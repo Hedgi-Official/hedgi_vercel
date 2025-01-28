@@ -11,7 +11,7 @@ export default function LandingPage() {
   const { user } = useUser();
 
   return (
-    <div className="min-h-screen bg-background/95">
+    <div className="min-h-screen bg-background">
       <BuildingBackdrop />
       <Header showAuthButton={!user} username={user?.username} />
 
