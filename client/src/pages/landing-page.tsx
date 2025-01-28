@@ -25,10 +25,11 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <main className="container mx-auto px-4">
-        <section className="py-20">
-          <div className="max-w-3xl">
-            <h1 className="text-6xl font-bold leading-tight mb-6">
+      <main className="container mx-auto px-4 py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Left side - Hero content */}
+          <div>
+            <h1 className="text-7xl font-bold leading-tight mb-6">
               Protect the value
               <br />
               of your <TypingEffect />
@@ -44,11 +45,12 @@ export default function LandingPage() {
               Start Hedging Now
             </Button>
           </div>
-        </section>
 
-        <section className="pb-20">
-          <CurrencySimulator />
-        </section>
+          {/* Right side - Currency Simulator */}
+          <div className="lg:mt-0">
+            <CurrencySimulator />
+          </div>
+        </div>
       </main>
     </div>
   );
