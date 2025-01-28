@@ -85,13 +85,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background/95">
       <BuildingBackdrop />
       <Header username={user?.username} onLogout={handleLogout} />
 
-      <main className="container mx-auto py-8">
+      <main className="container mx-auto py-8 relative z-10">
         <div className="grid gap-8">
-          <Card>
+          <Card className="bg-white shadow-lg">
             <CardHeader>
               <CardTitle>Active Hedges</CardTitle>
             </CardHeader>
@@ -137,7 +137,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white shadow-lg">
             <CardHeader>
               <CardTitle>New Hedge</CardTitle>
             </CardHeader>

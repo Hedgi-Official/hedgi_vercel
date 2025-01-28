@@ -11,11 +11,11 @@ export default function LandingPage() {
   const { user } = useUser();
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="min-h-screen bg-background/95">
       <BuildingBackdrop />
       <Header showAuthButton={!user} username={user?.username} />
 
-      <main className="container mx-auto px-4 py-20">
+      <main className="container mx-auto px-4 py-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left side - Hero content */}
           <div>

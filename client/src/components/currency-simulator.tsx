@@ -45,7 +45,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
   return (
     <TooltipProvider>
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
           <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
@@ -64,8 +64,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     </SelectTrigger>
                     <SelectContent>
                       {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem 
-                          key={currency} 
+                        <SelectItem
+                          key={currency}
                           value={currency}
                           disabled={currency === targetCurrency}
                         >
@@ -94,8 +94,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     </SelectTrigger>
                     <SelectContent>
                       {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem 
-                          key={currency} 
+                        <SelectItem
+                          key={currency}
                           value={currency}
                           disabled={currency === baseCurrency}
                         >
@@ -189,8 +189,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               )}
 
               {onPlaceHedge && (
-                <Button 
-                  onClick={handlePlaceHedge} 
+                <Button
+                  onClick={handlePlaceHedge}
                   className="w-full"
                   variant="outline"
                 >

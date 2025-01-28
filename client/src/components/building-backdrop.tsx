@@ -2,7 +2,7 @@ import React from 'react';
 
 export function BuildingBackdrop() {
   return (
-    <div className="fixed inset-0 pointer-events-none" aria-hidden="true">
+    <div className="fixed inset-0 -z-10 pointer-events-none" aria-hidden="true">
       <svg
         width="100%"
         height="100%"
