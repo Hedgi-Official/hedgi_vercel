@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 const API_KEY = "YOUR_API_KEY"; // Would use env var in production
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
@@ -38,14 +40,9 @@ export async function simulateHedge(
   const dailyCost = 10 * duration; // Daily cost in most valuable currency
   const totalCostInMVC = baseCost + dailyCost;
 
-  // Convert cost to target currency
-  let totalCostInTarget: number;
-  if (target === mostValuableCurrency) {
-    totalCostInTarget = totalCostInMVC;
-  } else {
-    const mvcToTargetRate = await fetchExchangeRate(mostValuableCurrency, target);
-    totalCostInTarget = totalCostInMVC * mvcToTargetRate;
-  }
+  // Convert total cost to target currency
+  const mvcToTargetRate = target === mostValuableCurrency ? 1 : await fetchExchangeRate(mostValuableCurrency, target);
+  const totalCostInTarget = totalCostInMVC * mvcToTargetRate;
 
   // Calculate percentage cost relative to hedged amount in target currency
   const hedgedAmountInTarget = amount;
@@ -59,7 +56,7 @@ export async function simulateHedge(
   return {
     rate,
     hedgedAmount: hedgedAmountInTarget,
-    totalCost: totalCostInTarget,
+    totalCost: totalCostInTarget, // Cost in target currency
     breakEvenRate,
     costDetails: {
       costPercentage

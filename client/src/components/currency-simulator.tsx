@@ -126,18 +126,33 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Trade Direction</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('buy')}
-                  >
-                    Buy {targetCurrency}
-                  </Button>
-                  <Button
-                    variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('sell')}
-                  >
-                    Sell {targetCurrency}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                        onClick={() => setTradeDirection('buy')}
+                      >
+                        Buy {targetCurrency}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>I will make a payment in {targetCurrency} in the future</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                        onClick={() => setTradeDirection('sell')}
+                      >
+                        Sell {targetCurrency}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>I will receive {targetCurrency} and convert to {baseCurrency} in the future</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </TooltipTrigger>
