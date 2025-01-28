@@ -35,18 +35,20 @@ export async function simulateHedge(
   const rate = await fetchExchangeRate(base, target);
   const mostValuableCurrency = getMostValuableCurrency(base, target);
 
-  // Calculate costs in most valuable currency
-  const baseCost = 5; // Base cost in most valuable currency
-  const dailyCost = 10 * duration; // Daily cost in most valuable currency
+  // Calculate costs in most valuable currency (USD)
+  const baseCost = 5; // Base cost in USD
+  const dailyCost = 10 * duration; // Daily cost in USD
   const totalCostInMVC = baseCost + dailyCost;
 
-  // Convert total cost to target currency
-  const mvcToTargetRate = target === mostValuableCurrency ? 1 : await fetchExchangeRate(mostValuableCurrency, target);
-  const totalCostInTarget = totalCostInMVC * mvcToTargetRate;
+  // Convert total cost to base currency (e.g., BRL)
+  // If base is most valuable, no conversion needed
+  // Otherwise, convert from MVC (USD) to base currency
+  const mvcToBaseRate = base === mostValuableCurrency ? 1 : await fetchExchangeRate(mostValuableCurrency, base);
+  const totalCostInBase = totalCostInMVC * mvcToBaseRate;
 
-  // Calculate percentage cost relative to hedged amount in target currency
+  // Calculate percentage cost relative to hedged amount
   const hedgedAmountInTarget = amount;
-  const costPercentage = (totalCostInTarget / hedgedAmountInTarget) * 100;
+  const costPercentage = (totalCostInBase / (hedgedAmountInTarget * rate)) * 100;
 
   // Calculate break-even rate based on trade direction
   const breakEvenRate = tradeDirection === 'sell'
@@ -56,7 +58,7 @@ export async function simulateHedge(
   return {
     rate,
     hedgedAmount: hedgedAmountInTarget,
-    totalCost: totalCostInTarget, // Cost in target currency
+    totalCost: totalCostInBase, // Cost already in base currency
     breakEvenRate,
     costDetails: {
       costPercentage
