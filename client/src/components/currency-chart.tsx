@@ -16,17 +16,14 @@ export function CurrencyChart({ data }: Props) {
     { name: 'Break-even', value: data.breakEvenRate },
   ];
 
-  const minRate = Math.min(data.rate, data.breakEvenRate) * 0.995;
-  const maxRate = Math.max(data.rate, data.breakEvenRate) * 1.005;
-
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
-          <YAxis domain={[minRate, maxRate]} />
-          <Tooltip />
+          <YAxis tickFormatter={(value) => value.toFixed(4)} />
+          <Tooltip formatter={(value) => value.toFixed(4)} />
           <ReferenceLine
             y={data.breakEvenRate}
             label="Break-even"

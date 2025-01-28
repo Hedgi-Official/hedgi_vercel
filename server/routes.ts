@@ -45,6 +45,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.delete("/api/hedges/:id", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const hedgeId = parseInt(req.params.id);
+    if (isNaN(hedgeId)) {
+      return res.status(400).send("Invalid hedge ID");
+    }
+
+    try {
+      const [hedge] = await db
+        .delete(hedges)
+        .where(eq(hedges.id, hedgeId))
+        .returning();
+
+      if (!hedge) {
+        return res.status(404).send("Hedge not found");
+      }
+
+      res.json({ message: "Hedge deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete hedge" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

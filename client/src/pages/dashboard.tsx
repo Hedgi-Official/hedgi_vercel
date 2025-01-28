@@ -7,6 +7,8 @@ import { Header } from "@/components/header";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
@@ -49,6 +51,33 @@ export default function Dashboard() {
     }
   });
 
+  const deleteHedgeMutation = useMutation({
+    mutationFn: async (hedgeId: number) => {
+      const response = await fetch(`/api/hedges/${hedgeId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      toast({
+        title: "Hedge Deleted",
+        description: "The hedge position has been removed.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  });
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -79,14 +108,26 @@ export default function Dashboard() {
                           {hedge.baseCurrency} → {hedge.targetCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Amount: {hedge.amount.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: hedge.baseCurrency
+                          Amount: {Number(hedge.amount).toLocaleString('en-US', {
+                            style: 'decimal',
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
                           })}
+                          {' '}{hedge.baseCurrency}
                           • Rate: {Number(hedge.rate).toFixed(4)}
                         </p>
                       </div>
-                      <Badge>{hedge.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge>{hedge.status}</Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive/90"
+                          onClick={() => deleteHedgeMutation.mutate(hedge.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

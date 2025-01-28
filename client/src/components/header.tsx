@@ -12,7 +12,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
     <nav className="bg-background border-b">
       <div className="container mx-auto flex justify-between items-center p-4">
         <Link href="/" className="flex items-center space-x-2">
-          <img src="/assets/Hedgi.png" alt="Hedgi Logo" className="h-8 w-auto" />
+          <img src="/Hedgi.png" alt="Hedgi Logo" className="h-8 w-auto" />
         </Link>
         <div className="flex items-center gap-4">
           {username ? (
