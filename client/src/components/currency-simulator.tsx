@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { simulateHedge } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
@@ -68,6 +67,9 @@ export function CurrencySimulator() {
                 <p className="text-2xl font-bold">
                   {simulation.breakEvenRate.toFixed(4)} BRL/USD
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  (+{simulation.costDetails.costPercentage.toFixed(2)}%)
+                </p>
               </div>
             </div>
 
@@ -79,7 +81,7 @@ export function CurrencySimulator() {
                   <span>${simulation.costDetails.baseCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Daily Costs</span>
+                  <span>Daily Costs ({Math.round(duration * 5/7)} business days)</span>
                   <span>${simulation.costDetails.dailyCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-medium pt-2 border-t">

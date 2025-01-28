@@ -8,6 +8,12 @@ export async function fetchExchangeRate(base: string, target: string) {
   return data.rates[target];
 }
 
+function getBusinessDays(duration: number): number {
+  // For a given number of calendar days, calculate business days
+  // Assuming 5 business days per 7 calendar days
+  return Math.round((duration * 5) / 7);
+}
+
 export async function simulateHedge(
   base: string,
   target: string,
@@ -15,25 +21,29 @@ export async function simulateHedge(
   duration: number
 ) {
   const rate = await fetchExchangeRate(base, target);
-  const hedgedAmount = amount * rate;
+  const businessDays = getBusinessDays(duration);
 
-  // Calculate hedge costs
+  // Calculate costs
   const baseCost = 5; // Opening and closing cost
-  const dailyCost = 10 * (duration / 7 * 5); // $10 per business day (5/7 of total days)
+  const dailyCost = 10 * businessDays; // $10 per business day
   const scalingFactor = amount / 10000; // Cost scales linearly with amount
   const totalCost = (baseCost + dailyCost) * scalingFactor;
 
-  // Calculate break-even rate
-  const breakEvenRate = rate + (totalCost / amount);
+  // Calculate percentage cost relative to hedged amount
+  const costPercentage = totalCost / amount;
+
+  // Break-even rate is current rate plus the cost percentage
+  const breakEvenRate = rate * (1 + costPercentage);
 
   return {
     rate,
-    hedgedAmount,
+    hedgedAmount: amount * rate,
     totalCost,
     breakEvenRate,
     costDetails: {
       baseCost: baseCost * scalingFactor,
       dailyCost: dailyCost * scalingFactor,
+      costPercentage: costPercentage * 100, // Convert to percentage for display
     }
   };
 }
