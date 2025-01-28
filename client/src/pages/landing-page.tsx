@@ -3,7 +3,7 @@ import { TypingEffect } from "@/components/typing-effect";
 import { CurrencySimulator } from "@/components/currency-simulator";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/header";
-import { BuildingBackdrop } from "@/components/building-backdrop";
+import { Skyline } from "@/components/skyline";
 import { useLocation } from "wouter";
 
 export default function LandingPage() {
@@ -12,7 +12,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BuildingBackdrop />
       <Header showAuthButton={!user} username={user?.username} />
 
       <main className="container mx-auto px-4 py-20 relative z-10">
@@ -24,6 +23,7 @@ export default function LandingPage() {
               <br />
               of your <TypingEffect />
             </h1>
+            <Skyline />
             <p className="text-xl mb-8 text-muted-foreground max-w-xl">
               Professional currency hedging made simple
             </p>
