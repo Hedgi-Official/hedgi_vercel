@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import LearnMore from "@/pages/learn-more";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -25,6 +26,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/learn-more" component={LearnMore} />
         <Route component={NotFound} />
       </Switch>
     );

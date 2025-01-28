@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,33 @@ import {
 } from "@/components/ui/card";
 import type { InsertHedge } from "@db/schema";
 
+// Helper function to calculate business days between dates
+function getBusinessDays(startDate: Date, endDate: Date): number {
+  let count = 0;
+  const curDate = new Date(startDate.getTime());
+  while (curDate <= endDate) {
+    const dayOfWeek = curDate.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+    curDate.setDate(curDate.getDate() + 1);
+  }
+  return count;
+}
+
+// Calculate hedge costs
+function calculateHedgeCost(amount: number, businessDays: number): number {
+  const baseAmount = 10000; // Reference amount for base cost
+  const dailyRate = 10; // Cost per business day
+  const flatFee = 5; // Opening/closing fee
+
+  const scaling = amount / baseAmount;
+  return (dailyRate * businessDays + flatFee) * scaling;
+}
+
 export function HedgeSimulator() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [baseCurrency, setBaseCurrency] = useState("USD");
-  const [targetCurrency, setTargetCurrency] = useState("EUR");
+  const [baseCurrency] = useState("USD");
+  const [targetCurrency] = useState("BRL");
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState("7");
 
@@ -75,39 +97,44 @@ export function HedgeSimulator() {
     createHedgeMutation.mutate({
       baseCurrency,
       targetCurrency,
-      amount: numAmount,
+      amount: numAmount.toString(), // Convert to string for decimal type
       startDate,
       endDate,
       status: "active",
     });
   };
 
-  const exchangeRate = rates?.rates?.[targetCurrency] || 0;
-  const estimatedValue = parseFloat(amount) * exchangeRate;
+  // Calculate simulation results
+  const simulationResults = useMemo(() => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return null;
+
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + parseInt(duration));
+
+    const businessDays = getBusinessDays(startDate, endDate);
+    const hedgeCost = calculateHedgeCost(numAmount, businessDays);
+    const currentRate = rates?.rates?.[targetCurrency] || 0;
+
+    // Calculate break-even rate
+    const totalCostBRL = hedgeCost * currentRate;
+    const breakEvenRateIncrease = (totalCostBRL / numAmount);
+    const breakEvenRate = currentRate + breakEvenRateIncrease;
+
+    return {
+      cost: hedgeCost,
+      currentRate,
+      breakEvenRate,
+      businessDays,
+    };
+  }, [amount, duration, rates, targetCurrency]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label>Base Currency</Label>
-          <CurrencySelect
-            value={baseCurrency}
-            onChange={setBaseCurrency}
-            excludeValue={targetCurrency}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Target Currency</Label>
-          <CurrencySelect
-            value={targetCurrency}
-            onChange={setTargetCurrency}
-            excludeValue={baseCurrency}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Amount (max $10,000)</Label>
+          <Label>Amount (USD)</Label>
           <Input
             type="number"
             value={amount}
@@ -116,6 +143,7 @@ export function HedgeSimulator() {
             step="0.01"
             required
           />
+          <p className="text-sm text-muted-foreground">Maximum: $10,000 USD</p>
         </div>
 
         <div className="space-y-2">
@@ -128,29 +156,48 @@ export function HedgeSimulator() {
             min="1"
             required
           />
+          <p className="text-sm text-muted-foreground">Maximum: 30 days</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Simulation Results</CardTitle>
-          <CardDescription>
-            Based on current exchange rates
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {amount ? (
-              <>
-                {parseFloat(amount).toFixed(2)} {baseCurrency} ={" "}
-                {estimatedValue.toFixed(2)} {targetCurrency}
-              </>
-            ) : (
-              "Enter an amount to see simulation"
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {simulationResults && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Simulation Results</CardTitle>
+            <CardDescription>
+              Based on current exchange rates and hedge costs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Current Exchange Rate:</p>
+              <p className="text-2xl font-bold">
+                1 USD = {simulationResults.currentRate.toFixed(4)} BRL
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Hedge Cost:</p>
+              <p className="text-2xl font-bold">
+                ${simulationResults.cost.toFixed(2)} USD
+              </p>
+              <p className="text-sm text-muted-foreground">
+                For {simulationResults.businessDays} business days
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Break-even Exchange Rate:</p>
+              <p className="text-2xl font-bold">
+                1 USD = {simulationResults.breakEvenRate.toFixed(4)} BRL
+              </p>
+              <p className="text-sm text-muted-foreground">
+                The exchange rate needed for the hedge to become profitable
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Button type="submit" className="w-full">
         Create Hedge
