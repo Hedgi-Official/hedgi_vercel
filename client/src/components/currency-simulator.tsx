@@ -7,19 +7,15 @@ import { Slider } from "@/components/ui/slider";
 import { simulateHedge } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'AUD'];
-
 export function CurrencySimulator() {
-  const [baseCurrency, setBaseCurrency] = useState('USD');
-  const [targetCurrency, setTargetCurrency] = useState('EUR');
-  const [amount, setAmount] = useState(1000);
+  const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [simulation, setSimulation] = useState(null);
 
   const handleSimulate = async () => {
     const result = await simulateHedge(
-      baseCurrency,
-      targetCurrency,
+      'USD',
+      'BRL',
       amount,
       duration
     );
@@ -31,45 +27,21 @@ export function CurrencySimulator() {
       <CardHeader>
         <CardTitle>Currency Hedge Simulator</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Select value={baseCurrency} onValueChange={setBaseCurrency}>
-            <SelectTrigger>
-              <SelectValue placeholder="Base Currency" />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map(currency => (
-                <SelectItem key={currency} value={currency}>
-                  {currency}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={targetCurrency} onValueChange={setTargetCurrency}>
-            <SelectTrigger>
-              <SelectValue placeholder="Target Currency" />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map(currency => (
-                <SelectItem key={currency} value={currency}>
-                  {currency}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Amount in USD</label>
+          <Input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            min={1000}
+            max={1000000}
+            placeholder="Amount to hedge"
+          />
         </div>
 
-        <Input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
-          max={10000}
-          placeholder="Amount to hedge"
-        />
-
         <div className="space-y-2">
-          <label className="text-sm">Duration: {duration} days</label>
+          <label className="text-sm font-medium">Duration: {duration} days</label>
           <Slider
             value={[duration]}
             onValueChange={([value]) => setDuration(value)}
@@ -79,18 +51,47 @@ export function CurrencySimulator() {
         </div>
 
         <Button onClick={handleSimulate} className="w-full">
-          Simulate Hedge
+          Calculate Hedge Cost
         </Button>
 
         {simulation && (
-          <div className="mt-4">
-            <CurrencyChart
-              data={{
-                rate: simulation.rate,
-                worstCase: simulation.worstCase,
-                bestCase: simulation.bestCase,
-              }}
-            />
+          <div className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Current Rate</p>
+                <p className="text-2xl font-bold">
+                  {simulation.rate.toFixed(4)} BRL/USD
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Break-even Rate</p>
+                <p className="text-2xl font-bold">
+                  {simulation.breakEvenRate.toFixed(4)} BRL/USD
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-medium">Cost Breakdown</h3>
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span>Base Cost</span>
+                  <span>${simulation.costDetails.baseCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Daily Costs</span>
+                  <span>${simulation.costDetails.dailyCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-medium pt-2 border-t">
+                  <span>Total Cost</span>
+                  <span>${simulation.totalCost.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <CurrencyChart data={simulation} />
+            </div>
           </div>
         )}
       </CardContent>

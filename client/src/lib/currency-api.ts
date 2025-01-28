@@ -16,16 +16,24 @@ export async function simulateHedge(
 ) {
   const rate = await fetchExchangeRate(base, target);
   const hedgedAmount = amount * rate;
-  
-  // Simulate potential savings/losses
-  const volatility = 0.02; // 2% daily volatility
-  const worstCase = hedgedAmount * (1 - volatility * duration);
-  const bestCase = hedgedAmount * (1 + volatility * duration);
+
+  // Calculate hedge costs
+  const baseCost = 5; // Opening and closing cost
+  const dailyCost = 10 * (duration / 7 * 5); // $10 per business day (5/7 of total days)
+  const scalingFactor = amount / 10000; // Cost scales linearly with amount
+  const totalCost = (baseCost + dailyCost) * scalingFactor;
+
+  // Calculate break-even rate
+  const breakEvenRate = rate + (totalCost / amount);
 
   return {
     rate,
     hedgedAmount,
-    worstCase,
-    bestCase,
+    totalCost,
+    breakEvenRate,
+    costDetails: {
+      baseCost: baseCost * scalingFactor,
+      dailyCost: dailyCost * scalingFactor,
+    }
   };
 }
