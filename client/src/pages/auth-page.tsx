@@ -6,20 +6,53 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
+  fullName: z.string().min(2, "Full name is required"),
+  phoneNumber: z.string().optional(),
+});
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
   const { login, register } = useUser();
   const { toast } = useToast();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+
+  // Login form state
+  const [loginData, setLoginData] = useState({
+    username: "",
+    password: "",
+  });
+
+  // Registration form state
+  const [registerData, setRegisterData] = useState({
+    username: "",
+    password: "",
+    email: "",
+    fullName: "",
+    phoneNumber: "",
+  });
 
   const handleSubmit = async (action: "login" | "register") => {
     try {
-      const result = await (action === "login" ? login : register)({
-        username,
-        password,
-      });
+      const data = action === "login" ? loginData : registerData;
+
+      if (action === "register") {
+        const validationResult = registerSchema.safeParse(data);
+        if (!validationResult.success) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: validationResult.error.errors[0].message,
+          });
+          return;
+        }
+      }
+
+      const result = await (action === "login" ? login : register)(data);
 
       if (result.ok) {
         navigate("/dashboard");
@@ -51,18 +84,18 @@ export default function AuthPage() {
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login" className="space-y-4">
               <Input
                 placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={loginData.username}
+                onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
               />
               <Input
                 type="password"
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={loginData.password}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
               />
               <Button
                 className="w-full"
@@ -71,18 +104,35 @@ export default function AuthPage() {
                 Login
               </Button>
             </TabsContent>
-            
+
             <TabsContent value="register" className="space-y-4">
               <Input
+                placeholder="Full Name"
+                value={registerData.fullName}
+                onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
+              />
+              <Input
+                placeholder="Email"
+                type="email"
+                value={registerData.email}
+                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+              />
+              <Input
                 placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={registerData.username}
+                onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
               />
               <Input
                 type="password"
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={registerData.password}
+                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+              />
+              <Input
+                placeholder="Phone Number (Optional)"
+                type="tel"
+                value={registerData.phoneNumber}
+                onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
               />
               <Button
                 className="w-full"
