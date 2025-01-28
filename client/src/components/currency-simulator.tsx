@@ -125,18 +125,20 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             <TooltipTrigger asChild>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Trade Direction</label>
-                <Select
-                  value={tradeDirection}
-                  onValueChange={(value: 'buy' | 'sell') => setTradeDirection(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="buy">Buy {targetCurrency}</SelectItem>
-                    <SelectItem value="sell">Sell {targetCurrency}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                    onClick={() => setTradeDirection('buy')}
+                  >
+                    Buy {targetCurrency}
+                  </Button>
+                  <Button
+                    variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                    onClick={() => setTradeDirection('sell')}
+                  >
+                    Sell {targetCurrency}
+                  </Button>
+                </div>
               </div>
             </TooltipTrigger>
             <TooltipContent>
