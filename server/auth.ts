@@ -107,7 +107,7 @@ export function setupAuth(app: Express) {
           .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
       }
 
-      const { username, password } = result.data;
+      const { username, email } = result.data;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -120,15 +120,29 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      // Hash the password
-      const hashedPassword = await crypto.hash(password);
+      // Check if email already exists
+      const [existingEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
 
-      // Create the new user
+      if (existingEmail) {
+        return res.status(400).send("Email already exists");
+      }
+
+      // Hash the password
+      const hashedPassword = await crypto.hash(result.data.password);
+
+      // Create the new user with all fields
       const [newUser] = await db
         .insert(users)
         .values({
-          ...result.data,
+          username: result.data.username,
           password: hashedPassword,
+          email: result.data.email,
+          fullName: result.data.fullName,
+          phoneNumber: result.data.phoneNumber,
         })
         .returning();
 
@@ -139,23 +153,22 @@ export function setupAuth(app: Express) {
         }
         return res.json({
           message: "Registration successful",
-          user: { id: newUser.id, username: newUser.username },
+          user: { 
+            id: newUser.id, 
+            username: newUser.username,
+            email: newUser.email,
+            fullName: newUser.fullName
+          },
         });
       });
     } catch (error) {
+      console.error('Registration error:', error);
       next(error);
     }
   });
 
   app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res
-        .status(400)
-        .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
-    }
-
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+    passport.authenticate("local", (err: any, user: Express.User, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
@@ -171,11 +184,15 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Login successful",
-          user: { id: user.id, username: user.username },
+          user: { 
+            id: user.id, 
+            username: user.username,
+            email: user.email,
+            fullName: user.fullName
+          },
         });
       });
-    };
-    passport.authenticate("local", cb)(req, res, next);
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res) => {
@@ -190,7 +207,8 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
-      return res.json(req.user);
+      const { password, ...userWithoutPassword } = req.user;
+      return res.json(userWithoutPassword);
     }
 
     res.status(401).send("Not logged in");
