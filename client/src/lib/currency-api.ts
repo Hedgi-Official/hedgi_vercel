@@ -53,8 +53,8 @@ export async function simulateHedge(
 
   // Calculate break-even rate based on trade direction
   const breakEvenRate = tradeDirection === 'buy'
-    ? rate * (1 + costPercentage / 100) // When buying target currency, break-even is higher
-    : rate * (1 - costPercentage / 100); // When selling target currency, break-even is lower
+    ? rate * (1 - costPercentage / 100) // When buying target currency, break-even is lower
+    : rate * (1 + costPercentage / 100); // When selling target currency, break-even is higher
 
   return {
     rate,
