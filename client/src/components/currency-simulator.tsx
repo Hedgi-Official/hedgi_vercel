@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import type { Hedge } from '@db/schema';
@@ -43,133 +44,163 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Currency Hedge Simulator</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Base Currency</label>
-            <Select
-              value={baseCurrency}
-              onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <SelectItem 
-                    key={currency} 
-                    value={currency}
-                    disabled={currency === targetCurrency}
+    <TooltipProvider>
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Currency Hedge Simulator</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Base Currency</label>
+                  <Select
+                    value={baseCurrency}
+                    onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
                   >
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map((currency) => (
+                        <SelectItem 
+                          key={currency} 
+                          value={currency}
+                          disabled={currency === targetCurrency}
+                        >
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select the currency of your future payment or liability</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Target Currency</label>
+                  <Select
+                    value={targetCurrency}
+                    onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map((currency) => (
+                        <SelectItem 
+                          key={currency} 
+                          value={currency}
+                          disabled={currency === baseCurrency}
+                        >
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Select the currency you want to hedge against</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Target Currency</label>
-            <Select
-              value={targetCurrency}
-              onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <SelectItem 
-                    key={currency} 
-                    value={currency}
-                    disabled={currency === baseCurrency}
-                  >
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Amount in {baseCurrency}</label>
-          <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            min={1000}
-            max={1000000}
-            placeholder="Amount to hedge"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Duration: {duration} days</label>
-          <Slider
-            value={[duration]}
-            onValueChange={([value]) => setDuration(value)}
-            max={30}
-            step={1}
-          />
-        </div>
-
-        <Button onClick={handleSimulate} className="w-full">
-          Calculate Hedge Cost
-        </Button>
-
-        {simulation && (
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Current Rate</p>
-                <p className="text-2xl font-bold">
-                  {simulation.rate.toFixed(4)} {targetCurrency}/{baseCurrency}
-                </p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Amount in {baseCurrency}</label>
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  min={1000}
+                  max={1000000}
+                  placeholder="Amount to hedge"
+                />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Break-even Rate</p>
-                <p className="text-2xl font-bold">
-                  {simulation.breakEvenRate.toFixed(4)} {targetCurrency}/{baseCurrency}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  (+{simulation.costDetails.costPercentage.toFixed(2)}%)
-                </p>
-              </div>
-            </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Enter the total amount of {baseCurrency} you need to protect</p>
+            </TooltipContent>
+          </Tooltip>
 
-            <div className="space-y-2">
-              <h3 className="font-medium">Hedge Cost</h3>
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="flex justify-between font-medium">
-                  <span>Total Cost</span>
-                  <span>{simulation.totalCost.toFixed(2)} {targetCurrency}</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Duration: {duration} days</label>
+                <Slider
+                  value={[duration]}
+                  onValueChange={([value]) => setDuration(value)}
+                  max={30}
+                  step={1}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select how long you need the hedge protection (in days)</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Button onClick={handleSimulate} className="w-full">
+            Calculate Hedge Cost
+          </Button>
+
+          {simulation && (
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Current Rate</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.rate.toFixed(4)} {targetCurrency}/{baseCurrency}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Break-even Rate</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.breakEvenRate.toFixed(4)} {targetCurrency}/{baseCurrency}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    (+{simulation.costDetails.costPercentage.toFixed(2)}%)
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {showGraph && (
-              <div className="pt-4">
-                <CurrencyChart data={simulation} />
+              <div className="space-y-2">
+                <h3 className="font-medium">Hedge Cost</h3>
+                <div className="bg-muted p-4 rounded-lg">
+                  <div className="flex justify-between font-medium">
+                    <span>Total Cost</span>
+                    <span>{simulation.totalCost.toFixed(2)} {targetCurrency}</span>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {onPlaceHedge && (
-              <Button 
-                onClick={handlePlaceHedge} 
-                className="w-full"
-                variant="outline"
-              >
-                Place Hedge
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              {showGraph && (
+                <div className="pt-4">
+                  <CurrencyChart data={simulation} />
+                </div>
+              )}
+
+              {onPlaceHedge && (
+                <Button 
+                  onClick={handlePlaceHedge} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  Place Hedge
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }

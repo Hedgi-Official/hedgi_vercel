@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
 import { Header } from "@/components/header";
+import { BuildingBackdrop } from "@/components/building-backdrop";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +86,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <BuildingBackdrop />
       <Header username={user?.username} onLogout={handleLogout} />
 
       <main className="container mx-auto py-8">
