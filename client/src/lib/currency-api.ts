@@ -27,10 +27,11 @@ export async function simulateHedge(
   const baseCost = 5; // Opening and closing cost
   const dailyCost = 10 * businessDays; // $10 per business day
   const scalingFactor = amount / 10000; // Cost scales linearly with amount
-  const totalCost = (baseCost + dailyCost) * scalingFactor;
+  const totalCostUSD = (baseCost + dailyCost) * scalingFactor;
+  const totalCostBRL = totalCostUSD * rate;
 
   // Calculate percentage cost relative to hedged amount
-  const costPercentage = totalCost / amount;
+  const costPercentage = totalCostUSD / amount;
 
   // Break-even rate is current rate plus the cost percentage
   const breakEvenRate = rate * (1 + costPercentage);
@@ -38,11 +39,9 @@ export async function simulateHedge(
   return {
     rate,
     hedgedAmount: amount * rate,
-    totalCost,
+    totalCost: totalCostBRL,
     breakEvenRate,
     costDetails: {
-      baseCost: baseCost * scalingFactor,
-      dailyCost: dailyCost * scalingFactor,
       costPercentage: costPercentage * 100, // Convert to percentage for display
     }
   };

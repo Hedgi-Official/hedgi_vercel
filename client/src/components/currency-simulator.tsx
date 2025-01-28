@@ -74,19 +74,11 @@ export function CurrencySimulator() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-medium">Cost Breakdown</h3>
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span>Base Cost</span>
-                  <span>${simulation.costDetails.baseCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Daily Costs ({Math.round(duration * 5/7)} business days)</span>
-                  <span>${simulation.costDetails.dailyCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-medium pt-2 border-t">
+              <h3 className="font-medium">Hedge Cost</h3>
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="flex justify-between font-medium">
                   <span>Total Cost</span>
-                  <span>${simulation.totalCost.toFixed(2)}</span>
+                  <span>R$ {simulation.totalCost.toFixed(2)}</span>
                 </div>
               </div>
             </div>
