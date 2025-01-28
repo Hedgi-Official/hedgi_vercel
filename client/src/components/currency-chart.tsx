@@ -16,9 +16,9 @@ export function CurrencyChart({ data }: Props) {
     { name: 'Break-even', value: data.breakEvenRate },
   ];
 
-  // Calculate min and max values as ±20% of current rate
-  const minRate = data.rate * 0.8;
-  const maxRate = data.rate * 1.2;
+  // Calculate min and max values as ±7% of current rate
+  const minRate = data.rate * 0.93;
+  const maxRate = data.rate * 1.07;
 
   return (
     <div className="h-[300px] w-full">

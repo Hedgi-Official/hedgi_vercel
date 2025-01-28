@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { simulateHedge } from '@/lib/currency-api';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import type { Hedge } from '@db/schema';
 
@@ -15,12 +16,14 @@ interface Props {
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
+  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('USD');
+  const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('BRL');
   const [simulation, setSimulation] = useState<any>(null);
 
   const handleSimulate = async () => {
     const result = await simulateHedge(
-      'USD',
-      'BRL',
+      baseCurrency,
+      targetCurrency,
       amount,
       duration
     );
@@ -30,11 +33,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const handlePlaceHedge = () => {
     if (onPlaceHedge && simulation) {
       onPlaceHedge({
-        baseCurrency: 'USD',
-        targetCurrency: 'BRL',
-        amount: amount,
+        baseCurrency,
+        targetCurrency,
+        amount,
         rate: simulation.rate,
-        duration: duration
+        duration
       });
     }
   };
@@ -45,8 +48,56 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         <CardTitle>Currency Hedge Simulator</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Base Currency</label>
+            <Select
+              value={baseCurrency}
+              onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <SelectItem 
+                    key={currency} 
+                    value={currency}
+                    disabled={currency === targetCurrency}
+                  >
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Target Currency</label>
+            <Select
+              value={targetCurrency}
+              onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <SelectItem 
+                    key={currency} 
+                    value={currency}
+                    disabled={currency === baseCurrency}
+                  >
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label className="text-sm font-medium">Amount in USD</label>
+          <label className="text-sm font-medium">Amount in {baseCurrency}</label>
           <Input
             type="number"
             value={amount}
@@ -77,13 +128,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Current Rate</p>
                 <p className="text-2xl font-bold">
-                  {simulation.rate.toFixed(4)} BRL/USD
+                  {simulation.rate.toFixed(4)} {targetCurrency}/{baseCurrency}
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Break-even Rate</p>
                 <p className="text-2xl font-bold">
-                  {simulation.breakEvenRate.toFixed(4)} BRL/USD
+                  {simulation.breakEvenRate.toFixed(4)} {targetCurrency}/{baseCurrency}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   (+{simulation.costDetails.costPercentage.toFixed(2)}%)
@@ -96,7 +147,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               <div className="bg-muted p-4 rounded-lg">
                 <div className="flex justify-between font-medium">
                   <span>Total Cost</span>
-                  <span>R$ {simulation.totalCost.toFixed(2)}</span>
+                  <span>{simulation.totalCost.toFixed(2)} {targetCurrency}</span>
                 </div>
               </div>
             </div>
