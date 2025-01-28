@@ -21,14 +21,13 @@ function Router() {
     );
   }
 
-  if (!user && window.location.pathname !== "/") {
-    return <AuthPage />;
-  }
-
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/dashboard">
+        {user ? <Dashboard /> : <AuthPage />}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
