@@ -59,29 +59,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Trade Direction</label>
-                <Select
-                  value={tradeDirection}
-                  onValueChange={(value: 'buy' | 'sell') => setTradeDirection(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="buy">Buy {targetCurrency}</SelectItem>
-                    <SelectItem value="sell">Sell {targetCurrency}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{getTradeDirectionHelp()}</p>
-            </TooltipContent>
-          </Tooltip>
-
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -143,6 +120,29 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </TooltipContent>
             </Tooltip>
           </div>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Trade Direction</label>
+                <Select
+                  value={tradeDirection}
+                  onValueChange={(value: 'buy' | 'sell') => setTradeDirection(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buy">Buy {targetCurrency}</SelectItem>
+                    <SelectItem value="sell">Sell {targetCurrency}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{getTradeDirectionHelp()}</p>
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -209,7 +209,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="bg-muted p-4 rounded-lg">
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
-                    <span>{simulation.totalCost.toFixed(2)} {targetCurrency}</span>
+                    <span>
+                      {(simulation.totalCost * simulation.rate).toFixed(2)} {baseCurrency}
+                    </span>
                   </div>
                 </div>
               </div>
