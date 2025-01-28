@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { addDays, isWeekend, differenceInDays } from "date-fns";
 
 const API_KEY = "YOUR_API_KEY"; // Would use env var in production
 
@@ -25,6 +26,22 @@ function getMostValuableCurrency(currency1: SupportedCurrency, currency2: Suppor
   return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
 
+function getBusinessDays(startDate: Date, duration: number): number {
+  let businessDays = 0;
+  let currentDate = startDate;
+  let daysChecked = 0;
+
+  while (businessDays < duration && daysChecked < duration * 2) { // * 2 to prevent infinite loops
+    if (!isWeekend(currentDate)) {
+      businessDays++;
+    }
+    currentDate = addDays(currentDate, 1);
+    daysChecked++;
+  }
+
+  return businessDays;
+}
+
 export async function simulateHedge(
   base: SupportedCurrency,
   target: SupportedCurrency,
@@ -37,7 +54,8 @@ export async function simulateHedge(
 
   // Calculate costs in most valuable currency
   const baseCost = 5; // Base cost in most valuable currency
-  const dailyCost = 10 * duration; // Daily cost in most valuable currency
+  const businessDays = getBusinessDays(new Date(), duration);
+  const dailyCost = 10 * businessDays; // Daily cost only for business days
   const totalCostInMVC = baseCost + dailyCost;
 
   // Convert total cost to target currency
@@ -59,7 +77,9 @@ export async function simulateHedge(
     totalCost: totalCostInTarget, // Cost in target currency
     breakEvenRate,
     costDetails: {
-      costPercentage
+      costPercentage,
+      businessDays,
+      totalDays: duration
     }
   };
 }
