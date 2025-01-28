@@ -17,8 +17,9 @@ interface Props {
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
-  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
+  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
+  const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<any>(null);
 
   const handleSimulate = async () => {
@@ -26,7 +27,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       baseCurrency,
       targetCurrency,
       amount,
-      duration
+      duration,
+      tradeDirection
     );
     setSimulation(result);
   };
@@ -43,6 +45,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     }
   };
 
+  const getTradeDirectionHelp = () => {
+    if (tradeDirection === 'buy') {
+      return `I will make a payment in ${targetCurrency} in the future`;
+    }
+    return `I will receive ${targetCurrency} and convert to ${baseCurrency} in the future`;
+  };
+
   return (
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
@@ -50,37 +59,30 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Base Currency</label>
-                  <Select
-                    value={baseCurrency}
-                    onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem
-                          key={currency}
-                          value={currency}
-                          disabled={currency === targetCurrency}
-                        >
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Select your local currency that you'll use to make the future payment</p>
-              </TooltipContent>
-            </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Trade Direction</label>
+                <Select
+                  value={tradeDirection}
+                  onValueChange={(value: 'buy' | 'sell') => setTradeDirection(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buy">Buy {targetCurrency}</SelectItem>
+                    <SelectItem value="sell">Sell {targetCurrency}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{getTradeDirectionHelp()}</p>
+            </TooltipContent>
+          </Tooltip>
 
+          <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
@@ -107,7 +109,37 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Select the currency of your future payment or liability that you want to hedge against</p>
+                <p>The currency of the payment you will make or receive in the future, that you are protecting against varying</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Base Currency</label>
+                  <Select
+                    value={baseCurrency}
+                    onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map((currency) => (
+                        <SelectItem
+                          key={currency}
+                          value={currency}
+                          disabled={currency === targetCurrency}
+                        >
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The currency whose fluctuations you are protecting against</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -127,7 +159,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Enter the total amount of {targetCurrency} you need to pay in the future</p>
+              <p>Enter the total amount of {targetCurrency} involved in the future transaction</p>
             </TooltipContent>
           </Tooltip>
 
@@ -144,7 +176,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select how many days until your {targetCurrency} payment is due</p>
+              <p>Select how many days until your {targetCurrency} transaction is due</p>
             </TooltipContent>
           </Tooltip>
 
@@ -167,7 +199,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     {(1 / simulation.breakEvenRate).toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    (+{simulation.costDetails.costPercentage.toFixed(2)}%)
+                    ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
                   </p>
                 </div>
               </div>

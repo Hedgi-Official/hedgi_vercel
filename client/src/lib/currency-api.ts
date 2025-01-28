@@ -27,7 +27,8 @@ export async function simulateHedge(
   base: SupportedCurrency,
   target: SupportedCurrency,
   amount: number,
-  duration: number
+  duration: number,
+  tradeDirection: 'buy' | 'sell' = 'buy'
 ) {
   const rate = await fetchExchangeRate(base, target);
   const mostValuableCurrency = getMostValuableCurrency(base, target);
@@ -47,16 +48,21 @@ export async function simulateHedge(
   }
 
   // Calculate percentage cost relative to hedged amount in target currency
-  const hedgedAmountInTarget = amount * rate;
-  const costPercentage = totalCostInTarget / hedgedAmountInTarget;
+  const hedgedAmountInTarget = amount;
+  const costPercentage = (totalCostInTarget / hedgedAmountInTarget) * 100;
+
+  // Calculate break-even rate based on trade direction
+  const breakEvenRate = tradeDirection === 'buy'
+    ? rate * (1 + costPercentage / 100) // When buying target currency, break-even is higher
+    : rate * (1 - costPercentage / 100); // When selling target currency, break-even is lower
 
   return {
     rate,
     hedgedAmount: hedgedAmountInTarget,
     totalCost: totalCostInTarget,
-    breakEvenRate: rate * (1 + costPercentage),
+    breakEvenRate,
     costDetails: {
-      costPercentage: costPercentage * 100,
+      costPercentage
     }
   };
 }
