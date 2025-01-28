@@ -5,11 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { simulateHedge } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
+import type { Hedge } from '@db/schema';
 
-export function CurrencySimulator() {
+interface Props {
+  showGraph?: boolean;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
+}
+
+export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
-  const [simulation, setSimulation] = useState(null);
+  const [simulation, setSimulation] = useState<any>(null);
 
   const handleSimulate = async () => {
     const result = await simulateHedge(
@@ -19,6 +25,18 @@ export function CurrencySimulator() {
       duration
     );
     setSimulation(result);
+  };
+
+  const handlePlaceHedge = () => {
+    if (onPlaceHedge && simulation) {
+      onPlaceHedge({
+        baseCurrency: 'USD',
+        targetCurrency: 'BRL',
+        amount: amount,
+        rate: simulation.rate,
+        duration: duration
+      });
+    }
   };
 
   return (
@@ -83,9 +101,21 @@ export function CurrencySimulator() {
               </div>
             </div>
 
-            <div className="pt-4">
-              <CurrencyChart data={simulation} />
-            </div>
+            {showGraph && (
+              <div className="pt-4">
+                <CurrencyChart data={simulation} />
+              </div>
+            )}
+
+            {onPlaceHedge && (
+              <Button 
+                onClick={handlePlaceHedge} 
+                className="w-full"
+                variant="outline"
+              >
+                Place Hedge
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

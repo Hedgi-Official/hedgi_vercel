@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { TypingEffect } from "@/components/typing-effect";
 import { CurrencySimulator } from "@/components/currency-simulator";
 import { useUser } from "@/hooks/use-user";
+import { Header } from "@/components/header";
 import { useLocation } from "wouter";
 
 export default function LandingPage() {
@@ -9,21 +10,8 @@ export default function LandingPage() {
   const { user } = useUser();
 
   return (
-    <div className="min-h-screen">
-      <nav className="bg-secondary p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Hedgi</h1>
-          {user ? (
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
-              Dashboard
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => navigate('/auth')}>
-              Get Started
-            </Button>
-          )}
-        </div>
-      </nav>
+    <div className="min-h-screen bg-background">
+      <Header showAuthButton={!user} username={user?.username} />
 
       <main className="container mx-auto px-4 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -48,7 +36,7 @@ export default function LandingPage() {
 
           {/* Right side - Currency Simulator */}
           <div className="lg:mt-0">
-            <CurrencySimulator />
+            <CurrencySimulator showGraph={false} />
           </div>
         </div>
       </main>
