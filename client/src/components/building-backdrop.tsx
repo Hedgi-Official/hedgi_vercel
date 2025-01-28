@@ -14,6 +14,7 @@ export function BuildingBackdrop() {
           fill="currentColor"
           d="M1600 0h160v1080h-160zm-320 300h160v780h-160zm-320-100h160v880h-160zm-320 200h160v680h-160zm-320-200h160v880h-160zM0 400h160v680H0z"
         />
+        {/* Windows pattern */}
         <path
           fill="currentColor"
           d="M1720 400h40v80h-40zm-320-100h40v80h-40zm-320 100h40v80h-40zm-320-100h40v80h-40zm-320 100h40v80h-40zM120 300h40v80h-40z"

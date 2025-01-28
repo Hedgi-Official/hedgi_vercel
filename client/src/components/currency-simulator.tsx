@@ -17,8 +17,8 @@ interface Props {
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
-  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('USD');
-  const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('BRL');
+  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
+  const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
   const [simulation, setSimulation] = useState<any>(null);
 
   const handleSimulate = async () => {
@@ -77,7 +77,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Select the currency of your future payment or liability</p>
+                <p>Select your local currency that you'll use to make the future payment</p>
               </TooltipContent>
             </Tooltip>
 
@@ -107,7 +107,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Select the currency you want to hedge against</p>
+                <p>Select the currency of your future payment or liability that you want to hedge against</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -115,7 +115,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Amount in {baseCurrency}</label>
+                <label className="text-sm font-medium">Amount in {targetCurrency}</label>
                 <Input
                   type="number"
                   value={amount}
@@ -127,7 +127,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Enter the total amount of {baseCurrency} you need to protect</p>
+              <p>Enter the total amount of {targetCurrency} you need to pay in the future</p>
             </TooltipContent>
           </Tooltip>
 
@@ -144,7 +144,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select how long you need the hedge protection (in days)</p>
+              <p>Select how many days until your {targetCurrency} payment is due</p>
             </TooltipContent>
           </Tooltip>
 
