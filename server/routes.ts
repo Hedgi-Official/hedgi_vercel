@@ -74,7 +74,14 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
 
-    const { code } = req.query;
+    const { code, state } = req.query;
+    const expectedState = req.session.oauthState;
+
+    // Validate state to prevent CSRF attacks
+    if (!state || state !== expectedState) {
+      console.error('OAuth state mismatch:', { expected: expectedState, received: state });
+      return res.status(400).send("Invalid OAuth state");
+    }
 
     if (!code || typeof code !== 'string') {
       return res.status(400).send("Invalid code");

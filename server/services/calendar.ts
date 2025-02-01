@@ -10,12 +10,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Get the Replit URL from environment
-const REPLIT_URL = process.env.REPL_SLUG 
-  ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-  : 'http://localhost:5000';
-
-const REDIRECT_URI = `${REPLIT_URL}/api/calendar/oauth/callback`;
+// Hardcode the exact redirect URI that's registered in Google Cloud Console
+const REDIRECT_URI = 'https://workspace.guilhermehoher.repl.co/api/calendar/oauth/callback';
 
 const oauth2Client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
@@ -138,12 +134,20 @@ export async function syncUserCalendar(userId: number) {
 }
 
 export function getAuthUrl() {
+  // Generate a random state
+  const state = Math.random().toString(36).substring(7);
+
+  // Store state in session for validation
+  if (global.session) {
+    global.session.oauthState = state;
+  }
+
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: ['https://www.googleapis.com/auth/calendar.readonly'],
     prompt: 'consent',
     include_granted_scopes: true,
-    state: Math.random().toString(36).substring(7)  // Add state parameter for security
+    state: state  // Add state parameter for security
   });
 }
 
