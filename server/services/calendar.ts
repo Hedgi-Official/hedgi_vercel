@@ -10,10 +10,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Get the Replit URL from environment
+const REPLIT_URL = process.env.REPL_SLUG 
+  ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+  : 'http://localhost:5000';
+
+const REDIRECT_URI = `${REPLIT_URL}/api/calendar/oauth/callback`;
+
 const oauth2Client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.BASE_URL || 'http://localhost:5000'}/api/calendar/oauth/callback`
+  REDIRECT_URI
 );
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
@@ -84,7 +91,7 @@ export async function syncUserCalendar(userId: number) {
 
   // Get events for the next 6 months
   const sixMonthsFromNow = addMonths(new Date(), 6);
-  
+
   const response = await calendar.events.list({
     calendarId: 'primary',
     timeMin: new Date().toISOString(),
@@ -140,7 +147,7 @@ export function getAuthUrl() {
 
 export async function handleOAuthCallback(code: string, userId: number) {
   const { tokens } = await oauth2Client.getToken(code);
-  
+
   if (!tokens.refresh_token) {
     throw new Error('No refresh token received');
   }
