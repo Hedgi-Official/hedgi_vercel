@@ -141,26 +141,33 @@ export function getAuthUrl() {
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: ['https://www.googleapis.com/auth/calendar.readonly'],
-    prompt: 'consent'
+    prompt: 'consent',
+    include_granted_scopes: true,
+    state: Math.random().toString(36).substring(7)  // Add state parameter for security
   });
 }
 
 export async function handleOAuthCallback(code: string, userId: number) {
-  const { tokens } = await oauth2Client.getToken(code);
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
 
-  if (!tokens.refresh_token) {
-    throw new Error('No refresh token received');
+    if (!tokens.refresh_token) {
+      throw new Error('No refresh token received');
+    }
+
+    // Store the refresh token
+    await db
+      .update(users)
+      .set({
+        googleCalendarEnabled: true,
+        googleRefreshToken: tokens.refresh_token
+      })
+      .where(eq(users.id, userId));
+
+    // Initial sync
+    await syncUserCalendar(userId);
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    throw new Error('Failed to complete Google Calendar authentication');
   }
-
-  // Store the refresh token
-  await db
-    .update(users)
-    .set({
-      googleCalendarEnabled: true,
-      googleRefreshToken: tokens.refresh_token
-    })
-    .where(eq(users.id, userId));
-
-  // Initial sync
-  await syncUserCalendar(userId);
 }
