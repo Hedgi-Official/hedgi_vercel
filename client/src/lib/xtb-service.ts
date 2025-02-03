@@ -175,34 +175,51 @@ export class XTBService {
 
   async getTickPrices(symbol: string): Promise<any> {
     if (!this.streamSessionId) {
+      console.error('[XTB] No streamSessionId available');
       throw new Error('Not connected to streaming server');
     }
 
     try {
       console.log('[XTB] Fetching tick prices for:', symbol);
 
+      // First verify the symbol exists
+      const allSymbols = await this.getAllSymbols();
+      const symbolExists = allSymbols.some(s => s.symbol === symbol);
+      
+      if (!symbolExists) {
+        console.error(`[XTB] Symbol ${symbol} not found in available symbols`);
+        throw new Error(`Symbol ${symbol} not available`);
+      }
+
       // Subscribe to tick prices
       const streamMessage = JSON.stringify({
         command: "getTickPrices",
         streamSessionId: this.streamSessionId,
         symbol: symbol,
-        minArrivalTime: 1, // Get ticks as frequently as possible
-        maxLevel: 2 // Get up to level 2 quotes
+        minArrivalTime: 1,
+        maxLevel: 2
       });
 
       if (this.streamWs && this.streamWs.readyState === WebSocket.OPEN) {
         console.log('[XTB] Subscribing to tick prices for:', symbol);
         this.streamWs.send(streamMessage);
       } else {
-        console.error('[XTB] Streaming WebSocket not ready');
+        console.error('[XTB] Streaming WebSocket not ready, state:', this.streamWs?.readyState);
         throw new Error('Streaming connection not available');
       }
 
       // Get initial price data
+      console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        timestamp: 0
+        timestamp: 0,
+        level: 0
       });
+
+      if (!response.status) {
+        console.error('[XTB] Error in tick prices response:', response.errorDescr);
+        throw new Error(response.errorDescr || 'Failed to get tick prices');
+      }
 
       console.log('[XTB] Tick prices response for', symbol, ':', response);
       return response;

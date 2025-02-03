@@ -56,7 +56,11 @@ export function useXTB() {
     queryKey: ['xtb-rates'],
     queryFn: async () => {
       console.log('[useXTB] Fetching exchange rates...');
-      // Add EURUSD to the list of symbols
+      if (!isConnected) {
+        console.error('[useXTB] Not connected to XTB');
+        throw new Error('Not connected to XTB');
+      }
+      
       const symbols = ['EURUSD'];
       const rates: ExchangeRate[] = [];
 
