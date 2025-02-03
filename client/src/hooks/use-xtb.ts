@@ -68,8 +68,6 @@ export function useXTB() {
         
         const symbols = ['EURUSD'];
         const rates: ExchangeRate[] = [];
-
-      try {
         // First get all available symbols
         console.log('[useXTB] Requesting all symbols...');
         const symbolsResponse = await xtbService.getAllSymbols();
