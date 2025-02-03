@@ -109,15 +109,19 @@ class MT5Service:
             self.clients.remove(websocket)
             logger.info(f"Client disconnected. Remaining clients: {len(self.clients)}")
 
-    async def start_server(self, host="0.0.0.0", port=6789):
+    async def start_server(self):
         try:
+            port = 6789  # Fixed port for WebSocket server
+            host = "0.0.0.0"
             logger.info(f"Starting WebSocket server on {host}:{port}")
+
             async def handler(websocket):
                 await self.register(websocket)
 
-            async with websockets.serve(handler, host, port):
-                logger.info(f"FBS WebSocket server started on ws://{host}:{port}")
-                await self.broadcast_rates()
+            server = await websockets.serve(handler, host, port)
+            logger.info(f"FBS WebSocket server started on ws://{host}:{port}")
+            await self.broadcast_rates()
+            await server.wait_closed()
         except Exception as e:
             logger.error(f"Error starting WebSocket server: {e}")
             raise
