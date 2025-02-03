@@ -55,7 +55,6 @@ export function useXTB() {
   const { data: exchangeRates, isLoading } = useQuery({
     queryKey: ['xtb-rates'],
     queryFn: async () => {
-      console.log('[useXTB] Fetching exchange rates...');
       if (!isConnected) {
         throw new Error('Not connected to XTB');
       }
@@ -64,14 +63,15 @@ export function useXTB() {
       console.log('[useXTB] Stream connection status:', streamStatus);
 
       const rates: ExchangeRate[] = [];
-      const symbol = 'EURUSD';
+      const symbol = 'USDBRL';
 
       try {
+        console.log('[useXTB] Requesting tick prices for:', symbol);
         const tickResponse = await xtbService.getTickPrices(symbol);
         console.log('[useXTB] Tick response:', tickResponse);
 
-        if (!tickResponse.status) {
-          throw new Error(tickResponse.errorDescr || 'Failed to get tick prices');
+        if (!tickResponse.status || !tickResponse.returnData) {
+          throw new Error(`Failed to get tick prices for ${symbol}`);
         }
 
         rates.push({

@@ -188,36 +188,29 @@ export class XTBService {
 
     try {
       console.log('[XTB] Fetching tick prices for:', symbol);
-      
+
       // Get initial price data
       console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
         timestamp: Math.floor(Date.now() / 1000) - 60,
-        level: 0,
-        minArrivalTime: 0,
-        maxLevel: 2
+        level: 0
       });
 
       if (!response.status) {
         throw new Error(response.errorDescr || 'Failed to get tick prices');
       }
 
-      // Subscribe to tick prices
-      const streamMessage = JSON.stringify({
-        command: "getTickPrices",
-        streamSessionId: this.streamSessionId,
-        symbol: symbol,
-        minArrivalTime: 1,
-        maxLevel: 2
-      });
+      // Subscribe to streaming updates
+      if (await this.checkStreamConnection()) {
+        const streamMessage = JSON.stringify({
+          command: "getTickPrices",
+          streamSessionId: this.streamSessionId,
+          symbol: symbol
+        });
 
-      if (this.streamWs && this.streamWs.readyState === WebSocket.OPEN) {
-        console.log('[XTB] Subscribing to tick prices for:', symbol);
-        this.streamWs.send(streamMessage);
-      } else {
-        console.error('[XTB] Streaming WebSocket not ready, state:', this.streamWs?.readyState);
-        throw new Error('Streaming connection not available');
+        console.log('[XTB] Subscribing to streaming updates for:', symbol);
+        this.streamWs!.send(streamMessage);
       }
 
       console.log('[XTB] Tick prices response for', symbol, ':', response);
