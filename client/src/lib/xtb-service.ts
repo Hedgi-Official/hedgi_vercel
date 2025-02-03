@@ -193,8 +193,10 @@ export class XTBService {
       console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        timestamp: Math.floor(Date.now() / 1000) - 60,
-        level: 0
+        timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
+        level: 0,
+        minArrivalTime: 0,
+        maxLevel: 2
       });
 
       if (!response.status) {
