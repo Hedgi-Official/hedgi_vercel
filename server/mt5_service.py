@@ -2,10 +2,10 @@ import asyncio
 import websockets
 import json
 import logging
-from datetime import datetime
 import os
-import time
-import random
+from datetime import datetime
+import requests
+from time import sleep
 
 # Configure logging
 logging.basicConfig(
@@ -19,42 +19,55 @@ logger = logging.getLogger(__name__)
 
 class MT5Service:
     def __init__(self):
-        self.connected = True  # Always connected in mock mode
+        self.connected = False
         self.symbol = "USDBRL"
         self.clients = set()
-        self.base_rate = 4.97  # Current USDBRL base rate
-        self.volatility = 0.002  # 0.2% volatility
-        self.spread = 0.002  # 0.2% spread
-        logger.info("MT5Service initialized")
+        self.api_url = "https://pricefeed.fbs.com/prices"
+        self.initialize_connection()
+
+    def initialize_connection(self):
+        try:
+            # Test connection by making a request
+            response = requests.get(f"{self.api_url}?pairs={self.symbol}")
+            if response.status_code == 200:
+                self.connected = True
+                logger.info("Successfully connected to FBS price feed")
+            else:
+                logger.error(f"Failed to connect to FBS: {response.status_code}")
+                self.connected = False
+        except Exception as e:
+            logger.error(f"Error connecting to FBS: {e}")
+            self.connected = False
 
     async def get_rate(self):
+        if not self.connected:
+            try:
+                self.initialize_connection()
+            except Exception as e:
+                logger.error(f"Failed to reconnect to FBS: {e}")
+                return None
+
         try:
-            # Generate realistic price movement
-            # Use Ornstein-Uhlenbeck process for mean-reverting behavior
-            theta = 0.1  # Mean reversion strength
-            target_rate = self.base_rate
-            current_time = time.time()
+            response = requests.get(f"{self.api_url}?pairs={self.symbol}")
+            if response.status_code != 200:
+                logger.error(f"Failed to get rates: {response.status_code}")
+                return None
 
-            # Add some randomness to the rate while maintaining mean reversion
-            random_factor = random.gauss(0, self.volatility)
-            rate_change = (theta * (target_rate - self.base_rate) + random_factor)
-
-            # Update the base rate with the new change
-            self.base_rate += rate_change
-
-            # Calculate bid and ask with realistic spread
-            bid_rate = self.base_rate * (1 - self.spread/2)
-            ask_rate = self.base_rate * (1 + self.spread/2)
+            data = response.json()
+            if not data or self.symbol not in data:
+                logger.error("Invalid response format")
+                return None
 
             rate_data = {
                 "symbol": self.symbol,
-                "bid": round(bid_rate, 4),  # 4 decimal places for FX
-                "ask": round(ask_rate, 4),
+                "bid": round(float(data[self.symbol]['bid']), 4),
+                "ask": round(float(data[self.symbol]['ask']), 4),
                 "time": datetime.now().isoformat(),
             }
             return rate_data
+
         except Exception as e:
-            logger.error(f"Error generating rate: {e}")
+            logger.error(f"Error getting rates: {e}")
             return None
 
     async def broadcast_rates(self):
@@ -96,7 +109,7 @@ class MT5Service:
                 await self.register(websocket)
 
             async with websockets.serve(handler, host, port):
-                logger.info(f"Mock MT5 WebSocket server started on ws://{host}:{port}")
+                logger.info(f"FBS WebSocket server started on ws://{host}:{port}")
                 await self.broadcast_rates()
         except Exception as e:
             logger.error(f"Error starting WebSocket server: {e}")

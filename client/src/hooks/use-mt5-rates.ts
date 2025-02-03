@@ -17,9 +17,12 @@ export function useMT5Rates() {
   const connect = useCallback(() => {
     try {
       setStatus('connecting');
-      // Use window.location to create WebSocket URL with the correct path
+
+      // Construct WebSocket URL based on current location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws`;
+
       const ws = new WebSocket(wsUrl);
       let reconnectTimeout: NodeJS.Timeout;
 
@@ -27,7 +30,7 @@ export function useMT5Rates() {
         setStatus('connected');
         setError(null);
         toast({
-          title: "Connected to MT5",
+          title: "Connected to FBS",
           description: "Live rates will now be displayed",
         });
       };
@@ -44,12 +47,12 @@ export function useMT5Rates() {
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        setError('Connection to MT5 service failed');
+        setError('Connection to FBS service failed');
         setStatus('disconnected');
         toast({
           variant: "destructive",
           title: "Connection Error",
-          description: "Failed to connect to MT5 service. Retrying...",
+          description: "Failed to connect to FBS service. Retrying...",
         });
       };
 
@@ -59,7 +62,7 @@ export function useMT5Rates() {
         reconnectTimeout = setTimeout(() => {
           toast({
             title: "Reconnecting",
-            description: "Attempting to reconnect to MT5 service...",
+            description: "Attempting to reconnect to FBS service...",
           });
           connect();
         }, 5000);
@@ -73,12 +76,12 @@ export function useMT5Rates() {
       };
     } catch (e) {
       console.error('WebSocket connection error:', e);
-      setError('Failed to connect to MT5 service');
+      setError('Failed to connect to FBS service');
       setStatus('disconnected');
       toast({
         variant: "destructive",
         title: "Connection Error",
-        description: "Failed to establish connection with MT5 service",
+        description: "Failed to establish connection with FBS service",
       });
     }
   }, [toast]);
