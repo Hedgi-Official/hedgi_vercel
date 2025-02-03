@@ -2,10 +2,7 @@ import type { XTBCredentials, XTBResponse, SymbolRecord, CandleStreamResponse } 
 
 export class XTBService {
   private ws: WebSocket | null = null;
-  private streamWs: WebSocket | null = null;
   private isConnected = false;
-  private streamSessionId: string | null = null;
-  private streamListeners: Map<string, (data: any) => void> = new Map();
 
   constructor(
     private readonly serverUrl = 'wss://ws.xtb.com/demo',
@@ -60,52 +57,33 @@ export class XTBService {
     }
 
     return new Promise((resolve, reject) => {
-      console.log('[XTB] Connecting to main socket...');
       this.ws = new WebSocket(this.serverUrl);
-
-      const connectionTimeout = setTimeout(() => {
-        reject(new Error('Connection timeout after 10s'));
-        this.ws?.close();
-      }, 10000);
 
       this.ws.addEventListener('open', async () => {
         try {
-          console.log('[XTB] Main socket connected, attempting login...');
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
             password: credentials.password,
-            appName: "Hedgi"
+            appName: "WebSocket Example"
           });
 
-          console.log('[XTB] Login response:', response);
-          clearTimeout(connectionTimeout);
-
-          if (response.streamSessionId) {
-            this.streamSessionId = response.streamSessionId;
+          if (response.status) {
             this.isConnected = true;
-            await this.setupStreamingConnection();
             resolve();
           } else {
-            reject(new Error('No streamSessionId received'));
+            reject(new Error(response.errorDescr || 'Login failed'));
           }
         } catch (error) {
-          console.error('[XTB] Login error:', error);
-          clearTimeout(connectionTimeout);
           reject(error);
         }
       });
 
-      this.ws.addEventListener('error', (error) => {
-        console.error('[XTB] Main socket error:', error);
-        clearTimeout(connectionTimeout);
+      this.ws.addEventListener('error', () => {
         reject(new Error('WebSocket connection failed'));
       });
 
       this.ws.addEventListener('close', () => {
-        console.log('[XTB] Main socket closed');
-        clearTimeout(connectionTimeout);
         this.isConnected = false;
-        this.streamSessionId = null;
       });
     });
   }
@@ -182,43 +160,20 @@ export class XTBService {
   }
 
   async getTickPrices(symbol: string): Promise<XTBResponse> {
-    if (!this.streamSessionId) {
-      throw new Error('Not connected to streaming server');
-    }
-
     try {
-      console.log('[XTB] Fetching tick prices for:', symbol);
-
-      // Get initial price data
-      console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
-        level: 0,
-        minArrivalTime: 0,
-        maxLevel: 2
+        timestamp: Math.floor(Date.now() / 1000) - 60,
+        level: 0
       });
 
       if (!response.status) {
         throw new Error(response.errorDescr || 'Failed to get tick prices');
       }
 
-      // Subscribe to streaming updates
-      if (await this.checkStreamConnection()) {
-        const streamMessage = JSON.stringify({
-          command: "getTickPrices",
-          streamSessionId: this.streamSessionId,
-          symbol: symbol
-        });
-
-        console.log('[XTB] Subscribing to streaming updates for:', symbol);
-        this.streamWs!.send(streamMessage);
-      }
-
-      console.log('[XTB] Tick prices response for', symbol, ':', response);
       return response;
     } catch (error) {
-      console.error('[XTB] Error fetching tick prices for', symbol, ':', error);
+      console.error('[XTB] Error fetching tick prices:', error);
       throw error;
     }
   }

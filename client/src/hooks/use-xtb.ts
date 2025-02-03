@@ -59,41 +59,25 @@ export function useXTB() {
         throw new Error('Not connected to XTB');
       }
 
-      const streamStatus = await xtbService.checkStreamConnection();
-      console.log('[useXTB] Stream connection status:', streamStatus);
-
+      const symbols = ['USDBRL', 'EURUSD', 'GBPUSD'];
       const rates: ExchangeRate[] = [];
-      const symbol = 'USDBRL';
 
-      try {
-        console.log('[useXTB] Requesting tick prices for:', symbol);
-        const tickResponse = await xtbService.getTickPrices(symbol);
-        console.log('[useXTB] Tick response:', tickResponse);
-
-        if (!tickResponse.status || !tickResponse.returnData) {
-          throw new Error(`Failed to get tick prices for ${symbol}`);
+      for (const symbol of symbols) {
+        const response = await xtbService.getTickPrices(symbol);
+        if (response.status && response.returnData) {
+          rates.push({
+            symbol,
+            bid: response.returnData.bid,
+            ask: response.returnData.ask,
+            timestamp: response.returnData.timestamp,
+          });
         }
-
-        rates.push({
-          symbol,
-          bid: tickResponse.returnData.bid,
-          ask: tickResponse.returnData.ask,
-          timestamp: tickResponse.returnData.timestamp,
-        });
-      } catch (error) {
-        console.error('[useXTB] Error in exchange rates query:', error);
-        throw error;
       }
 
-      if (rates.length === 0) {
-        throw new Error('No exchange rates available');
-      }
-
-      console.log('[useXTB] Final rates:', rates);
       return rates;
     },
     enabled: isConnected,
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 1000,
     retry: 3,
   });
 
