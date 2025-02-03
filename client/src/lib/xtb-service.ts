@@ -144,13 +144,30 @@ export class XTBService {
   }
 
   async getTickPrices(symbol: string): Promise<any> {
+    if (!this.streamSessionId) {
+      throw new Error('Not connected to streaming server');
+    }
+
     try {
       console.log('Fetching tick prices for:', symbol);
+      // Start getting candles for the symbol
+      const streamMessage = JSON.stringify({
+        command: "getCandles",
+        streamSessionId: this.streamSessionId,
+        symbol: symbol
+      });
+
+      if (this.streamWs) {
+        this.streamWs.send(streamMessage);
+      }
+
+      // Also get current price data
       const response = await this.sendCommand('getTickPrices', {
         symbol,
         level: 0,
         timestamp: 0
       });
+
       console.log('Tick prices response:', response);
       return response;
     } catch (error) {
