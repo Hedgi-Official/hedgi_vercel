@@ -25,6 +25,10 @@ export function registerRoutes(app: Express): Server {
   // Start MT5 service
   const mt5Service = spawn("python3", [path.join(__dirname, "mt5_service.py")], {
     stdio: "inherit",
+    env: {
+      ...process.env,
+      PORT: process.env.PORT || '5000'  // Use the same port as Express
+    }
   });
 
   mt5Service.on("error", (err) => {
@@ -102,14 +106,18 @@ export function registerRoutes(app: Express): Server {
   // Handle WebSocket upgrade requests
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname;
+    const protocol = request.headers['sec-websocket-protocol'];
 
+    // Handle Vite HMR connections
+    if (protocol === 'vite-hmr') {
+      // Let Vite handle its own HMR connections
+      socket.destroy();
+      return;
+    }
+
+    // Handle MT5 rates WebSocket connections
     if (pathname === '/ws') {
-      if (request.headers['sec-websocket-protocol'] === 'vite-hmr') {
-        socket.destroy();
-        return;
-      }
-
-      wss.handleUpgrade(request, socket, head, function done(ws) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
     } else {
@@ -117,14 +125,17 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Forward WebSocket messages to/from MT5 service
+  // Handle WebSocket connections
   wss.on('connection', (ws) => {
     console.log('Client connected to WebSocket');
 
     let mt5Ws: WebSocket | null = null;
 
     try {
-      mt5Ws = new WebSocket(`ws://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
+      // Connect to MT5 service using the Express server's port
+      const mt5Port = process.env.PORT || '5000';
+      const mt5Url = `ws://localhost:${mt5Port}`;
+      mt5Ws = new WebSocket(mt5Url);
 
       mt5Ws.on('open', () => {
         console.log('Connected to MT5 service');

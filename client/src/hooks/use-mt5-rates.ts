@@ -18,11 +18,9 @@ export function useMT5Rates() {
     try {
       setStatus('connecting');
 
-      // Use the current window location to determine the WebSocket URL
-      // Use window.location to determine the protocol and host
+      // Use the same host and port as the Express server
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.hostname;
-      const wsUrl = `${wsProtocol}//${wsHost}`;
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
 
       console.log('Connecting to WebSocket:', wsUrl); // Debug log
 
@@ -60,8 +58,8 @@ export function useMT5Rates() {
         });
       };
 
-      ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason); // Debug log
+      ws.onclose = () => {
+        console.log('WebSocket closed'); // Debug log
         setStatus('disconnected');
         setTimeout(() => {
           toast({
