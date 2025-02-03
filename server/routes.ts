@@ -8,12 +8,19 @@ import { spawn } from "child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from "path";
+import { WebSocketServer } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Create HTTP server
+  const httpServer = createServer(app);
+
+  // Create WebSocket server
+  const wss = new WebSocketServer({ noServer: true });
 
   // Start MT5 service
   const mt5Service = spawn("python3", [path.join(__dirname, "mt5_service.py")], {
@@ -28,6 +35,7 @@ export function registerRoutes(app: Express): Server {
     mt5Service.kill();
   });
 
+  // API Routes
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -91,6 +99,47 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  const httpServer = createServer(app);
+  // Handle WebSocket upgrade requests
+  httpServer.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname;
+
+    if (pathname === '/ws') {
+      if (request.headers['sec-websocket-protocol'] === 'vite-hmr') {
+        socket.destroy();
+        return;
+      }
+
+      wss.handleUpgrade(request, socket, head, function done(ws) {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
+  // Forward WebSocket messages to/from MT5 service
+  wss.on('connection', (ws) => {
+    console.log('Client connected to WebSocket');
+
+    const mt5Ws = new WebSocket('ws://localhost:6789');
+
+    mt5Ws.on('message', (data) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data.toString());
+      }
+    });
+
+    mt5Ws.on('error', (error) => {
+      console.error('MT5 WebSocket error:', error);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+
+    ws.on('close', () => {
+      mt5Ws.close();
+    });
+  });
+
   return httpServer;
 }

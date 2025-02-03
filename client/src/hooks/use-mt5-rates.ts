@@ -17,7 +17,10 @@ export function useMT5Rates() {
   const connect = useCallback(() => {
     try {
       setStatus('connecting');
-      const ws = new WebSocket('ws://localhost:6789');
+      // Use window.location to create WebSocket URL with the correct path
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const ws = new WebSocket(wsUrl);
       let reconnectTimeout: NodeJS.Timeout;
 
       ws.onopen = () => {
@@ -39,7 +42,8 @@ export function useMT5Rates() {
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
         setError('Connection to MT5 service failed');
         setStatus('disconnected');
         toast({
@@ -68,6 +72,7 @@ export function useMT5Rates() {
         }
       };
     } catch (e) {
+      console.error('WebSocket connection error:', e);
       setError('Failed to connect to MT5 service');
       setStatus('disconnected');
       toast({
