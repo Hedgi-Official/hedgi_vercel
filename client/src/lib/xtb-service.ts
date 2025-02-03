@@ -17,7 +17,7 @@ export class XTBService {
   private isConnected = false;
   private streamSessionId: string | null = null;
 
-  constructor(private readonly serverUrl = 'wss://ws.xtb.com/real') {}
+  constructor(private readonly serverUrl = 'wss://ws.xtb.com/demo') {}
 
   private async sendCommand(cmd: string, params: any = {}): Promise<XTBResponse> {
     if (!this.ws) {
@@ -63,8 +63,8 @@ export class XTBService {
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
             password: credentials.password,
-            appId: 'Hedgi_1.0',
-            type: 'javascript'
+            appId: "Hedgi_1.0",
+            appName: "Hedgi"
           });
 
           if (response.streamSessionId) {

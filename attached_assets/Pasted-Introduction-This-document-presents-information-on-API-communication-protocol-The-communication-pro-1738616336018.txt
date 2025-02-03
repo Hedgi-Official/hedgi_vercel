@@ -1,0 +1,173 @@
+Introduction
+This document presents information on API communication protocol. The communication protocol of the API uses JSON format.
+
+JSON format used by the server doesn't allow extensions (e.g. comments, other flags). JSON format standardization document is available under the following link: http://tools.ietf.org/html/rfc4627.
+
+The connection is performed by clean socket connection. For real trading SSL connection will be used.
+
+Definitions
+The following definitions will be used in this specification document:
+
+simple type: type, which value is itself: int, int64, string, double, bool;
+j-value (JSON value): any simple type, j-object or j-array;
+j-object (JSON object): a record containing any number of named j-values (pair );
+j-array (JSON array): an array where each element is j-value;
+j-subvalue: j-value which is a component of a j-object.
+A j-object can contain zero elements. A j-array can have zero length. The name of j-value can be an empty string.
+
+Encoding of strings is set to UTF-8. In this format the server sends and receives data.
+
+Definition of unix-time:
+
+Unix time, or POSIX time, is a system for describing points in time, defined as the number of milliseconds elapsed since midnight Coordinated Universal Time (UTC) of January 1, 1970.
+General data format
+Each packet consists of exactly one main, unnamed j-value. The data stream consists of consecutive j–values, with no punctuation.
+
+The main j-value is a j-object containing exactly two j-subvalues which are j-objects. The first j-subobject is named header and consists of at least a field type as a simple type string. This is a packet type. The second j-subobject of the main packet j-object is named data and its content is specific to a given packet type. The specifications for different types of packages are described in the next chapter.
+
+A sample of properly defined packet:
+
+{
+	"command" : "login",
+	"arguments" : {
+		"userId" : "1000",
+		"password": "PASSWORD"
+	}
+}
+Every single command sent to the API is allowed to contain an optional field called customTag. The API guarantees to return the very same customTag in the command’s response. For example, the following command:
+
+{
+	"command" : "login",
+	"arguments" : {
+		"userId" : "1000",
+		"password": "PASSWORD"
+	},
+	"customTag": "my_login_command_id"
+}
+returns (in case of a successful login):
+
+{
+	"status": true,
+	"customTag": "my_login_command_id"
+}
+Communication with the API
+XTB Clients:
+Host:
+
+xapi.xtb.com
+Here are the details of DEMO and REAL servers hosted on each of the addresses above:
+
+DEMO: main port: 5124, streaming port: 5125,
+REAL: main port: 5112, streaming port: 5113.
+Furthermore, WebSockets can be used to connect to the API using the following addresses:
+
+wss://ws.xtb.com/demo
+wss://ws.xtb.com/demoStream
+wss://ws.xtb.com/real
+wss://ws.xtb.com/realStream
+All servers use SSL connection.
+
+Communication is established as long as both server and client have opened and connected sockets.
+
+For convenience server guarantees that every separate reply to client command returned by server will be separated by two new line characters ("\n").
+
+Connection validation
+In order to provide best service for all users API set rules on connection and data send process. If any of the following rules is breached, then connection is closed immediately without server notification.
+
+List of rules:
+
+At most 50 simultaneous connections from the same client address are allowed (an attempt to obtain the 51st connection returns the error EX008). If you need this rule can be lenified please contact the XTB Support Team.
+Every new connection that fails to deliver data within one second from when it is established may be forced to close with no notification.
+Each command invocation should not contain more than 1kB of data.
+User should send requests in 200 ms intervals. This rule can be broken, but if it happens 6 times in a row the connection is dropped.
+Each command should be a proper JSON object.
+Exception:
+
+If the client sends a request that is a valid JSON object, but does not conform to the published API (incorrect command, missing fields, etc.), the response is sent back with the error description but the connection is not closed.
+
+This rule prevents incorrect messages from reaching further down the processing chain and allows clients to analyze and understand the source of problem.
+
+Default login credentials
+Default login credentials can be obtained at: http://developers.xstore.pro/panel/.
+
+Input data format
+The input data format is a JSON object that consists of service name and command name. Some commands also require an object of command's arguments.
+
+If optional prettyPrint field is set to true, an output JSON is printed in human-readable format. prettyPrint field can be omitted.
+
+{
+	"command": "commandName",
+	"arguments": {
+		"arg1Name": 10,
+		"arg2Name": "Some text",
+		...
+	},
+	"prettyPrint": true
+}
+Output data format
+The output data format is a JSON object that consists of status and returnData fields if command succeeded, or status, errorCode and errorDescr fields if an error occurred.
+
+{
+	"status": true,
+	"returnData": JSON value
+}
+or, in case of an error:
+
+{
+	"status": false,
+	"errorCode": "E123",
+	"errorDescr": "Error description"
+}
+Time format
+Time is number of milliseconds from 01.01.1970, 00:00 GMT.
+
+Floating number format
+In all Floating numbers '.' (period) is used as a decimal separator.
+
+Available commands
+Request-Reply commands are performed on main connection socket. The reply is sent by main connection socket.
+
+Login
+In order to perform any action client application have to perform login process. No functionality is available before proper login process.
+
+After initial login, a new session is created and all commands are executed for a logged user until he/she logs out or drops the connection.
+
+Request:
+Parameters:
+
+Name	Type	Desc
+userId	String	userId
+password	String	password
+appId	String	(optional, deprecated)
+appName	String	(optional) application name
+Example:
+
+{
+	"command": "login",
+	"arguments": {
+		"userId": "1000",
+		"password": "PASSWORD",
+		"appId": "test",
+		"appName": "test"
+	}
+}
+After successful login the system responds with the status message that can contain the String representing streamSessionId field:
+
+
+{
+	"status": true,
+	"streamSessionId": "8469308861804289383"
+}
+
+The streamSessionId field of the string type, if present, is a token that can be used to establish a streaming subscription on a separate network connection. streamSessionId is used in streaming subscription commands.
+
+streamSessionId is unique for the given main session and will change between login sessions.
+
+Logout
+Format of input:
+
+{
+	"command": "logout"
+}
+No returnData field in output. Only status message is sent.
+
