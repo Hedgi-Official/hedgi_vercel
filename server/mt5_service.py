@@ -22,19 +22,34 @@ class MT5Service:
         self.connected = True  # Always connected in mock mode
         self.symbol = "USDBRL"
         self.clients = set()
-        self.base_rate = 4.95  # Base rate for USDBRL
+        self.base_rate = 4.97  # Current USDBRL base rate
+        self.volatility = 0.002  # 0.2% volatility
+        self.spread = 0.002  # 0.2% spread
         logger.info("MT5Service initialized")
 
     async def get_rate(self):
         try:
-            # Simulate small random fluctuations around the base rate
-            variation = (random.random() - 0.5) * 0.02  # ±1% variation
-            current_rate = self.base_rate + (self.base_rate * variation)
+            # Generate realistic price movement
+            # Use Ornstein-Uhlenbeck process for mean-reverting behavior
+            theta = 0.1  # Mean reversion strength
+            target_rate = self.base_rate
+            current_time = time.time()
+
+            # Add some randomness to the rate while maintaining mean reversion
+            random_factor = random.gauss(0, self.volatility)
+            rate_change = (theta * (target_rate - self.base_rate) + random_factor)
+
+            # Update the base rate with the new change
+            self.base_rate += rate_change
+
+            # Calculate bid and ask with realistic spread
+            bid_rate = self.base_rate * (1 - self.spread/2)
+            ask_rate = self.base_rate * (1 + self.spread/2)
 
             rate_data = {
                 "symbol": self.symbol,
-                "bid": float(current_rate - 0.001),  # Simulate bid-ask spread
-                "ask": float(current_rate + 0.001),
+                "bid": round(bid_rate, 4),  # 4 decimal places for FX
+                "ask": round(ask_rate, 4),
                 "time": datetime.now().isoformat(),
             }
             return rate_data
