@@ -21,8 +21,8 @@ export function useXTB() {
       try {
         console.log('[useXTB] Connecting to XTB...');
         await xtbService.connect({
-          userId: process.env.XTB_USER_ID || '17474971',
-          password: process.env.XTB_PASSWORD || 'xoh74681',
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
         });
         console.log('[useXTB] Connected to XTB successfully');
         setIsConnected(true);
