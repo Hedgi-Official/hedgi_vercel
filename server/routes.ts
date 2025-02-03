@@ -4,9 +4,29 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
+import { spawn } from "child_process";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Start MT5 service
+  const mt5Service = spawn("python3", [path.join(__dirname, "mt5_service.py")], {
+    stdio: "inherit",
+  });
+
+  mt5Service.on("error", (err) => {
+    console.error("Failed to start MT5 service:", err);
+  });
+
+  process.on("exit", () => {
+    mt5Service.kill();
+  });
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
