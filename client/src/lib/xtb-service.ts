@@ -63,7 +63,8 @@ export class XTBService {
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
             password: credentials.password,
-            appName: 'Hedgi',
+            appId: 'Hedgi_1.0',
+            type: 'javascript'
           });
 
           if (response.streamSessionId) {
