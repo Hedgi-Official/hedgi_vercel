@@ -1,0 +1,170 @@
+xStoreDevelopers
+HOME
+ 
+API
+ 
+CREATE TEST ACCOUNT
+You are here: HOME / API / TUTORIALS
+DOCUMENTATION
+WRAPPERS
+TUTORIALS
+CHANGELOG
+NEWBIE GLOSSARY
+Creating simple Web application in JavaScript
+This tutorial will guide you through the process of creating basic web application in JavaScript on top of xAPI platform using Websockets.
+
+Commands used in this tutorial:
+
+login,
+getAllSymbols.
+Before you start...
+
+you should have at least basic understanding on WebSocket technology. If this is the first time you hear about Websockets we strongly encourage you to read this introduction: http://www.html5rocks.com/en/tutorials/websockets/basics/. This should give you better understanding on the subject;
+in this tutorial we will use jQuery framework, which can be downloaded from: http://jquery.com/, and Bootstrap from Twitter to beautify our app: http://getbootstrap.com. You can find tons of tutorials about that frameworks on the web.
+Step 1. Create basic layout.
+Create new HTML file. You may name it as you want, in our case it will be: index.html.
+Write initial layout. It is just a standard HTML5 webpage with Bootstrap imported. It is downloaded from Bootstrap webpage each time you load the page, so the Internet connection is required to view the page correctly. You may download the bootstrap.css file for yourself and include it from your local disk if you want.
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>First xAPI WebApp</title>
+      <link rel="stylesheet" href="http://getbootstrap.com/dist/css/bootstrap.css" />
+  </head>
+    
+  <body>
+  
+    <!-- Page body goes here -->
+  </body>
+</html>
+Step 2. Add controls to the layout
+Our page will consist of two text boxes: one for user id and one for password...
+<div class="row">
+  <div class="col-md-4 col-md-offset-4">
+    <h1>First xAPI WebApp</h1>
+    <form role="form">
+      <div class="form-group">
+        <label for="userId">User id</label>
+        <input type="text" class="form-control" id="userId" placeholder="User ID">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-control" id="password" placeholder="Password">
+      </div>
+      <div type="submit" id="login-btn" class="btn btn-primary">Log in</div>
+    </form>
+  </div>
+</div>
+... and a table to display list of symbols
+<div class="row">
+  <div class="col-md-4 col-md-offset-4">
+    <h3>Available instruments</h3>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Ask</th>
+          <th>Bid</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody id="instruments">
+        <!-- Instruments go here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+Step 3. Add some logic
+First, include jQuery framework by inserting:
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" type="text/javascript"></script>
+Now we are ready to establish connection with xAPI. We will connect to demo websocket proxy at: wss://ws.xapi.pro/demo. The following code do the trick:
+<script>
+  // Our websocket
+  var ws;
+  function connect() {
+    var url = "wss://ws.xapi.pro/demo";
+    console.log('Connecting to: ' + url);
+    ws = new WebSocket(url);
+    ws.onopen = function() {
+      console.log('Connected');
+      login();
+    };
+    ws.onmessage = function(evt) {
+      console.log("Received: " + evt.data);
+      
+      try {
+        var response = JSON.parse(evt.data);
+        if(response.status == true) {
+          if(response.streamSessionId != undefined) {
+            // We received login response
+            getAllSymbols();
+          } else {
+            // We received getAllSymbols response
+            parseGetAllSymbols(response.returnData);
+          }
+        } else {
+          alert('Error: ' + response.errorDescr);
+        }
+      } catch (Exception) {
+        alert('Fatal error while receiving data! :(');
+      }
+    }
+    ws.onclose = function() {
+      console.log('Connection closed');
+    };
+  };
+  function disconnect() {
+    ws.close();
+  }
+  function send(jsonMessage) {
+    try {
+      var msg = JSON.stringify(jsonMessage);
+      ws.send(msg);
+      console.log('Sent ' + msg.length + ' bytes of data: ' + msg);
+    } catch(Exception) {
+      console.error('Error while sending data: ' + Exception.message);
+    }
+  }
+  function login() {
+    var msg = {};
+    msg.command = "login";
+    var arguments = {};
+    arguments.userId = parseInt($('#userId').val());
+    arguments.password = $('#password').val();
+    msg.arguments = arguments;
+    console.log('Trying to log in as: ' + msg.arguments.userId);
+    send(msg);
+  }
+  function getAllSymbols() {
+    var msg = {};
+    msg.command = "getAllSymbols";
+    console.log('Getting list of symbols');
+    send(msg);
+  }
+  function parseGetAllSymbols(returnData) {
+    // For all symbols 
+    for (var i = returnData.length - 1; i >= 0; i--) {
+      var symbol = returnData[i].symbol;
+      var ask = returnData[i].ask;
+      var bid = returnData[i].bid;
+      var descr = returnData[i].description;
+      var row = '<tr><td>' + symbol + '</td><td>' + ask + '</td><td>' + bid + '</td><td>' + descr + '</td></tr>';
+      // Append to instruments table
+      $('#instruments').append($(row));
+    };
+  }
+  $(document).ready(function() {
+    $('#login-btn').on('click', function() {
+      connect();
+    });
+  });
+</script>
+Summary
+As a result you should get a website that looks simillar to the one on the following screenshot.
+
+Screen1
+Full code from this tutorial is available here: code.
+
+HOME
+ 
+API
+Copyright © 2022 xStore Developers
