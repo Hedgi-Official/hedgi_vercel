@@ -82,7 +82,8 @@ export class XTBService {
           console.log('WebSocket connected, attempting login...');
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
-            password: credentials.password
+            password: credentials.password,
+            appName: "Hedgi" // Added as per documentation
           });
 
           console.log('Login response:', response);
