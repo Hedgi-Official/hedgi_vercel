@@ -57,82 +57,29 @@ export function useXTB() {
     queryFn: async () => {
       console.log('[useXTB] Fetching exchange rates...');
       if (!isConnected) {
-        console.error('[useXTB] Not connected to XTB');
         throw new Error('Not connected to XTB');
       }
 
+      const streamStatus = await xtbService.checkStreamConnection();
+      console.log('[useXTB] Stream connection status:', streamStatus);
+
+      const rates: ExchangeRate[] = [];
+      const symbol = 'EURUSD';
+
       try {
-        if (!isConnected) {
-          console.error('[useXTB] Not connected to XTB');
-          throw new Error('Not connected to XTB');
+        const tickResponse = await xtbService.getTickPrices(symbol);
+        console.log('[useXTB] Tick response:', tickResponse);
+
+        if (!tickResponse.status) {
+          throw new Error(tickResponse.errorDescr || 'Failed to get tick prices');
         }
 
-        // First verify stream connection
-        const streamStatus = await xtbService.checkStreamConnection();
-        console.log('[useXTB] Stream connection status:', streamStatus);
-        
-        const symbols = ['EURUSD'];
-        const rates: ExchangeRate[] = [];
-
-        // Get all symbols and filter for our target
-        const symbolsResponse = await xtbService.getAllSymbols();
-        console.log('[useXTB] Received symbols:', symbolsResponse.length);
-        
-        const targetSymbol = symbolsResponse.find(s => s.symbol === 'EURUSD');
-        if (!targetSymbol) {
-          throw new Error('EURUSD symbol not available');
-        }
-        
-        // Get tick prices for EURUSD
-        const tickResponse = await xtbService.getTickPrices('EURUSD');
-        if (tickResponse.status && tickResponse.returnData) {
-          rates.push({
-            symbol: 'EURUSD',
-            bid: tickResponse.returnData.bid,
-            ask: tickResponse.returnData.ask,
-            timestamp: tickResponse.returnData.timestamp,
-          });
-        }
-
-        // Only fetch prices for symbols that exist
-        for (const symbol of symbols) {
-          if (!availableSymbols.has(symbol)) {
-            console.warn(`[useXTB] Symbol ${symbol} not available, checking for alternative formats...`);
-            // Try to find a similar symbol (e.g., if USDBRL doesn't exist, maybe USD/BRL does)
-            const alternativeSymbol = Array.from(availableSymbols.keys()).find(
-              s => s.replace(/[^A-Z]/g, '') === symbol
-            );
-            if (alternativeSymbol) {
-              console.log(`[useXTB] Found alternative symbol format: ${alternativeSymbol}`);
-              continue;
-            }
-            continue;
-          }
-
-          try {
-            console.log(`[useXTB] Fetching rates for ${symbol}...`);
-            const response = await xtbService.getTickPrices(symbol);
-            console.log(`[useXTB] Received response for ${symbol}:`, response);
-
-            if (response.status && response.returnData) {
-              rates.push({
-                symbol,
-                bid: response.returnData.bid,
-                ask: response.returnData.ask,
-                timestamp: response.returnData.timestamp,
-              });
-
-              // Set up streaming updates for this symbol
-              xtbService.onSymbolUpdate(symbol, (candleData) => {
-                console.log(`[useXTB] Received streaming update for ${symbol}:`, candleData);
-              });
-            } else {
-              console.error(`[useXTB] Invalid response for ${symbol}:`, response);
-            }
-          } catch (error) {
-            console.error(`[useXTB] Error fetching rates for ${symbol}:`, error);
-          }
-        }
+        rates.push({
+          symbol,
+          bid: tickResponse.returnData.bid,
+          ask: tickResponse.returnData.ask,
+          timestamp: tickResponse.returnData.timestamp,
+        });
       } catch (error) {
         console.error('[useXTB] Error in exchange rates query:', error);
         throw error;

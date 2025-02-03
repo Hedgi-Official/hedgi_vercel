@@ -181,22 +181,23 @@ export class XTBService {
     }
   }
 
-  async getTickPrices(symbol: string): Promise<any> {
+  async getTickPrices(symbol: string): Promise<XTBResponse> {
     if (!this.streamSessionId) {
-      console.error('[XTB] No streamSessionId available');
       throw new Error('Not connected to streaming server');
     }
 
     try {
       console.log('[XTB] Fetching tick prices for:', symbol);
-
-      // First verify the symbol exists
-      const allSymbols = await this.getAllSymbols();
-      const symbolExists = allSymbols.some(s => s.symbol === symbol);
       
-      if (!symbolExists) {
-        console.error(`[XTB] Symbol ${symbol} not found in available symbols`);
-        throw new Error(`Symbol ${symbol} not available`);
+      // Get initial price data
+      const response = await this.sendCommand('getTickPrices', {
+        symbol,
+        timestamp: 0,
+        level: 0
+      });
+
+      if (!response.status) {
+        throw new Error(response.errorDescr || 'Failed to get tick prices');
       }
 
       // Subscribe to tick prices
