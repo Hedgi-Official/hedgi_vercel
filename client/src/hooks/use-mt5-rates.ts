@@ -19,14 +19,16 @@ export function useMT5Rates() {
       setStatus('connecting');
 
       // Construct WebSocket URL based on current location
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.host;
+      const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+
+      console.log('Connecting to WebSocket:', wsUrl); // Debug log
 
       const ws = new WebSocket(wsUrl);
-      let reconnectTimeout: NodeJS.Timeout;
 
       ws.onopen = () => {
+        console.log('WebSocket connected'); // Debug log
         setStatus('connected');
         setError(null);
         toast({
@@ -37,6 +39,7 @@ export function useMT5Rates() {
 
       ws.onmessage = (event) => {
         try {
+          console.log('Received message:', event.data); // Debug log
           const data = JSON.parse(event.data);
           setRate(data);
         } catch (e) {
@@ -45,8 +48,8 @@ export function useMT5Rates() {
         }
       };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.onerror = (event) => {
+        console.error('WebSocket error:', event);
         setError('Connection to FBS service failed');
         setStatus('disconnected');
         toast({
@@ -56,10 +59,10 @@ export function useMT5Rates() {
         });
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason); // Debug log
         setStatus('disconnected');
-        // Try to reconnect after 5 seconds
-        reconnectTimeout = setTimeout(() => {
+        setTimeout(() => {
           toast({
             title: "Reconnecting",
             description: "Attempting to reconnect to FBS service...",
@@ -69,7 +72,6 @@ export function useMT5Rates() {
       };
 
       return () => {
-        clearTimeout(reconnectTimeout);
         if (ws.readyState === WebSocket.OPEN) {
           ws.close();
         }

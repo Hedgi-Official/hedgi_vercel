@@ -29,6 +29,9 @@ class MT5Service:
         try:
             # Test connection by making a request
             response = requests.get(f"{self.api_url}?pairs={self.symbol}")
+            logger.info(f"FBS API response status: {response.status_code}")
+            logger.info(f"FBS API response: {response.text}")
+
             if response.status_code == 200:
                 self.connected = True
                 logger.info("Successfully connected to FBS price feed")
@@ -49,13 +52,15 @@ class MT5Service:
 
         try:
             response = requests.get(f"{self.api_url}?pairs={self.symbol}")
+            logger.debug(f"Rate response: {response.status_code} - {response.text}")
+
             if response.status_code != 200:
                 logger.error(f"Failed to get rates: {response.status_code}")
                 return None
 
             data = response.json()
             if not data or self.symbol not in data:
-                logger.error("Invalid response format")
+                logger.error(f"Invalid response format: {data}")
                 return None
 
             rate_data = {
@@ -64,6 +69,7 @@ class MT5Service:
                 "ask": round(float(data[self.symbol]['ask']), 4),
                 "time": datetime.now().isoformat(),
             }
+            logger.debug(f"Processed rate data: {rate_data}")
             return rate_data
 
         except Exception as e:
@@ -105,6 +111,7 @@ class MT5Service:
 
     async def start_server(self, host="0.0.0.0", port=6789):
         try:
+            logger.info(f"Starting WebSocket server on {host}:{port}")
             async def handler(websocket):
                 await self.register(websocket)
 
