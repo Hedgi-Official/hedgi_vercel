@@ -190,10 +190,13 @@ export class XTBService {
       console.log('[XTB] Fetching tick prices for:', symbol);
       
       // Get initial price data
+      console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        timestamp: 0,
-        level: 0
+        timestamp: Math.floor(Date.now() / 1000) - 60,
+        level: 0,
+        minArrivalTime: 0,
+        maxLevel: 2
       });
 
       if (!response.status) {
@@ -217,9 +220,7 @@ export class XTBService {
         throw new Error('Streaming connection not available');
       }
 
-      // Get initial price data
-      console.log('[XTB] Requesting initial tick prices...');
-      const response = await this.sendCommand('getTickPrices', {
+      console.log('[XTB] Tick prices response for', symbol, ':', response);
         symbol,
         timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
         level: 0,
