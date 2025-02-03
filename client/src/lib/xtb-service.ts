@@ -1,5 +1,3 @@
-import WebSocket from 'ws';
-
 interface XTBCredentials {
   userId: string;
   password: string;
@@ -32,13 +30,12 @@ export class XTBService {
         arguments: params,
       });
 
-      this.ws!.send(message, (error) => {
-        if (error) reject(error);
-      });
+      this.ws!.send(message);
 
-      this.ws!.once('message', (data) => {
+      const handleMessage = (event: MessageEvent) => {
         try {
-          const response = JSON.parse(data.toString()) as XTBResponse;
+          const response = JSON.parse(event.data) as XTBResponse;
+          this.ws!.removeEventListener('message', handleMessage);
           if (!response.status) {
             reject(new Error(response.errorDescr || 'Unknown error'));
           } else {
@@ -47,7 +44,9 @@ export class XTBService {
         } catch (e) {
           reject(e);
         }
-      });
+      };
+
+      this.ws!.addEventListener('message', handleMessage);
     });
   }
 
@@ -59,7 +58,7 @@ export class XTBService {
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.serverUrl);
 
-      this.ws.on('open', async () => {
+      this.ws.addEventListener('open', async () => {
         try {
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
@@ -80,11 +79,11 @@ export class XTBService {
         }
       });
 
-      this.ws.on('error', (error) => {
-        reject(error);
+      this.ws.addEventListener('error', (error) => {
+        reject(new Error('WebSocket connection failed'));
       });
 
-      this.ws.on('close', () => {
+      this.ws.addEventListener('close', () => {
         this.isConnected = false;
         this.streamSessionId = null;
       });
@@ -96,7 +95,7 @@ export class XTBService {
 
     this.streamWs = new WebSocket(`${this.serverUrl}/stream`);
 
-    this.streamWs.on('open', () => {
+    this.streamWs.addEventListener('open', () => {
       if (this.streamWs) {
         this.streamWs.send(JSON.stringify({
           command: 'getTickPrices',
