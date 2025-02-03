@@ -124,7 +124,7 @@ export function registerRoutes(app: Express): Server {
     let mt5Ws: WebSocket | null = null;
 
     try {
-      mt5Ws = new WebSocket('ws://0.0.0.0:8080');
+      mt5Ws = new WebSocket(`ws://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
 
       mt5Ws.on('open', () => {
         console.log('Connected to MT5 service');
