@@ -60,7 +60,8 @@ export function useXTB() {
       const rates: ExchangeRate[] = [];
 
       try {
-        // First get all available symbols to validate our symbol list
+        // First get all available symbols
+        console.log('[useXTB] Requesting all symbols...');
         const symbolsResponse = await xtbService.getAllSymbols();
         console.log('[useXTB] Available symbols:', symbolsResponse);
 
@@ -94,6 +95,8 @@ export function useXTB() {
               xtbService.onSymbolUpdate(symbol, (candleData) => {
                 console.log(`[useXTB] Received streaming update for ${symbol}:`, candleData);
               });
+            } else {
+              console.error(`[useXTB] Invalid response for ${symbol}:`, response);
             }
           } catch (error) {
             console.error(`[useXTB] Error fetching rates for ${symbol}:`, error);
