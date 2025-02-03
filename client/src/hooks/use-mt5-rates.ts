@@ -19,10 +19,10 @@ export function useMT5Rates() {
       setStatus('connecting');
 
       // Use the current window location to determine the WebSocket URL
+      // Use window.location to determine the protocol and host
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = window.location.hostname;
-      const wsPort = '6789'; // Fixed port that matches the server
-      const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
+      const wsUrl = `${wsProtocol}//${wsHost}:6789`;
 
       console.log('Connecting to WebSocket:', wsUrl); // Debug log
 
