@@ -62,23 +62,36 @@ export function useXTB() {
       }
 
       try {
+        if (!isConnected) {
+          console.error('[useXTB] Not connected to XTB');
+          throw new Error('Not connected to XTB');
+        }
+
         // First verify stream connection
         const streamStatus = await xtbService.checkStreamConnection();
         console.log('[useXTB] Stream connection status:', streamStatus);
         
         const symbols = ['EURUSD'];
         const rates: ExchangeRate[] = [];
-        // First get all available symbols
-        console.log('[useXTB] Requesting all symbols...');
-        const symbolsResponse = await xtbService.getAllSymbols();
-        console.log('[useXTB] Available symbols:', symbolsResponse);
 
-        // Create a map for quick symbol lookup and log available symbols
-        const availableSymbols = new Map<string, SymbolRecord>();
-        for (const symbol of symbolsResponse) {
-          availableSymbols.set(symbol.symbol, symbol);
-          // Log each available symbol to help debug
-          console.log(`[useXTB] Available symbol: ${symbol.symbol} (${symbol.description})`);
+        // Get all symbols and filter for our target
+        const symbolsResponse = await xtbService.getAllSymbols();
+        console.log('[useXTB] Received symbols:', symbolsResponse.length);
+        
+        const targetSymbol = symbolsResponse.find(s => s.symbol === 'EURUSD');
+        if (!targetSymbol) {
+          throw new Error('EURUSD symbol not available');
+        }
+        
+        // Get tick prices for EURUSD
+        const tickResponse = await xtbService.getTickPrices('EURUSD');
+        if (tickResponse.status && tickResponse.returnData) {
+          rates.push({
+            symbol: 'EURUSD',
+            bid: tickResponse.returnData.bid,
+            ask: tickResponse.returnData.ask,
+            timestamp: tickResponse.returnData.timestamp,
+          });
         }
 
         // Only fetch prices for symbols that exist

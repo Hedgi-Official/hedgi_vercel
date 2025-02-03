@@ -5,21 +5,37 @@ import { Loader2 } from "lucide-react";
 export function ExchangeRatesWidget() {
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
 
-  if (error) {
-    return (
-      <Card className="bg-background shadow-lg">
-        <CardHeader>
-          <CardTitle>Live Exchange Rates</CardTitle>
-        </CardHeader>
-        <CardContent>
+  return (
+    <Card className="bg-background shadow-lg">
+      <CardHeader>
+        <CardTitle>Live Exchange Rates</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {error ? (
           <div className="text-destructive">
             Error: {error}
             {!isConnected && " (Not connected to XTB)"}
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
+        ) : isLoading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading rates...
+          </div>
+        ) : exchangeRates && exchangeRates.length > 0 ? (
+          <div className="space-y-2">
+            {exchangeRates.map((rate) => (
+              <div key={rate.symbol} className="flex justify-between">
+                <span>{rate.symbol}</span>
+                <span>Bid: {rate.bid} Ask: {rate.ask}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>No exchange rates available</div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <Card className="bg-background shadow-lg">
