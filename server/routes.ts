@@ -4,38 +4,10 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
-import { spawn } from "child_process";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import path from "path";
-import { WebSocketServer, WebSocket } from 'ws';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Create HTTP server
-  const httpServer = createServer(app);
-
-  // Create WebSocket server
-  const wss = new WebSocketServer({ noServer: true });
-
-  // Start MT5 service
-  const mt5Service = spawn("python3", [path.join(__dirname, "mt5_service.py")], {
-    stdio: "inherit",
-  });
-
-  mt5Service.on("error", (err) => {
-    console.error("Failed to start MT5 service:", err);
-  });
-
-  process.on("exit", () => {
-    mt5Service.kill();
-  });
-
-  // API Routes
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -99,70 +71,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Handle WebSocket upgrade requests
-  httpServer.on('upgrade', (request, socket, head) => {
-    const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname;
-
-    // Ignore Vite HMR WebSocket connections
-    if (request.headers['sec-websocket-protocol'] === 'vite-hmr') {
-      socket.destroy();
-      return;
-    }
-
-    // Handle MT5 rates WebSocket connections
-    if (pathname === '/ws') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    } else {
-      socket.destroy();
-    }
-  });
-
-  // Handle WebSocket connections
-  wss.on('connection', (ws) => {
-    console.log('Client connected to WebSocket');
-
-    let mt5Ws: WebSocket | null = null;
-
-    try {
-      // Connect to MT5 service on port 5001
-      const mt5Url = 'ws://localhost:5001';
-      mt5Ws = new WebSocket(mt5Url);
-
-      mt5Ws.on('open', () => {
-        console.log('Connected to MT5 service');
-      });
-
-      mt5Ws.on('message', (data) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(data.toString());
-          } catch (error) {
-            console.error('Error sending data to client:', error);
-          }
-        }
-      });
-
-      mt5Ws.on('error', (error) => {
-        console.error('MT5 WebSocket error:', error);
-      });
-
-      mt5Ws.on('close', () => {
-        console.log('MT5 service connection closed');
-      });
-
-    } catch (error) {
-      console.error('Failed to connect to MT5 service:', error);
-    }
-
-    ws.on('close', () => {
-      console.log('Client disconnected');
-      if (mt5Ws) {
-        mt5Ws.close();
-      }
-    });
-  });
-
+  const httpServer = createServer(app);
   return httpServer;
 }

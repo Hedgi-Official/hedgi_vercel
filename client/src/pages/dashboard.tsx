@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
 import { Header } from "@/components/header";
-import { LiveRateDisplay } from "@/components/live-rate-display";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -90,8 +89,6 @@ export default function Dashboard() {
 
       <main className="container mx-auto py-8 relative z-10">
         <div className="grid gap-8">
-          <LiveRateDisplay />
-
           <Card className="bg-white shadow-lg">
             <CardHeader>
               <CardTitle>Active Hedges</CardTitle>

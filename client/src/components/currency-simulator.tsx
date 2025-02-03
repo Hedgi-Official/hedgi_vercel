@@ -227,9 +227,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
-                      {simulation.totalCost.toFixed(2)} {targetCurrency}
-                      {' '}
-                      ({(simulation.totalCost * simulation.rate).toFixed(2)} {baseCurrency})
+                      {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
                     </span>
                   </div>
                 </div>
