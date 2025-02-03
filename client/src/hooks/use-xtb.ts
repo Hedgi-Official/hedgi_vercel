@@ -60,9 +60,14 @@ export function useXTB() {
         console.error('[useXTB] Not connected to XTB');
         throw new Error('Not connected to XTB');
       }
-      
-      const symbols = ['EURUSD'];
-      const rates: ExchangeRate[] = [];
+
+      try {
+        // First verify stream connection
+        const streamStatus = await xtbService.checkStreamConnection();
+        console.log('[useXTB] Stream connection status:', streamStatus);
+        
+        const symbols = ['EURUSD'];
+        const rates: ExchangeRate[] = [];
 
       try {
         // First get all available symbols

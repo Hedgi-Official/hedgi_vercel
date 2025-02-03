@@ -161,6 +161,14 @@ export class XTBService {
     });
   }
 
+  async checkStreamConnection(): Promise<boolean> {
+    if (!this.streamWs || this.streamWs.readyState !== WebSocket.OPEN) {
+      console.error('[XTB] Stream connection not ready');
+      await this.setupStreamingConnection();
+    }
+    return this.streamWs?.readyState === WebSocket.OPEN;
+  }
+
   async getAllSymbols(): Promise<SymbolRecord[]> {
     try {
       console.log('[XTB] Fetching all symbols...');
@@ -212,8 +220,10 @@ export class XTBService {
       console.log('[XTB] Requesting initial tick prices...');
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        timestamp: 0,
-        level: 0
+        timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
+        level: 0,
+        minArrivalTime: 0,
+        maxLevel: 2
       });
 
       if (!response.status) {
