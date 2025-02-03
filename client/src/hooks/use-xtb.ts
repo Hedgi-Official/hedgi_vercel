@@ -56,7 +56,8 @@ export function useXTB() {
     queryKey: ['xtb-rates'],
     queryFn: async () => {
       console.log('[useXTB] Fetching exchange rates...');
-      const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'];
+      // Add USDBRL to the list of symbols
+      const symbols = ['USDBRL'];
       const rates: ExchangeRate[] = [];
 
       try {
@@ -65,16 +66,26 @@ export function useXTB() {
         const symbolsResponse = await xtbService.getAllSymbols();
         console.log('[useXTB] Available symbols:', symbolsResponse);
 
-        // Create a map for quick symbol lookup
+        // Create a map for quick symbol lookup and log available symbols
         const availableSymbols = new Map<string, SymbolRecord>();
         for (const symbol of symbolsResponse) {
           availableSymbols.set(symbol.symbol, symbol);
+          // Log each available symbol to help debug
+          console.log(`[useXTB] Available symbol: ${symbol.symbol} (${symbol.description})`);
         }
 
         // Only fetch prices for symbols that exist
         for (const symbol of symbols) {
           if (!availableSymbols.has(symbol)) {
-            console.warn(`[useXTB] Symbol ${symbol} not available, skipping`);
+            console.warn(`[useXTB] Symbol ${symbol} not available, checking for alternative formats...`);
+            // Try to find a similar symbol (e.g., if USDBRL doesn't exist, maybe USD/BRL does)
+            const alternativeSymbol = Array.from(availableSymbols.keys()).find(
+              s => s.replace(/[^A-Z]/g, '') === symbol
+            );
+            if (alternativeSymbol) {
+              console.log(`[useXTB] Found alternative symbol format: ${alternativeSymbol}`);
+              continue;
+            }
             continue;
           }
 
