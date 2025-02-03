@@ -17,7 +17,10 @@ export class XTBService {
   private isConnected = false;
   private streamSessionId: string | null = null;
 
-  constructor(private readonly serverUrl = 'wss://ws.xtb.com/demo') {}
+  constructor(
+    private readonly serverUrl = 'wss://ws.xtb.com/demo',
+    private readonly streamUrl = 'wss://ws.xtb.com/demoStream'
+  ) {}
 
   private async sendCommand(cmd: string, params: any = {}): Promise<XTBResponse> {
     if (!this.ws) {
@@ -25,12 +28,12 @@ export class XTBService {
     }
 
     return new Promise((resolve, reject) => {
-      const message = JSON.stringify({
+      const message = {
         command: cmd,
-        arguments: params,
-      });
+        arguments: params
+      };
 
-      this.ws!.send(message);
+      this.ws!.send(JSON.stringify(message));
 
       const handleMessage = (event: MessageEvent) => {
         try {
@@ -62,15 +65,13 @@ export class XTBService {
         try {
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
-            password: credentials.password,
-            appId: "Hedgi_1.0",
-            appName: "Hedgi"
+            password: credentials.password
           });
 
           if (response.streamSessionId) {
             this.streamSessionId = response.streamSessionId;
             this.isConnected = true;
-            this.setupStreamingConnection();
+            await this.setupStreamingConnection();
             resolve();
           } else {
             reject(new Error('No streamSessionId received'));
@@ -81,6 +82,7 @@ export class XTBService {
       });
 
       this.ws.addEventListener('error', (error) => {
+        console.error('XTB WebSocket error:', error);
         reject(new Error('WebSocket connection failed'));
       });
 
@@ -91,28 +93,32 @@ export class XTBService {
     });
   }
 
-  private setupStreamingConnection(): void {
+  private async setupStreamingConnection(): Promise<void> {
     if (!this.streamSessionId) return;
 
-    this.streamWs = new WebSocket(`${this.serverUrl}/stream`);
+    return new Promise((resolve, reject) => {
+      this.streamWs = new WebSocket(this.streamUrl);
 
-    this.streamWs.addEventListener('open', () => {
-      if (this.streamWs) {
-        this.streamWs.send(JSON.stringify({
-          command: 'getTickPrices',
-          streamSessionId: this.streamSessionId,
-          symbol: 'EURUSD',
-        }));
-      }
+      this.streamWs.addEventListener('open', () => {
+        if (this.streamWs) {
+          // No need to subscribe here, we'll do it per symbol in getTickPrices
+          resolve();
+        }
+      });
+
+      this.streamWs.addEventListener('error', (error) => {
+        console.error('XTB Streaming WebSocket error:', error);
+        reject(new Error('Streaming WebSocket connection failed'));
+      });
     });
   }
 
-  async getSymbols(): Promise<any> {
-    return this.sendCommand('getAllSymbols');
-  }
-
   async getTickPrices(symbol: string): Promise<any> {
-    return this.sendCommand('getTickPrices', { symbol });
+    return this.sendCommand('getTickPrices', {
+      symbol,
+      minArrivalTime: 0,
+      maxLevel: 2
+    });
   }
 
   disconnect(): void {
@@ -122,6 +128,7 @@ export class XTBService {
     }
 
     if (this.ws) {
+      this.sendCommand('logout').catch(console.error);
       this.ws.close();
       this.ws = null;
     }
