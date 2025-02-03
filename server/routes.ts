@@ -8,7 +8,7 @@ import { spawn } from "child_process";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from "path";
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -121,23 +121,42 @@ export function registerRoutes(app: Express): Server {
   wss.on('connection', (ws) => {
     console.log('Client connected to WebSocket');
 
-    const mt5Ws = new WebSocket('ws://localhost:6789');
+    let mt5Ws: WebSocket | null = null;
 
-    mt5Ws.on('message', (data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data.toString());
-      }
-    });
+    try {
+      mt5Ws = new WebSocket('ws://localhost:6789');
 
-    mt5Ws.on('error', (error) => {
-      console.error('MT5 WebSocket error:', error);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-    });
+      mt5Ws.on('open', () => {
+        console.log('Connected to MT5 service');
+      });
+
+      mt5Ws.on('message', (data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(data.toString());
+          } catch (error) {
+            console.error('Error sending data to client:', error);
+          }
+        }
+      });
+
+      mt5Ws.on('error', (error) => {
+        console.error('MT5 WebSocket error:', error);
+      });
+
+      mt5Ws.on('close', () => {
+        console.log('MT5 service connection closed');
+      });
+
+    } catch (error) {
+      console.error('Failed to connect to MT5 service:', error);
+    }
 
     ws.on('close', () => {
-      mt5Ws.close();
+      console.log('Client disconnected');
+      if (mt5Ws) {
+        mt5Ws.close();
+      }
     });
   });
 
