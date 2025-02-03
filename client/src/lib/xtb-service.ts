@@ -1,8 +1,11 @@
+import type { XTBCredentials, XTBResponse, SymbolRecord, CandleStreamResponse } from './xtb-types';
+
 export class XTBService {
   private ws: WebSocket | null = null;
   private streamWs: WebSocket | null = null;
   private isConnected = false;
   private streamSessionId: string | null = null;
+  private streamListeners: Map<string, (data: any) => void> = new Map();
 
   constructor(
     private readonly serverUrl = 'wss://ws.xtb.com/demo',
@@ -60,6 +63,11 @@ export class XTBService {
       console.log('[XTB] Connecting to main socket...');
       this.ws = new WebSocket(this.serverUrl);
 
+      const connectionTimeout = setTimeout(() => {
+        reject(new Error('Connection timeout after 10s'));
+        this.ws?.close();
+      }, 10000);
+
       this.ws.addEventListener('open', async () => {
         try {
           console.log('[XTB] Main socket connected, attempting login...');
@@ -70,6 +78,7 @@ export class XTBService {
           });
 
           console.log('[XTB] Login response:', response);
+          clearTimeout(connectionTimeout);
 
           if (response.streamSessionId) {
             this.streamSessionId = response.streamSessionId;
@@ -81,17 +90,20 @@ export class XTBService {
           }
         } catch (error) {
           console.error('[XTB] Login error:', error);
+          clearTimeout(connectionTimeout);
           reject(error);
         }
       });
 
       this.ws.addEventListener('error', (error) => {
         console.error('[XTB] Main socket error:', error);
+        clearTimeout(connectionTimeout);
         reject(new Error('WebSocket connection failed'));
       });
 
       this.ws.addEventListener('close', () => {
         console.log('[XTB] Main socket closed');
+        clearTimeout(connectionTimeout);
         this.isConnected = false;
         this.streamSessionId = null;
       });
@@ -108,15 +120,29 @@ export class XTBService {
       console.log('[XTB] Setting up streaming connection...');
       this.streamWs = new WebSocket(this.streamUrl);
 
+      const connectionTimeout = setTimeout(() => {
+        reject(new Error('Streaming connection timeout after 10s'));
+        this.streamWs?.close();
+      }, 10000);
+
       this.streamWs.addEventListener('open', () => {
         console.log('[XTB] Streaming connection established');
+        clearTimeout(connectionTimeout);
         resolve();
       });
 
       this.streamWs.addEventListener('message', (event) => {
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data) as CandleStreamResponse;
           console.log('[XTB] Streaming data received:', data);
+
+          // If this is a candle update, notify listeners
+          if (data.command === 'candle') {
+            const listener = this.streamListeners.get(data.data.symbol);
+            if (listener) {
+              listener(data.data);
+            }
+          }
         } catch (error) {
           console.error('[XTB] Error parsing streaming data:', error);
         }
@@ -124,21 +150,23 @@ export class XTBService {
 
       this.streamWs.addEventListener('error', (error) => {
         console.error('[XTB] Streaming socket error:', error);
+        clearTimeout(connectionTimeout);
         reject(new Error('Streaming WebSocket connection failed'));
       });
 
       this.streamWs.addEventListener('close', () => {
         console.log('[XTB] Streaming connection closed');
+        clearTimeout(connectionTimeout);
       });
     });
   }
 
-  async getAllSymbols(): Promise<any> {
+  async getAllSymbols(): Promise<SymbolRecord[]> {
     try {
       console.log('[XTB] Fetching all symbols...');
       const response = await this.sendCommand('getAllSymbols');
       console.log('[XTB] All symbols response:', response);
-      return response;
+      return response.returnData;
     } catch (error) {
       console.error('[XTB] Error fetching symbols:', error);
       throw error;
@@ -160,9 +188,12 @@ export class XTBService {
         symbol: symbol
       });
 
-      if (this.streamWs) {
+      if (this.streamWs && this.streamWs.readyState === WebSocket.OPEN) {
         console.log('[XTB] Subscribing to candles for:', symbol);
         this.streamWs.send(streamMessage);
+      } else {
+        console.error('[XTB] Streaming WebSocket not ready');
+        throw new Error('Streaming connection not available');
       }
 
       // Get initial price data
@@ -178,6 +209,10 @@ export class XTBService {
       console.error('[XTB] Error fetching tick prices for', symbol, ':', error);
       throw error;
     }
+  }
+
+  onSymbolUpdate(symbol: string, callback: (data: any) => void) {
+    this.streamListeners.set(symbol, callback);
   }
 
   disconnect(): void {
@@ -196,6 +231,7 @@ export class XTBService {
 
     this.isConnected = false;
     this.streamSessionId = null;
+    this.streamListeners.clear();
   }
 }
 

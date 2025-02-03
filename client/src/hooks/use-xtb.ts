@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { xtbService } from '@/lib/xtb-service';
 import { useToast } from '@/hooks/use-toast';
+import type { SymbolRecord } from '@/lib/xtb-types';
 
 export interface ExchangeRate {
   symbol: string;
@@ -20,8 +21,8 @@ export function useXTB() {
       try {
         console.log('[useXTB] Connecting to XTB...');
         await xtbService.connect({
-          userId: '17474971',
-          password: 'xoh74681',
+          userId: process.env.XTB_USER_ID || '17474971',
+          password: process.env.XTB_PASSWORD || 'xoh74681',
         });
         console.log('[useXTB] Connected to XTB successfully');
         setIsConnected(true);
@@ -63,13 +64,11 @@ export function useXTB() {
         const symbolsResponse = await xtbService.getAllSymbols();
         console.log('[useXTB] Available symbols:', symbolsResponse);
 
-        if (!symbolsResponse.status || !Array.isArray(symbolsResponse.returnData)) {
-          throw new Error('Failed to get available symbols');
+        // Create a map for quick symbol lookup
+        const availableSymbols = new Map<string, SymbolRecord>();
+        for (const symbol of symbolsResponse) {
+          availableSymbols.set(symbol.symbol, symbol);
         }
-
-        const availableSymbols = new Set(
-          symbolsResponse.returnData.map((s: any) => s.symbol)
-        );
 
         // Only fetch prices for symbols that exist
         for (const symbol of symbols) {
@@ -90,6 +89,11 @@ export function useXTB() {
                 ask: response.returnData.ask,
                 timestamp: response.returnData.timestamp,
               });
+
+              // Set up streaming updates for this symbol
+              xtbService.onSymbolUpdate(symbol, (candleData) => {
+                console.log(`[useXTB] Received streaming update for ${symbol}:`, candleData);
+              });
             }
           } catch (error) {
             console.error(`[useXTB] Error fetching rates for ${symbol}:`, error);
@@ -98,6 +102,10 @@ export function useXTB() {
       } catch (error) {
         console.error('[useXTB] Error in exchange rates query:', error);
         throw error;
+      }
+
+      if (rates.length === 0) {
+        throw new Error('No exchange rates available');
       }
 
       console.log('[useXTB] Final rates:', rates);
