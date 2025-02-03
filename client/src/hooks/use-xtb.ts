@@ -56,8 +56,8 @@ export function useXTB() {
     queryKey: ['xtb-rates'],
     queryFn: async () => {
       console.log('[useXTB] Fetching exchange rates...');
-      // Add USDBRL to the list of symbols
-      const symbols = ['USDBRL'];
+      // Add EURUSD to the list of symbols
+      const symbols = ['EURUSD'];
       const rates: ExchangeRate[] = [];
 
       try {
