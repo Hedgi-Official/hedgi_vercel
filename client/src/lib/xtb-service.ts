@@ -1,3 +1,28 @@
+// Types for XTB API
+interface XTBCredentials {
+  userId: string;
+  password: string;
+}
+
+interface XTBResponse {
+  status: boolean;
+  returnData?: any;
+  streamSessionId?: string;
+  errorCode?: string;
+  errorDescr?: string;
+}
+
+interface TickPrice {
+  ask: number;
+  bid: number;
+  high: number;
+  low: number;
+  spreadRaw: number;
+  spreadTable: number;
+  symbol: string;
+  timestamp: number;
+}
+
 export class XTBService {
   private ws: WebSocket | null = null;
   private streamWs: WebSocket | null = null;
@@ -21,11 +46,13 @@ export class XTBService {
         arguments: args
       });
 
+      console.log('Sending command:', cmd, 'with args:', args);
       this.ws!.send(message);
 
       const handleMessage = (event: MessageEvent) => {
         try {
           const response = JSON.parse(event.data) as XTBResponse;
+          console.log('Received response:', response);
           this.ws!.removeEventListener('message', handleMessage);
 
           if (!response.status) {
@@ -52,11 +79,13 @@ export class XTBService {
 
       this.ws.addEventListener('open', async () => {
         try {
-          // Match exactly the format from documentation
+          console.log('WebSocket connected, attempting login...');
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
             password: credentials.password
           });
+
+          console.log('Login response:', response);
 
           if (response.streamSessionId) {
             this.streamSessionId = response.streamSessionId;
@@ -90,6 +119,7 @@ export class XTBService {
       this.streamWs = new WebSocket(this.streamUrl);
 
       this.streamWs.addEventListener('open', () => {
+        console.log('Streaming connection established');
         resolve();
       });
 
@@ -101,11 +131,19 @@ export class XTBService {
   }
 
   async getTickPrices(symbol: string): Promise<any> {
-    return this.sendCommand('getTickPrices', {
-      symbol,
-      minArrivalTime: 0,
-      maxLevel: 2
-    });
+    try {
+      console.log('Fetching tick prices for:', symbol);
+      const response = await this.sendCommand('getTickPrices', {
+        symbol,
+        level: 0,
+        timestamp: 0
+      });
+      console.log('Tick prices response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching tick prices:', error);
+      throw error;
+    }
   }
 
   disconnect(): void {
