@@ -23,7 +23,7 @@ export function useMT5Rates() {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = window.location.hostname;
       // Use the same host without a specific port since Replit handles the routing
-      const wsUrl = `${wsProtocol}//${wsHost}`;
+      const wsUrl = `${wsProtocol}//${wsHost}:8080`;
 
       console.log('Connecting to WebSocket:', wsUrl); // Debug log
 
