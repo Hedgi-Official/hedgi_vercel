@@ -16,13 +16,18 @@ export function useXTB() {
   useEffect(() => {
     const connect = async () => {
       try {
+        if (!import.meta.env.VITE_XTB_USER_ID || !import.meta.env.VITE_XTB_PASSWORD) {
+          throw new Error('XTB credentials not configured');
+        }
+
         await xtbService.connect({
-          userId: import.meta.env.VITE_XTB_USER_ID!,
-          password: import.meta.env.VITE_XTB_PASSWORD!,
+          userId: import.meta.env.VITE_XTB_USER_ID,
+          password: import.meta.env.VITE_XTB_PASSWORD,
         });
         setIsConnected(true);
         setError(null);
       } catch (err: any) {
+        console.error('XTB connection error:', err);
         setError(err.message);
         setIsConnected(false);
       }
@@ -42,14 +47,18 @@ export function useXTB() {
       const rates: ExchangeRate[] = [];
 
       for (const symbol of symbols) {
-        const response = await xtbService.getTickPrices(symbol);
-        if (response.status) {
-          rates.push({
-            symbol,
-            bid: response.returnData.bid,
-            ask: response.returnData.ask,
-            timestamp: response.returnData.timestamp,
-          });
+        try {
+          const response = await xtbService.getTickPrices(symbol);
+          if (response.status) {
+            rates.push({
+              symbol,
+              bid: response.returnData.bid,
+              ask: response.returnData.ask,
+              timestamp: response.returnData.timestamp,
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching rates for ${symbol}:`, error);
         }
       }
 

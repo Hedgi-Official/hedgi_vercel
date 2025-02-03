@@ -1,16 +1,3 @@
-interface XTBCredentials {
-  userId: string;
-  password: string;
-}
-
-interface XTBResponse {
-  status: boolean;
-  returnData?: any;
-  streamSessionId?: string;
-  errorCode?: string;
-  errorDescr?: string;
-}
-
 export class XTBService {
   private ws: WebSocket | null = null;
   private streamWs: WebSocket | null = null;
@@ -22,23 +9,25 @@ export class XTBService {
     private readonly streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {}
 
-  private async sendCommand(cmd: string, params: any = {}): Promise<XTBResponse> {
+  private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
     if (!this.ws) {
       throw new Error('Not connected to XTB');
     }
 
     return new Promise((resolve, reject) => {
-      const message = {
+      // Exactly match the required format from documentation
+      const message = JSON.stringify({
         command: cmd,
-        arguments: params
-      };
+        arguments: args
+      });
 
-      this.ws!.send(JSON.stringify(message));
+      this.ws!.send(message);
 
       const handleMessage = (event: MessageEvent) => {
         try {
           const response = JSON.parse(event.data) as XTBResponse;
           this.ws!.removeEventListener('message', handleMessage);
+
           if (!response.status) {
             reject(new Error(response.errorDescr || 'Unknown error'));
           } else {
@@ -63,6 +52,7 @@ export class XTBService {
 
       this.ws.addEventListener('open', async () => {
         try {
+          // Match exactly the format from documentation
           const response = await this.sendCommand('login', {
             userId: credentials.userId,
             password: credentials.password
@@ -100,10 +90,7 @@ export class XTBService {
       this.streamWs = new WebSocket(this.streamUrl);
 
       this.streamWs.addEventListener('open', () => {
-        if (this.streamWs) {
-          // No need to subscribe here, we'll do it per symbol in getTickPrices
-          resolve();
-        }
+        resolve();
       });
 
       this.streamWs.addEventListener('error', (error) => {
