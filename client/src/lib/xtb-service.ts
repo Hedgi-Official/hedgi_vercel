@@ -221,19 +221,6 @@ export class XTBService {
       }
 
       console.log('[XTB] Tick prices response for', symbol, ':', response);
-        symbol,
-        timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
-        level: 0,
-        minArrivalTime: 0,
-        maxLevel: 2
-      });
-
-      if (!response.status) {
-        console.error('[XTB] Error in tick prices response:', response.errorDescr);
-        throw new Error(response.errorDescr || 'Failed to get tick prices');
-      }
-
-      console.log('[XTB] Tick prices response for', symbol, ':', response);
       return response;
     } catch (error) {
       console.error('[XTB] Error fetching tick prices for', symbol, ':', error);
