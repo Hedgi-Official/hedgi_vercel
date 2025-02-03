@@ -16,14 +16,10 @@ export function useXTB() {
   useEffect(() => {
     const connect = async () => {
       try {
-        if (!import.meta.env.VITE_XTB_USER_ID || !import.meta.env.VITE_XTB_PASSWORD) {
-          throw new Error('XTB credentials not configured');
-        }
-
         await xtbService.connect({
-          userId: import.meta.env.VITE_XTB_USER_ID,
-          password: import.meta.env.VITE_XTB_PASSWORD,
-        });
+    userId: '17474971',
+    password: 'xoh74681',
+  });
         setIsConnected(true);
         setError(null);
       } catch (err: any) {
