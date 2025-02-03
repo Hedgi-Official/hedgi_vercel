@@ -181,15 +181,17 @@ export class XTBService {
     try {
       console.log('[XTB] Fetching tick prices for:', symbol);
 
-      // Subscribe to candle updates
+      // Subscribe to tick prices
       const streamMessage = JSON.stringify({
-        command: "getCandles",
+        command: "getTickPrices",
         streamSessionId: this.streamSessionId,
-        symbol: symbol
+        symbol: symbol,
+        minArrivalTime: 1, // Get ticks as frequently as possible
+        maxLevel: 2 // Get up to level 2 quotes
       });
 
       if (this.streamWs && this.streamWs.readyState === WebSocket.OPEN) {
-        console.log('[XTB] Subscribing to candles for:', symbol);
+        console.log('[XTB] Subscribing to tick prices for:', symbol);
         this.streamWs.send(streamMessage);
       } else {
         console.error('[XTB] Streaming WebSocket not ready');
@@ -199,7 +201,6 @@ export class XTBService {
       // Get initial price data
       const response = await this.sendCommand('getTickPrices', {
         symbol,
-        level: 0,
         timestamp: 0
       });
 
