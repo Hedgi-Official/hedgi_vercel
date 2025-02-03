@@ -130,6 +130,18 @@ export class XTBService {
     });
   }
 
+  async getAllSymbols(): Promise<any> {
+    try {
+      console.log('Fetching all symbols...');
+      const response = await this.sendCommand('getAllSymbols');
+      console.log('All symbols response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching symbols:', error);
+      throw error;
+    }
+  }
+
   async getTickPrices(symbol: string): Promise<any> {
     try {
       console.log('Fetching tick prices for:', symbol);

@@ -1,0 +1,139 @@
+Retrieving trading data
+Command: getAllSymbols
+Description: Returns array of all symbols available for the user.
+
+Request:
+Example:
+
+{
+	"command": "getAllSymbols"
+}
+Response:
+Parameters:
+
+name	type	description
+array	Array of SYMBOL_RECORD 
+Example:
+
+{
+	"status": true,
+	"returnData": [SYMBOL_RECORD, SYMBOL_RECORD, ...]	
+}
+Format of SYMBOL_RECORD:
+
+Please be advised that result values for profit and margin calculation can be used optionally, because server is able to perform all profit/margin calculations for Client application by commands described later in this document.
+
+name	type	description
+ask	Floating number	Ask price in base currency
+bid	Floating number	Bid price in base currency
+categoryName	String	Category name
+contractSize	Number	Size of 1 lot
+currency	String	Currency
+currencyPair	Boolean	Indicates whether the symbol represents a currency pair
+currencyProfit	String	The currency of calculated profit
+description	String	Description
+expiration	Time	Null if not applicable
+groupName	String	Symbol group name
+high	Floating number	The highest price of the day in base currency
+initialMargin	Number	Initial margin for 1 lot order, used for profit/margin calculation
+instantMaxVolume	Number	Maximum instant volume multiplied by 100 (in lots)
+leverage	Floating number	Symbol leverage
+longOnly	Boolean	Long only
+lotMax	Floating number	Maximum size of trade
+lotMin	Floating number	Minimum size of trade
+lotStep	Floating number	A value of minimum step by which the size of trade can be changed (within lotMin - lotMax range)
+low	Floating number	The lowest price of the day in base currency
+marginHedged	Number	Used for profit calculation
+marginHedgedStrong	Boolean	For margin calculation
+marginMaintenance	Number	For margin calculation, null if not applicable
+marginMode	Number	For margin calculation
+percentage	Floating number	Percentage
+pipsPrecision	Number	Number of symbol's pip decimal places
+precision	Number	Number of symbol's price decimal places
+profitMode	Number	For profit calculation
+quoteId	Number	Source of price
+shortSelling	Boolean	Indicates whether short selling is allowed on the instrument
+spreadRaw	Floating number	The difference between raw ask and bid prices
+spreadTable	Floating number	Spread representation
+starting	Time	Null if not applicable
+stepRuleId	Number	Appropriate step rule ID from getStepRules  command response
+stopsLevel	Number	Minimal distance (in pips) from the current price where the stopLoss/takeProfit can be set
+swap_rollover3days	Number	Time when additional swap is accounted for weekend
+swapEnable	Boolean	Indicates whether swap value is added to position on end of day
+swapLong	Floating number	Swap value for long positions in pips
+swapShort	Floating number	Swap value for short positions in pips
+swapType	Number	Type of swap calculated
+symbol	String	Symbol name
+tickSize	Floating number	Smallest possible price change, used for profit/margin calculation, null if not applicable
+tickValue	Floating number	Value of smallest possible price change (in base currency), used for profit/margin calculation, null if not applicable
+time	Time	Ask & bid tick time
+timeString	String	Time in String
+trailingEnabled	Boolean	Indicates whether trailing stop (offset) is applicable to the instrument.
+type	Number	Instrument class number
+Example:
+
+{
+	"ask": 4000.0,
+	"bid": 4000.0,
+	"categoryName": "Forex",
+	"contractSize": 100000,
+	"currency": "USD",
+	"currencyPair": true,
+	"currencyProfit": "SEK",
+	"description": "USD/PLN",
+	"expiration": null,
+	"groupName": "Minor",
+	"high": 4000.0,
+	"initialMargin": 0,
+	"instantMaxVolume": 0,
+	"leverage": 1.5,
+	"longOnly": false,
+	"lotMax": 10.0,
+	"lotMin": 0.1,
+	"lotStep": 0.1,
+	"low": 3500.0,
+	"marginHedged": 0,
+	"marginHedgedStrong": false,
+	"marginMaintenance": null,
+	"marginMode": 101,
+	"percentage": 100.0,
+	"precision": 2,
+	"profitMode": 5,
+	"quoteId": 1,
+	"shortSelling": true,
+	"spreadRaw": 0.000003,
+	"spreadTable": 0.00042,
+	"starting": null,
+	"stepRuleId": 1,
+	"stopsLevel": 0,
+	"swap_rollover3days": 0,
+	"swapEnable": true,
+	"swapLong": -2.55929,
+	"swapShort": 0.131,
+	"swapType": 0,
+	"symbol": "USDPLN",
+	"tickSize": 1.0,
+	"tickValue": 1.0,
+	"time": 1272446136891,
+	"timeString": "Thu May 23 12:23:44 EDT 2013",
+	"trailingEnabled": true,
+	"type": 21
+}
+Possible values of quoteId field:
+
+name	value	description
+fixed	1	fixed
+float	2	float
+depth	3	depth
+cross	4	cross
+Possible values of marginMode field:
+
+name	value	description
+Forex	101	Forex
+CFD leveraged	102	CFD leveraged
+CFD	103	CFD
+Possible values of profitMode field:
+
+name	value	description
+FOREX	5	FOREX
+CFD	6	CFD

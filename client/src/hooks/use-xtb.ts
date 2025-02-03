@@ -18,9 +18,9 @@ export function useXTB() {
       try {
         console.log('Connecting to XTB...');
         await xtbService.connect({
-    userId: '17474971',
-    password: 'xoh74681',
-  });
+          userId: '17474971',
+          password: 'xoh74681',
+        });
         console.log('Connected to XTB successfully');
         setIsConnected(true);
         setError(null);
@@ -45,23 +45,45 @@ export function useXTB() {
       const symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF'];
       const rates: ExchangeRate[] = [];
 
-      for (const symbol of symbols) {
-        try {
-          console.log(`Fetching rates for ${symbol}...`);
-          const response = await xtbService.getTickPrices(symbol);
-          console.log(`Received response for ${symbol}:`, response);
+      try {
+        // First get all available symbols to validate our symbol list
+        const symbolsResponse = await xtbService.getAllSymbols();
+        console.log('Available symbols:', symbolsResponse);
 
-          if (response.status && response.returnData) {
-            rates.push({
-              symbol,
-              bid: response.returnData.bid,
-              ask: response.returnData.ask,
-              timestamp: response.returnData.timestamp,
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching rates for ${symbol}:`, error);
+        if (!symbolsResponse.status || !Array.isArray(symbolsResponse.returnData)) {
+          throw new Error('Failed to get available symbols');
         }
+
+        const availableSymbols = new Set(
+          symbolsResponse.returnData.map((s: any) => s.symbol)
+        );
+
+        // Only fetch prices for symbols that exist
+        for (const symbol of symbols) {
+          if (!availableSymbols.has(symbol)) {
+            console.warn(`Symbol ${symbol} not available, skipping`);
+            continue;
+          }
+
+          try {
+            console.log(`Fetching rates for ${symbol}...`);
+            const response = await xtbService.getTickPrices(symbol);
+            console.log(`Received response for ${symbol}:`, response);
+
+            if (response.status && response.returnData) {
+              rates.push({
+                symbol,
+                bid: response.returnData.bid,
+                ask: response.returnData.ask,
+                timestamp: response.returnData.timestamp,
+              });
+            }
+          } catch (error) {
+            console.error(`Error fetching rates for ${symbol}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error('Error in exchange rates query:', error);
       }
 
       console.log('Final rates:', rates);
