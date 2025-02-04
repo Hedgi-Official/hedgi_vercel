@@ -13,11 +13,11 @@ export class XTBService {
   ) {}
 
   get isConnected(): boolean {
-    return this._isConnected;
+    return this._isConnected && this.ws?.readyState === WebSocket.OPEN;
   }
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
-    if (!this.ws) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('Not connected to XTB');
     }
 
@@ -58,7 +58,7 @@ export class XTBService {
   }
 
   async connect(credentials: XTBCredentials): Promise<void> {
-    if (this._isConnected) {
+    if (this.isConnected) {
       console.log('[XTB] Already connected');
       return;
     }
@@ -114,6 +114,86 @@ export class XTBService {
     });
   }
 
+  async getHistoricalData(symbol: string, period: number = 30): Promise<Array<{ date: string; rate: number }>> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to XTB');
+    }
+
+    try {
+      const endTimestamp = Math.floor(Date.now() / 1000);
+      const startTimestamp = endTimestamp - (period * 24 * 60 * 60); // period days ago
+
+      console.log('[XTB] Requesting historical data:', {
+        symbol,
+        start: new Date(startTimestamp * 1000).toISOString(),
+        end: new Date(endTimestamp * 1000).toISOString(),
+      });
+
+      const response = await this.sendCommand('getChartRangeRequest', {
+        symbol,
+        start: startTimestamp * 1000, // XTB expects milliseconds
+        end: endTimestamp * 1000,
+        period: 1440, // Daily candles (1440 minutes = 24 hours)
+        ticks: 0
+      });
+
+      console.log('[XTB] Historical data response:', response);
+
+      if (!response.status || !response.returnData?.rateInfos) {
+        throw new Error('Failed to get historical data');
+      }
+
+      const data = response.returnData.rateInfos.map((info: any) => ({
+        date: new Date(info.ctm).toISOString(),
+        rate: (info.open + info.close) / 2 // Average of open and close prices
+      })).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      console.log('[XTB] Processed historical data:', data);
+      return data;
+    } catch (error) {
+      console.error('[XTB] Error fetching historical data:', error);
+      throw error;
+    }
+  }
+
+  async getSymbolData(symbol: string): Promise<XTBResponse> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to XTB');
+    }
+
+    try {
+      console.log('[XTB] Fetching symbol data for:', symbol);
+
+      // Get symbol data
+      const response = await this.sendCommand('getSymbol', {
+        symbol: symbol
+      });
+
+      if (!response.status) {
+        throw new Error(response.errorDescr || 'Failed to get symbol data');
+      }
+
+      console.log('[XTB] Symbol data response for', symbol, ':', response);
+      return response;
+    } catch (error) {
+      console.error('[XTB] Error fetching symbol data for', symbol, ':', error);
+      throw error;
+    }
+  }
+
+  async checkStreamConnection(): Promise<boolean> {
+    if (!this.streamWs || this.streamWs.readyState !== WebSocket.OPEN) {
+      console.error('[XTB] Stream connection not ready');
+      try {
+        await this.setupStreamingConnection();
+      } catch (error) {
+        console.error('[XTB] Failed to setup streaming connection:', error);
+        return false;
+      }
+    }
+    return this.streamWs?.readyState === WebSocket.OPEN;
+  }
+
   private async setupStreamingConnection(): Promise<void> {
     if (!this.streamSessionId) {
       console.error('[XTB] No streamSessionId available for streaming connection');
@@ -135,23 +215,6 @@ export class XTBService {
         resolve();
       });
 
-      this.streamWs.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data) as CandleStreamResponse;
-          console.log('[XTB] Streaming data received:', data);
-
-          // If this is a candle update, notify listeners
-          if (data.command === 'candle') {
-            const listener = this.streamListeners.get(data.data.symbol);
-            if (listener) {
-              listener(data.data);
-            }
-          }
-        } catch (error) {
-          console.error('[XTB] Error parsing streaming data:', error);
-        }
-      });
-
       this.streamWs.addEventListener('error', (error) => {
         console.error('[XTB] Streaming socket error:', error);
         clearTimeout(connectionTimeout);
@@ -163,136 +226,6 @@ export class XTBService {
         clearTimeout(connectionTimeout);
       });
     });
-  }
-
-  async checkStreamConnection(): Promise<boolean> {
-    if (!this.streamWs || this.streamWs.readyState !== WebSocket.OPEN) {
-      console.error('[XTB] Stream connection not ready');
-      await this.setupStreamingConnection();
-    }
-    return this.streamWs?.readyState === WebSocket.OPEN;
-  }
-
-  async getAllSymbols(): Promise<SymbolRecord[]> {
-    try {
-      console.log('[XTB] Fetching all symbols...');
-      const response = await this.sendCommand('getAllSymbols');
-      console.log('[XTB] All symbols response:', response);
-      return response.returnData;
-    } catch (error) {
-      console.error('[XTB] Error fetching symbols:', error);
-      throw error;
-    }
-  }
-
-  async getHistoricalData(symbol: string, period: number = 30): Promise<Array<{ date: string; rate: number }>> {
-    if (!this.isConnected) {
-      throw new Error('Not connected to XTB');
-    }
-
-    try {
-      const endTimestamp = Math.floor(Date.now() / 1000);
-      const startTimestamp = endTimestamp - (period * 24 * 60 * 60); // period days ago
-
-      const response = await this.sendCommand('getChartRangeRequest', {
-        symbol,
-        start: startTimestamp * 1000, // XTB expects milliseconds
-        end: endTimestamp * 1000,
-        period: 1440, // Daily candles (1440 minutes = 24 hours)
-        ticks: 0
-      });
-
-      if (!response.status || !response.returnData?.rateInfos) {
-        throw new Error('Failed to get historical data');
-      }
-
-      return response.returnData.rateInfos.map((info: any) => ({
-        date: new Date(info.ctm).toISOString(),
-        rate: (info.open + info.close) / 2 // Average of open and close prices
-      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    } catch (error) {
-      console.error('[XTB] Error fetching historical data:', error);
-      throw error;
-    }
-  }
-
-  async getTickPrices(symbol: string): Promise<XTBResponse> {
-    if (!this.streamSessionId) {
-      throw new Error('Not connected to streaming server');
-    }
-
-    try {
-      console.log('[XTB] Fetching tick prices for:', symbol);
-
-      // Get initial price data
-      console.log('[XTB] Requesting initial tick prices...');
-      const response = await this.sendCommand('getTickPrices', {
-        symbol,
-        timestamp: Math.floor(Date.now() / 1000) - 60, // Last minute
-        level: 0,
-        minArrivalTime: 0,
-        maxLevel: 2
-      });
-
-      if (!response.status) {
-        throw new Error(response.errorDescr || 'Failed to get tick prices');
-      }
-
-      // Subscribe to streaming updates
-      if (await this.checkStreamConnection()) {
-        const streamMessage = JSON.stringify({
-          command: "getTickPrices",
-          streamSessionId: this.streamSessionId,
-          symbol: symbol
-        });
-
-        console.log('[XTB] Subscribing to streaming updates for:', symbol);
-        this.streamWs!.send(streamMessage);
-      }
-
-      console.log('[XTB] Tick prices response for', symbol, ':', response);
-      return response;
-    } catch (error) {
-      console.error('[XTB] Error fetching tick prices for', symbol, ':', error);
-      throw error;
-    }
-  }
-
-  async getSymbolData(symbol: string): Promise<XTBResponse> {
-    if (!this.streamSessionId) {
-      throw new Error('Not connected to streaming server');
-    }
-
-    try {
-      console.log('[XTB] Fetching symbol data for:', symbol);
-
-      // Get symbol data
-      const response = await this.sendCommand('getSymbol', {
-        symbol: symbol
-      });
-
-      if (!response.status) {
-        throw new Error(response.errorDescr || 'Failed to get symbol data');
-      }
-
-      // Subscribe to streaming updates if available
-      if (await this.checkStreamConnection()) {
-        const streamMessage = JSON.stringify({
-          command: "getSymbol",
-          streamSessionId: this.streamSessionId,
-          symbol: symbol
-        });
-
-        console.log('[XTB] Subscribing to streaming updates for:', symbol);
-        this.streamWs!.send(streamMessage);
-      }
-
-      console.log('[XTB] Symbol data response for', symbol, ':', response);
-      return response;
-    } catch (error) {
-      console.error('[XTB] Error fetching symbol data for', symbol, ':', error);
-      throw error;
-    }
   }
 
   onSymbolUpdate(symbol: string, callback: (data: any) => void) {

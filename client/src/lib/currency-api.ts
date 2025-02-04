@@ -41,9 +41,13 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
   await ensureXTBConnection();
   const symbol = getXTBSymbol(base, target);
 
+  console.log(`[Currency API] Fetching current rate for ${symbol}...`);
+  const streamStatus = await xtbService.checkStreamConnection();
+  console.log('[Currency API] Stream connection status:', streamStatus);
+
   try {
-    console.log(`[Currency API] Fetching current rate for ${symbol}...`);
     const response = await xtbService.getSymbolData(symbol);
+    console.log(`[Currency API] Symbol response for ${symbol}:`, response);
 
     if (!response.status || !response.returnData) {
       console.error(`[Currency API] Failed to get data for ${symbol}:`, response);
@@ -65,14 +69,20 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
   try {
     console.log(`[Currency API] Fetching ${days} days of historical data for ${symbol}...`);
     const historicalData = await xtbService.getHistoricalData(symbol, days);
+    console.log(`[Currency API] Raw historical data for ${symbol}:`, historicalData);
 
     if (!historicalData || historicalData.length === 0) {
       console.error(`[Currency API] No historical data available for ${symbol}`);
       throw new Error('No historical data available');
     }
 
-    console.log(`[Currency API] Successfully fetched historical data for ${symbol}:`, historicalData.length, 'days');
-    return historicalData;
+    const processedData = historicalData.map(point => ({
+      date: point.date,
+      rate: point.rate
+    }));
+
+    console.log(`[Currency API] Processed historical data for ${symbol}:`, processedData);
+    return processedData;
   } catch (error) {
     console.error('[Currency API] Error fetching historical rates:', error);
     throw new Error(`Failed to fetch historical exchange rates for ${base}/${target}`);
@@ -90,7 +100,10 @@ export async function simulateHedge(
   duration: number,
   tradeDirection: 'buy' | 'sell' = 'buy'
 ) {
+  // Get current rate
   const rate = await fetchExchangeRate(base, target);
+  console.log(`[Currency API] Current rate for ${base}/${target}:`, rate);
+
   const mostValuableCurrency = getMostValuableCurrency(base, target);
 
   // Calculate costs in most valuable currency
