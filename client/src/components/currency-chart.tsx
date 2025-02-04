@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface HistoricalRate {
   date: string;
@@ -7,7 +7,6 @@ interface HistoricalRate {
 
 interface ChartData {
   historicalRates: HistoricalRate[];
-  breakEvenRate: number;
   currentRate: number;
   tradeDirection: 'buy' | 'sell';
 }
@@ -17,19 +16,20 @@ interface Props {
 }
 
 export function CurrencyChart({ data }: Props) {
-  const isProfitOnIncrease = data.tradeDirection === 'sell';
-  const thresholdColor = isProfitOnIncrease ? "#22c55e" : "#ef4444"; // green-500 or red-500
-
   // Convert rates to their inverse (e.g., from USD/BRL to BRL/USD)
   const processedData = data.historicalRates.map(point => ({
     date: point.date,
     rate: 1 / point.rate  // Convert to inverse rate for display
   }));
 
-  const breakEvenRate = 1 / data.breakEvenRate;
+  // Calculate number of days from the data
+  const days = processedData.length - 1;
 
   return (
     <div className="space-y-2">
+      <h3 className="text-lg font-medium text-center">
+        Last {days} Days Exchange Rate History
+      </h3>
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={processedData}>
@@ -47,18 +47,8 @@ export function CurrencyChart({ data }: Props) {
               formatter={(value: number) => value.toFixed(4)} 
               labelFormatter={(date) => new Date(date).toLocaleDateString()}
             />
-            <ReferenceLine
-              y={breakEvenRate}
-              label={{ 
-                value: 'Break-even', 
-                position: 'right',
-                fill: thresholdColor
-              }}
-              stroke={thresholdColor}
-              strokeDasharray="3 3"
-            />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="rate"
               stroke="#2563eb" // blue-600
               strokeWidth={2}
@@ -67,12 +57,6 @@ export function CurrencyChart({ data }: Props) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-sm text-muted-foreground text-center">
-        The dotted {isProfitOnIncrease ? "green" : "red"} line represents the break-even rate - 
-        {isProfitOnIncrease 
-          ? " above this line indicates potential profit" 
-          : " below this line indicates potential profit"}
-      </p>
     </div>
   );
 }

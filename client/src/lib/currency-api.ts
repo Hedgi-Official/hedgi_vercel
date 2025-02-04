@@ -95,8 +95,20 @@ export async function simulateHedge(
     const rate = await fetchExchangeRate(base, target);
     console.log(`[Currency API] Current rate: ${rate}`);
 
-    // Calculate hedge costs (simplified for demo)
-    const costPercentage = 0.5 + (duration * 0.1); // Base 0.5% + 0.1% per day
+    // Calculate hedge costs using more realistic market conditions
+    // Base spread cost (difference between buy and sell rates)
+    const spreadCost = 0.15; // 0.15% typical FX spread
+
+    // Forward points cost (increases with duration)
+    const forwardPointsCost = 0.02 * (duration / 30); // 0.02% per month equivalent
+
+    // Transaction fee
+    const transactionFee = 0.1; // 0.1% fixed transaction fee
+
+    // Total cost percentage
+    const costPercentage = spreadCost + forwardPointsCost + transactionFee;
+
+    // Calculate total cost in target currency
     const totalCost = (amount * costPercentage) / 100;
 
     // Calculate break-even rate
@@ -113,7 +125,10 @@ export async function simulateHedge(
       totalCost,
       breakEvenRate,
       costDetails: {
-        costPercentage
+        costPercentage,
+        spreadCost,
+        forwardPointsCost,
+        transactionFee
       },
       historicalRates
     };
