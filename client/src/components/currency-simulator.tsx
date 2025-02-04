@@ -14,13 +14,26 @@ interface Props {
   onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
 }
 
+interface SimulationResult {
+  rate: number;
+  breakEvenRate: number;
+  totalCost: number;
+  costDetails: {
+    costPercentage: number;
+  };
+  historicalRates: Array<{
+    date: string;
+    rate: number;
+  }>;
+}
+
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
-  const [simulation, setSimulation] = useState<any>(null);
+  const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
   const handleSimulate = async () => {
     const result = await simulateHedge(
@@ -235,7 +248,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
               {showGraph && (
                 <div className="pt-4">
-                  <CurrencyChart data={simulation} />
+                  <CurrencyChart
+                    data={{
+                      historicalRates: simulation.historicalRates,
+                      breakEvenRate: simulation.breakEvenRate,
+                      currentRate: simulation.rate,
+                      tradeDirection: tradeDirection
+                    }}
+                  />
                 </div>
               )}
 

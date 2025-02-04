@@ -1,9 +1,15 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-interface ChartData {
+interface HistoricalRate {
+  date: string;
   rate: number;
+}
+
+interface ChartData {
+  historicalRates: HistoricalRate[];
   breakEvenRate: number;
-  totalCost: number;
+  currentRate: number;
+  tradeDirection: 'buy' | 'sell';
 }
 
 interface Props {
@@ -11,42 +17,43 @@ interface Props {
 }
 
 export function CurrencyChart({ data }: Props) {
-  const chartData = [
-    { name: 'Current', value: data.rate },
-    { name: 'Break-even', value: data.breakEvenRate },
-  ];
-
-  // Calculate min and max values as ±7% of current rate
-  const minRate = data.rate * 0.93;
-  const maxRate = data.rate * 1.07;
+  const isProfitOnIncrease = data.tradeDirection === 'sell';
+  const thresholdColor = isProfitOnIncrease ? "#22c55e" : "#ef4444"; // green-500 or red-500
 
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
+        <LineChart data={data.historicalRates}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
+          <XAxis 
+            dataKey="date" 
+            tickFormatter={(date) => new Date(date).toLocaleDateString()}
+          />
           <YAxis 
-            domain={[minRate, maxRate]} 
+            domain={['auto', 'auto']}
             tickFormatter={(value) => value.toFixed(4)}
             tickCount={5}
           />
           <Tooltip 
             formatter={(value: number) => value.toFixed(4)} 
-            labelFormatter={(label) => `${label} Rate`}
+            labelFormatter={(date) => new Date(date).toLocaleDateString()}
           />
           <ReferenceLine
             y={data.breakEvenRate}
-            label={{ value: 'Break-even', position: 'right' }}
-            stroke="#2bedb7"
+            label={{ 
+              value: 'Break-even', 
+              position: 'right',
+              fill: thresholdColor
+            }}
+            stroke={thresholdColor}
             strokeDasharray="3 3"
           />
           <Line
             type="monotone"
-            dataKey="value"
-            stroke="#2bedb7"
+            dataKey="rate"
+            stroke="#2563eb" // blue-600
             strokeWidth={2}
-            dot={{ fill: '#2bedb7' }}
+            dot={false}
           />
         </LineChart>
       </ResponsiveContainer>
