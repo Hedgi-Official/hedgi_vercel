@@ -19,16 +19,21 @@ function getXTBSymbol(base: SupportedCurrency, target: SupportedCurrency): strin
 
 async function ensureXTBConnection() {
   try {
+    console.log('[Currency API] Checking XTB connection...');
     // Try to connect if not already connected
     if (!xtbService.isConnected) {
+      console.log('[Currency API] Connecting to XTB...');
       await xtbService.connect({
         userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
         password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
       });
+      console.log('[Currency API] Successfully connected to XTB');
+    } else {
+      console.log('[Currency API] Already connected to XTB');
     }
   } catch (error) {
-    console.error('Failed to connect to XTB:', error);
-    throw new Error('Failed to connect to trading platform');
+    console.error('[Currency API] Failed to connect to XTB:', error);
+    throw new Error('Failed to connect to trading platform. Please try again.');
   }
 }
 
@@ -37,14 +42,19 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
   const symbol = getXTBSymbol(base, target);
 
   try {
+    console.log(`[Currency API] Fetching current rate for ${symbol}...`);
     const response = await xtbService.getSymbolData(symbol);
+
     if (!response.status || !response.returnData) {
+      console.error(`[Currency API] Failed to get data for ${symbol}:`, response);
       throw new Error(`Failed to fetch rate for ${symbol}`);
     }
+
+    console.log(`[Currency API] Successfully fetched rate for ${symbol}:`, response.returnData.ask);
     return response.returnData.ask;
   } catch (error) {
-    console.error('Error fetching exchange rate:', error);
-    throw new Error('Failed to fetch current exchange rate');
+    console.error('[Currency API] Error fetching exchange rate:', error);
+    throw new Error(`Failed to fetch current exchange rate for ${base}/${target}`);
   }
 }
 
@@ -53,14 +63,19 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
   const symbol = getXTBSymbol(base, target);
 
   try {
+    console.log(`[Currency API] Fetching ${days} days of historical data for ${symbol}...`);
     const historicalData = await xtbService.getHistoricalData(symbol, days);
+
     if (!historicalData || historicalData.length === 0) {
+      console.error(`[Currency API] No historical data available for ${symbol}`);
       throw new Error('No historical data available');
     }
+
+    console.log(`[Currency API] Successfully fetched historical data for ${symbol}:`, historicalData.length, 'days');
     return historicalData;
   } catch (error) {
-    console.error('Error fetching historical rates:', error);
-    throw new Error('Failed to fetch historical exchange rates');
+    console.error('[Currency API] Error fetching historical rates:', error);
+    throw new Error(`Failed to fetch historical exchange rates for ${base}/${target}`);
   }
 }
 

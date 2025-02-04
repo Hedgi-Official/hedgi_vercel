@@ -3,7 +3,7 @@ import type { XTBCredentials, XTBResponse, SymbolRecord, CandleStreamResponse } 
 export class XTBService {
   private ws: WebSocket | null = null;
   private streamWs: WebSocket | null = null;
-  private isConnected = false;
+  private _isConnected = false;
   private streamSessionId: string | null = null;
   private streamListeners: Map<string, (data: any) => void> = new Map();
 
@@ -11,6 +11,10 @@ export class XTBService {
     private readonly serverUrl = 'wss://ws.xtb.com/demo',
     private readonly streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {}
+
+  get isConnected(): boolean {
+    return this._isConnected;
+  }
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
     if (!this.ws) {
@@ -54,7 +58,7 @@ export class XTBService {
   }
 
   async connect(credentials: XTBCredentials): Promise<void> {
-    if (this.isConnected) {
+    if (this._isConnected) {
       console.log('[XTB] Already connected');
       return;
     }
@@ -82,7 +86,7 @@ export class XTBService {
 
           if (response.streamSessionId) {
             this.streamSessionId = response.streamSessionId;
-            this.isConnected = true;
+            this._isConnected = true;
             await this.setupStreamingConnection();
             resolve();
           } else {
@@ -104,7 +108,7 @@ export class XTBService {
       this.ws.addEventListener('close', () => {
         console.log('[XTB] Main socket closed');
         clearTimeout(connectionTimeout);
-        this.isConnected = false;
+        this._isConnected = false;
         this.streamSessionId = null;
       });
     });
@@ -309,7 +313,7 @@ export class XTBService {
       this.ws = null;
     }
 
-    this.isConnected = false;
+    this._isConnected = false;
     this.streamSessionId = null;
     this.streamListeners.clear();
   }
