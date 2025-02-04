@@ -32,14 +32,6 @@ async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
 }
 
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
-  const cacheKey = `${base}${target}`;
-  const cached = rateCache.get(cacheKey);
-
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log(`[Currency API] Using cached rate for ${base}/${target}:`, cached.rate);
-    return cached.rate;
-  }
-
   try {
     console.log(`[Currency API] Fetching current rate for ${base}/${target}...`);
     const response = await fetchWithRetry(
@@ -47,17 +39,20 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
     );
 
     const data = await response.json();
+    console.log('[Currency API] Response data:', data);
 
-    if (!data.success || !data.result) {
-      throw new Error(`Invalid response for ${base}/${target}`);
+    if (!data.success) {
+      console.error('[Currency API] API returned unsuccessful response:', data);
+      throw new Error('API request was not successful');
     }
 
-    const rate = data.result[target];
+    if (typeof data.result !== 'number') {
+      console.error('[Currency API] Invalid rate in response:', data.result);
+      throw new Error('Invalid rate received from API');
+    }
+
+    const rate = data.result;
     console.log(`[Currency API] Rate for ${base}/${target}:`, rate);
-
-    // Cache the result
-    rateCache.set(cacheKey, { rate, timestamp: Date.now() });
-
     return rate;
   } catch (error) {
     console.error('[Currency API] Error fetching exchange rate:', error);
@@ -82,21 +77,29 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
     );
 
     const data = await response.json();
+    console.log('[Currency API] Historical data response:', data);
 
-    if (!data.success || !data.rates) {
-      throw new Error('Invalid historical data response');
+    if (!data.success) {
+      console.error('[Currency API] API returned unsuccessful response:', data);
+      throw new Error('Historical data API request was not successful');
+    }
+
+    if (!data.rates || typeof data.rates !== 'object') {
+      console.error('[Currency API] Invalid rates object:', data.rates);
+      throw new Error('Invalid historical rates data');
     }
 
     const processedData = Object.entries(data.rates).map(([date, rates]: [string, any]) => ({
       date: new Date(date).toISOString(),
       rate: rates[target]
-    })).filter(point => point.rate !== null);
+    })).filter(point => point.rate !== null && !isNaN(point.rate));
 
     if (processedData.length === 0) {
+      console.error('[Currency API] No valid historical data points found');
       throw new Error('No historical data available');
     }
 
-    console.log(`[Currency API] Processed ${processedData.length} historical records`);
+    console.log(`[Currency API] Processed ${processedData.length} historical records:`, processedData);
     return processedData;
   } catch (error) {
     console.error('[Currency API] Error fetching historical rates:', error);
@@ -112,6 +115,8 @@ export async function simulateHedge(
   tradeDirection: 'buy' | 'sell' = 'buy'
 ) {
   try {
+    console.log(`[Currency API] Starting hedge simulation for ${amount} ${target}`);
+
     // Get current rate
     const rate = await fetchExchangeRate(base, target);
     console.log(`[Currency API] Current rate for ${base}/${target}:`, rate);
@@ -139,7 +144,7 @@ export async function simulateHedge(
     // Get historical rates for the chart
     const historicalRates = await fetchHistoricalRates(base, target, duration);
 
-    return {
+    const result = {
       rate,
       hedgedAmount: hedgedAmountInTarget,
       totalCost: totalCostInTarget,
@@ -149,6 +154,9 @@ export async function simulateHedge(
       },
       historicalRates
     };
+
+    console.log('[Currency API] Simulation result:', result);
+    return result;
   } catch (error) {
     console.error('[Currency API] Error in hedge simulation:', error);
     throw error;

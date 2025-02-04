@@ -1,0 +1,62 @@
+Your function may not be catching the latest data due to a few possible reasons:
+
+### Potential Issues and Fixes
+
+#### 1. **Incorrect Key in API Response (`data.result[target]`)**
+   - Your API request to `https://api.exchangerate.host/convert` uses `data.result[target]`, but the API might return a different structure.
+   - **Fix:** Log `data` to check its structure.
+   - Example:
+     ```ts
+     console.log("API Response:", data);
+     ```
+   - The correct value might be `data.result`, not `data.result[target]`.
+
+#### 2. **Cache Not Updating Correctly**
+   - Your cache is set to **1 minute (60,000ms)**, but if the function is frequently called, it may keep serving outdated values.
+   - **Fix:** Try reducing the cache duration or forcing an update when needed.
+   - Example:
+     ```ts
+     const CACHE_DURATION = 10000; // Reduce to 10 seconds for testing
+     ```
+
+   - Or, allow a **force refresh** option:
+     ```ts
+     export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency, forceRefresh = false) {
+       const cacheKey = `${base}${target}`;
+       const cached = rateCache.get(cacheKey);
+
+       if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+         console.log(`[Currency API] Using cached rate for ${base}/${target}:`, cached.rate);
+         return cached.rate;
+       }
+     ```
+
+#### 3. **Incorrect API Endpoint for Real-Time Conversion**
+   - The `convert` endpoint may not always return the latest rates. Instead, `latest` might be more reliable:
+     ```
+     https://api.exchangerate.host/latest?base=${base}&symbols=${target}
+     ```
+   - **Fix:** Update your fetch function:
+     ```ts
+     const response = await fetchWithRetry(
+       `https://api.exchangerate.host/latest?base=${base}&symbols=${target}`
+     );
+     ```
+
+#### 4. **Potential API Rate Limits**
+   - Some APIs throttle requests. If the API isn't returning fresh data, consider adding a delay between calls.
+
+#### 5. **Historical Data Issue**
+   - If you're using `fetchHistoricalRates`, confirm the dates align with available data.
+   - Log the `data.rates` object to verify it contains the expected format.
+
+---
+
+### Suggested Fixes Summary:
+1. Log API responses (`console.log(data)`) to verify structure.
+2. Reduce cache duration or allow `forceRefresh`.
+3. Use the `latest` API instead of `convert`.
+4. Check API rate limits.
+5. Verify date formatting in historical requests.
+
+Try these fixes and let me know if you need further debugging! 🚀
