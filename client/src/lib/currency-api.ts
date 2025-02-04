@@ -33,29 +33,41 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
   const startDate = new Date();
   startDate.setDate(currentDate.getDate() - days);
 
-  // Fetch historical data for each day
-  for (let date = new Date(startDate); date <= currentDate; date.setDate(date.getDate() + 1)) {
+  // We'll fetch only one day's data at a time to avoid rate limiting
+  const fetchDate = async (date: Date) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
       const response = await fetch(
         `https://api.exchangerate-api.com/v4/latest/${base}`
       );
 
       if (!response.ok) {
-        console.error(`Failed to fetch rates for ${formattedDate}:`, await response.text());
-        continue;
+        console.error(`Failed to fetch rates:`, await response.text());
+        return null;
       }
 
       const data = await response.json();
-      rates.push({
-        date: date.toISOString(),
-        rate: data.rates[target]
-      });
+      const rate = data.rates[target];
+
+      if (rate) {
+        return {
+          date: date.toISOString(),
+          rate: rate  // This will be in base/target format (e.g., USD/BRL)
+        };
+      }
     } catch (error) {
-      console.error(`Error fetching rates for ${date}:`, error);
-      // Continue with other dates if one fails
-      continue;
+      console.error(`Error fetching rates:`, error);
     }
+    return null;
+  };
+
+  // Fetch data for each day
+  for (let date = new Date(startDate); date <= currentDate; date.setDate(date.getDate() + 1)) {
+    const result = await fetchDate(date);
+    if (result) {
+      rates.push(result);
+    }
+    // Add a small delay to avoid hitting rate limits
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
   // If we couldn't get any rates, throw an error
@@ -63,7 +75,8 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
     throw new Error('Failed to fetch historical exchange rates');
   }
 
-  return rates;
+  // Ensure rates are sorted by date
+  return rates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {

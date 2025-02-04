@@ -20,10 +20,18 @@ export function CurrencyChart({ data }: Props) {
   const isProfitOnIncrease = data.tradeDirection === 'sell';
   const thresholdColor = isProfitOnIncrease ? "#22c55e" : "#ef4444"; // green-500 or red-500
 
+  // Convert rates to their inverse (e.g., from USD/BRL to BRL/USD)
+  const processedData = data.historicalRates.map(point => ({
+    date: point.date,
+    rate: 1 / point.rate  // Convert to inverse rate for display
+  }));
+
+  const breakEvenRate = 1 / data.breakEvenRate;
+
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data.historicalRates}>
+        <LineChart data={processedData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="date" 
@@ -39,7 +47,7 @@ export function CurrencyChart({ data }: Props) {
             labelFormatter={(date) => new Date(date).toLocaleDateString()}
           />
           <ReferenceLine
-            y={data.breakEvenRate}
+            y={breakEvenRate}
             label={{ 
               value: 'Break-even', 
               position: 'right',
