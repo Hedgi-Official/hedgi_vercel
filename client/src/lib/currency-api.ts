@@ -13,15 +13,33 @@ const CURRENCY_VALUES = {
 };
 
 function getXTBSymbol(base: SupportedCurrency, target: SupportedCurrency): string {
+  // XTB expects currency pairs in a specific format
   return `${base}${target}`;
 }
 
+async function ensureXTBConnection() {
+  try {
+    // Try to connect if not already connected
+    if (!xtbService.isConnected) {
+      await xtbService.connect({
+        userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+        password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
+      });
+    }
+  } catch (error) {
+    console.error('Failed to connect to XTB:', error);
+    throw new Error('Failed to connect to trading platform');
+  }
+}
+
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
+  await ensureXTBConnection();
   const symbol = getXTBSymbol(base, target);
+
   try {
     const response = await xtbService.getSymbolData(symbol);
     if (!response.status || !response.returnData) {
-      throw new Error('Failed to fetch current exchange rate');
+      throw new Error(`Failed to fetch rate for ${symbol}`);
     }
     return response.returnData.ask;
   } catch (error) {
@@ -31,9 +49,15 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
 }
 
 async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
+  await ensureXTBConnection();
   const symbol = getXTBSymbol(base, target);
+
   try {
-    return await xtbService.getHistoricalData(symbol, days);
+    const historicalData = await xtbService.getHistoricalData(symbol, days);
+    if (!historicalData || historicalData.length === 0) {
+      throw new Error('No historical data available');
+    }
+    return historicalData;
   } catch (error) {
     console.error('Error fetching historical rates:', error);
     throw new Error('Failed to fetch historical exchange rates');
