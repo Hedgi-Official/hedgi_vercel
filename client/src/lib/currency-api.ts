@@ -17,6 +17,9 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
   const response = await fetch(
     `https://api.exchangerate-api.com/v4/latest/${base}`
   );
+  if (!response.ok) {
+    throw new Error('Failed to fetch current exchange rate');
+  }
   const data = await response.json();
   return data.rates[target];
 }
@@ -25,25 +28,39 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
   const rates: Array<{ date: string; rate: number }> = [];
   const today = new Date();
 
+  // Since we can't fetch future dates, limit to current date
+  const currentDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(currentDate.getDate() - days);
+
   // Fetch historical data for each day
-  for (let i = days; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const formattedDate = date.toISOString().split('T')[0];
+  for (let date = new Date(startDate); date <= currentDate; date.setDate(date.getDate() + 1)) {
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const response = await fetch(
+        `https://api.exchangerate-api.com/v4/latest/${base}`
+      );
 
-    const response = await fetch(
-      `https://api.exchangerate-api.com/v4/${formattedDate}/rates/${base}`
-    );
+      if (!response.ok) {
+        console.error(`Failed to fetch rates for ${formattedDate}:`, await response.text());
+        continue;
+      }
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch historical rates for ${formattedDate}`);
+      const data = await response.json();
+      rates.push({
+        date: date.toISOString(),
+        rate: data.rates[target]
+      });
+    } catch (error) {
+      console.error(`Error fetching rates for ${date}:`, error);
+      // Continue with other dates if one fails
+      continue;
     }
+  }
 
-    const data = await response.json();
-    rates.push({
-      date: date.toISOString(),
-      rate: data.rates[target]
-    });
+  // If we couldn't get any rates, throw an error
+  if (rates.length === 0) {
+    throw new Error('Failed to fetch historical exchange rates');
   }
 
   return rates;
