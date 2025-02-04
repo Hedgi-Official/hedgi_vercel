@@ -3,20 +3,20 @@ import { z } from "zod";
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 
-// Sample rates for development/testing
+// Sample rates based on current XTB market data
 const SAMPLE_RATES = {
-  'USDBRL': 4.95,
-  'USDEUR': 0.93,
-  'USDMXN': 17.05,
-  'EURUSD': 1.08,
-  'EURBRL': 5.35,
-  'EURMXN': 18.45,
-  'BRLUSD': 0.20,
-  'BRLEUR': 0.19,
-  'BRLMXN': 3.45,
-  'MXNUSD': 0.059,
-  'MXNEUR': 0.054,
-  'MXNBRL': 0.29,
+  'USDBRL': 5.8322,
+  'USDEUR': 0.9689, // 1/1.03232
+  'USDMXN': 20.3942,
+  'EURUSD': 1.03232,
+  'EURBRL': 6.0234,
+  'EURMXN': 21.0542,
+  'BRLUSD': 0.1715, // 1/5.8322
+  'BRLEUR': 0.1660,
+  'BRLMXN': 3.4967,
+  'MXNUSD': 0.0490, // 1/20.3942
+  'MXNEUR': 0.0475,
+  'MXNBRL': 0.2860,
 };
 
 function generateHistoricalRates(baseRate: number, days: number) {
