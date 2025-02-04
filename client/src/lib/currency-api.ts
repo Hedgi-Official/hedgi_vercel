@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-const API_KEY = "YOUR_API_KEY"; // Would use env var in production
+import { xtbService } from './xtb-service';
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
@@ -13,70 +12,32 @@ const CURRENCY_VALUES = {
   MXN: 0.058
 };
 
+function getXTBSymbol(base: SupportedCurrency, target: SupportedCurrency): string {
+  return `${base}${target}`;
+}
+
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
-  const response = await fetch(
-    `https://api.exchangerate-api.com/v4/latest/${base}`
-  );
-  if (!response.ok) {
+  const symbol = getXTBSymbol(base, target);
+  try {
+    const response = await xtbService.getSymbolData(symbol);
+    if (!response.status || !response.returnData) {
+      throw new Error('Failed to fetch current exchange rate');
+    }
+    return response.returnData.ask;
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
     throw new Error('Failed to fetch current exchange rate');
   }
-  const data = await response.json();
-  return data.rates[target];
 }
 
 async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
-  const rates: Array<{ date: string; rate: number }> = [];
-  const today = new Date();
-
-  // Since we can't fetch future dates, limit to current date
-  const currentDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(currentDate.getDate() - days);
-
-  // We'll fetch only one day's data at a time to avoid rate limiting
-  const fetchDate = async (date: Date) => {
-    try {
-      const response = await fetch(
-        `https://api.exchangerate-api.com/v4/latest/${base}`
-      );
-
-      if (!response.ok) {
-        console.error(`Failed to fetch rates:`, await response.text());
-        return null;
-      }
-
-      const data = await response.json();
-      const rate = data.rates[target];
-
-      if (rate) {
-        return {
-          date: date.toISOString(),
-          rate: rate  // This will be in base/target format (e.g., USD/BRL)
-        };
-      }
-    } catch (error) {
-      console.error(`Error fetching rates:`, error);
-    }
-    return null;
-  };
-
-  // Fetch data for each day
-  for (let date = new Date(startDate); date <= currentDate; date.setDate(date.getDate() + 1)) {
-    const result = await fetchDate(date);
-    if (result) {
-      rates.push(result);
-    }
-    // Add a small delay to avoid hitting rate limits
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  // If we couldn't get any rates, throw an error
-  if (rates.length === 0) {
+  const symbol = getXTBSymbol(base, target);
+  try {
+    return await xtbService.getHistoricalData(symbol, days);
+  } catch (error) {
+    console.error('Error fetching historical rates:', error);
     throw new Error('Failed to fetch historical exchange rates');
   }
-
-  // Ensure rates are sorted by date
-  return rates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {

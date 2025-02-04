@@ -29,42 +29,50 @@ export function CurrencyChart({ data }: Props) {
   const breakEvenRate = 1 / data.breakEvenRate;
 
   return (
-    <div className="h-[300px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={processedData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
-            tickFormatter={(date) => new Date(date).toLocaleDateString()}
-          />
-          <YAxis 
-            domain={['auto', 'auto']}
-            tickFormatter={(value) => value.toFixed(4)}
-            tickCount={5}
-          />
-          <Tooltip 
-            formatter={(value: number) => value.toFixed(4)} 
-            labelFormatter={(date) => new Date(date).toLocaleDateString()}
-          />
-          <ReferenceLine
-            y={breakEvenRate}
-            label={{ 
-              value: 'Break-even', 
-              position: 'right',
-              fill: thresholdColor
-            }}
-            stroke={thresholdColor}
-            strokeDasharray="3 3"
-          />
-          <Line
-            type="monotone"
-            dataKey="rate"
-            stroke="#2563eb" // blue-600
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div className="space-y-2">
+      <div className="h-[300px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={processedData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="date" 
+              tickFormatter={(date) => new Date(date).toLocaleDateString()}
+            />
+            <YAxis 
+              domain={['auto', 'auto']}
+              tickFormatter={(value) => value.toFixed(4)}
+              tickCount={5}
+            />
+            <Tooltip 
+              formatter={(value: number) => value.toFixed(4)} 
+              labelFormatter={(date) => new Date(date).toLocaleDateString()}
+            />
+            <ReferenceLine
+              y={breakEvenRate}
+              label={{ 
+                value: 'Break-even', 
+                position: 'right',
+                fill: thresholdColor
+              }}
+              stroke={thresholdColor}
+              strokeDasharray="3 3"
+            />
+            <Line
+              type="monotone"
+              dataKey="rate"
+              stroke="#2563eb" // blue-600
+              strokeWidth={2}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="text-sm text-muted-foreground text-center">
+        The dotted {isProfitOnIncrease ? "green" : "red"} line represents the break-even rate - 
+        {isProfitOnIncrease 
+          ? " above this line indicates potential profit" 
+          : " below this line indicates potential profit"}
+      </p>
     </div>
   );
 }

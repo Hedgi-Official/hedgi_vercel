@@ -181,6 +181,37 @@ export class XTBService {
     }
   }
 
+  async getHistoricalData(symbol: string, period: number = 30): Promise<Array<{ date: string; rate: number }>> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to XTB');
+    }
+
+    try {
+      const endTimestamp = Math.floor(Date.now() / 1000);
+      const startTimestamp = endTimestamp - (period * 24 * 60 * 60); // period days ago
+
+      const response = await this.sendCommand('getChartRangeRequest', {
+        symbol,
+        start: startTimestamp * 1000, // XTB expects milliseconds
+        end: endTimestamp * 1000,
+        period: 1440, // Daily candles (1440 minutes = 24 hours)
+        ticks: 0
+      });
+
+      if (!response.status || !response.returnData?.rateInfos) {
+        throw new Error('Failed to get historical data');
+      }
+
+      return response.returnData.rateInfos.map((info: any) => ({
+        date: new Date(info.ctm).toISOString(),
+        rate: (info.open + info.close) / 2 // Average of open and close prices
+      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } catch (error) {
+      console.error('[XTB] Error fetching historical data:', error);
+      throw error;
+    }
+  }
+
   async getTickPrices(symbol: string): Promise<XTBResponse> {
     if (!this.streamSessionId) {
       throw new Error('Not connected to streaming server');
