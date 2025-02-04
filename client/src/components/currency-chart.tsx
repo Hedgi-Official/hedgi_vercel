@@ -16,10 +16,10 @@ interface Props {
 }
 
 export function CurrencyChart({ data }: Props) {
-  // Now using the rates directly without inversion to match the exchange rates widget
+  // Convert rates to their inverse (e.g., from USD/BRL to BRL/USD)
   const processedData = data.historicalRates.map(point => ({
     date: point.date,
-    rate: point.rate
+    rate: 1 / point.rate  // Convert to inverse rate for display
   }));
 
   // Calculate number of days from the data
