@@ -11,6 +11,8 @@ export interface ExchangeRate {
   timestamp: number;
 }
 
+const CURRENCY_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
+
 export function useXTB() {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,29 +65,32 @@ export function useXTB() {
       console.log('[useXTB] Stream connection status:', streamStatus);
 
       const rates: ExchangeRate[] = [];
-      const symbol = 'USDBRL';
 
       try {
-        console.log('[useXTB] Requesting symbol data for:', symbol);
-        const symbolResponse = await xtbService.getSymbolData(symbol);
-        console.log('[useXTB] Symbol response:', symbolResponse);
+        // Fetch data for all currency pairs
+        for (const symbol of CURRENCY_PAIRS) {
+          console.log('[useXTB] Requesting symbol data for:', symbol);
+          const symbolResponse = await xtbService.getSymbolData(symbol);
+          console.log('[useXTB] Symbol response:', symbolResponse);
 
-        if (!symbolResponse.status || !symbolResponse.returnData) {
-          throw new Error(`Failed to get symbol data for ${symbol}`);
+          if (!symbolResponse.status || !symbolResponse.returnData) {
+            console.error(`[useXTB] Failed to get symbol data for ${symbol}`);
+            continue;
+          }
+
+          const data = symbolResponse.returnData as SymbolRecord;
+          rates.push({
+            symbol,
+            bid: data.bid,
+            ask: data.ask,
+            timestamp: data.time,
+          });
+
+          // Set up streaming updates for this symbol
+          xtbService.onSymbolUpdate(symbol, (symbolData) => {
+            console.log(`[useXTB] Received streaming update for ${symbol}:`, symbolData);
+          });
         }
-
-        const data = symbolResponse.returnData as SymbolRecord;
-        rates.push({
-          symbol,
-          bid: data.bid,
-          ask: data.ask,
-          timestamp: data.time,
-        });
-
-        // Set up streaming updates for this symbol
-        xtbService.onSymbolUpdate(symbol, (symbolData) => {
-          console.log(`[useXTB] Received streaming update for ${symbol}:`, symbolData);
-        });
       } catch (error) {
         console.error('[useXTB] Error in exchange rates query:', error);
         throw error;
