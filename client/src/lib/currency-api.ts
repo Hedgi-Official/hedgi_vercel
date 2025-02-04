@@ -21,6 +21,34 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
   return data.rates[target];
 }
 
+async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
+  const rates: Array<{ date: string; rate: number }> = [];
+  const today = new Date();
+
+  // Fetch historical data for each day
+  for (let i = days; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    const formattedDate = date.toISOString().split('T')[0];
+
+    const response = await fetch(
+      `https://api.exchangerate-api.com/v4/${formattedDate}/rates/${base}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch historical rates for ${formattedDate}`);
+    }
+
+    const data = await response.json();
+    rates.push({
+      date: date.toISOString(),
+      rate: data.rates[target]
+    });
+  }
+
+  return rates;
+}
+
 function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {
   return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
@@ -53,13 +81,17 @@ export async function simulateHedge(
     ? rate * (1 + costPercentage / 100) // When selling target currency, break-even is higher (get more base currency)
     : rate * (1 - costPercentage / 100); // When buying target currency, break-even is lower (pay less base currency)
 
+  // Get historical rates for the chart
+  const historicalRates = await fetchHistoricalRates(base, target, duration);
+
   return {
     rate,
     hedgedAmount: hedgedAmountInTarget,
-    totalCost: totalCostInTarget, // Cost in target currency
+    totalCost: totalCostInTarget,
     breakEvenRate,
     costDetails: {
       costPercentage
-    }
+    },
+    historicalRates
   };
 }

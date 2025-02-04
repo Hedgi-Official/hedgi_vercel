@@ -18,6 +18,7 @@ interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
+  hedgedAmount: number; // Added hedgedAmount
   costDetails: {
     costPercentage: number;
   };
