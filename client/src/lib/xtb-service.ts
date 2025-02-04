@@ -8,8 +8,8 @@ export class XTBService {
   private streamListeners: Map<string, (data: any) => void> = new Map();
 
   constructor(
-    private readonly serverUrl = 'wss://xs5.xopenhub.pro/xoh',
-    private readonly streamUrl = 'wss://xs5.xopenhub.pro/xohStream'
+    private readonly serverUrl = 'wss://ws.xtb.com/demo',
+    private readonly streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {}
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
