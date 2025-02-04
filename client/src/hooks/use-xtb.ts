@@ -66,19 +66,25 @@ export function useXTB() {
       const symbol = 'USDBRL';
 
       try {
-        console.log('[useXTB] Requesting tick prices for:', symbol);
-        const tickResponse = await xtbService.getTickPrices(symbol);
-        console.log('[useXTB] Tick response:', tickResponse);
+        console.log('[useXTB] Requesting symbol data for:', symbol);
+        const symbolResponse = await xtbService.getSymbolData(symbol);
+        console.log('[useXTB] Symbol response:', symbolResponse);
 
-        if (!tickResponse.status || !tickResponse.returnData) {
-          throw new Error(`Failed to get tick prices for ${symbol}`);
+        if (!symbolResponse.status || !symbolResponse.returnData) {
+          throw new Error(`Failed to get symbol data for ${symbol}`);
         }
 
+        const data = symbolResponse.returnData as SymbolRecord;
         rates.push({
           symbol,
-          bid: tickResponse.returnData.bid,
-          ask: tickResponse.returnData.ask,
-          timestamp: tickResponse.returnData.timestamp,
+          bid: data.bid,
+          ask: data.ask,
+          timestamp: data.time,
+        });
+
+        // Set up streaming updates for this symbol
+        xtbService.onSymbolUpdate(symbol, (symbolData) => {
+          console.log(`[useXTB] Received streaming update for ${symbol}:`, symbolData);
         });
       } catch (error) {
         console.error('[useXTB] Error in exchange rates query:', error);

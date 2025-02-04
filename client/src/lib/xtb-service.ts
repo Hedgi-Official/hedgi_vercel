@@ -223,6 +223,43 @@ export class XTBService {
     }
   }
 
+  async getSymbolData(symbol: string): Promise<XTBResponse> {
+    if (!this.streamSessionId) {
+      throw new Error('Not connected to streaming server');
+    }
+
+    try {
+      console.log('[XTB] Fetching symbol data for:', symbol);
+
+      // Get symbol data
+      const response = await this.sendCommand('getSymbol', {
+        symbol: symbol
+      });
+
+      if (!response.status) {
+        throw new Error(response.errorDescr || 'Failed to get symbol data');
+      }
+
+      // Subscribe to streaming updates if available
+      if (await this.checkStreamConnection()) {
+        const streamMessage = JSON.stringify({
+          command: "getSymbol",
+          streamSessionId: this.streamSessionId,
+          symbol: symbol
+        });
+
+        console.log('[XTB] Subscribing to streaming updates for:', symbol);
+        this.streamWs!.send(streamMessage);
+      }
+
+      console.log('[XTB] Symbol data response for', symbol, ':', response);
+      return response;
+    } catch (error) {
+      console.error('[XTB] Error fetching symbol data for', symbol, ':', error);
+      throw error;
+    }
+  }
+
   onSymbolUpdate(symbol: string, callback: (data: any) => void) {
     this.streamListeners.set(symbol, callback);
   }

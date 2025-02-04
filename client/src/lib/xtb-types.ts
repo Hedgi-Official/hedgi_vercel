@@ -14,16 +14,24 @@ export interface XTBResponse {
 
 export interface SymbolRecord {
   symbol: string;
-  categoryName: string;
   currency: string;
-  ask: number;
+  categoryName: string;
+  description: string;
   bid: number;
+  ask: number;
   high: number;
   low: number;
+  time: number;
+  timeString: string;
   spreadRaw: number;
   spreadTable: number;
-  time: number;
-  quoteId: 1 | 2 | 3 | 4; // 1=fixed, 2=float, 3=depth, 4=cross
+  currencyPair: boolean;
+  currencyProfit: string;
+}
+
+export interface StreamingSymbolResponse {
+  command: "getSymbol";
+  data: SymbolRecord;
 }
 
 export interface StreamingCandleRecord {
