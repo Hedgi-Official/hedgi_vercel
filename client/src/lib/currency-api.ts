@@ -11,29 +11,54 @@ const CURRENCY_VALUES = {
   MXN: 0.058
 };
 
-function getYahooSymbol(base: SupportedCurrency, target: SupportedCurrency): string {
-  return `${base}${target}=X`;
+// Simple in-memory cache for rates
+const rateCache = new Map<string, { rate: number; timestamp: number }>();
+const CACHE_DURATION = 60000; // 1 minute in milliseconds
+
+async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return response;
+      console.error(`[Currency API] Attempt ${i + 1} failed with status ${response.status}`);
+    } catch (error) {
+      console.error(`[Currency API] Attempt ${i + 1} failed with error:`, error);
+      if (i === retries - 1) throw error;
+    }
+    // Wait before retrying (exponential backoff)
+    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+  }
+  throw new Error(`Failed after ${retries} attempts`);
 }
 
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
+  const cacheKey = `${base}${target}`;
+  const cached = rateCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`[Currency API] Using cached rate for ${base}/${target}:`, cached.rate);
+    return cached.rate;
+  }
+
   try {
     console.log(`[Currency API] Fetching current rate for ${base}/${target}...`);
-    const symbol = getYahooSymbol(base, target);
-    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await fetchWithRetry(
+      `https://api.exchangerate.host/convert?from=${base}&to=${target}&amount=1`
+    );
 
     const data = await response.json();
-    const price = data.chart.result[0].meta.regularMarketPrice;
 
-    if (!price) {
-      throw new Error(`No rate available for ${base}/${target}`);
+    if (!data.success || !data.result) {
+      throw new Error(`Invalid response for ${base}/${target}`);
     }
 
-    console.log(`[Currency API] Rate for ${base}/${target}:`, price);
-    return price;
+    const rate = data.result[target];
+    console.log(`[Currency API] Rate for ${base}/${target}:`, rate);
+
+    // Cache the result
+    rateCache.set(cacheKey, { rate, timestamp: Date.now() });
+
+    return rate;
   } catch (error) {
     console.error('[Currency API] Error fetching exchange rate:', error);
     throw new Error(`Failed to fetch current exchange rate for ${base}/${target}`);
@@ -43,27 +68,33 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
 async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
   try {
     console.log(`[Currency API] Fetching ${days} days historical data for ${base}/${target}...`);
-    const symbol = getYahooSymbol(base, target);
-    const response = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${days}d`
+
+    // Calculate date range
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+
+    const response = await fetchWithRetry(
+      `https://api.exchangerate.host/timeseries?start_date=${startStr}&end_date=${endStr}&base=${base}&symbols=${target}`
     );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+
+    if (!data.success || !data.rates) {
+      throw new Error('Invalid historical data response');
     }
 
-    const data = await response.json();
-    const timestamps = data.chart.result[0].timestamp;
-    const closePrices = data.chart.result[0].indicators.quote[0].close;
+    const processedData = Object.entries(data.rates).map(([date, rates]: [string, any]) => ({
+      date: new Date(date).toISOString(),
+      rate: rates[target]
+    })).filter(point => point.rate !== null);
 
-    if (!timestamps || !closePrices || timestamps.length === 0) {
+    if (processedData.length === 0) {
       throw new Error('No historical data available');
     }
-
-    const processedData = timestamps.map((timestamp: number, index: number) => ({
-      date: new Date(timestamp * 1000).toISOString(),
-      rate: closePrices[index]
-    })).filter((point: { rate: number }) => point.rate !== null);
 
     console.log(`[Currency API] Processed ${processedData.length} historical records`);
     return processedData;
@@ -71,10 +102,6 @@ async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCu
     console.error('[Currency API] Error fetching historical rates:', error);
     throw new Error(`Failed to fetch historical exchange rates for ${base}/${target}`);
   }
-}
-
-function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {
-  return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
 
 export async function simulateHedge(
@@ -106,8 +133,8 @@ export async function simulateHedge(
 
     // Calculate break-even rate based on trade direction
     const breakEvenRate = tradeDirection === 'sell'
-      ? rate * (1 + costPercentage / 100) // When selling target currency, break-even is higher (get more base currency)
-      : rate * (1 - costPercentage / 100); // When buying target currency, break-even is lower (pay less base currency)
+      ? rate * (1 + costPercentage / 100) // When selling target currency, break-even is higher
+      : rate * (1 - costPercentage / 100); // When buying target currency, break-even is lower
 
     // Get historical rates for the chart
     const historicalRates = await fetchHistoricalRates(base, target, duration);
@@ -126,4 +153,8 @@ export async function simulateHedge(
     console.error('[Currency API] Error in hedge simulation:', error);
     throw error;
   }
+}
+
+function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {
+  return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
