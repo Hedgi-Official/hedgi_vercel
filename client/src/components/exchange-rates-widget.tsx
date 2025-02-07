@@ -10,11 +10,24 @@ const CURRENCY_PAIRS = [
   { value: "USDMXN", label: "USD/MXN - US Dollar/Mexican Peso" }
 ];
 
+function useSecondaryRate() {
+  return useQuery({
+    queryKey: ['secondary-rate'],
+    queryFn: async () => {
+      const response = await fetch('http://18.231.217.179:8080/usdrbl');
+      return response.json();
+    },
+    refetchInterval: 5000
+  });
+}
+
 export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
+  const { data: secondaryRate, isLoading: isLoadingSecondary } = useSecondaryRate();
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
+  const showSecondaryRate = selectedPair === "USDBRL";
 
   return (
     <Card className="bg-background shadow-lg">
@@ -51,15 +64,29 @@ export function ExchangeRatesWidget() {
           </div>
         ) : selectedRate ? (
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 p-4 rounded-lg border">
-                <div className="text-sm text-muted-foreground">Bid Price</div>
-                <div className="text-2xl font-bold">{selectedRate.bid.toFixed(4)}</div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 p-4 rounded-lg border">
+                  <div className="text-sm text-muted-foreground">XTB Bid Price</div>
+                  <div className="text-2xl font-bold">{selectedRate.bid.toFixed(4)}</div>
+                </div>
+                <div className="space-y-2 p-4 rounded-lg border">
+                  <div className="text-sm text-muted-foreground">XTB Ask Price</div>
+                  <div className="text-2xl font-bold">{selectedRate.ask.toFixed(4)}</div>
+                </div>
               </div>
-              <div className="space-y-2 p-4 rounded-lg border">
-                <div className="text-sm text-muted-foreground">Ask Price</div>
-                <div className="text-2xl font-bold">{selectedRate.ask.toFixed(4)}</div>
-              </div>
+              {showSecondaryRate && (
+                <div className="p-4 rounded-lg border">
+                  <div className="text-sm text-muted-foreground">Secondary Source Rate</div>
+                  <div className="text-2xl font-bold">
+                    {isLoadingSecondary ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    ) : (
+                      secondaryRate?.rate?.toFixed(4) || "N/A"
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
