@@ -4,9 +4,13 @@ import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
+import secondaryRateRouter from './routes/secondary-rate';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Register secondary rate route
+  app.use(secondaryRateRouter);
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
