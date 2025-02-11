@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-interface SecondaryRateResponse {
+interface FBSRateResponse {
   bid: number;
   ask: number;
   swap_long: number;
@@ -8,25 +8,24 @@ interface SecondaryRateResponse {
   symbol: string;
 }
 
-export function useSecondaryRate() {
+export function useFBSRate(symbol: string = 'USDBRL') {
   return useQuery({
-    queryKey: ['secondary-rate'],
+    queryKey: ['fbs-rate', symbol],
     queryFn: async () => {
       try {
-        console.log('Fetching secondary rate...');
+        console.log('Fetching FBS rate for', symbol);
 
-        // Execute curl command
-        const response = await fetch('/api/secondary-rate');
+        const response = await fetch(`/api/fbs-rate?symbol=${symbol}`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json() as SecondaryRateResponse;
-        console.log('Secondary rate data:', data);
+        const data = await response.json() as FBSRateResponse;
+        console.log('FBS rate data:', data);
         return data;
       } catch (error) {
-        console.error('Secondary rate fetch error:', error);
+        console.error('FBS rate fetch error:', error);
         throw error;
       }
     },

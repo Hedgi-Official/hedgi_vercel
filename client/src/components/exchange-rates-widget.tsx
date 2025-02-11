@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useXTB } from "@/hooks/use-xtb";
-import { useSecondaryRate } from "@/hooks/use-secondary-rate";
+import { useFBSRate } from "@/hooks/use-secondary-rate";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
@@ -14,32 +14,31 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
-  const { data: secondaryRate, isLoading: isLoadingSecondary, error: secondaryError } = useSecondaryRate();
+  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
 
-  console.log('Secondary Rate Data:', secondaryRate); // Debug log
-  console.log('Secondary Rate Loading:', isLoadingSecondary); // Debug loading state
-  console.log('Secondary Rate Error:', secondaryError); // Debug errors
+  console.log('FBS Rate Data:', fbsRate); // Debug log
+  console.log('FBS Rate Loading:', isLoadingFBS); // Debug loading state
+  console.log('FBS Rate Error:', fbsError); // Debug errors
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
-  const showSecondaryRate = selectedPair === "USDBRL"; // Only show for USDBRL
 
-  const renderSecondaryRate = () => {
-    if (secondaryError) {
-      return <div className="text-destructive">Error loading secondary rate: {secondaryError.message}</div>;
+  const renderFBSRate = () => {
+    if (fbsError) {
+      return <div className="text-destructive">Error loading FBS rate: {fbsError.message}</div>;
     }
 
     return (
       <div className="space-y-2 p-4 rounded-lg border">
-        <div className="text-sm text-muted-foreground">Secondary Rate</div>
+        <div className="text-sm text-muted-foreground">FBS Rate</div>
         <div className="space-y-2">
           <div className="text-2xl font-bold">
-            {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
+            {fbsRate ? fbsRate.bid.toFixed(4) : 'Loading...'}
           </div>
           <div className="text-sm text-muted-foreground">Bid Price</div>
         </div>
         <div className="space-y-2">
           <div className="text-2xl font-bold">
-            {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
+            {fbsRate ? fbsRate.ask.toFixed(4) : 'Loading...'}
           </div>
           <div className="text-sm text-muted-foreground">Ask Price</div>
         </div>
@@ -53,7 +52,7 @@ export function ExchangeRatesWidget() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             Live Exchange Rates
-            {(isLoading || isLoadingSecondary) && <Loader2 className="h-4 w-4 animate-spin" />}
+            {(isLoading || isLoadingFBS) && <Loader2 className="h-4 w-4 animate-spin" />}
             {!isConnected && <span className="text-sm text-muted-foreground">(Connecting...)</span>}
           </div>
           <Select value={selectedPair} onValueChange={setSelectedPair}>
@@ -94,7 +93,7 @@ export function ExchangeRatesWidget() {
                   <div className="text-sm text-muted-foreground">Ask Price</div>
                 </div>
               </div>
-              {showSecondaryRate && renderSecondaryRate()}
+              {renderFBSRate()}
             </div>
           </div>
         ) : (

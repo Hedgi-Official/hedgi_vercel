@@ -5,31 +5,39 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const router = Router();
 
-router.get('/api/secondary-rate', async (req, res) => {
+const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
+
+router.get('/api/fbs-rate', async (req, res) => {
   try {
-    console.log('Executing curl command for secondary rate...');
+    const symbol = req.query.symbol as string;
+
+    if (!symbol || !SUPPORTED_PAIRS.includes(symbol)) {
+      res.status(400).json({ error: 'Invalid or missing symbol parameter' });
+      return;
+    }
+
+    console.log(`Executing curl command for FBS rate for ${symbol}...`);
     const { stdout, stderr } = await execAsync(
-      'curl -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL"'
+      `curl -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=${symbol}"`
     );
 
     if (stderr) {
       console.error('Curl command error:', stderr);
-      res.status(500).json({ error: 'Failed to fetch secondary rate' });
+      res.status(500).json({ error: 'Failed to fetch FBS rate' });
       return;
     }
 
-    // Try to parse the response as JSON
     try {
       const data = JSON.parse(stdout);
-      console.log('Secondary rate data:', data);
+      console.log('FBS rate data:', data);
       res.json(data);
     } catch (parseError) {
       console.error('JSON parse error:', parseError, 'Raw output:', stdout);
-      res.status(500).json({ error: 'Invalid response format from secondary rate service' });
+      res.status(500).json({ error: 'Invalid response format from FBS rate service' });
     }
   } catch (error) {
-    console.error('Error fetching secondary rate:', error);
-    res.status(500).json({ error: 'Failed to fetch secondary rate' });
+    console.error('Error fetching FBS rate:', error);
+    res.status(500).json({ error: 'Failed to fetch FBS rate' });
   }
 });
 
