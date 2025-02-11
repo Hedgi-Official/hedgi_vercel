@@ -13,13 +13,27 @@ export function useSecondaryRate() {
     queryKey: ['secondary-rate'],
     queryFn: async () => {
       try {
-        const response = await fetch('http://192.168.1.103:8080/symbol_info?symbol=USDBRL');
-        if (!response.ok) {
-          throw new Error('Failed to fetch secondary rate');
+        console.log('[Secondary Rate] Fetching rates...');
+        const pairs = ['USDBRL', 'EURUSD', 'USDMXN'];
+        const rates: Record<string, SecondaryRateResponse> = {};
+
+        for (const symbol of pairs) {
+          const response = await fetch(`http://192.168.1.103:8080/symbol_info?symbol=${symbol}`);
+          console.log(`[Secondary Rate] Response for ${symbol}:`, response.status);
+
+          if (!response.ok) {
+            console.error(`[Secondary Rate] Failed to fetch ${symbol}:`, response.statusText);
+            throw new Error(`Failed to fetch secondary rate for ${symbol}`);
+          }
+
+          const data = await response.json();
+          console.log(`[Secondary Rate] Data for ${symbol}:`, data);
+          rates[symbol] = data;
         }
-        return response.json() as Promise<SecondaryRateResponse>;
+
+        return rates;
       } catch (error) {
-        console.error('Secondary rate fetch error:', error);
+        console.error('[Secondary Rate] Fetch error:', error);
         throw error;
       }
     },

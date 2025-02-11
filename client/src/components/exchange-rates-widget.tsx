@@ -14,10 +14,10 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
-  const { data: secondaryRate, isLoading: isLoadingSecondary } = useSecondaryRate();
+  const { data: secondaryRates, isLoading: isLoadingSecondary } = useSecondaryRate();
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
-  const showSecondaryRate = selectedPair === "USDBRL"; // Only show for USDBRL
+  const selectedSecondaryRate = secondaryRates?.[selectedPair];
 
   return (
     <Card className="bg-background shadow-lg">
@@ -66,18 +66,18 @@ export function ExchangeRatesWidget() {
                   <div className="text-sm text-muted-foreground">Ask Price</div>
                 </div>
               </div>
-              {showSecondaryRate && (
+              {selectedSecondaryRate && (
                 <div className="space-y-2 p-4 rounded-lg border">
                   <div className="text-sm text-muted-foreground">Secondary Rate</div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
+                      {selectedSecondaryRate.bid.toFixed(4)}
                     </div>
                     <div className="text-sm text-muted-foreground">Bid Price</div>
                   </div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
+                      {selectedSecondaryRate.ask.toFixed(4)}
                     </div>
                     <div className="text-sm text-muted-foreground">Ask Price</div>
                   </div>
