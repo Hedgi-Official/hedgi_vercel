@@ -18,9 +18,11 @@ export function useSecondaryRate() {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'skip_zrok_interstitial': 'true'
+            'skip_zrok_interstitial': 'true',
+            'Access-Control-Allow-Origin': '*'
           },
           mode: 'cors',
+          credentials: 'omit'
         });
 
         if (response.status === 429) {
