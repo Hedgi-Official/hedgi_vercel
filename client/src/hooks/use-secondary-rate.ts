@@ -15,10 +15,11 @@ export function useSecondaryRate() {
     queryFn: async () => {
       try {
         console.log('Fetching secondary rate...');
-        const response = await fetch('https://2e7c-67-169-127-92.ngrok-free.app/symbol_info?symbol=USDBRL', {
+        const response = await fetch('https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
+            'skip_zrok_interstitial': 'true'
           },
           mode: 'cors',
         });
