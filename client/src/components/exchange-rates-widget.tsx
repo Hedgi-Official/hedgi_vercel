@@ -14,14 +14,10 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
-  const { data: secondaryRates, isLoading: isLoadingSecondary } = useSecondaryRate();
+  const { data: secondaryRate, isLoading: isLoadingSecondary } = useSecondaryRate();
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
-  const selectedSecondaryRate = secondaryRates?.[selectedPair];
-
-  console.log('[ExchangeRatesWidget] Selected pair:', selectedPair);
-  console.log('[ExchangeRatesWidget] Secondary rates:', secondaryRates);
-  console.log('[ExchangeRatesWidget] Selected secondary rate:', selectedSecondaryRate);
+  const showSecondaryRate = selectedPair === "USDBRL"; // Only show for USDBRL
 
   return (
     <Card className="bg-background shadow-lg">
@@ -70,18 +66,18 @@ export function ExchangeRatesWidget() {
                   <div className="text-sm text-muted-foreground">Ask Price</div>
                 </div>
               </div>
-              {selectedSecondaryRate && (
+              {showSecondaryRate && (
                 <div className="space-y-2 p-4 rounded-lg border">
                   <div className="text-sm text-muted-foreground">Secondary Rate</div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {selectedSecondaryRate.bid.toFixed(4)}
+                      {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
                     </div>
                     <div className="text-sm text-muted-foreground">Bid Price</div>
                   </div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {selectedSecondaryRate.ask.toFixed(4)}
+                      {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
                     </div>
                     <div className="text-sm text-muted-foreground">Ask Price</div>
                   </div>
