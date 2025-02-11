@@ -8,8 +8,9 @@ const router = Router();
 router.get('/api/secondary-rate', async (req, res) => {
   try {
     console.log('Executing curl command for secondary rate...');
+    // Add -v flag for verbose output to help debug the request
     const { stdout, stderr } = await execAsync(
-      'curl -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL"'
+      'curl -v -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL"'
     );
 
     if (stderr) {
@@ -18,9 +19,15 @@ router.get('/api/secondary-rate', async (req, res) => {
       return;
     }
 
-    const data = JSON.parse(stdout);
-    console.log('Curl command response:', data);
-    res.json(data);
+    // Try to parse the response as JSON
+    try {
+      const data = JSON.parse(stdout);
+      console.log('Secondary rate data:', data);
+      res.json(data);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Raw output:', stdout);
+      res.status(500).json({ error: 'Invalid response format from secondary rate service' });
+    }
   } catch (error) {
     console.error('Error fetching secondary rate:', error);
     res.status(500).json({ error: 'Failed to fetch secondary rate' });
