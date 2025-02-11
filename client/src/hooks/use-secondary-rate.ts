@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 
 interface SecondaryRateResponse {
@@ -14,16 +15,25 @@ export function useSecondaryRate() {
     queryFn: async () => {
       try {
         console.log('Fetching secondary rate...');
-        const response = await fetch('http://192.168.1.103:8080/symbol_info?symbol=USDBRL');
+        const response = await fetch('http://0.0.0.0:8080/symbol_info?symbol=USDBRL', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch secondary rate');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json() as Promise<SecondaryRateResponse>;
+        
+        const data = await response.json();
+        console.log('Secondary rate data:', data);
+        return data as SecondaryRateResponse;
       } catch (error) {
         console.error('Secondary rate fetch error:', error);
         throw error;
       }
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 5000,
   });
 }
