@@ -19,6 +19,10 @@ export function ExchangeRatesWidget() {
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
   const selectedSecondaryRate = secondaryRates?.[selectedPair];
 
+  console.log('[ExchangeRatesWidget] Selected pair:', selectedPair);
+  console.log('[ExchangeRatesWidget] Secondary rates:', secondaryRates);
+  console.log('[ExchangeRatesWidget] Selected secondary rate:', selectedSecondaryRate);
+
   return (
     <Card className="bg-background shadow-lg">
       <CardHeader>
