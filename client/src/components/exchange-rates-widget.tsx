@@ -16,6 +16,8 @@ export function ExchangeRatesWidget() {
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
   const { data: secondaryRate, isLoading: isLoadingSecondary } = useSecondaryRate();
 
+  console.log('Secondary Rate Data:', secondaryRate); // Debug log
+
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
   const showSecondaryRate = selectedPair === "USDBRL"; // Only show for USDBRL
 
