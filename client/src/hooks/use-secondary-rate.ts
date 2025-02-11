@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 interface SecondaryRateResponse {
   bid: number;
   ask: number;
+  swap_long: number;
+  swap_short: number;
+  symbol: string;
 }
 
 export function useSecondaryRate() {
