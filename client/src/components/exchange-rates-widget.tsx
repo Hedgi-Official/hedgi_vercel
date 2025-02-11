@@ -71,9 +71,15 @@ export function ExchangeRatesWidget() {
                   <div className="text-sm text-muted-foreground">Secondary Rate</div>
                   <div className="space-y-2">
                     <div className="text-2xl font-bold">
-                      {secondaryRate ? Number(secondaryRate.value).toFixed(4) : 'Loading...'}
+                      {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
                     </div>
-                    <div className="text-sm text-muted-foreground">USD/BRL</div>
+                    <div className="text-sm text-muted-foreground">Bid Price</div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold">
+                      {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Ask Price</div>
                   </div>
                 </div>
               )}
