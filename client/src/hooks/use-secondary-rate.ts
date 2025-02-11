@@ -1,4 +1,6 @@
+
 import { useQuery } from '@tanstack/react-query';
+import { spawn } from 'child_process';
 
 interface SecondaryRateResponse {
   bid: number;
@@ -14,26 +16,38 @@ export function useSecondaryRate() {
     queryFn: async () => {
       try {
         console.log('Fetching secondary rate...');
-        const response = await fetch('https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'skip_zrok_interstitial': 'true'
-          },
-          mode: 'cors',
+        
+        return new Promise<SecondaryRateResponse>((resolve, reject) => {
+          const curl = spawn('curl', [
+            '-H', 
+            'skip_zrok_interstitial: true',
+            'https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL'
+          ]);
+
+          let data = '';
+          
+          curl.stdout.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          curl.stderr.on('data', (data) => {
+            console.error('curl stderr:', data.toString());
+          });
+
+          curl.on('close', (code) => {
+            if (code !== 0) {
+              reject(new Error(`curl process exited with code ${code}`));
+              return;
+            }
+            try {
+              const response = JSON.parse(data);
+              console.log('Secondary rate data:', response);
+              resolve(response);
+            } catch (error) {
+              reject(error);
+            }
+          });
         });
-
-        if (response.status === 429) {
-          throw new Error('Please approve the ngrok URL by visiting it in your browser first');
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Secondary rate data:', data);
-        return data as SecondaryRateResponse;
       } catch (error) {
         console.error('Secondary rate fetch error:', error);
         throw error;
