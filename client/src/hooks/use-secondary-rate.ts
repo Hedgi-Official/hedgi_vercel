@@ -23,6 +23,10 @@ export function useSecondaryRate() {
           mode: 'cors',
         });
         
+        if (response.status === 429) {
+          throw new Error('Please approve the ngrok URL by visiting it in your browser first');
+        }
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
