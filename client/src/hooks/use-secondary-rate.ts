@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 
 interface SecondaryRateResponse {
@@ -23,15 +22,15 @@ export function useSecondaryRate() {
           },
           mode: 'cors',
         });
-        
+
         if (response.status === 429) {
           throw new Error('Please approve the ngrok URL by visiting it in your browser first');
         }
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Secondary rate data:', data);
         return data as SecondaryRateResponse;
@@ -40,6 +39,6 @@ export function useSecondaryRate() {
         throw error;
       }
     },
-    refetchInterval: 5000,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 }
