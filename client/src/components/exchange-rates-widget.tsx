@@ -14,12 +14,38 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
-  const { data: secondaryRate, isLoading: isLoadingSecondary } = useSecondaryRate();
+  const { data: secondaryRate, isLoading: isLoadingSecondary, error: secondaryError } = useSecondaryRate();
 
   console.log('Secondary Rate Data:', secondaryRate); // Debug log
+  console.log('Secondary Rate Loading:', isLoadingSecondary); // Debug loading state
+  console.log('Secondary Rate Error:', secondaryError); // Debug errors
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
   const showSecondaryRate = selectedPair === "USDBRL"; // Only show for USDBRL
+
+  const renderSecondaryRate = () => {
+    if (secondaryError) {
+      return <div className="text-destructive">Error loading secondary rate: {secondaryError.message}</div>;
+    }
+
+    return (
+      <div className="space-y-2 p-4 rounded-lg border">
+        <div className="text-sm text-muted-foreground">Secondary Rate</div>
+        <div className="space-y-2">
+          <div className="text-2xl font-bold">
+            {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
+          </div>
+          <div className="text-sm text-muted-foreground">Bid Price</div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-2xl font-bold">
+            {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
+          </div>
+          <div className="text-sm text-muted-foreground">Ask Price</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className="bg-background shadow-lg">
@@ -50,7 +76,7 @@ export function ExchangeRatesWidget() {
             Error: {error}
             {!isConnected && " (Not connected to XTB)"}
           </div>
-        ) : isLoading || isLoadingSecondary ? (
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -68,23 +94,7 @@ export function ExchangeRatesWidget() {
                   <div className="text-sm text-muted-foreground">Ask Price</div>
                 </div>
               </div>
-              {showSecondaryRate && (
-                <div className="space-y-2 p-4 rounded-lg border">
-                  <div className="text-sm text-muted-foreground">Secondary Rate</div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold">
-                      {secondaryRate ? secondaryRate.bid.toFixed(4) : 'Loading...'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Bid Price</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-2xl font-bold">
-                      {secondaryRate ? secondaryRate.ask.toFixed(4) : 'Loading...'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Ask Price</div>
-                  </div>
-                </div>
-              )}
+              {showSecondaryRate && renderSecondaryRate()}
             </div>
           </div>
         ) : (
