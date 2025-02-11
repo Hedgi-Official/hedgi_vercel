@@ -8,9 +8,8 @@ const router = Router();
 router.get('/api/secondary-rate', async (req, res) => {
   try {
     console.log('Executing curl command for secondary rate...');
-    // Add -v flag for verbose output to help debug the request
     const { stdout, stderr } = await execAsync(
-      'curl -v -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL"'
+      'curl -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=USDBRL"'
     );
 
     if (stderr) {
