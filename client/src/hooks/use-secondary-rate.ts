@@ -13,6 +13,7 @@ export function useSecondaryRate() {
     queryKey: ['secondary-rate'],
     queryFn: async () => {
       try {
+        console.log('Fetching secondary rate...');
         const response = await fetch('http://192.168.1.103:8080/symbol_info?symbol=USDBRL');
         if (!response.ok) {
           throw new Error('Failed to fetch secondary rate');
