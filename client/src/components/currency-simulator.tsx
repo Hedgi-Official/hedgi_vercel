@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import type { Hedge } from '@db/schema';
-import { useXTB } from '@/hooks/use-xtb';
 
 interface Props {
   showGraph?: boolean;
@@ -19,37 +18,14 @@ interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
-  hedgedAmount: number;
+  hedgedAmount: number; // Added hedgedAmount
   costDetails: {
     costPercentage: number;
-    businessDays: number;
   };
   historicalRates: Array<{
     date: string;
     rate: number;
   }>;
-}
-
-function calculateBusinessDays(startDate: Date, duration: number): number {
-  let businessDays = 0;
-  const currentDate = new Date(startDate);
-
-  // Include current day if it's a business day
-  const currentDayOfWeek = currentDate.getDay();
-  if (currentDayOfWeek !== 0 && currentDayOfWeek !== 6) {
-    businessDays++;
-  }
-
-  // Calculate remaining business days
-  for (let i = 1; i < duration; i++) {
-    currentDate.setDate(currentDate.getDate() + 1);
-    const dayOfWeek = currentDate.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 is Sunday, 6 is Saturday
-      businessDays++;
-    }
-  }
-
-  return businessDays;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
@@ -60,31 +36,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
-  const { exchangeRates } = useXTB();
-
-  // Find current exchange rate from cached XTB data
-  const getCurrentRate = () => {
-    if (!exchangeRates) return null;
-    const pair = `${targetCurrency}${baseCurrency}`;
-    const reversePair = `${baseCurrency}${targetCurrency}`;
-
-    const rate = exchangeRates.find(r => r.symbol === pair || r.symbol === reversePair);
-    if (!rate) return null;
-
-    // If the pair is reversed, we need to take reciprocal of the rate
-    const isReversed = rate.symbol === reversePair;
-    return isReversed ? 1 / rate.bid : rate.bid;
-  };
-
   const handleSimulate = async () => {
-    const liveRate = getCurrentRate();
-    if (!liveRate) {
-      console.error('Could not get live exchange rate');
-      return;
-    }
-
-    const businessDays = calculateBusinessDays(new Date(), duration);
-
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -92,11 +44,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       duration,
       tradeDirection
     );
-
-    // Override the rate with cached XTB rate
-    result.rate = liveRate;
-    result.costDetails.businessDays = businessDays;
-
     setSimulation(result);
   };
 
@@ -289,17 +236,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">Hedge Details</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-2">
+                <h3 className="font-medium">Hedge Cost</h3>
+                <div className="bg-muted p-4 rounded-lg">
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
                       {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
                     </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Business Days</span>
-                    <span>{simulation.costDetails.businessDays} days</span>
                   </div>
                 </div>
               </div>
