@@ -1,80 +1,52 @@
 import { z } from "zod";
+import { countMarketClosures } from './market-utils';
+import { xtbService } from './xtb-service';
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 
-// Sample rates for development/testing
-const SAMPLE_RATES = {
-  'USDBRL': 4.95,
-  'USDEUR': 0.93,
-  'USDMXN': 17.05,
-  'EURUSD': 1.08,
-  'EURBRL': 5.35,
-  'EURMXN': 18.45,
-  'BRLUSD': 0.20,
-  'BRLEUR': 0.19,
-  'BRLMXN': 3.45,
-  'MXNUSD': 0.059,
-  'MXNEUR': 0.054,
-  'MXNBRL': 0.29,
-};
-
-function generateHistoricalRates(baseRate: number, days: number) {
-  const volatility = 0.02; // 2% daily volatility
-  const data = [];
-  const now = new Date();
-
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-
-    // Generate a random walk with mean reversion
-    const randomChange = (Math.random() - 0.5) * volatility;
-    const rate = baseRate * (1 + randomChange);
-
-    data.push({
-      date: date.toISOString(),
-      rate: Number(rate.toFixed(4))
-    });
-  }
-
-  return data;
-}
-
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
   try {
     console.log(`[Currency API] Fetching rate for ${base}/${target}`);
-    const key = `${base}${target}`;
+    const symbol = `${target}${base}`;
 
-    // If direct rate exists
-    if (SAMPLE_RATES[key]) {
-      return SAMPLE_RATES[key];
+    // Get the rate from XTB service
+    const symbolData = await xtbService.getSymbolData(symbol);
+    if (!symbolData.status || !symbolData.returnData) {
+      throw new Error(`Failed to get rate for ${symbol}`);
     }
 
-    // If inverse rate exists
-    const inverseKey = `${target}${base}`;
-    if (SAMPLE_RATES[inverseKey]) {
-      return 1 / SAMPLE_RATES[inverseKey];
-    }
-
-    // Calculate cross rate via USD
-    if (base !== 'USD' && target !== 'USD') {
-      const baseUSD = SAMPLE_RATES[`${base}USD`] || 1 / SAMPLE_RATES[`USD${base}`];
-      const targetUSD = SAMPLE_RATES[`${target}USD`] || 1 / SAMPLE_RATES[`USD${target}`];
-      return baseUSD / targetUSD;
-    }
-
-    throw new Error(`Rate not available for ${base}/${target}`);
+    // Return bid rate as it represents the current market rate
+    return symbolData.returnData.bid;
   } catch (error) {
     console.error('[Currency API] Error:', error);
     throw new Error(`Failed to fetch rate for ${base}/${target}`);
   }
 }
 
+async function fetchBidAskRates(base: SupportedCurrency, target: SupportedCurrency) {
+  try {
+    const symbol = `${target}${base}`;
+    const symbolData = await xtbService.getSymbolData(symbol);
+
+    if (!symbolData.status || !symbolData.returnData) {
+      throw new Error(`Failed to get rates for ${symbol}`);
+    }
+
+    return {
+      bid: symbolData.returnData.bid,
+      ask: symbolData.returnData.ask
+    };
+  } catch (error) {
+    console.error('[Currency API] Error fetching bid/ask rates:', error);
+    throw error;
+  }
+}
+
 async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
   try {
-    const currentRate = await fetchExchangeRate(base, target);
-    return generateHistoricalRates(currentRate, days);
+    const symbol = `${target}${base}`;
+    return await xtbService.getHistoricalData(symbol, days);
   } catch (error) {
     console.error('[Currency API] Error fetching historical rates:', error);
     throw error;
@@ -91,16 +63,29 @@ export async function simulateHedge(
   try {
     console.log(`[Currency API] Simulating hedge for ${amount} ${target}`);
 
-    // Get current rate
-    const rate = await fetchExchangeRate(base, target);
-    console.log(`[Currency API] Current rate: ${rate}`);
+    // Get current bid/ask rates
+    const { bid, ask } = await fetchBidAskRates(base, target);
+    console.log(`[Currency API] Bid: ${bid}, Ask: ${ask}`);
 
-    // Calculate hedge costs using more realistic market conditions
+    // Use appropriate rate based on trade direction
+    const rate = tradeDirection === 'buy' ? ask : bid;
+    console.log(`[Currency API] Using ${tradeDirection} rate: ${rate}`);
+
+    // Calculate end date based on duration
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + duration);
+
+    // Get number of business days (excluding weekends)
+    const businessDays = await countMarketClosures(endDate, startDate);
+    console.log(`[Currency API] Business days: ${businessDays}`);
+
+    // Calculate hedge costs based on business days
     // Base spread cost (difference between buy and sell rates)
-    const spreadCost = 0.15; // 0.15% typical FX spread
+    const spreadCost = ((ask - bid) / bid) * 100; // Actual spread cost from market
 
-    // Forward points cost (increases with duration)
-    const forwardPointsCost = 0.02 * (duration / 30); // 0.02% per month equivalent
+    // Forward points cost (increases with business days)
+    const forwardPointsCost = 0.02 * (businessDays / 20); // 0.02% per 20 business days
 
     // Transaction fee
     const transactionFee = 0.1; // 0.1% fixed transaction fee
@@ -128,7 +113,8 @@ export async function simulateHedge(
         costPercentage,
         spreadCost,
         forwardPointsCost,
-        transactionFee
+        transactionFee,
+        businessDays
       },
       historicalRates
     };
