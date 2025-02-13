@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
-import { useXTB } from '@/hooks/use-xtb';
+import { xtbService } from '@/lib/xtb-service';
 import type { Hedge } from '@db/schema';
 
 interface Props {
@@ -38,15 +38,24 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
-  const { exchangeRates, isConnected } = useXTB();
 
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
-    const currentRate = exchangeRates?.find(rate => rate.symbol === currencyPair);
 
-    if (!currentRate && isConnected) {
-      console.error('Currency pair not found in XTB rates:', currencyPair);
-      return;
+    // Only fetch XTB rate when simulation is requested
+    let currentRate;
+    try {
+      if (xtbService.isConnected) {
+        const symbolData = await xtbService.getSymbolData(currencyPair);
+        if (symbolData.status && symbolData.returnData) {
+          currentRate = {
+            bid: symbolData.returnData.bid,
+            ask: symbolData.returnData.ask
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching XTB rate:', error);
     }
 
     const result = await simulateHedge(
@@ -63,7 +72,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     setSimulation({
       ...result,
       businessDays,
-      // If we have live XTB rates, use them, otherwise use the simulated rate
+      // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate
     });
   };
