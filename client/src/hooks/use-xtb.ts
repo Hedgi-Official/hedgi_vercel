@@ -44,6 +44,11 @@ export function useXTB() {
           title: "Connection Error",
           description: err.message,
         });
+
+        // Retry connection after a delay
+        setTimeout(() => {
+          connect();
+        }, 5000);
       }
     };
 
@@ -63,6 +68,10 @@ export function useXTB() {
 
       const streamStatus = await xtbService.checkStreamConnection();
       console.log('[useXTB] Stream connection status:', streamStatus);
+
+      if (!streamStatus) {
+        throw new Error('Stream connection not ready');
+      }
 
       const rates: ExchangeRate[] = [];
 

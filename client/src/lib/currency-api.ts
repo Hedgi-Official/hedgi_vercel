@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { countMarketClosures } from './market-utils';
-import { xtbService } from './xtb-service';
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
@@ -10,43 +9,29 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
     console.log(`[Currency API] Fetching rate for ${base}/${target}`);
     const symbol = `${target}${base}`;
 
-    // Get the rate from XTB service
-    const symbolData = await xtbService.getSymbolData(symbol);
-    if (!symbolData.status || !symbolData.returnData) {
-      throw new Error(`Failed to get rate for ${symbol}`);
-    }
-
-    // Return bid rate as it represents the current market rate
-    return symbolData.returnData.bid;
+    // For now, return a placeholder rate as we'll get real rates from the component
+    return 1.0;
   } catch (error) {
     console.error('[Currency API] Error:', error);
     throw new Error(`Failed to fetch rate for ${base}/${target}`);
   }
 }
 
-async function fetchBidAskRates(base: SupportedCurrency, target: SupportedCurrency) {
-  try {
-    const symbol = `${target}${base}`;
-    const symbolData = await xtbService.getSymbolData(symbol);
-
-    if (!symbolData.status || !symbolData.returnData) {
-      throw new Error(`Failed to get rates for ${symbol}`);
-    }
-
-    return {
-      bid: symbolData.returnData.bid,
-      ask: symbolData.returnData.ask
-    };
-  } catch (error) {
-    console.error('[Currency API] Error fetching bid/ask rates:', error);
-    throw error;
-  }
-}
-
 async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
   try {
     const symbol = `${target}${base}`;
-    return await xtbService.getHistoricalData(symbol, days);
+    // For now, return placeholder historical data
+    const data = [];
+    const now = new Date();
+    for (let i = days; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      data.push({
+        date: date.toISOString(),
+        rate: 1.0
+      });
+    }
+    return data;
   } catch (error) {
     console.error('[Currency API] Error fetching historical rates:', error);
     throw error;
@@ -58,13 +43,14 @@ export async function simulateHedge(
   target: SupportedCurrency,
   amount: number,
   duration: number,
-  tradeDirection: 'buy' | 'sell' = 'buy'
+  tradeDirection: 'buy' | 'sell' = 'buy',
+  currentRates?: { bid: number; ask: number }
 ) {
   try {
     console.log(`[Currency API] Simulating hedge for ${amount} ${target}`);
 
-    // Get current bid/ask rates
-    const { bid, ask } = await fetchBidAskRates(base, target);
+    // Use provided rates from the component
+    const { bid, ask } = currentRates || { bid: 1.0, ask: 1.0 };
     console.log(`[Currency API] Bid: ${bid}, Ask: ${ask}`);
 
     // Use appropriate rate based on trade direction
