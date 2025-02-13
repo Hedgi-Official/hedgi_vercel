@@ -18,13 +18,9 @@ interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
-  hedgedAmount: number;
+  hedgedAmount: number; // Added hedgedAmount
   costDetails: {
     costPercentage: number;
-    businessDays: number;
-    spreadCost: number;
-    forwardPointsCost: number;
-    transactionFee: number;
   };
   historicalRates: Array<{
     date: string;
@@ -240,17 +236,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">Hedge Details</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-2">
+                <h3 className="font-medium">Hedge Cost</h3>
+                <div className="bg-muted p-4 rounded-lg">
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
                       {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
                     </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Business Days</span>
-                    <span>{simulation.costDetails.businessDays} days</span>
                   </div>
                 </div>
               </div>
@@ -260,8 +252,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   <CurrencyChart
                     data={{
                       historicalRates: simulation.historicalRates,
+                      breakEvenRate: simulation.breakEvenRate,
                       currentRate: simulation.rate,
-                      tradeDirection
+                      tradeDirection: tradeDirection
                     }}
                   />
                 </div>

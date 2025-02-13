@@ -21,17 +21,10 @@ export function useXTB() {
   useEffect(() => {
     const connect = async () => {
       try {
-        const userId = import.meta.env.VITE_XTB_USER_ID;
-        const password = import.meta.env.VITE_XTB_PASSWORD;
-
-        if (!userId || !password) {
-          throw new Error('XTB credentials not configured. Please check environment variables.');
-        }
-
         console.log('[useXTB] Connecting to XTB...');
         await xtbService.connect({
-          userId,
-          password,
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
         });
         console.log('[useXTB] Connected to XTB successfully');
         setIsConnected(true);
@@ -74,6 +67,7 @@ export function useXTB() {
       const rates: ExchangeRate[] = [];
 
       try {
+        // Fetch data for all currency pairs
         for (const symbol of CURRENCY_PAIRS) {
           console.log('[useXTB] Requesting symbol data for:', symbol);
           const symbolResponse = await xtbService.getSymbolData(symbol);
@@ -92,6 +86,7 @@ export function useXTB() {
             timestamp: data.time,
           });
 
+          // Set up streaming updates for this symbol
           xtbService.onSymbolUpdate(symbol, (symbolData) => {
             console.log(`[useXTB] Received streaming update for ${symbol}:`, symbolData);
           });
@@ -109,7 +104,7 @@ export function useXTB() {
       return rates;
     },
     enabled: isConnected,
-    refetchInterval: 5000,
+    refetchInterval: 5000, // Refresh every 5 seconds
     retry: 3,
   });
 
