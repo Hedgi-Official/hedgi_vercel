@@ -78,11 +78,15 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
+    // Invert the break-even rate to match the current rate format (BRL per USD)
+    const breakEvenRate = 1 / result.breakEvenRate;
+
     setSimulation({
       ...result,
       businessDays,
       // If we have XTB rates, use them, otherwise use the simulated rate
-      rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate
+      rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
+      breakEvenRate
     });
   };
 
@@ -266,7 +270,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Break-even Rate</p>
                   <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
+                    {(1/simulation.breakEvenRate).toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
