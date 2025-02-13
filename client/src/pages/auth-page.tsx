@@ -8,12 +8,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
+const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+
 const registerSchema = z.object({
+  fullName: z.string().min(2, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  dateOfBirth: z.string().refine((date) => {
+    const birthDate = new Date(date);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    return age >= 18;
+  }, "You must be at least 18 years old"),
+  cpf: z.string().regex(cpfRegex, "Invalid CPF format (e.g., 123.456.789-00)"),
+  phoneNumber: z.string().optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  email: z.string().email("Invalid email address"),
-  fullName: z.string().min(2, "Full name is required"),
-  phoneNumber: z.string().optional(),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export default function AuthPage() {
@@ -29,11 +42,14 @@ export default function AuthPage() {
 
   // Registration form state
   const [registerData, setRegisterData] = useState({
+    fullName: "",
+    email: "",
+    dateOfBirth: "",
+    cpf: "",
+    phoneNumber: "",
     username: "",
     password: "",
-    email: "",
-    fullName: "",
-    phoneNumber: "",
+    confirmPassword: "",
   });
 
   const handleSubmit = async (action: "login" | "register") => {
@@ -70,6 +86,18 @@ export default function AuthPage() {
         description: "An unexpected error occurred",
       });
     }
+  };
+
+  const formatCPF = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format as CPF (123.456.789-00)
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      .slice(0, 14); // Limit to CPF format length
   };
 
   return (
@@ -118,6 +146,26 @@ export default function AuthPage() {
                 onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
               />
               <Input
+                placeholder="Date of Birth"
+                type="date"
+                value={registerData.dateOfBirth}
+                onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+              />
+              <Input
+                placeholder="CPF (e.g., 123.456.789-00)"
+                value={registerData.cpf}
+                onChange={(e) => setRegisterData({ 
+                  ...registerData, 
+                  cpf: formatCPF(e.target.value)
+                })}
+              />
+              <Input
+                placeholder="Phone Number (Optional)"
+                type="tel"
+                value={registerData.phoneNumber}
+                onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
+              />
+              <Input
                 placeholder="Username"
                 value={registerData.username}
                 onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
@@ -129,10 +177,10 @@ export default function AuthPage() {
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
               />
               <Input
-                placeholder="Phone Number (Optional)"
-                type="tel"
-                value={registerData.phoneNumber}
-                onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
+                type="password"
+                placeholder="Confirm Password"
+                value={registerData.confirmPassword}
+                onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
               />
               <Button
                 className="w-full"
