@@ -8,9 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import type { Hedge } from '@db/schema';
-import { useXTB } from "@/hooks/use-xtb";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
 
 interface Props {
   showGraph?: boolean;
@@ -42,50 +39,16 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  // Get real-time rates from XTB
-  const { exchangeRates, isConnected, isLoading: isLoadingRates, error: xtbError } = useXTB();
-  const { toast } = useToast();
 
   const handleSimulate = async () => {
-    if (!isConnected || isLoadingRates) {
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: "Please wait for the connection to the trading platform to be established."
-      });
-      return;
-    }
-
-    setIsSimulating(true);
-
-    try {
-      // Find the current rates for the selected currency pair
-      const currentRates = exchangeRates?.find(rate => rate.symbol === `${targetCurrency}${baseCurrency}`);
-
-      if (!currentRates) {
-        throw new Error(`No exchange rates available for ${targetCurrency}/${baseCurrency}`);
-      }
-
-      const result = await simulateHedge(
-        baseCurrency,
-        targetCurrency,
-        amount,
-        duration,
-        tradeDirection,
-        { bid: currentRates.bid, ask: currentRates.ask }
-      );
-      setSimulation(result);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Simulation Error",
-        description: error.message || "Failed to simulate hedge"
-      });
-    } finally {
-      setIsSimulating(false);
-    }
+    const result = await simulateHedge(
+      baseCurrency,
+      targetCurrency,
+      amount,
+      duration,
+      tradeDirection
+    );
+    setSimulation(result);
   };
 
   const handlePlaceHedge = () => {
@@ -111,20 +74,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Currency Hedge Simulator
-            {(isLoadingRates || !isConnected) && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
-          </CardTitle>
+          <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {xtbError && (
-            <div className="p-4 rounded-lg bg-destructive/10 text-destructive">
-              {xtbError}
-            </div>
-          )}
-
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -263,19 +215,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             </TooltipContent>
           </Tooltip>
 
-          <Button 
-            onClick={handleSimulate} 
-            className="w-full"
-            disabled={isSimulating || isLoadingRates || !isConnected}
-          >
-            {isSimulating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Calculating...
-              </>
-            ) : (
-              'Calculate Hedge Cost'
-            )}
+          <Button onClick={handleSimulate} className="w-full">
+            Calculate Hedge Cost
           </Button>
 
           {simulation && (
