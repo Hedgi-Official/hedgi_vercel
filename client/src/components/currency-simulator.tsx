@@ -7,6 +7,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
+import { calculateBusinessDays } from '@/lib/utils';
+import { useXTB } from '@/hooks/use-xtb';
 import type { Hedge } from '@db/schema';
 
 interface Props {
@@ -18,10 +20,11 @@ interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
-  hedgedAmount: number; // Added hedgedAmount
+  hedgedAmount: number;
   costDetails: {
     costPercentage: number;
   };
+  businessDays: number;
   historicalRates: Array<{
     date: string;
     rate: number;
@@ -35,8 +38,17 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
+  const { exchangeRates, isConnected } = useXTB();
 
   const handleSimulate = async () => {
+    const currencyPair = `${targetCurrency}${baseCurrency}`;
+    const currentRate = exchangeRates?.find(rate => rate.symbol === currencyPair);
+
+    if (!currentRate && isConnected) {
+      console.error('Currency pair not found in XTB rates:', currencyPair);
+      return;
+    }
+
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -44,7 +56,16 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       duration,
       tradeDirection
     );
-    setSimulation(result);
+
+    // Calculate business days
+    const businessDays = calculateBusinessDays(new Date(), duration);
+
+    setSimulation({
+      ...result,
+      businessDays,
+      // If we have live XTB rates, use them, otherwise use the simulated rate
+      rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate
+    });
   };
 
   const handlePlaceHedge = () => {
@@ -236,13 +257,17 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">Hedge Cost</h3>
-                <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-medium">Hedge Details</h3>
+                <div className="bg-muted p-4 rounded-lg space-y-2">
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
                       {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
                     </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Business Days</span>
+                    <span>{simulation.businessDays} days</span>
                   </div>
                 </div>
               </div>
