@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,11 +60,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
-  const { exchangeRates, isConnected } = useXTB();
+  const { exchangeRates } = useXTB();
 
-  // Find current exchange rate from XTB data
+  // Find current exchange rate from cached XTB data
   const getCurrentRate = () => {
-    if (!exchangeRates || !isConnected) return null;
+    if (!exchangeRates) return null;
     const pair = `${targetCurrency}${baseCurrency}`;
     const reversePair = `${baseCurrency}${targetCurrency}`;
 
@@ -93,7 +93,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       tradeDirection
     );
 
-    // Override the rate with live XTB rate
+    // Override the rate with cached XTB rate
     result.rate = liveRate;
     result.costDetails.businessDays = businessDays;
 
