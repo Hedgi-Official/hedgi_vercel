@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { countMarketClosures, type Market } from './market-utils';
+import { countMarketClosures } from './market-utils';
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
@@ -18,7 +18,7 @@ const SAMPLE_RATES = {
   'MXNUSD': 0.059,
   'MXNEUR': 0.054,
   'MXNBRL': 0.29,
-};
+} as const;
 
 function generateHistoricalRates(baseRate: number, days: number) {
   const volatility = 0.02; // 2% daily volatility
@@ -45,23 +45,23 @@ function generateHistoricalRates(baseRate: number, days: number) {
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
   try {
     console.log(`[Currency API] Fetching rate for ${base}/${target}`);
-    const key = `${base}${target}`;
+    const key = `${base}${target}` as keyof typeof SAMPLE_RATES;
 
     // If direct rate exists
-    if (SAMPLE_RATES[key]) {
+    if (key in SAMPLE_RATES) {
       return SAMPLE_RATES[key];
     }
 
     // If inverse rate exists
-    const inverseKey = `${target}${base}`;
-    if (SAMPLE_RATES[inverseKey]) {
+    const inverseKey = `${target}${base}` as keyof typeof SAMPLE_RATES;
+    if (inverseKey in SAMPLE_RATES) {
       return 1 / SAMPLE_RATES[inverseKey];
     }
 
     // Calculate cross rate via USD
     if (base !== 'USD' && target !== 'USD') {
-      const baseUSD = SAMPLE_RATES[`${base}USD`] || 1 / SAMPLE_RATES[`USD${base}`];
-      const targetUSD = SAMPLE_RATES[`${target}USD`] || 1 / SAMPLE_RATES[`USD${target}`];
+      const baseUSD = SAMPLE_RATES[`${base}USD` as keyof typeof SAMPLE_RATES] || 1 / SAMPLE_RATES[`USD${base}` as keyof typeof SAMPLE_RATES];
+      const targetUSD = SAMPLE_RATES[`${target}USD` as keyof typeof SAMPLE_RATES] || 1 / SAMPLE_RATES[`USD${target}` as keyof typeof SAMPLE_RATES];
       return baseUSD / targetUSD;
     }
 
@@ -96,29 +96,21 @@ export async function simulateHedge(
     const rate = await fetchExchangeRate(base, target);
     console.log(`[Currency API] Current rate: ${rate}`);
 
-    // Determine market based on currency pair
-    let market: Market = 'BR';
-    if (base === 'USD' || target === 'USD') {
-      market = 'US';
-    } else if (base === 'MXN' || target === 'MXN') {
-      market = 'MX';
-    }
-
     // Calculate end date based on duration
     const startDate = new Date();
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + duration);
 
-    // Get number of market closures
-    const marketClosures = await countMarketClosures(endDate, startDate, market);
-    console.log(`[Currency API] Market closures: ${marketClosures}`);
+    // Get number of business days (excluding weekends)
+    const businessDays = await countMarketClosures(endDate, startDate);
+    console.log(`[Currency API] Business days: ${businessDays}`);
 
-    // Calculate hedge costs using market closures
+    // Calculate hedge costs based on business days
     // Base spread cost (difference between buy and sell rates)
     const spreadCost = 0.15; // 0.15% typical FX spread
 
-    // Forward points cost (increases with actual trading days)
-    const forwardPointsCost = 0.02 * (marketClosures / 20); // 0.02% per 20 trading days
+    // Forward points cost (increases with business days)
+    const forwardPointsCost = 0.02 * (businessDays / 20); // 0.02% per 20 business days
 
     // Transaction fee
     const transactionFee = 0.1; // 0.1% fixed transaction fee
@@ -147,7 +139,7 @@ export async function simulateHedge(
         spreadCost,
         forwardPointsCost,
         transactionFee,
-        marketClosures
+        businessDays
       },
       historicalRates
     };
