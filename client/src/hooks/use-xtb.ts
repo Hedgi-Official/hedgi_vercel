@@ -21,8 +21,8 @@ export function useXTB() {
   useEffect(() => {
     const connect = async () => {
       try {
-        const userId = import.meta.env.XTB_USER_ID;
-        const password = import.meta.env.XTB_PASSWORD;
+        const userId = import.meta.env.VITE_XTB_USER_ID;
+        const password = import.meta.env.VITE_XTB_PASSWORD;
 
         if (!userId || !password) {
           throw new Error('XTB credentials not configured. Please check environment variables.');
