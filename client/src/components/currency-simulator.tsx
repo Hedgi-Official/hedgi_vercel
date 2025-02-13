@@ -78,8 +78,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
-    // Keep the break-even rate in BRL per USD format to match current rate
-    const breakEvenRate = result.breakEvenRate;
+    // Keep the break-even rate in BRL per USD format
+    const breakEvenRate = tradeDirection === 'buy' ? 
+      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
+      result.rate * (1 + result.costDetails.costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
+      result.rate * (1 - result.costDetails.costPercentage / 100);
 
     setSimulation({
       ...result,
