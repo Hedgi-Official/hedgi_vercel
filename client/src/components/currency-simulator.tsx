@@ -45,17 +45,26 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Only fetch XTB rate when simulation is requested
     let currentRate;
     try {
-      if (xtbService.isConnected) {
-        const symbolData = await xtbService.getSymbolData(currencyPair);
-        if (symbolData.status && symbolData.returnData) {
-          currentRate = {
-            bid: symbolData.returnData.bid,
-            ask: symbolData.returnData.ask
-          };
-        }
+      // Connect to XTB if not already connected
+      if (!xtbService.isConnected) {
+        await xtbService.connect({
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
+        });
+      }
+
+      const symbolData = await xtbService.getSymbolData(currencyPair);
+      console.log('[CurrencySimulator] XTB symbol data:', symbolData);
+
+      if (symbolData.status && symbolData.returnData) {
+        currentRate = {
+          bid: symbolData.returnData.bid,
+          ask: symbolData.returnData.ask
+        };
+        console.log('[CurrencySimulator] Using XTB rates:', currentRate);
       }
     } catch (error) {
-      console.error('Error fetching XTB rate:', error);
+      console.error('[CurrencySimulator] Error fetching XTB rate:', error);
     }
 
     const result = await simulateHedge(
