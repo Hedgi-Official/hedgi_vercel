@@ -41,4 +41,39 @@ router.get('/api/fbs-rate', async (req, res) => {
   }
 });
 
+// New endpoint for market holidays
+router.get('/api/fbs-rate/holidays', async (req, res) => {
+  try {
+    const { market, year } = req.query;
+
+    if (!market || !year) {
+      res.status(400).json({ error: 'Missing required parameters: market and year' });
+      return;
+    }
+
+    console.log(`Fetching market holidays for ${market} in ${year}...`);
+    const { stdout, stderr } = await execAsync(
+      `curl -s -H "skip_zrok_interstitial: true" "https://zosb7c04fcu6.share.zrok.io/market_holidays?market=${market}&year=${year}"`
+    );
+
+    if (stderr) {
+      console.error('Curl command error:', stderr);
+      res.status(500).json({ error: 'Failed to fetch market holidays' });
+      return;
+    }
+
+    try {
+      const data = JSON.parse(stdout);
+      console.log('Market holidays data:', data);
+      res.json(data);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Raw output:', stdout);
+      res.status(500).json({ error: 'Invalid response format from market holidays service' });
+    }
+  } catch (error) {
+    console.error('Error fetching market holidays:', error);
+    res.status(500).json({ error: 'Failed to fetch market holidays' });
+  }
+});
+
 export default router;

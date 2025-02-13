@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { countMarketClosures, type Market } from './market-utils';
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
@@ -95,12 +96,29 @@ export async function simulateHedge(
     const rate = await fetchExchangeRate(base, target);
     console.log(`[Currency API] Current rate: ${rate}`);
 
-    // Calculate hedge costs using more realistic market conditions
+    // Determine market based on currency pair
+    let market: Market = 'BR';
+    if (base === 'USD' || target === 'USD') {
+      market = 'US';
+    } else if (base === 'MXN' || target === 'MXN') {
+      market = 'MX';
+    }
+
+    // Calculate end date based on duration
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + duration);
+
+    // Get number of market closures
+    const marketClosures = await countMarketClosures(endDate, startDate, market);
+    console.log(`[Currency API] Market closures: ${marketClosures}`);
+
+    // Calculate hedge costs using market closures
     // Base spread cost (difference between buy and sell rates)
     const spreadCost = 0.15; // 0.15% typical FX spread
 
-    // Forward points cost (increases with duration)
-    const forwardPointsCost = 0.02 * (duration / 30); // 0.02% per month equivalent
+    // Forward points cost (increases with actual trading days)
+    const forwardPointsCost = 0.02 * (marketClosures / 20); // 0.02% per 20 trading days
 
     // Transaction fee
     const transactionFee = 0.1; // 0.1% fixed transaction fee
@@ -128,7 +146,8 @@ export async function simulateHedge(
         costPercentage,
         spreadCost,
         forwardPointsCost,
-        transactionFee
+        transactionFee,
+        marketClosures
       },
       historicalRates
     };
