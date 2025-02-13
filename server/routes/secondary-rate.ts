@@ -18,7 +18,7 @@ router.get('/api/fbs-rate', async (req, res) => {
 
     console.log(`Executing curl command for FBS rate for ${symbol}...`);
     const { stdout, stderr } = await execAsync(
-      `curl -s -H "skip_zrok_interstitial: true" "https://5pxoe9wu00tf.share.zrok.io/symbol_info?symbol=${symbol}"`
+      `curl -s -H "skip_zrok_interstitial: true" "https://zosb7c04fcu6.share.zrok.io/symbol_info?symbol=${symbol}"`
     );
 
     if (stderr) {
