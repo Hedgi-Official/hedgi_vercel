@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import type { Hedge } from '@db/schema';
-import { useXTB } from '@/hooks/use-xtb';
 
 interface Props {
   showGraph?: boolean;
@@ -19,31 +18,14 @@ interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
-  hedgedAmount: number;
+  hedgedAmount: number; // Added hedgedAmount
   costDetails: {
     costPercentage: number;
-    businessDays: number;
   };
   historicalRates: Array<{
     date: string;
     rate: number;
   }>;
-}
-
-// Helper function to calculate business days
-function calculateBusinessDays(startDate: Date, duration: number): number {
-  let businessDays = 0;
-  const currentDate = new Date(startDate);
-
-  for (let i = 0; i < duration; i++) {
-    const dayOfWeek = currentDate.getDay();
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 is Sunday, 6 is Saturday
-      businessDays++;
-    }
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  return businessDays;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
@@ -54,13 +36,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
-  const { exchangeRates, isLoading: isLoadingRates } = useXTB();
-
-  // Calculate business days
-  const businessDays = useMemo(() => {
-    return calculateBusinessDays(new Date(), duration);
-  }, [duration]);
-
   const handleSimulate = async () => {
     const result = await simulateHedge(
       baseCurrency,
@@ -69,23 +44,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       duration,
       tradeDirection
     );
-
-    // Add business days to the simulation result
-    setSimulation({
-      ...result,
-      costDetails: {
-        ...result.costDetails,
-        businessDays,
-      }
-    });
+    setSimulation(result);
   };
-
-  // Find the current exchange rate from XTB
-  const currentRate = useMemo(() => {
-    if (!exchangeRates) return null;
-    const pair = `${targetCurrency}${baseCurrency}`;
-    return exchangeRates.find(rate => rate.symbol === pair);
-  }, [exchangeRates, targetCurrency, baseCurrency]);
 
   const handlePlaceHedge = () => {
     if (onPlaceHedge && simulation) {
@@ -113,7 +73,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Currency Selection Section */}
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -176,7 +135,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             </Tooltip>
           </div>
 
-          {/* Trade Direction Section */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
@@ -217,7 +175,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             </TooltipContent>
           </Tooltip>
 
-          {/* Amount Input Section */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
@@ -237,13 +194,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             </TooltipContent>
           </Tooltip>
 
-          {/* Duration Section */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Duration: {duration} days ({businessDays} business days)
-                </label>
+                <label className="text-sm font-medium">Duration: {duration} days</label>
                 <Slider
                   value={[duration]}
                   onValueChange={([value]) => setDuration(value)}
@@ -257,28 +211,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             </TooltipContent>
           </Tooltip>
 
-          {/* Live Exchange Rate Display */}
-          {currentRate && (
-            <div className="bg-muted p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Live Exchange Rate</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Bid</p>
-                  <p className="text-lg font-semibold">{currentRate.bid.toFixed(4)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ask</p>
-                  <p className="text-lg font-semibold">{currentRate.ask.toFixed(4)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <Button 
-            onClick={handleSimulate} 
-            className="w-full"
-            disabled={isLoadingRates}
-          >
+          <Button onClick={handleSimulate} className="w-full">
             Calculate Hedge Cost
           </Button>
 
@@ -303,17 +236,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">Hedge Details</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-2">
+                <h3 className="font-medium">Hedge Cost</h3>
+                <div className="bg-muted p-4 rounded-lg">
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
                       {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
                     </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Business Days</span>
-                    <span>{simulation.costDetails.businessDays} days</span>
                   </div>
                 </div>
               </div>
