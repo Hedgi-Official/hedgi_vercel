@@ -78,8 +78,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
-    // Invert the break-even rate to match the current rate format (BRL per USD)
-    const breakEvenRate = 1 / result.breakEvenRate;
+    // Keep the break-even rate in BRL per USD format to match current rate
+    const breakEvenRate = result.breakEvenRate;
 
     setSimulation({
       ...result,
@@ -270,7 +270,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Break-even Rate</p>
                   <p className="text-2xl font-bold">
-                    {(1/simulation.breakEvenRate).toFixed(4)} {baseCurrency}/{targetCurrency}
+                    {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
