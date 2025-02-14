@@ -9,7 +9,6 @@ import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/l
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
 import { xtbService } from '@/lib/xtb-service';
-import { calculateHedgingCost } from '@/lib/hedge-calculator';
 import type { Hedge } from '@db/schema';
 
 interface Props {
@@ -60,8 +59,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       if (symbolData.status && symbolData.returnData) {
         currentRate = {
           bid: symbolData.returnData.bid,
-          ask: symbolData.returnData.ask,
-          spreadRaw: symbolData.returnData.spreadRaw,
+          ask: symbolData.returnData.ask
         };
         console.log('[CurrencySimulator] Using XTB rates:', currentRate);
       }
@@ -80,33 +78,19 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
-    // Calculate total hedging cost using real market parameters
-    const hedgingCost = calculateHedgingCost({
-      durationDays: duration,
-      value: amount,
-      rateNative: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
-      rateHedge: result.rate,
-      leverage: 100, // Standard leverage for currency pairs
-      spread: currentRate?.spreadRaw || 0.0001, // Use actual spread or default to 1 pip
-      overnight: 0.0001 // Standard overnight fee of 1 pip
-    });
-
-    // Calculate the break-even rate based on the direction and total cost
+    // Keep the break-even rate in BRL per USD format
     const breakEvenRate = tradeDirection === 'buy' ? 
-      currentRate ? currentRate.ask * (1 + hedgingCost / (amount * currentRate.ask)) :
-      result.rate * (1 + hedgingCost / (amount * result.rate)) :
-      currentRate ? currentRate.bid * (1 - hedgingCost / (amount * currentRate.bid)) :
-      result.rate * (1 - hedgingCost / (amount * result.rate));
+      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
+      result.rate * (1 + result.costDetails.costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
+      result.rate * (1 - result.costDetails.costPercentage / 100);
 
     setSimulation({
       ...result,
       businessDays,
+      // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
-      breakEvenRate,
-      totalCost: hedgingCost,
-      costDetails: {
-        costPercentage: (Math.abs(breakEvenRate - result.rate) / result.rate) * 100
-      }
+      breakEvenRate
     });
   };
 
