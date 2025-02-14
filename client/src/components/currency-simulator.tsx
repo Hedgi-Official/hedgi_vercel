@@ -93,30 +93,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       const spreadCost = (ask - bid) * amount;
 
       if (tradeDirection === 'buy') {
-        // Debug logging for each part of the calculation
-        console.log('[Hedge Cost Debug] Variables:', {
-          businessDays,
-          swapLong,
-          bid,
-          amount,
-          spreadCost,
-          ask
-        });
-        
-        const swapRatio = swapLong / bid;
-        console.log('[Hedge Cost Debug] swapLong / bid =', swapRatio);
-        
-        const timeAdjustedSwap = businessDays * swapRatio;
-        console.log('[Hedge Cost Debug] businessDays * (swapLong/bid) =', timeAdjustedSwap);
-        
-        const sizeAdjustedSwap = timeAdjustedSwap * (amount / 10);
-        console.log('[Hedge Cost Debug] Previous * (amount/10) =', sizeAdjustedSwap);
-        
-        const withSpreadCost = sizeAdjustedSwap + spreadCost;
-        console.log('[Hedge Cost Debug] Previous + spreadCost =', withSpreadCost);
-        
-        hedgeCost = withSpreadCost * ask;
-        console.log('[Hedge Cost Debug] Final hedgeCost =', hedgeCost);
+        // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
+        hedgeCost = (businessDays * (swapLong / bid) * (amount / 10) + spreadCost) * ask;
       } else {
         // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
         hedgeCost = (businessDays * (swapShort / bid) * (amount / 10) + spreadCost) * ask;
