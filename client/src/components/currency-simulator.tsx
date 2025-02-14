@@ -23,6 +23,7 @@ interface SimulationResult {
   hedgedAmount: number;
   costDetails: {
     costPercentage: number;
+    hedgeCost: number;  // New field to store the calculated hedge cost
   };
   businessDays: number;
   historicalRates: Array<{
@@ -44,6 +45,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
     // Only fetch XTB rate when simulation is requested
     let currentRate;
+    let swapValues;
     try {
       // Connect to XTB if not already connected
       if (!xtbService.isConnected) {
@@ -61,7 +63,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           bid: symbolData.returnData.bid,
           ask: symbolData.returnData.ask
         };
+        swapValues = {
+          swapLong: symbolData.returnData.swapLong,
+          swapShort: symbolData.returnData.swapShort
+        };
         console.log('[CurrencySimulator] Using XTB rates:', currentRate);
+        console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
       }
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
@@ -78,6 +85,22 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
+    // Calculate hedge cost based on the provided formulas
+    let hedgeCost = 0;
+    if (currentRate && swapValues) {
+      const { bid, ask } = currentRate;
+      const { swapLong, swapShort } = swapValues;
+      const spreadCost = (ask - bid) * amount;
+
+      if (tradeDirection === 'buy') {
+        // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
+        hedgeCost = ((businessDays * swapLong / bid) * (amount / 10) + spreadCost) * ask;
+      } else {
+        // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
+        hedgeCost = ((businessDays * swapShort / bid) * (amount / 10) + spreadCost) * ask;
+      }
+    }
+
     // Keep the break-even rate in BRL per USD format
     const breakEvenRate = tradeDirection === 'buy' ? 
       currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
@@ -88,6 +111,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     setSimulation({
       ...result,
       businessDays,
+      costDetails: {
+        ...result.costDetails,
+        hedgeCost
+      },
       // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
@@ -288,7 +315,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   <div className="flex justify-between font-medium">
                     <span>Total Cost</span>
                     <span>
-                      {(simulation.totalCost / simulation.rate).toFixed(2)} {baseCurrency}
+                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
