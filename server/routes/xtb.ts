@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import WebSocket from 'ws';
-import { XTBService } from '../../client/src/lib/xtb-service';
+import { Router } from "express";
+import WebSocket from "ws";
+import { XTBService } from "../../client/src/lib/xtb-service";
 
 const router = Router();
 
@@ -18,13 +18,13 @@ const initializeXTB = async () => {
   try {
     // Use environment variables for credentials
     await xtbService.connect({
-      userId: process.env.XTB_USER_ID!,
+      userId: 17535100,
       password: process.env.XTB_PASSWORD!,
     });
-    console.log('[XTB Backend] Connected successfully');
+    console.log("[XTB Backend] Connected successfully");
     return true;
   } catch (error) {
-    console.error('[XTB Backend] Connection error:', error);
+    console.error("[XTB Backend] Connection error:", error);
     return false;
   }
 };
@@ -32,13 +32,13 @@ const initializeXTB = async () => {
 // Initialize connection when the server starts
 initializeXTB();
 
-router.get('/api/xtb/rates', async (req, res) => {
+router.get("/api/xtb/rates", async (req, res) => {
   try {
     if (!xtbService.isConnected) {
       await initializeXTB();
     }
 
-    const symbols = ['USDBRL', 'EURUSD', 'USDMXN'];
+    const symbols = ["USDBRL", "EURUSD", "USDMXN"];
     const rates = [];
 
     for (const symbol of symbols) {
@@ -59,8 +59,8 @@ router.get('/api/xtb/rates', async (req, res) => {
 
     res.json(rates);
   } catch (error) {
-    console.error('[XTB Backend] Error fetching rates:', error);
-    res.status(500).json({ error: 'Failed to fetch exchange rates' });
+    console.error("[XTB Backend] Error fetching rates:", error);
+    res.status(500).json({ error: "Failed to fetch exchange rates" });
   }
 });
 
