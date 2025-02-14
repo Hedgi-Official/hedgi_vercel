@@ -101,12 +101,15 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       }
     }
 
-    // Keep the break-even rate in BRL per USD format
+    // Calculate cost percentage based on actual hedge cost
+    const costPercentage = (hedgeCost / amount) * 100;
+
+    // Calculate break-even rate using actual hedge costs
     const breakEvenRate = tradeDirection === 'buy' ? 
-      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
-      result.rate * (1 + result.costDetails.costPercentage / 100) :
-      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
-      result.rate * (1 - result.costDetails.costPercentage / 100);
+      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
+      result.rate * (1 + costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
+      result.rate * (1 - costPercentage / 100);
 
     setSimulation({
       ...result,
