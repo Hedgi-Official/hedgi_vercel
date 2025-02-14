@@ -307,7 +307,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
+                    {(() => {
+                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                    })()}
                   </p>
                 </div>
               </div>
