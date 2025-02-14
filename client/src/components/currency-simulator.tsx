@@ -23,9 +23,6 @@ interface SimulationResult {
   hedgedAmount: number;
   costDetails: {
     costPercentage: number;
-    overnightCost?: number;
-    spreadCost?: number;
-    additionalFee?: number;
   };
   businessDays: number;
   historicalRates: Array<{
@@ -33,42 +30,6 @@ interface SimulationResult {
     rate: number;
   }>;
 }
-
-// Calculate total hedge cost following the provided formula
-const calculateHedgeCost = (
-  durationDays: number,
-  amount: number,
-  symbolData: any,
-  tradeDirection: 'buy' | 'sell'
-) => {
-  // Get overnight rate based on trade direction
-  const overnightRate = tradeDirection === 'buy' ?
-    symbolData.swapLong :
-    symbolData.swapShort;
-
-  // 1. Calculate overnight cost
-  const overnightCost = durationDays * Math.abs(overnightRate) * amount;
-
-  // 2. Calculate spread cost (spread is in pips, need to convert to actual cost)
-  const spreadCost = symbolData.spreadRaw * amount;
-
-  // 3. Add additional fee (1% of base cost or 10, whichever is lower)
-  const baseCost = overnightCost + spreadCost;
-  const additionalFee = Math.min(0.01 * baseCost, 10);
-
-  // 4. Apply 5% markup
-  const totalCost = (baseCost + additionalFee) * 1.05;
-
-  return {
-    totalCost,
-    costDetails: {
-      overnightCost,
-      spreadCost,
-      additionalFee,
-      costPercentage: (totalCost / amount) * 100
-    }
-  };
-};
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
@@ -81,9 +42,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
+    // Only fetch XTB rate when simulation is requested
     let currentRate;
-    let hedgeCost;
     try {
+      // Connect to XTB if not already connected
       if (!xtbService.isConnected) {
         await xtbService.connect({
           userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
@@ -100,15 +62,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           ask: symbolData.returnData.ask
         };
         console.log('[CurrencySimulator] Using XTB rates:', currentRate);
-
-        // Calculate hedge cost using live data
-        hedgeCost = calculateHedgeCost(
-          duration,
-          amount,
-          symbolData.returnData,
-          tradeDirection
-        );
-        console.log('[CurrencySimulator] Calculated hedge cost:', hedgeCost);
       }
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
@@ -122,19 +75,22 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       tradeDirection
     );
 
+    // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
-    const simulationRate = currentRate ?
-      (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) :
-      result.rate;
+    // Keep the break-even rate in BRL per USD format
+    const breakEvenRate = tradeDirection === 'buy' ? 
+      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
+      result.rate * (1 + result.costDetails.costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
+      result.rate * (1 - result.costDetails.costPercentage / 100);
 
     setSimulation({
       ...result,
-      rate: simulationRate,
       businessDays,
-      totalCost: hedgeCost ? hedgeCost.totalCost : result.totalCost,
-      costDetails: hedgeCost ? hedgeCost.costDetails : result.costDetails,
-      breakEvenRate: simulationRate
+      // If we have XTB rates, use them, otherwise use the simulated rate
+      rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
+      breakEvenRate
     });
   };
 
@@ -339,24 +295,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     <span>Business Days</span>
                     <span>{simulation.businessDays} days</span>
                   </div>
-                  {simulation.costDetails.overnightCost && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Overnight Cost</span>
-                      <span>{simulation.costDetails.overnightCost.toFixed(2)} {baseCurrency}</span>
-                    </div>
-                  )}
-                  {simulation.costDetails.spreadCost && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Spread Cost</span>
-                      <span>{simulation.costDetails.spreadCost.toFixed(2)} {baseCurrency}</span>
-                    </div>
-                  )}
-                  {simulation.costDetails.additionalFee && (
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Additional Fee</span>
-                      <span>{simulation.costDetails.additionalFee.toFixed(2)} {baseCurrency}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
