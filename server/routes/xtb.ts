@@ -54,6 +54,8 @@ router.get('/api/xtb/rates', async (req, res) => {
         bid: symbolResponse.returnData.bid,
         ask: symbolResponse.returnData.ask,
         timestamp: symbolResponse.returnData.time,
+        swapLong: symbolResponse.returnData.swapLong,
+        swapShort: symbolResponse.returnData.swapShort,
       });
     }
 

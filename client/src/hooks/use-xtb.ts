@@ -9,6 +9,8 @@ export interface ExchangeRate {
   bid: number;
   ask: number;
   timestamp: number;
+  swapLong: number;
+  swapShort: number;
 }
 
 const CURRENCY_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
@@ -84,6 +86,8 @@ export function useXTB() {
             bid: data.bid,
             ask: data.ask,
             timestamp: data.time,
+            swapLong: data.swapLong,
+            swapShort: data.swapShort,
           });
 
           // Set up streaming updates for this symbol

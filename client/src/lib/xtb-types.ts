@@ -27,6 +27,8 @@ export interface SymbolRecord {
   spreadTable: number;
   currencyPair: boolean;
   currencyProfit: string;
+  swapLong: number;
+  swapShort: number;
 }
 
 export interface StreamingSymbolResponse {
