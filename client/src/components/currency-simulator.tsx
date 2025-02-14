@@ -92,38 +92,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       const { swapLong, swapShort } = swapValues;
       const spreadCost = (ask - bid) * amount;
 
-      console.log('[CurrencySimulator] Cost calculation values:', {
-        businessDays,
-        amount,
-        bid,
-        ask,
-        swapLong,
-        swapShort,
-        spreadCost
-      });
-
       if (tradeDirection === 'buy') {
         // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        const swapComponent = (businessDays * swapLong / bid) * (amount / 10);
-        const spreadComponent = spreadCost;
-        hedgeCost = (swapComponent + spreadComponent) * ask;
-
-        console.log('[CurrencySimulator] Buy cost components:', {
-          swapComponent,
-          spreadComponent,
-          totalCost: hedgeCost
-        });
+        hedgeCost = ((businessDays * swapLong / bid) * (amount / 10) + spreadCost) * ask;
       } else {
         // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        const swapComponent = (businessDays * swapShort / bid) * (amount / 10);
-        const spreadComponent = spreadCost;
-        hedgeCost = (swapComponent + spreadComponent) * ask;
-
-        console.log('[CurrencySimulator] Sell cost components:', {
-          swapComponent,
-          spreadComponent,
-          totalCost: hedgeCost
-        });
+        hedgeCost = ((businessDays * swapShort / bid) * (amount / 10) + spreadCost) * ask;
       }
     }
 
