@@ -48,7 +48,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       // Connect to XTB if not already connected
       if (!xtbService.isConnected) {
         await xtbService.connect({
-          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          userId: import.meta.env.VITE_XTB_USER_ID,
           password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
         });
       }
