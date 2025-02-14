@@ -102,7 +102,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     }
 
     // Calculate cost percentage based on actual hedge cost
-    const costPercentage = (hedgeCost / amount / bid) * 100;
+    const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
     // Calculate break-even rate using actual hedge costs
     const breakEvenRate = tradeDirection === 'buy' ? 
