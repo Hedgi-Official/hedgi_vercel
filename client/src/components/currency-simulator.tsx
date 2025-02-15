@@ -94,10 +94,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
       if (tradeDirection === 'buy') {
         // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapLong / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = (businessDays * (Math.abs(swapLong) / bid) * (amount / 10)) * ask + spreadCost;
       } else {
         // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapShort / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = (businessDays * (Math.abs(swapShort) / bid) * (amount / 10)) * ask + spreadCost;
       }
     }
 
