@@ -14,7 +14,6 @@ import type { Hedge } from '@db/schema';
 interface Props {
   showGraph?: boolean;
   onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
-  title?: string;
 }
 
 interface SimulationResult {
@@ -24,7 +23,7 @@ interface SimulationResult {
   hedgedAmount: number;
   costDetails: {
     costPercentage: number;
-    hedgeCost: number;  
+    hedgeCost: number;  // New field to store the calculated hedge cost
   };
   businessDays: number;
   historicalRates: Array<{
@@ -40,11 +39,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
-  const [isLoadingHistorical, setIsLoadingHistorical] = useState(false);
-  const [historicalData, setHistoricalData] = useState<Array<{ date: string; rate: number }> | null>(null);
 
   const handleSimulate = async () => {
-    setIsLoadingHistorical(true);
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
     // Only fetch XTB rate when simulation is requested
@@ -71,20 +67,20 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
           swapLong: symbolData.returnData.swapLong,
           swapShort: symbolData.returnData.swapShort
         };
+        console.log('[CurrencySimulator] Using XTB rates:', currentRate);
+        console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
       }
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
     }
 
     // Fetch historical data from XTB
+    let historicalData;
     try {
-      const data = await xtbService.getHistoricalData(currencyPair, duration);
-      setHistoricalData(data);
+      historicalData = await xtbService.getHistoricalData(currencyPair, duration);
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching historical data:', error);
-      setHistoricalData(null);
     }
-    setIsLoadingHistorical(false);
 
     const result = await simulateHedge(
       baseCurrency,
@@ -130,6 +126,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
         ...result.costDetails,
         hedgeCost
       },
+      // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
@@ -345,18 +342,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
 
               {showGraph && (
                 <div className="pt-4">
-                  {isLoadingHistorical ? (
-                    <div className="text-center py-4">Loading historical data...</div>
-                  ) : (
-                    <CurrencyChart
-                      data={{
-                        historicalRates: historicalData || [],
-                        breakEvenRate: simulation.breakEvenRate,
-                        currentRate: simulation.rate,
-                        tradeDirection: tradeDirection
-                      }}
-                    />
-                  )}
+                  <CurrencyChart
+                    data={{
+                      historicalRates: historicalData || result.historicalRates,
+                      breakEvenRate: simulation.breakEvenRate,
+                      currentRate: simulation.rate,
+                      tradeDirection: tradeDirection
+                    }}
+                  />
                 </div>
               )}
 

@@ -130,12 +130,11 @@ export class XTBService {
       });
 
       const response = await this.sendCommand('getChartRangeRequest', {
-        info: {
-          symbol,
-          period: 1440, // Daily candles (1440 minutes = 24 hours)
-          start: startTimestamp * 1000, // XTB expects milliseconds
-          end: endTimestamp * 1000
-        }
+        symbol,
+        start: startTimestamp * 1000, // XTB expects milliseconds
+        end: endTimestamp * 1000,
+        period: 1440, // Daily candles (1440 minutes = 24 hours)
+        ticks: 0
       });
 
       console.log('[XTB] Historical data response:', response);
