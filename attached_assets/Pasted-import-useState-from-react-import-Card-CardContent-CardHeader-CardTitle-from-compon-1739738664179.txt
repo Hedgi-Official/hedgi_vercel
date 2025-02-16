@@ -74,14 +74,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
     }
 
-    // Fetch historical data from XTB
-    let historicalData;
-    try {
-      historicalData = await xtbService.getHistoricalData(currencyPair, duration);
-    } catch (error) {
-      console.error('[CurrencySimulator] Error fetching historical data:', error);
-    }
-
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -155,7 +147,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle> {title || "Hedging Simulator"} </CardTitle>
+          <CardTitle> title || "Hedge your Currency" </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -344,7 +336,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
                 <div className="pt-4">
                   <CurrencyChart
                     data={{
-                      historicalRates: historicalData || result.historicalRates,
+                      historicalRates: simulation.historicalRates,
                       breakEvenRate: simulation.breakEvenRate,
                       currentRate: simulation.rate,
                       tradeDirection: tradeDirection

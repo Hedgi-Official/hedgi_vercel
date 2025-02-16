@@ -147,6 +147,7 @@ export default function Dashboard() {
               <CurrencySimulator 
                 showGraph={true} 
                 onPlaceHedge={(hedgeData) => createHedgeMutation.mutate(hedgeData)}
+                title="Secure Your Payment"
               />
             </CardContent>
           </Card>
