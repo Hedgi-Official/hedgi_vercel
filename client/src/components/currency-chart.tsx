@@ -17,19 +17,39 @@ interface Props {
 }
 
 export function CurrencyChart({ data }: Props) {
-  // Don't invert the rates, use them as they come from XTB
-  const processedData = data.historicalRates.map(point => ({
-    date: point.date,
-    rate: point.rate
-  }));
+  // Show loading state if no historical data is available
+  if (!data.historicalRates?.length) {
+    return (
+      <div className="h-[300px] w-full flex items-center justify-center">
+        <p className="text-muted-foreground">Loading historical data...</p>
+      </div>
+    );
+  }
 
-  // Calculate number of days from the data
+  console.log('[CurrencyChart] Rendering with data:', data);
+
+  // Process and validate the data
+  const processedData = data.historicalRates
+    .filter(point => point.rate > 0) // Filter out invalid rates
+    .map(point => ({
+      date: new Date(point.date).toISOString(),
+      rate: Number(point.rate.toFixed(4)) // Ensure consistent decimal places
+    }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  if (processedData.length === 0) {
+    return (
+      <div className="h-[300px] w-full flex items-center justify-center">
+        <p className="text-muted-foreground">No valid historical data available</p>
+      </div>
+    );
+  }
+
+  // Calculate number of days and domain boundaries
   const days = processedData.length - 1;
-
-  // Calculate min and max values for Y axis domain
-  const rates = processedData.map(d => d.rate);
-  const minRate = Math.min(...rates, data.currentRate, data.breakEvenRate);
-  const maxRate = Math.max(...rates, data.currentRate, data.breakEvenRate);
+  const rates = [...processedData.map(d => d.rate), data.currentRate, data.breakEvenRate];
+  const minRate = Math.min(...rates);
+  const maxRate = Math.max(...rates);
   const padding = (maxRate - minRate) * 0.1; // Add 10% padding
 
   return (
@@ -44,6 +64,7 @@ export function CurrencyChart({ data }: Props) {
             <XAxis 
               dataKey="date" 
               tickFormatter={(date) => new Date(date).toLocaleDateString()}
+              minTickGap={50}
             />
             <YAxis 
               domain={[minRate - padding, maxRate + padding]}
@@ -61,6 +82,8 @@ export function CurrencyChart({ data }: Props) {
               stroke="#2563eb"
               strokeWidth={2}
               dot={false}
+              isAnimationActive={true}
+              animationDuration={500}
             />
             {/* Current rate reference line */}
             <ReferenceLine 
@@ -70,7 +93,8 @@ export function CurrencyChart({ data }: Props) {
               label={{ 
                 value: 'Current Rate',
                 position: 'right',
-                fill: '#16a34a'
+                fill: '#16a34a',
+                fontSize: 12
               }}
             />
             {/* Break-even rate reference line */}
@@ -81,7 +105,8 @@ export function CurrencyChart({ data }: Props) {
               label={{ 
                 value: 'Break-even Rate',
                 position: 'left',
-                fill: '#dc2626'
+                fill: '#dc2626',
+                fontSize: 12
               }}
             />
           </LineChart>

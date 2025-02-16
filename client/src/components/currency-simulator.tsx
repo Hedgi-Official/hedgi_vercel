@@ -78,6 +78,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
     let historicalData;
     try {
       historicalData = await xtbService.getHistoricalData(currencyPair, duration);
+      console.log('[CurrencySimulator] Historical data:', historicalData);
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching historical data:', error);
     }
@@ -102,33 +103,38 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
 
       if (tradeDirection === 'buy') {
         // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapLong / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = ((businessDays * swapLong / bid) * (amount / 10) + spreadCost) * ask;
       } else {
         // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapShort / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = ((businessDays * swapShort / bid) * (amount / 10) + spreadCost) * ask;
       }
     }
 
     // Calculate cost percentage based on actual hedge cost
     const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
-    // Calculate break-even rate using actual hedge costs
-    const breakEvenRate = tradeDirection === 'buy' ? 
-      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
-      result.rate * (1 + costPercentage / 100) :
-      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
-      result.rate * (1 - costPercentage / 100);
+    console.log('[CurrencySimulator] Simulation data:', {
+      historicalData,
+      currentRate,
+      swapValues,
+      hedgeCost,
+      costPercentage,
+      businessDays
+    });
 
     setSimulation({
       ...result,
       businessDays,
       costDetails: {
-        ...result.costDetails,
+        costPercentage,
         hedgeCost
       },
       // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
-      breakEvenRate
+      breakEvenRate: tradeDirection === 'buy' ? 
+        (currentRate ? currentRate.ask * (1 + costPercentage / 100) : result.rate * (1 + costPercentage / 100)) :
+        (currentRate ? currentRate.bid * (1 - costPercentage / 100) : result.rate * (1 - costPercentage / 100)),
+      historicalRates: historicalData || []
     });
   };
 
@@ -344,7 +350,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
                 <div className="pt-4">
                   <CurrencyChart
                     data={{
-                      historicalRates: historicalData || result.historicalRates,
+                      historicalRates: simulation.historicalRates,
                       breakEvenRate: simulation.breakEvenRate,
                       currentRate: simulation.rate,
                       tradeDirection: tradeDirection

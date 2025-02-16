@@ -114,38 +114,46 @@ export class XTBService {
     });
   }
 
-  async getHistoricalData(symbol: string, period: number = 30): Promise<Array<{ date: string; rate: number }>> {
+  async getHistoricalData(
+    symbol: string,
+    days: number = 30,
+    candlePeriod: number = 1440 // default to daily candles
+  ): Promise<Array<{ date: string; rate: number }>> {
     if (!this.isConnected) {
       throw new Error('Not connected to XTB');
     }
 
     try {
       const endTimestamp = Math.floor(Date.now() / 1000);
-      const startTimestamp = endTimestamp - (period * 24 * 60 * 60); // period days ago
+      const startTimestamp = endTimestamp - (days * 24 * 60 * 60);
 
       console.log('[XTB] Requesting historical data:', {
         symbol,
         start: new Date(startTimestamp * 1000).toISOString(),
         end: new Date(endTimestamp * 1000).toISOString(),
+        candlePeriod,
       });
 
       const response = await this.sendCommand('getChartRangeRequest', {
-        symbol,
-        start: startTimestamp * 1000, // XTB expects milliseconds
-        end: endTimestamp * 1000,
-        period: 1440, // Daily candles (1440 minutes = 24 hours)
-        ticks: 0
+        info: {
+          symbol,
+          period: candlePeriod,
+          start: startTimestamp * 1000,
+          end: endTimestamp * 1000
+        }
       });
 
       console.log('[XTB] Historical data response:', response);
 
       if (!response.status || !response.returnData?.rateInfos) {
+        console.error('[XTB] Invalid historical data response:', response);
         throw new Error('Failed to get historical data');
       }
 
+      // Process the data: use 'open' values for rates since 'close' represents price change
       const data = response.returnData.rateInfos.map((info: any) => ({
         date: new Date(info.ctm).toISOString(),
-        rate: (info.open + info.close) / 2 // Average of open and close prices
+        rate: info.open / 10000 // XTB returns prices multiplied by 10000
       })).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       console.log('[XTB] Processed historical data:', data);
@@ -155,6 +163,7 @@ export class XTBService {
       throw error;
     }
   }
+
 
   async getSymbolData(symbol: string): Promise<XTBResponse> {
     if (!this.isConnected) {
