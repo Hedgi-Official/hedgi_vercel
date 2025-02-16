@@ -173,11 +173,6 @@ export class XTBService {
         throw new Error(response.errorDescr || 'Failed to get symbol data');
       }
 
-      // Ensure swap values are positive
-      if (response.returnData) {
-        response.returnData.swapLong = Math.abs(response.returnData.swapLong);
-        response.returnData.swapShort = Math.abs(response.returnData.swapShort);
-      }
       console.log('[XTB] Symbol data response for', symbol, ':', response);
       return response;
     } catch (error) {

@@ -32,7 +32,7 @@ interface SimulationResult {
   }>;
 }
 
-export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Props) {
+export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -74,14 +74,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
     }
 
-    // Fetch historical data from XTB
-    let historicalData;
-    try {
-      historicalData = await xtbService.getHistoricalData(currencyPair, duration);
-    } catch (error) {
-      console.error('[CurrencySimulator] Error fetching historical data:', error);
-    }
-
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -102,22 +94,19 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
 
       if (tradeDirection === 'buy') {
         // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapLong / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = ((businessDays * swapLong / bid) * (amount / 10) + spreadCost) * ask;
       } else {
         // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
-        hedgeCost = (businessDays * (swapShort / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = ((businessDays * swapShort / bid) * (amount / 10) + spreadCost) * ask;
       }
     }
 
-    // Calculate cost percentage based on actual hedge cost
-    const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
-
-    // Calculate break-even rate using actual hedge costs
+    // Keep the break-even rate in BRL per USD format
     const breakEvenRate = tradeDirection === 'buy' ? 
-      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
-      result.rate * (1 + costPercentage / 100) :
-      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
-      result.rate * (1 - costPercentage / 100);
+      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
+      result.rate * (1 + result.costDetails.costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
+      result.rate * (1 - result.costDetails.costPercentage / 100);
 
     setSimulation({
       ...result,
@@ -155,7 +144,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle> {title || "Hedging Simulator"} </CardTitle>
+          <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -315,11 +304,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
                     {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
+                    ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
                   </p>
                 </div>
               </div>
@@ -344,7 +329,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, title }: Pro
                 <div className="pt-4">
                   <CurrencyChart
                     data={{
-                      historicalRates: historicalData || result.historicalRates,
+                      historicalRates: simulation.historicalRates,
                       breakEvenRate: simulation.breakEvenRate,
                       currentRate: simulation.rate,
                       tradeDirection: tradeDirection
