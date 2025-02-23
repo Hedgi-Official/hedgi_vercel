@@ -4,10 +4,35 @@ import { initReactI18next } from 'react-i18next';
 // English translations
 const enUS = {
   translation: {
-    // We'll populate these with the actual text once we get them from the user
     welcome: 'Welcome to Hedgi',
     description: 'Your comprehensive currency hedging platform',
-    // Add more translation keys as needed
+    simulator: {
+      title: 'Currency Hedge Simulator',
+      targetCurrency: 'Target Currency',
+      baseCurrency: 'Base Currency',
+      tradeDirection: 'Trade Direction',
+      buy: 'Buy',
+      sell: 'Sell',
+      buyHelp: 'I will make a payment in',
+      sellHelp: 'I will receive and convert to',
+      amount: 'Amount in',
+      duration: 'Duration',
+      days: 'days',
+      calculateCost: 'Calculate Hedge Cost',
+      currentRate: 'Current Rate',
+      breakEvenRate: 'Break-even Rate',
+      details: 'Hedge Details',
+      totalCost: 'Total Cost',
+      businessDays: 'Business Days',
+      placeHedge: 'Place Hedge',
+      willMakePayment: 'I will make a payment in',
+      willReceive: 'I will receive',
+      convertTo: 'and convert to',
+      inFuture: 'in the future',
+      enterAmount: 'Enter amount',
+      selectDuration: 'Select duration: {days} days',
+      lastDays: 'Last {days} Days of Exchange Rate History'
+    }
   }
 };
 
