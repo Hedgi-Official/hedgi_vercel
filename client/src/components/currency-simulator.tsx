@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ interface SimulationResult {
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -147,14 +149,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle>Currency Hedge Simulator</CardTitle>
+          <CardTitle>{t('Currency Hedge Simulator')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Target Currency</label>
+                  <label className="text-sm font-medium">{t('Target Currency')}</label>
                   <Select
                     value={targetCurrency}
                     onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
