@@ -86,8 +86,8 @@ export function useXTB() {
             bid: data.bid,
             ask: data.ask,
             timestamp: data.time,
-            swapLong: data.swapLong,
-            swapShort: data.swapShort,
+            swapLong: Math.abs(data.swapLong),
+            swapShort: Math.abs(data.swapShort),
           });
 
           // Set up streaming updates for this symbol

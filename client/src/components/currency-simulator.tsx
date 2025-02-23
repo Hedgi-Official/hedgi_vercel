@@ -10,7 +10,6 @@ import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
 import { xtbService } from '@/lib/xtb-service';
 import type { Hedge } from '@db/schema';
-import { useTranslation } from 'react-i18next';
 
 interface Props {
   showGraph?: boolean;
@@ -24,7 +23,7 @@ interface SimulationResult {
   hedgedAmount: number;
   costDetails: {
     costPercentage: number;
-    hedgeCost: number;
+    hedgeCost: number;  // New field to store the calculated hedge cost
   };
   businessDays: number;
   historicalRates: Array<{
@@ -34,7 +33,6 @@ interface SimulationResult {
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
-  const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -45,9 +43,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
+    // Only fetch XTB rate when simulation is requested
     let currentRate;
     let swapValues;
     try {
+      // Connect to XTB if not already connected
       if (!xtbService.isConnected) {
         await xtbService.connect({
           userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
@@ -82,8 +82,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       tradeDirection
     );
 
+    // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
+    // Calculate hedge cost based on the provided formulas
     let hedgeCost = 0;
     if (currentRate && swapValues) {
       const { bid, ask } = currentRate;
@@ -91,17 +93,23 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       const spreadCost = (ask - bid) * amount;
 
       if (tradeDirection === 'buy') {
-        hedgeCost = ((businessDays * swapLong / bid) * (amount / 10) + spreadCost) * ask;
+        // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
+        hedgeCost = (businessDays * (Math.abs(swapLong) / bid) * (amount / 10)) * ask + spreadCost;
       } else {
-        hedgeCost = ((businessDays * swapShort / bid) * (amount / 10) + spreadCost) * ask;
+        // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
+        hedgeCost = (businessDays * (Math.abs(swapShort) / bid) * (amount / 10)) * ask + spreadCost;
       }
     }
 
-    const breakEvenRate = tradeDirection === 'buy' ?
-      currentRate ? currentRate.ask * (1 + result.costDetails.costPercentage / 100) :
-      result.rate * (1 + result.costDetails.costPercentage / 100) :
-      currentRate ? currentRate.bid * (1 - result.costDetails.costPercentage / 100) :
-      result.rate * (1 - result.costDetails.costPercentage / 100);
+    // Calculate cost percentage based on actual hedge cost
+    const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
+
+    // Calculate break-even rate using actual hedge costs
+    const breakEvenRate = tradeDirection === 'buy' ? 
+      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
+      result.rate * (1 + costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
+      result.rate * (1 - costPercentage / 100);
 
     setSimulation({
       ...result,
@@ -110,6 +118,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         ...result.costDetails,
         hedgeCost
       },
+      // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
@@ -138,14 +147,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle>{t('common.currencyHedgeSimulator')}</CardTitle>
+          <CardTitle>Currency Hedge Simulator</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('simulator.targetCurrency')}</label>
+                  <label className="text-sm font-medium">Target Currency</label>
                   <Select
                     value={targetCurrency}
                     onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
@@ -168,14 +177,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('tooltips.targetCurrencyHelp')}</p>
+                <p>The currency of the payment you will make or receive in the future, that you are protecting against varying</p>
               </TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('simulator.baseCurrency')}</label>
+                  <label className="text-sm font-medium">Base Currency</label>
                   <Select
                     value={baseCurrency}
                     onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
@@ -198,7 +207,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('tooltips.baseCurrencyHelp')}</p>
+                <p>The currency whose fluctuations you are protecting against</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -206,7 +215,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.tradeDirection')}</label>
+                <label className="text-sm font-medium">Trade Direction</label>
                 <div className="grid grid-cols-2 gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -214,11 +223,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                         variant={tradeDirection === 'buy' ? 'default' : 'outline'}
                         onClick={() => setTradeDirection('buy')}
                       >
-                        {t('simulator.buy')} {targetCurrency}
+                        Buy {targetCurrency}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('tooltips.buyHelp', { currency: targetCurrency })}</p>
+                      <p>I will make a payment in {targetCurrency} in the future</p>
                     </TooltipContent>
                   </Tooltip>
 
@@ -228,11 +237,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                         variant={tradeDirection === 'sell' ? 'default' : 'outline'}
                         onClick={() => setTradeDirection('sell')}
                       >
-                        {t('simulator.sell')} {targetCurrency}
+                        Sell {targetCurrency}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('tooltips.sellHelp', { currency: targetCurrency, baseCurrency })}</p>
+                      <p>I will receive {targetCurrency} and convert to {baseCurrency} in the future</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -246,7 +255,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.amount')} {t('simulator.in')} {targetCurrency}</label>
+                <label className="text-sm font-medium">Amount in {targetCurrency}</label>
                 <Input
                   type="number"
                   value={amount}
@@ -258,14 +267,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{t('tooltips.amountHelp', { currency: targetCurrency })}</p>
+              <p>Enter the total amount of {targetCurrency} involved in the future transaction</p>
             </TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.duration')}: {duration} {t('simulator.days')}</label>
+                <label className="text-sm font-medium">Duration: {duration} days</label>
                 <Slider
                   value={[duration]}
                   onValueChange={([value]) => setDuration(value)}
@@ -275,46 +284,50 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{t('tooltips.durationHelp', { currency: targetCurrency })}</p>
+              <p>Select how many days until your {targetCurrency} transaction is due</p>
             </TooltipContent>
           </Tooltip>
 
           <Button onClick={handleSimulate} className="w-full">
-            {t('simulator.calculateHedgeCost')}
+            Calculate Hedge Cost
           </Button>
 
           {simulation && (
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                  <p className="text-sm text-muted-foreground">Current Rate</p>
                   <p className="text-2xl font-bold">
                     {simulation.rate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                  <p className="text-sm text-muted-foreground">Break-even Rate</p>
                   <p className="text-2xl font-bold">
                     {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    ({tradeDirection === 'buy' ? '+' : '-'}{simulation.costDetails.costPercentage.toFixed(2)}%)
+                    {(() => {
+                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                    })()}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
+                <h3 className="font-medium">Hedge Details</h3>
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <div className="flex justify-between font-medium">
-                    <span>{t('simulator.totalCost')}</span>
+                    <span>Total Cost</span>
                     <span>
                       {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{t('simulator.businessDays')}</span>
-                    <span>{simulation.businessDays} {t('simulator.days')}</span>
+                    <span>Business Days</span>
+                    <span>{simulation.businessDays} days</span>
                   </div>
                 </div>
               </div>
@@ -338,7 +351,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   className="w-full"
                   variant="outline"
                 >
-                  {t('simulator.placeHedge')}
+                  Place Hedge
                 </Button>
               )}
             </div>

@@ -1,7 +1,5 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LanguageSelector } from "./language-selector";
-import { useTranslation } from "react-i18next";
 
 interface HeaderProps {
   showAuthButton?: boolean;
@@ -10,8 +8,6 @@ interface HeaderProps {
 }
 
 export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
-  const { t } = useTranslation();
-
   return (
     <nav className="bg-background border-b">
       <div className="container mx-auto flex justify-between items-center p-4">
@@ -19,17 +15,16 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
           <img src="/Hedgi.png" alt="Hedgi Logo" className="h-12 w-auto rounded-lg" />
         </Link>
         <div className="flex items-center gap-4">
-          <LanguageSelector />
           {username ? (
             <>
-              <span className="text-foreground">{t('common.welcome')}, {username}</span>
+              <span className="text-foreground">Welcome, {username}</span>
               <Button variant="outline" onClick={onLogout}>
-                {t('common.logout')}
+                Logout
               </Button>
             </>
           ) : showAuthButton && (
             <Button variant="outline" asChild>
-              <Link href="/auth">{t('common.signup')}</Link>
+              <Link href="/auth">Get Started</Link>
             </Button>
           )}
         </div>
