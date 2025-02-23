@@ -257,19 +257,19 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Amount in {targetCurrency}</label>
+                <label className="text-sm font-medium">{t('simulator.amount')} {targetCurrency}</label>
                 <Input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
                   min={1000}
                   max={1000000}
-                  placeholder="Amount to hedge"
+                  placeholder={t('simulator.amountField')}
                 />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Enter the total amount of {targetCurrency} involved in the future transaction</p>
+              <p>{t('simulator.amountHelp')}</p>
             </TooltipContent>
           </Tooltip>
 
