@@ -149,14 +149,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle>{t('Currency Hedge Simulator')}</CardTitle>
+          <CardTitle>{t('simulator.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Target Currency')}</label>
+                  <label className="text-sm font-medium">{t('simulator.targetCurrency')}</label>
                   <Select
                     value={targetCurrency}
                     onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
@@ -186,7 +186,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Base Currency</label>
+                  <label className="text-sm font-medium">{t('simulator.baseCurrency')}</label>
                   <Select
                     value={baseCurrency}
                     onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
@@ -217,7 +217,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Trade Direction</label>
+                <label className="text-sm font-medium">{t('simulator.tradeDirection')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -225,11 +225,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                         variant={tradeDirection === 'buy' ? 'default' : 'outline'}
                         onClick={() => setTradeDirection('buy')}
                       >
-                        Buy {targetCurrency}
+                        {t('simulator.buy')} {targetCurrency}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>I will make a payment in {targetCurrency} in the future</p>
+                      <p>{t('simulator.buyHelp')} {targetCurrency} {t('simulator.inFuture')}</p>
                     </TooltipContent>
                   </Tooltip>
 
@@ -239,11 +239,11 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                         variant={tradeDirection === 'sell' ? 'default' : 'outline'}
                         onClick={() => setTradeDirection('sell')}
                       >
-                        Sell {targetCurrency}
+                        {t('simulator.sell')} {targetCurrency}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>I will receive {targetCurrency} and convert to {baseCurrency} in the future</p>
+                      <p>{t('simulator.sellHelp')} {baseCurrency} {t('simulator.inFuture')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
