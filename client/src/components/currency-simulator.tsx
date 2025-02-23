@@ -149,14 +149,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle>{t('Currency Hedge Simulator')}</CardTitle>
+          <CardTitle>{t('simulator.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('Target Currency')}</label>
+                  <label className="text-sm font-medium">{t('simulator.targetCurrency')}</label>
                   <Select
                     value={targetCurrency}
                     onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
