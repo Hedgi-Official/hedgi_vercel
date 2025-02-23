@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
+import { Header } from "@/components/header";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
@@ -33,6 +35,7 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const { login, register } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -89,109 +92,134 @@ export default function AuthPage() {
   };
 
   const formatCPF = (value: string) => {
-    // Remove all non-digits
     const digits = value.replace(/\D/g, '');
-
-    // Format as CPF (123.456.789-00)
     return digits
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-      .slice(0, 14); // Limit to CPF format length
+      .slice(0, 14);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader>
-          <CardTitle className="text-center">Welcome to Hedgi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
+    <div className="min-h-screen bg-background">
+      <Header showAuthButton={false} />
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">{t('auth.Welcome back')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="login">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">{t('auth.Sign In')}</TabsTrigger>
+                <TabsTrigger value="register">{t('auth.Sign Up')}</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="login" className="space-y-4">
-              <Input
-                placeholder="Username"
-                value={loginData.username}
-                onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-              />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={loginData.password}
-                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-              />
-              <Button
-                className="w-full"
-                onClick={() => handleSubmit("login")}
-              >
-                Login
-              </Button>
-            </TabsContent>
+              <TabsContent value="login" className="space-y-4">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {t('auth.Sign in to your account')}
+                  </p>
+                </div>
+                <Input
+                  placeholder={t('auth.Enter your username')}
+                  value={loginData.username}
+                  onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                />
+                <Input
+                  type="password"
+                  placeholder={t('auth.Enter your password')}
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                />
+                <Button
+                  className="w-full"
+                  onClick={() => handleSubmit("login")}
+                >
+                  {t('auth.Sign In')}
+                </Button>
+                <p className="text-sm text-center text-muted-foreground">
+                  {t('auth.Don\'t have an account?')} {' '}
+                  <TabsTrigger value="register" className="underline">
+                    {t('auth.Sign Up')}
+                  </TabsTrigger>
+                </p>
+              </TabsContent>
 
-            <TabsContent value="register" className="space-y-4">
-              <Input
-                placeholder="Full Name"
-                value={registerData.fullName}
-                onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
-              />
-              <Input
-                placeholder="Email"
-                type="email"
-                value={registerData.email}
-                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-              />
-              <Input
-                placeholder="Date of Birth"
-                type="date"
-                value={registerData.dateOfBirth}
-                onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
-              />
-              <Input
-                placeholder="CPF (e.g., 123.456.789-00)"
-                value={registerData.cpf}
-                onChange={(e) => setRegisterData({ 
-                  ...registerData, 
-                  cpf: formatCPF(e.target.value)
-                })}
-              />
-              <Input
-                placeholder="Phone Number (Optional)"
-                type="tel"
-                value={registerData.phoneNumber}
-                onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
-              />
-              <Input
-                placeholder="Username"
-                value={registerData.username}
-                onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
-              />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={registerData.password}
-                onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-              />
-              <Input
-                type="password"
-                placeholder="Confirm Password"
-                value={registerData.confirmPassword}
-                onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-              />
-              <Button
-                className="w-full"
-                onClick={() => handleSubmit("register")}
-              >
-                Register
-              </Button>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <TabsContent value="register" className="space-y-4">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {t('auth.Create your account')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('auth.Start protecting your currency today')}
+                  </p>
+                </div>
+                <Input
+                  placeholder={t('auth.Enter username')}
+                  value={registerData.fullName}
+                  onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
+                />
+                <Input
+                  placeholder={t('auth.Enter your email')}
+                  type="email"
+                  value={registerData.email}
+                  onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                />
+                <Input
+                  placeholder={t('auth.Date of Birth')}
+                  type="date"
+                  value={registerData.dateOfBirth}
+                  onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+                />
+                <Input
+                  placeholder="CPF (e.g., 123.456.789-00)"
+                  value={registerData.cpf}
+                  onChange={(e) => setRegisterData({ 
+                    ...registerData, 
+                    cpf: formatCPF(e.target.value)
+                  })}
+                />
+                <Input
+                  placeholder={t('auth.Phone Number (Optional)')}
+                  type="tel"
+                  value={registerData.phoneNumber}
+                  onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
+                />
+                <Input
+                  placeholder={t('auth.Enter your username')}
+                  value={registerData.username}
+                  onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
+                />
+                <Input
+                  type="password"
+                  placeholder={t('auth.Enter your password')}
+                  value={registerData.password}
+                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                />
+                <Input
+                  type="password"
+                  placeholder={t('auth.Confirm Password')}
+                  value={registerData.confirmPassword}
+                  onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                />
+                <Button
+                  className="w-full"
+                  onClick={() => handleSubmit("register")}
+                >
+                  {t('auth.Sign Up')}
+                </Button>
+                <p className="text-sm text-center text-muted-foreground">
+                  {t('auth.Already have an account?')} {' '}
+                  <TabsTrigger value="login" className="underline">
+                    {t('auth.Sign In')}
+                  </TabsTrigger>
+                </p>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -29,7 +29,15 @@ const enUS = {
       'or': 'or',
       'Forgot password?': 'Forgot password?',
       'Already have an account?': 'Already have an account?',
-      'Don\'t have an account?': 'Don\'t have an account?'
+      'Don\'t have an account?': 'Don\'t have an account?',
+      'Welcome back': 'Welcome back',
+      'Create your account': 'Create your account',
+      'Sign in to your account': 'Sign in to your account',
+      'Start protecting your currency today': 'Start protecting your currency today',
+      'Date of Birth': 'Date of Birth',
+      'Phone Number (Optional)': 'Phone Number (Optional)',
+      'Confirm Password': 'Confirm Password',
+      'Enter username': 'Enter username'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -49,6 +57,8 @@ const enUS = {
       amountField: 'Amount to hedge',
       amountHelp: 'Enter the total amount involved in the future transaction',
       duration: 'Duration',
+      durationLabel: 'Duration: {days} days',
+      durationHelp: 'Select how many days until your transaction is due',
       days: 'days',
       calculateCost: 'Calculate Hedge Cost',
       currentRate: 'Current Rate',
@@ -96,7 +106,15 @@ const ptBR = {
       'or': 'ou',
       'Forgot password?': 'Esqueceu a senha?',
       'Already have an account?': 'Já tem uma conta?',
-      'Don\'t have an account?': 'Não tem uma conta?'
+      'Don\'t have an account?': 'Não tem uma conta?',
+      'Welcome back': 'Bem-vindo de volta',
+      'Create your account': 'Crie sua conta',
+      'Sign in to your account': 'Entre na sua conta',
+      'Start protecting your currency today': 'Comece a proteger sua moeda hoje',
+      'Date of Birth': 'Data de Nascimento',
+      'Phone Number (Optional)': 'Telefone (Opcional)',
+      'Confirm Password': 'Confirmar Senha',
+      'Enter username': 'Digite seu nome completo'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
@@ -116,6 +134,8 @@ const ptBR = {
       amountField: 'Valor para proteção',
       amountHelp: 'Digite o valor total envolvido na transação futura',
       duration: 'Duração',
+      durationLabel: 'Duração: {days} dias',
+      durationHelp: 'Selecione quantos dias até sua transação vencer',
       days: 'dias',
       calculateCost: 'Calcular Custo do Hedge',
       currentRate: 'Taxa Atual',

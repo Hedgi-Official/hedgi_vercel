@@ -107,7 +107,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
     // Calculate break-even rate using actual hedge costs
-    const breakEvenRate = tradeDirection === 'buy' ? 
+    const breakEvenRate = tradeDirection === 'buy' ?
       currentRate ? currentRate.ask * (1 + costPercentage / 100) :
       result.rate * (1 + costPercentage / 100) :
       currentRate ? currentRate.bid * (1 - costPercentage / 100) :
@@ -276,7 +276,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Duration: {duration} days</label>
+                <label className="text-sm font-medium">{t('simulator.durationLabel', { days: duration })}</label>
                 <Slider
                   value={[duration]}
                   onValueChange={([value]) => setDuration(value)}
@@ -286,12 +286,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Select how many days until your {targetCurrency} transaction is due</p>
+              <p>{t('simulator.durationHelp')}</p>
             </TooltipContent>
           </Tooltip>
 
           <Button onClick={handleSimulate} className="w-full">
-            Calculate Hedge Cost
+            {t('simulator.calculateCost')}
           </Button>
 
           {simulation && (
