@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
@@ -33,6 +34,7 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const { login, register } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -89,39 +91,36 @@ export default function AuthPage() {
   };
 
   const formatCPF = (value: string) => {
-    // Remove all non-digits
     const digits = value.replace(/\D/g, '');
-
-    // Format as CPF (123.456.789-00)
     return digits
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-      .slice(0, 14); // Limit to CPF format length
+      .slice(0, 14);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle className="text-center">Welcome to Hedgi</CardTitle>
+          <CardTitle className="text-center">{t('auth.welcomeMessage')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="login">{t('common.login')}</TabsTrigger>
+              <TabsTrigger value="register">{t('common.signup')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login" className="space-y-4">
               <Input
-                placeholder="Username"
+                placeholder={t('auth.usernamePlaceholder')}
                 value={loginData.username}
                 onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
               />
               <Input
                 type="password"
-                placeholder="Password"
+                placeholder={t('auth.passwordPlaceholder')}
                 value={loginData.password}
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
               />
@@ -129,30 +128,30 @@ export default function AuthPage() {
                 className="w-full"
                 onClick={() => handleSubmit("login")}
               >
-                Login
+                {t('common.login')}
               </Button>
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4">
               <Input
-                placeholder="Full Name"
+                placeholder={t('auth.fullName')}
                 value={registerData.fullName}
                 onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
               />
               <Input
-                placeholder="Email"
+                placeholder={t('auth.email')}
                 type="email"
                 value={registerData.email}
                 onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
               />
               <Input
-                placeholder="Date of Birth"
+                placeholder={t('auth.dateOfBirth')}
                 type="date"
                 value={registerData.dateOfBirth}
                 onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
               />
               <Input
-                placeholder="CPF (e.g., 123.456.789-00)"
+                placeholder={t('auth.cpfPlaceholder')}
                 value={registerData.cpf}
                 onChange={(e) => setRegisterData({ 
                   ...registerData, 
@@ -160,25 +159,25 @@ export default function AuthPage() {
                 })}
               />
               <Input
-                placeholder="Phone Number (Optional)"
+                placeholder={t('auth.phoneNumber')}
                 type="tel"
                 value={registerData.phoneNumber}
                 onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
               />
               <Input
-                placeholder="Username"
+                placeholder={t('auth.username')}
                 value={registerData.username}
                 onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
               />
               <Input
                 type="password"
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
               />
               <Input
                 type="password"
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
                 value={registerData.confirmPassword}
                 onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
               />
@@ -186,7 +185,7 @@ export default function AuthPage() {
                 className="w-full"
                 onClick={() => handleSubmit("register")}
               >
-                Register
+                {t('auth.register')}
               </Button>
             </TabsContent>
           </Tabs>
