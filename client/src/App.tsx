@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
+import "@/i18n"; // Import i18n configuration
 
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
