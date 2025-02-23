@@ -24,7 +24,7 @@ interface SimulationResult {
   hedgedAmount: number;
   costDetails: {
     costPercentage: number;
-    hedgeCost: number;  // New field to store the calculated hedge cost
+    hedgeCost: number;  
   };
   businessDays: number;
   historicalRates: Array<{
@@ -45,11 +45,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
-    // Only fetch XTB rate when simulation is requested
     let currentRate;
     let swapValues;
     try {
-      // Connect to XTB if not already connected
       if (!xtbService.isConnected) {
         await xtbService.connect({
           userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
@@ -84,10 +82,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       tradeDirection
     );
 
-    // Calculate business days
     const businessDays = calculateBusinessDays(new Date(), duration);
 
-    // Calculate hedge cost based on the provided formulas
     let hedgeCost = 0;
     if (currentRate && swapValues) {
       const { bid, ask } = currentRate;
@@ -95,18 +91,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       const spreadCost = (ask - bid) * amount;
 
       if (tradeDirection === 'buy') {
-        // Buy formula: ((businessDays * swapLong/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
         hedgeCost = (businessDays * (Math.abs(swapLong) / bid) * (amount / 10)) * ask + spreadCost;
       } else {
-        // Sell formula: ((businessDays * swapShort/bid) * (hedgeSize/10) + (ask-bid) * hedgeSize) * ask
         hedgeCost = (businessDays * (Math.abs(swapShort) / bid) * (amount / 10)) * ask + spreadCost;
       }
     }
 
-    // Calculate cost percentage based on actual hedge cost
     const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
-    // Calculate break-even rate using actual hedge costs
     const breakEvenRate = tradeDirection === 'buy' ?
       currentRate ? currentRate.ask * (1 + costPercentage / 100) :
       result.rate * (1 + costPercentage / 100) :
@@ -120,7 +112,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         ...result.costDetails,
         hedgeCost
       },
-      // If we have XTB rates, use them, otherwise use the simulated rate
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
@@ -179,7 +170,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>The currency of the payment you will make or receive in the future, that you are protecting against varying</p>
+                <p>{t('simulator.buyHelp')}</p>
               </TooltipContent>
             </Tooltip>
 
@@ -209,7 +200,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>The currency whose fluctuations you are protecting against</p>
+                <p>{t('simulator.sellHelp')}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -219,38 +210,26 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t('simulator.tradeDirection')}</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                        onClick={() => setTradeDirection('buy')}
-                      >
-                        {t('simulator.buy')} {targetCurrency}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('simulator.buyHelp')} {targetCurrency} {t('simulator.inFuture')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                        onClick={() => setTradeDirection('sell')}
-                      >
-                        {t('simulator.sell')} {targetCurrency}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('simulator.sellHelp')} {baseCurrency} {t('simulator.inFuture')}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <Button
+                    variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                    onClick={() => setTradeDirection('buy')}
+                  >
+                    {t('simulator.buy')} {targetCurrency}
+                  </Button>
+                  <Button
+                    variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                    onClick={() => setTradeDirection('sell')}
+                  >
+                    {t('simulator.sell')} {targetCurrency}
+                  </Button>
                 </div>
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{getTradeDirectionHelp()}</p>
+              <p>{tradeDirection === 'buy' ? 
+                `${t('simulator.buyHelp')} ${targetCurrency}` :
+                `${t('simulator.sellHelp')} ${baseCurrency}`} {t('simulator.inFuture')}
+              </p>
             </TooltipContent>
           </Tooltip>
 
@@ -276,7 +255,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.durationLabel', { days: duration })}</label>
+                <label className="text-sm font-medium">
+                  {t('simulator.durationLabel').replace('{days}', duration.toString())}
+                </label>
                 <Slider
                   value={[duration]}
                   onValueChange={([value]) => setDuration(value)}
