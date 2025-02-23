@@ -14,10 +14,9 @@ const enUS = {
 // Brazilian Portuguese translations
 const ptBR = {
   translation: {
-    // We'll populate these with the actual text once we get them from the user
     welcome: 'Bem-vindo ao Hedgi',
     description: 'Sua plataforma completa de hedge cambial',
-    // Add more translation keys as needed
+    'Protect the value of your': 'Proteja o valor de seus'
   }
 };
 
