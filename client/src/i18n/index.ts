@@ -41,6 +41,17 @@ const ptBR = {
   translation: {
     welcome: 'Bem-vindo ao Hedgi',
     description: 'Sua plataforma completa de hedge cambial',
+    'Get Started': 'Começar',
+    'Welcome,': 'Bem-vindo,',
+    'Logout': 'Sair',
+    'Switch to English': 'Mudar para Inglês',
+    'Sign In': 'Entrar',
+    'Sign Up': 'Cadastrar',
+    'Email': 'Email',
+    'Password': 'Senha',
+    'Enter your email': 'Digite seu email',
+    'Enter your password': 'Digite sua senha',
+    'or': 'ou',
     simulator: {
       title: 'Simulador de Hedge Cambial',
       targetCurrency: 'Moeda Alvo',
@@ -66,7 +77,16 @@ const ptBR = {
       inFuture: 'no futuro',
       enterAmount: 'Digite o valor',
       selectDuration: 'Selecione a duração: {days} dias',
-      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio'
+      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio',
+      'in': 'em',
+      'Enter amount': 'Digite o valor',
+      'Select duration': 'Selecione a duração',
+      'Duration:': 'Duração:',
+      'Amount to hedge': 'Valor para hedge',
+      'Select how many days until your': 'Selecione quantos dias até sua',
+      'transaction is due': 'transação vencer',
+      'Enter the total amount of': 'Digite o valor total de',
+      'involved in the future transaction': 'envolvido na transação futura'
     }
   }
 };
