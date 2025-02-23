@@ -36,6 +36,7 @@ export default function AuthPage() {
   const { login, register } = useUser();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState("login");
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -109,7 +110,7 @@ export default function AuthPage() {
             <CardTitle className="text-center">{t('auth.Welcome back')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">{t('auth.Sign In')}</TabsTrigger>
                 <TabsTrigger value="register">{t('auth.Sign Up')}</TabsTrigger>
@@ -140,9 +141,13 @@ export default function AuthPage() {
                 </Button>
                 <p className="text-sm text-center text-muted-foreground">
                   {t('auth.Don\'t have an account?')} {' '}
-                  <TabsTrigger value="register" className="underline">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-normal"
+                    onClick={() => setActiveTab("register")}
+                  >
                     {t('auth.Sign Up')}
-                  </TabsTrigger>
+                  </Button>
                 </p>
               </TabsContent>
 
@@ -211,9 +216,13 @@ export default function AuthPage() {
                 </Button>
                 <p className="text-sm text-center text-muted-foreground">
                   {t('auth.Already have an account?')} {' '}
-                  <TabsTrigger value="login" className="underline">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-normal"
+                    onClick={() => setActiveTab("login")}
+                  >
                     {t('auth.Sign In')}
-                  </TabsTrigger>
+                  </Button>
                 </p>
               </TabsContent>
             </Tabs>
