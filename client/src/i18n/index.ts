@@ -6,6 +6,34 @@ const enUS = {
   translation: {
     welcome: 'Welcome to Hedgi',
     description: 'Your comprehensive currency hedging platform',
+    'Get Started': 'Get Started',
+    'Start Hedging Now': 'Start Hedging Now',
+    'Protect the value': 'Protect the value',
+    'of your': 'of your',
+    'Professional currency hedging made simple': 'Professional currency hedging made simple',
+    'Live Exchange Rates': 'Live Exchange Rates',
+    'Active Hedges': 'Active Hedges',
+    'New Hedge': 'New Hedge',
+    'No active hedges': 'No active hedges',
+    auth: {
+      'Sign In': 'Sign In',
+      'Sign Up': 'Sign Up',
+      'Email': 'Email',
+      'Password': 'Password',
+      'Username': 'Username',
+      'Enter your email': 'Enter your email',
+      'Enter your password': 'Enter your password',
+      'Enter your username': 'Enter your username',
+      'or': 'or',
+      'Forgot password?': 'Forgot password?',
+      'Already have an account?': 'Already have an account?',
+      'Don\'t have an account?': 'Don\'t have an account?'
+    },
+    currencyPairs: {
+      'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
+      'EURUSD': 'EUR/USD - Euro/US Dollar',
+      'USDMXN': 'USD/MXN - US Dollar/Mexican Peso'
+    },
     simulator: {
       title: 'Currency Hedge Simulator',
       targetCurrency: 'Target Currency',
@@ -31,9 +59,7 @@ const enUS = {
       inFuture: 'in the future',
       enterAmount: 'Enter amount',
       selectDuration: 'Select duration: {days} days',
-      lastDays: 'Last {days} Days of Exchange Rate History',
-      amountToHedge: 'Amount to hedge',
-      in: 'in'
+      lastDays: 'Last {days} Days of Exchange Rate History'
     }
   }
 };
@@ -44,16 +70,33 @@ const ptBR = {
     welcome: 'Bem-vindo ao Hedgi',
     description: 'Sua plataforma completa de hedge cambial',
     'Get Started': 'Começar',
-    'Welcome,': 'Bem-vindo,',
-    'Logout': 'Sair',
-    'Switch to English': 'Mudar para Inglês',
-    'Sign In': 'Entrar',
-    'Sign Up': 'Cadastrar',
-    'Email': 'Email',
-    'Password': 'Senha',
-    'Enter your email': 'Digite seu email',
-    'Enter your password': 'Digite sua senha',
-    'or': 'ou',
+    'Start Hedging Now': 'Comece a Proteger Agora',
+    'Protect the value': 'Proteja o valor',
+    'of your': 'do seu',
+    'Professional currency hedging made simple': 'Hedge cambial profissional simplificado',
+    'Live Exchange Rates': 'Taxas de Câmbio em Tempo Real',
+    'Active Hedges': 'Hedges Ativos',
+    'New Hedge': 'Novo Hedge',
+    'No active hedges': 'Nenhum hedge ativo',
+    auth: {
+      'Sign In': 'Entrar',
+      'Sign Up': 'Cadastrar',
+      'Email': 'E-mail',
+      'Password': 'Senha',
+      'Username': 'Nome de usuário',
+      'Enter your email': 'Digite seu e-mail',
+      'Enter your password': 'Digite sua senha',
+      'Enter your username': 'Digite seu nome de usuário',
+      'or': 'ou',
+      'Forgot password?': 'Esqueceu a senha?',
+      'Already have an account?': 'Já tem uma conta?',
+      'Don\'t have an account?': 'Não tem uma conta?'
+    },
+    currencyPairs: {
+      'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
+      'EURUSD': 'EUR/USD - Euro/Dólar Americano',
+      'USDMXN': 'USD/MXN - Dólar Americano/Peso Mexicano'
+    },
     simulator: {
       title: 'Simulador de Hedge Cambial',
       targetCurrency: 'Moeda Alvo',
@@ -79,16 +122,7 @@ const ptBR = {
       inFuture: 'no futuro',
       enterAmount: 'Digite o valor',
       selectDuration: 'Selecione a duração: {days} dias',
-      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio',
-      'in': 'em',
-      'Enter amount': 'Digite o valor',
-      'Select duration': 'Selecione a duração',
-      'Duration:': 'Duração:',
-      'Amount to hedge': 'Valor para hedge',
-      'Select how many days until your': 'Selecione quantos dias até sua',
-      'transaction is due': 'transação vencer',
-      'Enter the total amount of': 'Digite o valor total de',
-      'involved in the future transaction': 'envolvido na transação futura'
+      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio'
     }
   }
 };

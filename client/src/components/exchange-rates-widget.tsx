@@ -4,21 +4,19 @@ import { useFBSRate } from "@/hooks/use-secondary-rate";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const CURRENCY_PAIRS = [
-  { value: "USDBRL", label: "USD/BRL - US Dollar/Brazilian Real" },
-  { value: "EURUSD", label: "EUR/USD - Euro/US Dollar" },
-  { value: "USDMXN", label: "USD/MXN - US Dollar/Mexican Peso" }
+  { value: "USDBRL", label: "USDBRL" },
+  { value: "EURUSD", label: "EURUSD" },
+  { value: "USDMXN", label: "USDMXN" }
 ];
 
 export function ExchangeRatesWidget() {
+  const { t } = useTranslation();
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { exchangeRates, isLoading, error, isConnected } = useXTB();
   const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
-
-  console.log('FBS Rate Data:', fbsRate); // Debug log
-  console.log('FBS Rate Loading:', isLoadingFBS); // Debug loading state
-  console.log('FBS Rate Error:', fbsError); // Debug errors
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
 
@@ -51,7 +49,7 @@ export function ExchangeRatesWidget() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            Live Exchange Rates
+            {t('Live Exchange Rates')}
             {(isLoading || isLoadingFBS) && <Loader2 className="h-4 w-4 animate-spin" />}
             {!isConnected && <span className="text-sm text-muted-foreground">(Connecting...)</span>}
           </div>
@@ -62,7 +60,7 @@ export function ExchangeRatesWidget() {
             <SelectContent>
               {CURRENCY_PAIRS.map(pair => (
                 <SelectItem key={pair.value} value={pair.value}>
-                  {pair.label}
+                  {t(`currencyPairs.${pair.value}`)}
                 </SelectItem>
               ))}
             </SelectContent>

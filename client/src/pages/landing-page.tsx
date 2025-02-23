@@ -5,10 +5,12 @@ import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/header";
 import { Skyline } from "@/components/skyline";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const { user } = useUser();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,20 +21,20 @@ export default function LandingPage() {
           {/* Left side - Hero content */}
           <div>
             <h1 className="text-7xl font-bold leading-tight mb-6">
-              Protect the value
+              {t('Protect the value')}
               <br />
-              of your <TypingEffect />
+              {t('of your')} <TypingEffect />
             </h1>
             <Skyline />
             <p className="text-xl mb-8 text-muted-foreground max-w-xl">
-              Professional currency hedging made simple
+              {t('Professional currency hedging made simple')}
             </p>
             <Button 
               size="lg" 
               onClick={() => navigate('/auth')}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              Start Hedging Now
+              {t('Start Hedging Now')}
             </Button>
           </div>
 
