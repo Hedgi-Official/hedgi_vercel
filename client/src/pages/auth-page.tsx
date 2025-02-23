@@ -171,12 +171,16 @@ export default function AuthPage() {
                   value={registerData.email}
                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                 />
-                <Input
-                  placeholder={t('auth.Date of Birth')}
-                  type="date"
-                  value={registerData.dateOfBirth}
-                  onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
-                />
+                <div className="space-y-1">
+                  <label className="text-sm text-muted-foreground">
+                    {t('auth.Select your birth date')}
+                  </label>
+                  <Input
+                    type="date"
+                    value={registerData.dateOfBirth}
+                    onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+                  />
+                </div>
                 <Input
                   placeholder="CPF (e.g., 123.456.789-00)"
                   value={registerData.cpf}

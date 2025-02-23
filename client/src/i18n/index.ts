@@ -37,7 +37,8 @@ const enUS = {
       'Date of Birth': 'Date of Birth',
       'Phone Number (Optional)': 'Phone Number (Optional)',
       'Confirm Password': 'Confirm Password',
-      'Enter username': 'Enter username'
+      'Enter username': 'Enter username',
+      'Select your birth date': 'Select your birth date'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -97,7 +98,7 @@ const ptBR = {
     auth: {
       'Sign In': 'Entrar',
       'Sign Up': 'Cadastrar',
-      'Email': 'E-mail',
+      'Email': 'Email',
       'Password': 'Senha',
       'Username': 'Nome de usuário',
       'Enter your email': 'Digite seu e-mail',
@@ -114,7 +115,8 @@ const ptBR = {
       'Date of Birth': 'Data de Nascimento',
       'Phone Number (Optional)': 'Telefone (Opcional)',
       'Confirm Password': 'Confirmar Senha',
-      'Enter username': 'Digite seu nome completo'
+      'Enter username': 'Digite seu nome completo',
+      'Select your birth date': 'Selecione sua data de nascimento'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
