@@ -31,7 +31,9 @@ const enUS = {
       inFuture: 'in the future',
       enterAmount: 'Enter amount',
       selectDuration: 'Select duration: {days} days',
-      lastDays: 'Last {days} Days of Exchange Rate History'
+      lastDays: 'Last {days} Days of Exchange Rate History',
+      amountToHedge: 'Amount to hedge',
+      in: 'in'
     }
   }
 };

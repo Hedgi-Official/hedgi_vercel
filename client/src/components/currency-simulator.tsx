@@ -298,13 +298,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Current Rate</p>
+                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-2xl font-bold">
                     {simulation.rate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Break-even Rate</p>
+                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                   <p className="text-2xl font-bold">
                     {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
                   </p>
@@ -319,16 +319,16 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium">Hedge Details</h3>
+                <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <div className="flex justify-between font-medium">
-                    <span>Total Cost</span>
+                    <span>{t('simulator.totalCost')}</span>
                     <span>
                       {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Business Days</span>
+                    <span>{t('simulator.businessDays')}</span>
                     <span>{simulation.businessDays} days</span>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   className="w-full"
                   variant="outline"
                 >
-                  Place Hedge
+                  {t('simulator.placeHedge')}
                 </Button>
               )}
             </div>
