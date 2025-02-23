@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { LanguageSelector } from "./language-selector";
 
 interface HeaderProps {
   showAuthButton?: boolean;
@@ -15,6 +16,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
           <img src="/Hedgi.png" alt="Hedgi Logo" className="h-12 w-auto rounded-lg" />
         </Link>
         <div className="flex items-center gap-4">
+          <LanguageSelector />
           {username ? (
             <>
               <span className="text-foreground">Welcome, {username}</span>
