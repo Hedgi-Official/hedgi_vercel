@@ -24,15 +24,11 @@ export default function Dashboard() {
   });
 
   const createHedgeMutation = useMutation({
-    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => {
+    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...hedgeData,
-          amount: hedgeData.amount.toString(),
-          rate: hedgeData.rate.toString()
-        }),
+        body: JSON.stringify(hedgeData),
         credentials: 'include'
       });
 
@@ -111,7 +107,7 @@ export default function Dashboard() {
                   {hedges?.map((hedge) => {
                     const amount = Number(hedge.amount);
                     const rate = Number(hedge.rate);
-                    const isPositive = amount >= 0;
+                    const isBuy = amount > 0;
 
                     return (
                       <div
@@ -120,7 +116,7 @@ export default function Dashboard() {
                       >
                         <div>
                           <p className="font-medium">
-                            {t(`simulator.hedgeTitles.${isPositive ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
+                            {t(`simulator.hedgeTitles.${isBuy ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {t('simulator.amountField')}: {Math.abs(amount).toLocaleString('en-US', {

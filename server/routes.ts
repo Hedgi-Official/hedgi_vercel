@@ -33,7 +33,7 @@ export function registerRoutes(app: Express): Server {
     const { baseCurrency, targetCurrency, amount, rate, duration, tradeDirection } = req.body;
 
     try {
-      // Convert amount based on trade direction and ensure it's a string
+      // Convert amount to number, apply direction, then back to string
       const adjustedAmount = (tradeDirection === 'sell' ? 
         -Math.abs(Number(amount)) : 
         Math.abs(Number(amount))).toString();
