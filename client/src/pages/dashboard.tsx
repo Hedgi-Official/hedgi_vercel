@@ -41,14 +41,14 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
-        title: "Hedge Created",
-        description: "Your hedge position has been created successfully.",
+        title: t('simulator.notifications.hedgeCreated'),
+        description: t('simulator.notifications.hedgeCreatedDesc'),
       });
     },
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t('simulator.notifications.error'),
         description: error.message,
       });
     }
@@ -68,8 +68,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
-        title: "Hedge Deleted",
-        description: "The hedge position has been removed.",
+        title: t('simulator.notifications.hedgeDeleted'),
+        description: t('simulator.notifications.hedgeDeletedDesc'),
       });
     },
     onError: (error) => {
@@ -114,17 +114,17 @@ export default function Dashboard() {
                           {hedge.baseCurrency} → {hedge.targetCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Amount: {Number(hedge.amount).toLocaleString('en-US', {
+                          {t('simulator.amount')}: {Number(hedge.amount).toLocaleString('en-US', {
                             style: 'decimal',
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                           {' '}{hedge.baseCurrency}
-                          • Rate: {Number(hedge.rate).toFixed(4)}
+                          • {t('simulator.rate')}: {Number(hedge.rate).toFixed(4)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge>{hedge.status}</Badge>
+                        <Badge>{t(`simulator.status.${hedge.status}`)}</Badge>
                         <Button
                           variant="ghost"
                           size="icon"

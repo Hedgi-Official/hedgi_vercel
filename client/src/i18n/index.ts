@@ -180,7 +180,21 @@ const ptBR = {
       inFuture: 'no futuro',
       enterAmount: 'Digite o valor',
       selectDuration: 'Selecione a duração: {days} dias',
-      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio'
+      lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio',
+      notifications: {
+        hedgeCreated: 'Hedge Criado',
+        hedgeCreatedDesc: 'Sua posição de hedge foi criada com sucesso.',
+        hedgeDeleted: 'Hedge Excluído',
+        hedgeDeletedDesc: 'A posição de hedge foi removida.',
+        error: 'Erro',
+      },
+      status: {
+        active: 'Ativo',
+        completed: 'Concluído',
+        cancelled: 'Cancelado'
+      },
+      amount: 'Valor',
+      rate: 'Taxa'
     },
     'What is a Hedge?': 'O que é um Hedge?',
     'Using Hedgi': 'Usando o Hedgi',
