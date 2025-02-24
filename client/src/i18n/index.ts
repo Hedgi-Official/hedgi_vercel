@@ -194,7 +194,11 @@ const ptBR = {
         cancelled: 'Cancelado'
       },
       amount: 'Valor',
-      rate: 'Taxa'
+      rate: 'Taxa',
+      hedgeTitles: {
+        bought: 'Comprou',
+        sold: 'Vendeu'
+      }
     },
     'What is a Hedge?': 'O que é um Hedge?',
     'Using Hedgi': 'Usando o Hedgi',
