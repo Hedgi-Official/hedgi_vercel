@@ -25,7 +25,6 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
           <div className="hidden md:flex items-center space-x-4">
             <Link href={user ? "/dashboard" : "/"}>
               <Button variant="ghost">
-                <Home className="mr-2 h-4 w-4" />
                 {t('Home')}
               </Button>
             </Link>
