@@ -40,17 +40,6 @@ const enUS = {
       'Confirm Password': 'Confirm Password',
       'Enter username': 'Enter username'
     },
-    currencyPairs: {
-      'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
-      'EURUSD': 'EUR/USD - Euro/US Dollar',
-      'USDMXN': 'USD/MXN - US Dollar/Mexican Peso',
-      'BRLUSD': 'BRL/USD - Brazilian Real/US Dollar',
-      'BRLEUR': 'BRL/EUR - Brazilian Real/Euro',
-      'BRLMXN': 'BRL/MXN - Brazilian Real/Mexican Peso',
-      'MXNUSD': 'MXN/USD - Mexican Peso/US Dollar',
-      'MXNEUR': 'MXN/EUR - Mexican Peso/Euro',
-      'MXNBRL': 'MXN/BRL - Mexican Peso/Brazilian Real'
-    },
     simulator: {
       title: 'Currency Hedge Simulator',
       targetCurrency: 'Target Currency',
@@ -80,7 +69,34 @@ const enUS = {
       inFuture: 'in the future',
       enterAmount: 'Enter amount',
       selectDuration: 'Select duration: {days} days',
-      lastDays: 'Last {days} Days of Exchange Rate History'
+      lastDays: 'Last {days} Days of Exchange Rate History',
+      notifications: {
+        hedgeCreated: 'Hedge Created',
+        hedgeCreatedDesc: 'Your hedge position has been created successfully.',
+        hedgeDeleted: 'Hedge Deleted',
+        hedgeDeletedDesc: 'The hedge position has been removed.',
+        error: 'Error'
+      },
+      status: {
+        active: 'Active',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
+      },
+      hedgeTitles: {
+        bought: 'Bought',
+        sold: 'Sold'
+      }
+    },
+    currencyPairs: {
+      'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
+      'EURUSD': 'EUR/USD - Euro/US Dollar',
+      'USDMXN': 'USD/MXN - US Dollar/Mexican Peso',
+      'BRLUSD': 'BRL/USD - Brazilian Real/US Dollar',
+      'BRLEUR': 'BRL/EUR - Brazilian Real/Euro',
+      'BRLMXN': 'BRL/MXN - Brazilian Real/Mexican Peso',
+      'MXNUSD': 'MXN/USD - Mexican Peso/US Dollar',
+      'MXNEUR': 'MXN/EUR - Mexican Peso/Euro',
+      'MXNBRL': 'MXN/BRL - Mexican Peso/Brazilian Real'
     },
     'What is a Hedge?': 'What is a Hedge?',
     'Using Hedgi': 'Using Hedgi',
@@ -104,26 +120,9 @@ const ptBR = {
     'Active Hedges': 'Hedges Ativos',
     'New Hedge': 'Novo Hedge',
     'No active hedges': 'Nenhum hedge ativo',
-    'Bid Price': 'Preço de Compra',
-    'Ask Price': 'Preço de Venda',
-    'Last Update': 'Última Atualização',
-    'Market Data': 'Dados do Mercado',
-    'Currency Pair': 'Par de Moedas',
-    'Price': 'Preço',
-    'Status': 'Status',
-    'Actions': 'Ações',
-    'View Details': 'Ver Detalhes',
-    'Cancel Hedge': 'Cancelar Hedge',
-    'Active': 'Ativo',
-    'Completed': 'Concluído',
-    'Cancelled': 'Cancelado',
     'Welcome': 'Bem-vindo',
     'Logout': 'Sair',
     'Home': 'Início',
-    'XTB Rate': 'Taxa XTB',
-    'Bid Price': 'Preço de Compra',
-    'Ask Price': 'Preço de Venda',
-    'New Hedge': 'Novo Hedge',
     auth: {
       'Sign In': 'Entrar',
       'Sign Up': 'Cadastrar',
@@ -149,7 +148,13 @@ const ptBR = {
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
       'EURUSD': 'EUR/USD - Euro/Dólar Americano',
-      'USDMXN': 'USD/MXN - Dólar Americano/Peso Mexicano'
+      'USDMXN': 'USD/MXN - Dólar Americano/Peso Mexicano',
+      'BRLUSD': 'BRL/USD - Real Brasileiro/Dólar Americano',
+      'BRLEUR': 'BRL/EUR - Real Brasileiro/Euro',
+      'BRLMXN': 'BRL/MXN - Real Brasileiro/Peso Mexicano',
+      'MXNUSD': 'MXN/USD - Peso Mexicano/Dólar Americano',
+      'MXNEUR': 'MXN/EUR - Peso Mexicano/Euro',
+      'MXNBRL': 'MXN/BRL - Peso Mexicano/Real Brasileiro'
     },
     simulator: {
       title: 'Simulador de Hedge Cambial',
@@ -186,15 +191,13 @@ const ptBR = {
         hedgeCreatedDesc: 'Sua posição de hedge foi criada com sucesso.',
         hedgeDeleted: 'Hedge Excluído',
         hedgeDeletedDesc: 'A posição de hedge foi removida.',
-        error: 'Erro',
+        error: 'Erro'
       },
       status: {
         active: 'Ativo',
         completed: 'Concluído',
         cancelled: 'Cancelado'
       },
-      amount: 'Valor',
-      rate: 'Taxa',
       hedgeTitles: {
         bought: 'Comprou',
         sold: 'Vendeu'

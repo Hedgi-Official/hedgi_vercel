@@ -9,6 +9,7 @@ interface ChartData {
   historicalRates: HistoricalRate[];
   currentRate: number;
   tradeDirection: 'buy' | 'sell';
+  breakEvenRate: number;
 }
 
 interface Props {
@@ -16,10 +17,10 @@ interface Props {
 }
 
 export function CurrencyChart({ data }: Props) {
-  // Convert rates to their inverse (e.g., from USD/BRL to BRL/USD)
   const processedData = data.historicalRates.map(point => ({
     date: point.date,
-    rate: 1 / point.rate  // Convert to inverse rate for display
+    rate: point.rate,
+    breakEvenRate: data.breakEvenRate
   }));
 
   // Calculate number of days from the data
@@ -52,6 +53,14 @@ export function CurrencyChart({ data }: Props) {
               dataKey="rate"
               stroke="#2563eb" // blue-600
               strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="linear"
+              dataKey="breakEvenRate"
+              stroke="#dc2626" // red-600
+              strokeWidth={2}
+              strokeDasharray="3 3"
               dot={false}
             />
           </LineChart>

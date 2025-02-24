@@ -2,9 +2,10 @@ import { z } from "zod";
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+export type CurrencyPair = `${SupportedCurrency}${SupportedCurrency}`;
 
 // Sample rates for development/testing
-const SAMPLE_RATES = {
+const SAMPLE_RATES: Record<CurrencyPair, number> = {
   'USDBRL': 4.95,
   'USDEUR': 0.93,
   'USDMXN': 17.05,
@@ -17,7 +18,7 @@ const SAMPLE_RATES = {
   'MXNUSD': 0.059,
   'MXNEUR': 0.054,
   'MXNBRL': 0.29,
-};
+} as const;
 
 function generateHistoricalRates(baseRate: number, days: number) {
   const volatility = 0.02; // 2% daily volatility
@@ -44,23 +45,27 @@ function generateHistoricalRates(baseRate: number, days: number) {
 export async function fetchExchangeRate(base: SupportedCurrency, target: SupportedCurrency) {
   try {
     console.log(`[Currency API] Fetching rate for ${base}/${target}`);
-    const key = `${base}${target}`;
+    const key = `${base}${target}` as CurrencyPair;
 
     // If direct rate exists
-    if (SAMPLE_RATES[key]) {
+    if (key in SAMPLE_RATES) {
       return SAMPLE_RATES[key];
     }
 
     // If inverse rate exists
-    const inverseKey = `${target}${base}`;
-    if (SAMPLE_RATES[inverseKey]) {
+    const inverseKey = `${target}${base}` as CurrencyPair;
+    if (inverseKey in SAMPLE_RATES) {
       return 1 / SAMPLE_RATES[inverseKey];
     }
 
     // Calculate cross rate via USD
     if (base !== 'USD' && target !== 'USD') {
-      const baseUSD = SAMPLE_RATES[`${base}USD`] || 1 / SAMPLE_RATES[`USD${base}`];
-      const targetUSD = SAMPLE_RATES[`${target}USD`] || 1 / SAMPLE_RATES[`USD${target}`];
+      const baseUSD = `${base}USD` in SAMPLE_RATES ? 
+        SAMPLE_RATES[`${base}USD` as CurrencyPair] : 
+        1 / SAMPLE_RATES[`USD${base}` as CurrencyPair];
+      const targetUSD = `${target}USD` in SAMPLE_RATES ? 
+        SAMPLE_RATES[`${target}USD` as CurrencyPair] : 
+        1 / SAMPLE_RATES[`USD${target}` as CurrencyPair];
       return baseUSD / targetUSD;
     }
 
@@ -71,7 +76,7 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
   }
 }
 
-async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
+export async function fetchHistoricalRates(base: SupportedCurrency, target: SupportedCurrency, days: number) {
   try {
     const currentRate = await fetchExchangeRate(base, target);
     return generateHistoricalRates(currentRate, days);
@@ -112,9 +117,9 @@ export async function simulateHedge(
     const totalCost = (amount * costPercentage) / 100;
 
     // Calculate break-even rate
-    const breakEvenRate = tradeDirection === 'sell'
-      ? rate * (1 + costPercentage / 100)
-      : rate * (1 - costPercentage / 100);
+    const breakEvenRate = tradeDirection === 'sell' ?
+      rate * (1 + costPercentage / 100) :
+      rate * (1 - costPercentage / 100);
 
     // Get historical rates
     const historicalRates = await fetchHistoricalRates(base, target, duration);

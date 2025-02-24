@@ -14,23 +14,7 @@ import type { Hedge } from '@db/schema';
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
-}
-
-interface SimulationResult {
-  rate: number;
-  breakEvenRate: number;
-  totalCost: number;
-  hedgedAmount: number;
-  costDetails: {
-    costPercentage: number;
-    hedgeCost: number;  
-  };
-  businessDays: number;
-  historicalRates: Array<{
-    date: string;
-    rate: number;
-  }>;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => void;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
@@ -122,9 +106,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       onPlaceHedge({
         baseCurrency,
         targetCurrency,
-        amount,
-        rate: simulation.rate,
-        duration
+        amount: amount.toString(),
+        rate: simulation.rate.toString(),
+        duration,
+        tradeDirection 
       });
     }
   };
@@ -226,7 +211,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{tradeDirection === 'buy' ? 
+              <p>{tradeDirection === 'buy' ?
                 `${t('simulator.buyHelp')} ${targetCurrency}` :
                 `${t('simulator.sellHelp')} ${baseCurrency}`} {t('simulator.inFuture')}
               </p>
@@ -343,4 +328,20 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       </Card>
     </TooltipProvider>
   );
+}
+
+interface SimulationResult {
+  rate: number;
+  breakEvenRate: number;
+  totalCost: number;
+  hedgedAmount: number;
+  costDetails: {
+    costPercentage: number;
+    hedgeCost: number;
+  };
+  businessDays: number;
+  historicalRates: Array<{
+    date: string;
+    rate: number;
+  }>;
 }
