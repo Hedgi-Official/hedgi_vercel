@@ -12,6 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface HedgeWithDirection extends Hedge {
+  tradeDirection: 'buy' | 'sell';
+}
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -19,12 +23,12 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: hedges } = useQuery<Hedge[]>({
+  const { data: hedges } = useQuery<HedgeWithDirection[]>({
     queryKey: ["/api/hedges"],
   });
 
   const createHedgeMutation = useMutation({
-    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => {
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,16 +115,16 @@ export default function Dashboard() {
                     >
                       <div>
                         <p className="font-medium">
-                          {t(`simulator.hedgeTitles.${hedge.amount > 0 ? 'bought' : 'sold'}`)} {hedge.targetCurrency}{hedge.baseCurrency}
+                          {t(`simulator.hedgeTitles.${hedge.tradeDirection === 'buy' ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {t('simulator.amount')}: {Number(hedge.amount).toLocaleString('en-US', {
+                          {t('simulator.amountField')}: {Number(hedge.amount).toLocaleString('en-US', {
                             style: 'decimal',
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                           {' '}{hedge.baseCurrency}
-                          • {t('simulator.rate')}: {Number(hedge.rate).toFixed(4)}
+                          • {t('simulator.currentRate')}: {Number(hedge.rate).toFixed(4)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -147,7 +151,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <CurrencySimulator 
-                showGraph={true} 
+                showGraph={false}
                 onPlaceHedge={(hedgeData) => createHedgeMutation.mutate(hedgeData)}
               />
             </CardContent>
