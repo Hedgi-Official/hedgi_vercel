@@ -122,9 +122,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
       onPlaceHedge({
         baseCurrency,
         targetCurrency,
-        amount,
-        rate: simulation.rate,
-        duration
+        amount: amount.toString(),
+        rate: simulation.rate.toString(),
+        duration,
+        tradeDirection
       });
     }
   };

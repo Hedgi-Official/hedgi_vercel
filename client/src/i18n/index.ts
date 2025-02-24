@@ -60,7 +60,7 @@ const enUS = {
       sell: 'Sell',
       buyHelp: 'I will make a payment in',
       sellHelp: 'I will receive and convert to',
-      amount: 'Amount in',
+      amount: 'Amount',
       amountField: 'Amount to hedge',
       amountHelp: 'Enter the total amount involved in the future transaction',
       duration: 'Duration',
@@ -80,7 +80,11 @@ const enUS = {
       inFuture: 'in the future',
       enterAmount: 'Enter amount',
       selectDuration: 'Select duration: {days} days',
-      lastDays: 'Last {days} Days of Exchange Rate History'
+      lastDays: 'Last {days} Days of Exchange Rate History',
+      hedgeTitles: {
+        bought: 'Bought',
+        sold: 'Sold'
+      }
     },
     'What is a Hedge?': 'What is a Hedge?',
     'Using Hedgi': 'Using Hedgi',
