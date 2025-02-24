@@ -281,13 +281,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {baseCurrency}/{targetCurrency}
+                    {simulation.rate.toFixed(4)} {t(`currencyPairs.${baseCurrency}${targetCurrency}`)}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                   <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {baseCurrency}/{targetCurrency}
+                    {simulation.breakEvenRate.toFixed(4)} {t(`currencyPairs.${baseCurrency}${targetCurrency}`)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
@@ -305,12 +305,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   <div className="flex justify-between font-medium">
                     <span>{t('simulator.totalCost')}</span>
                     <span>
-                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
+                      {simulation.costDetails.hedgeCost.toFixed(2)} {t(`currencyPairs.${baseCurrency}`)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>{t('simulator.businessDays')}</span>
-                    <span>{simulation.businessDays} days</span>
+                    <span>{simulation.businessDays} {t('simulator.days')}</span>
                   </div>
                 </div>
               </div>
