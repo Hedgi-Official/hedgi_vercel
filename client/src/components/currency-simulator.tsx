@@ -281,13 +281,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {t(`currencyPairs.${baseCurrency}${targetCurrency}`)}
+                    {simulation.rate.toFixed(4)} {`${baseCurrency}/${targetCurrency}`}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                   <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {t(`currencyPairs.${targetCurrency}${baseCurrency}`)}
+                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
