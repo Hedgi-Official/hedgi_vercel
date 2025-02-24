@@ -41,8 +41,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
-        title: t('Hedge Created'),
-        description: t('Your hedge position has been created successfully.'),
+        title: "Hedge Created",
+        description: "Your hedge position has been created successfully.",
       });
     },
     onError: (error) => {
@@ -68,8 +68,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
-        title: t('Hedge Deleted'),
-        description: t('The hedge position has been removed.'),
+        title: "Hedge Deleted",
+        description: "The hedge position has been removed.",
       });
     },
     onError: (error) => {
@@ -114,13 +114,13 @@ export default function Dashboard() {
                           {hedge.baseCurrency} → {hedge.targetCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {t('Amount')}: {Number(hedge.amount).toLocaleString('en-US', {
+                          Amount: {Number(hedge.amount).toLocaleString('en-US', {
                             style: 'decimal',
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}
                           {' '}{hedge.baseCurrency}
-                          • {t('Rate')}: {Number(hedge.rate).toFixed(4)}
+                          • Rate: {Number(hedge.rate).toFixed(4)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
