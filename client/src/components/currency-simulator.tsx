@@ -305,7 +305,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   <div className="flex justify-between font-medium">
                     <span>{t('simulator.totalCost')}</span>
                     <span>
-                      {simulation.costDetails.hedgeCost.toFixed(2)} {t(`currencyPairs.${baseCurrency}`)}
+                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
