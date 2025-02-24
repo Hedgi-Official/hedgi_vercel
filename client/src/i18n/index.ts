@@ -186,7 +186,21 @@ const ptBR = {
     'Using Hedgi': 'Usando o Hedgi',
     'About Us': 'Sobre Nós',
     'Page Under Construction': 'Página Em Construção',
-    'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.'
+    'Coming Soon': 'Esta página está em construção',
+    'Hedge Created': 'Hedge Criado',
+    'Your hedge position has been created successfully.': 'Sua posição de hedge foi criada com sucesso.',
+    'Hedge Deleted': 'Hedge Excluído',
+    'The hedge position has been removed.': 'A posição de hedge foi removida.',
+    'Error': 'Erro',
+    'Active Hedges': 'Hedges Ativos',
+    'No active hedges': 'Nenhum hedge ativo',
+    'Amount': 'Valor',
+    'Rate': 'Taxa',
+    'Status': 'Status',
+    'XTB Rate': 'Taxa XTB',
+    'Bid Price': 'Preço de Compra',
+    'Ask Price': 'Preço de Venda',
+    'New Hedge': 'Novo Hedge' em construção. Por favor, volte em breve.'
   }
 };
 
