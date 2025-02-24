@@ -196,8 +196,8 @@ const ptBR = {
       amount: 'Valor',
       rate: 'Taxa',
       hedgeTitles: {
-        bought: 'Comprou',
-        sold: 'Vendeu'
+        bought: 'Bought',
+        sold: 'Sold'
       }
     },
     'What is a Hedge?': 'O que é um Hedge?',
