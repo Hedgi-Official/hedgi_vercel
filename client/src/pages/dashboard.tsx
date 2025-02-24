@@ -143,7 +143,7 @@ export default function Dashboard() {
 
           <Card className="bg-white shadow-lg">
             <CardHeader>
-              <CardTitle>New Hedge</CardTitle>
+              <CardTitle>{t('New Hedge')}</CardTitle>
             </CardHeader>
             <CardContent>
               <CurrencySimulator 
