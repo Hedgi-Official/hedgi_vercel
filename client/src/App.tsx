@@ -4,12 +4,15 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
-import "@/i18n"; // Import i18n configuration
+import "@/i18n";
 
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
+import WhatIsHedge from "@/pages/what-is-hedge";
+import UsingHedgi from "@/pages/using-hedgi";
+import AboutUs from "@/pages/about-us";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -29,6 +32,9 @@ function Router() {
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
       </Route>
+      <Route path="/what-is-hedge" component={WhatIsHedge} />
+      <Route path="/using-hedgi" component={UsingHedgi} />
+      <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>
   );

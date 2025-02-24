@@ -75,7 +75,12 @@ const enUS = {
       enterAmount: 'Enter amount',
       selectDuration: 'Select duration: {days} days',
       lastDays: 'Last {days} Days of Exchange Rate History'
-    }
+    },
+    'What is a Hedge?': 'What is a Hedge?',
+    'Using Hedgi': 'Using Hedgi',
+    'About Us': 'About Us',
+    'Page Under Construction': 'Page Under Construction',
+    'Coming Soon': 'This page is under construction. Please check back later.'
   }
 };
 
@@ -153,7 +158,12 @@ const ptBR = {
       enterAmount: 'Digite o valor',
       selectDuration: 'Selecione a duração: {days} dias',
       lastDays: 'Últimos {days} Dias do Histórico da Taxa de Câmbio'
-    }
+    },
+    'What is a Hedge?': 'O que é um Hedge?',
+    'Using Hedgi': 'Usando o Hedgi',
+    'About Us': 'Sobre Nós',
+    'Page Under Construction': 'Página Em Construção',
+    'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.'
   }
 };
 

@@ -15,9 +15,22 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
   return (
     <nav className="bg-background border-b">
       <div className="container mx-auto flex justify-between items-center p-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <img src="/Hedgi.png" alt="Hedgi Logo" className="h-12 w-auto rounded-lg" />
-        </Link>
+        <div className="flex items-center space-x-6">
+          <Link href="/" className="flex items-center space-x-2">
+            <img src="/Hedgi.png" alt="Hedgi Logo" className="h-12 w-auto rounded-lg" />
+          </Link>
+          <div className="hidden md:flex items-center space-x-4">
+            <Link href="/what-is-hedge">
+              <Button variant="ghost">{t('What is a Hedge?')}</Button>
+            </Link>
+            <Link href="/using-hedgi">
+              <Button variant="ghost">{t('Using Hedgi')}</Button>
+            </Link>
+            <Link href="/about-us">
+              <Button variant="ghost">{t('About Us')}</Button>
+            </Link>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <LanguageSelector />
           {username ? (
