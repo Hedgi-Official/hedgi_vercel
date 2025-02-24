@@ -41,11 +41,12 @@ export function registerRoutes(app: Express): Server {
         rate,
         duration,
         status: "active",
-        tradeDirection
+        tradeDirection: tradeDirection || 'buy' // Default to 'buy' if not specified
       }).returning();
 
       res.json(hedge);
     } catch (error) {
+      console.error('Error creating hedge:', error);
       res.status(400).json({ error: "Failed to create hedge" });
     }
   });

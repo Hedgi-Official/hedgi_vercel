@@ -12,10 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface HedgeWithDirection extends Hedge {
-  tradeDirection: 'buy' | 'sell';
-}
-
 export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -23,7 +19,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: hedges } = useQuery<HedgeWithDirection[]>({
+  const { data: hedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
   });
 
@@ -115,7 +111,9 @@ export default function Dashboard() {
                     >
                       <div>
                         <p className="font-medium">
-                          {t(`simulator.hedgeTitles.${hedge.tradeDirection}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
+                          {hedge.tradeDirection ? 
+                            t(`simulator.hedgeTitles.${hedge.tradeDirection}`) :
+                            t('simulator.hedgeTitles.bought')} {hedge.targetCurrency}/{hedge.baseCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {t('simulator.amountField')}: {Number(hedge.amount).toLocaleString('en-US', {
