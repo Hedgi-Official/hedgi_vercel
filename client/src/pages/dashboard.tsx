@@ -115,7 +115,7 @@ export default function Dashboard() {
                     >
                       <div>
                         <p className="font-medium">
-                          {t(`simulator.hedgeTitles.${hedge.tradeDirection === 'buy' ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
+                          {t(`simulator.hedgeTitles.${hedge.tradeDirection}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {t('simulator.amountField')}: {Number(hedge.amount).toLocaleString('en-US', {
