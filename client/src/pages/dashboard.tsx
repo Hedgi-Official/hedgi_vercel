@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
+import { useTranslation } from 'react-i18next';
 import { Header } from "@/components/header";
 import { ExchangeRatesWidget } from "@/components/exchange-rates-widget";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { toast } = useToast();
@@ -95,11 +97,11 @@ export default function Dashboard() {
 
           <Card className="bg-white shadow-lg">
             <CardHeader>
-              <CardTitle>Active Hedges</CardTitle>
+              <CardTitle>{t('Active Hedges')}</CardTitle>
             </CardHeader>
             <CardContent>
               {hedges?.length === 0 ? (
-                <p>No active hedges</p>
+                <p>{t('No active hedges')}</p>
               ) : (
                 <div className="space-y-4">
                   {hedges?.map((hedge) => (
