@@ -21,7 +21,6 @@ export const hedges = pgTable("hedges", {
   rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
   duration: integer("duration").notNull(), // in days
   status: text("status").notNull(), // active, completed, cancelled
-  tradeDirection: text("trade_direction").notNull(), // buy, sell
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
 });
