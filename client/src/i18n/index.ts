@@ -43,7 +43,13 @@ const enUS = {
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
       'EURUSD': 'EUR/USD - Euro/US Dollar',
-      'USDMXN': 'USD/MXN - US Dollar/Mexican Peso'
+      'USDMXN': 'USD/MXN - US Dollar/Mexican Peso',
+      'BRLUSD': 'BRL/USD - Brazilian Real/US Dollar',
+      'BRLEUR': 'BRL/EUR - Brazilian Real/Euro',
+      'BRLMXN': 'BRL/MXN - Brazilian Real/Mexican Peso',
+      'MXNUSD': 'MXN/USD - Mexican Peso/US Dollar',
+      'MXNEUR': 'MXN/EUR - Mexican Peso/Euro',
+      'MXNBRL': 'MXN/BRL - Mexican Peso/Brazilian Real'
     },
     simulator: {
       title: 'Currency Hedge Simulator',

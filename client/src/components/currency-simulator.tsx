@@ -287,7 +287,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                   <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {t(`currencyPairs.${baseCurrency}${targetCurrency}`)}
+                    {simulation.breakEvenRate.toFixed(4)} {t(`currencyPairs.${targetCurrency}${baseCurrency}`)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
