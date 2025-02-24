@@ -114,6 +114,10 @@ const ptBR = {
     'Welcome': 'Bem-vindo',
     'Logout': 'Sair',
     'Home': 'Início',
+    'XTB Rate': 'Taxa XTB',
+    'Bid Price': 'Preço de Compra',
+    'Ask Price': 'Preço de Venda',
+    'New Hedge': 'Novo Hedge',
     auth: {
       'Sign In': 'Entrar',
       'Sign Up': 'Cadastrar',

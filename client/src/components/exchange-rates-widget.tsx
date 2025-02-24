@@ -81,14 +81,14 @@ export function ExchangeRatesWidget() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 p-4 rounded-lg border">
-                <div className="text-sm text-muted-foreground">XTB Rate</div>
+                <div className="text-sm text-muted-foreground">{t('XTB Rate')}</div>
                 <div className="space-y-2">
                   <div className="text-2xl font-bold">{selectedRate.bid.toFixed(4)}</div>
-                  <div className="text-sm text-muted-foreground">Bid Price</div>
+                  <div className="text-sm text-muted-foreground">{t('Bid Price')}</div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-2xl font-bold">{selectedRate.ask.toFixed(4)}</div>
-                  <div className="text-sm text-muted-foreground">Ask Price</div>
+                  <div className="text-sm text-muted-foreground">{t('Ask Price')}</div>
                 </div>
               </div>
               {renderFBSRate()}
