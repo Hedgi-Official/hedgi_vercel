@@ -33,15 +33,19 @@ export function registerRoutes(app: Express): Server {
     const { baseCurrency, targetCurrency, amount, rate, duration, tradeDirection } = req.body;
 
     try {
+      // Convert amount based on trade direction and ensure it's a string
+      const adjustedAmount = (tradeDirection === 'sell' ? 
+        -Math.abs(Number(amount)) : 
+        Math.abs(Number(amount))).toString();
+
       const [hedge] = await db.insert(hedges).values({
         userId: req.user.id,
         baseCurrency,
         targetCurrency,
-        amount,
-        rate,
+        amount: adjustedAmount,
+        rate: rate.toString(),
         duration,
-        status: "active",
-        tradeDirection: tradeDirection || 'buy' // Default to 'buy' if not specified
+        status: "active"
       }).returning();
 
       res.json(hedge);

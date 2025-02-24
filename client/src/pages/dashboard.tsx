@@ -28,7 +28,11 @@ export default function Dashboard() {
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(hedgeData),
+        body: JSON.stringify({
+          ...hedgeData,
+          amount: hedgeData.amount.toString(),
+          rate: hedgeData.rate.toString()
+        }),
         credentials: 'include'
       });
 
@@ -104,40 +108,44 @@ export default function Dashboard() {
                 <p>{t('No active hedges')}</p>
               ) : (
                 <div className="space-y-4">
-                  {hedges?.map((hedge) => (
-                    <div
-                      key={hedge.id}
-                      className="p-4 border rounded flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {hedge.tradeDirection ? 
-                            t(`simulator.hedgeTitles.${hedge.tradeDirection}`) :
-                            t('simulator.hedgeTitles.bought')} {hedge.targetCurrency}/{hedge.baseCurrency}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {t('simulator.amountField')}: {Number(hedge.amount).toLocaleString('en-US', {
-                            style: 'decimal',
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                          {' '}{hedge.baseCurrency}
-                          • {t('simulator.currentRate')}: {Number(hedge.rate).toFixed(4)}
-                        </p>
+                  {hedges?.map((hedge) => {
+                    const amount = Number(hedge.amount);
+                    const rate = Number(hedge.rate);
+                    const isPositive = amount >= 0;
+
+                    return (
+                      <div
+                        key={hedge.id}
+                        className="p-4 border rounded flex justify-between items-center"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {t(`simulator.hedgeTitles.${isPositive ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t('simulator.amountField')}: {Math.abs(amount).toLocaleString('en-US', {
+                              style: 'decimal',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            {' '}{hedge.baseCurrency}
+                            • {t('simulator.currentRate')}: {rate.toFixed(4)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge>{t(`simulator.status.${hedge.status}`)}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive/90"
+                            onClick={() => deleteHedgeMutation.mutate(hedge.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge>{t(`simulator.status.${hedge.status}`)}</Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive/90"
-                          onClick={() => deleteHedgeMutation.mutate(hedge.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
