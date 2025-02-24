@@ -19,6 +19,7 @@ export const hedges = pgTable("hedges", {
   targetCurrency: text("target_currency").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
+  tradeDirection: text("trade_direction").notNull(),
   duration: integer("duration").notNull(), // in days
   status: text("status").notNull(), // active, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),
