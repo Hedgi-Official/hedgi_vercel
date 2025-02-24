@@ -124,8 +124,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         targetCurrency,
         amount,
         rate: simulation.rate,
-        duration,
-        tradeDirection
+        duration
       });
     }
   };
