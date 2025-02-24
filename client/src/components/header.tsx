@@ -2,6 +2,8 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/language-selector";
 import { useTranslation } from "react-i18next";
+import { useUser } from "@/hooks/use-user";
+import { Home } from "lucide-react";
 
 interface HeaderProps {
   showAuthButton?: boolean;
@@ -11,6 +13,7 @@ interface HeaderProps {
 
 export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
   const { t } = useTranslation();
+  const { user } = useUser();
 
   return (
     <nav className="bg-background border-b">
@@ -20,6 +23,12 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
             <img src="/Hedgi.png" alt="Hedgi Logo" className="h-12 w-auto rounded-lg" />
           </Link>
           <div className="hidden md:flex items-center space-x-4">
+            <Link href={user ? "/dashboard" : "/"}>
+              <Button variant="ghost">
+                <Home className="mr-2 h-4 w-4" />
+                {t('Home')}
+              </Button>
+            </Link>
             <Link href="/what-is-hedge">
               <Button variant="ghost">{t('What is a Hedge?')}</Button>
             </Link>

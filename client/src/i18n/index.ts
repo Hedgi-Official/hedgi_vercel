@@ -17,6 +17,7 @@ const enUS = {
     'No active hedges': 'No active hedges',
     'Welcome': 'Welcome',
     'Logout': 'Logout',
+    'Home': 'Home',
     auth: {
       'Sign In': 'Sign In',
       'Sign Up': 'Sign Up',
@@ -37,8 +38,7 @@ const enUS = {
       'Date of Birth': 'Date of Birth',
       'Phone Number (Optional)': 'Phone Number (Optional)',
       'Confirm Password': 'Confirm Password',
-      'Enter username': 'Enter username',
-      'Select your birth date': 'Select your birth date'
+      'Enter username': 'Enter username'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -100,10 +100,11 @@ const ptBR = {
     'No active hedges': 'Nenhum hedge ativo',
     'Welcome': 'Bem-vindo',
     'Logout': 'Sair',
+    'Home': 'Início',
     auth: {
       'Sign In': 'Entrar',
       'Sign Up': 'Cadastrar',
-      'Email': 'Email',
+      'Email': 'E-mail',
       'Password': 'Senha',
       'Username': 'Nome de usuário',
       'Enter your email': 'Digite seu e-mail',
@@ -120,8 +121,7 @@ const ptBR = {
       'Date of Birth': 'Data de Nascimento',
       'Phone Number (Optional)': 'Telefone (Opcional)',
       'Confirm Password': 'Confirmar Senha',
-      'Enter username': 'Digite seu nome completo',
-      'Select your birth date': 'Selecione sua data de nascimento'
+      'Enter username': 'Digite seu nome completo'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
