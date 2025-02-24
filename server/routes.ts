@@ -30,7 +30,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
 
-    const { baseCurrency, targetCurrency, amount, rate, duration, tradeDirection } = req.body;
+    const { baseCurrency, targetCurrency, amount, rate, duration } = req.body;
 
     try {
       const [hedge] = await db.insert(hedges).values({
@@ -40,7 +40,6 @@ export function registerRoutes(app: Express): Server {
         amount,
         rate,
         duration,
-        tradeDirection,
         status: "active",
       }).returning();
 
