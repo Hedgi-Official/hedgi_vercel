@@ -1,0 +1,124 @@
+// Define a simple interface for the XTB API response (adjust as needed)
+interface XTBResponse {
+  command: string;
+  info?: string;
+  status?: number;
+  arguments: any;
+}
+
+// TradingAPI class that wraps our API calls
+class TradingAPI {
+  // Dummy implementation of sendCommand for demonstration purposes.
+  // In production, this method should perform the actual API call.
+  async sendCommand(command: string, args: any): Promise<XTBResponse> {
+    // Here you'd typically make an HTTP/WebSocket call to the XTB API.
+    console.log(`Sending command: ${command}`, args);
+    // Simulate an API response structure.
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          command,
+          arguments: { order: Math.floor(Math.random() * 1000) + 1 } // dummy order number
+        });
+      }, 500);
+    });
+  }
+
+  // Get symbol data (e.g., current prices)
+  async getSymbolData(symbol: string): Promise<XTBResponse> {
+    return this.sendCommand('getSymbol', { symbol });
+  }
+
+  // Open a trade and return the trade (order) number
+  async openTrade(
+    symbol: string,
+    price: number,
+    volume: number,
+    sl: number = 0,
+    tp: number = 0,
+    customComment: string = "",
+    expiration: number = 0
+  ): Promise<number> {
+    const tradeTransInfo = {
+      cmd: 0,             // 0 typically represents a SELL order; adjust for BUY orders
+      customComment,
+      expiration,
+      order: 0,
+      price,              // Use the appropriate price (e.g., currentBidPrice for a SELL order)
+      sl,
+      tp,
+      symbol,
+      type: 0,            // 0 indicates an open order
+      volume
+    };
+
+    const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    const tradeNumber = response.arguments.order;
+    console.log(`Trade opened. Order number: ${tradeNumber}`);
+    return tradeNumber;
+  }
+
+  // Check the status of a trade using its order number
+  async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
+    const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
+    console.log(`Trade status for order ${tradeNumber}:`, response);
+    return response;
+  }
+
+  // Close an existing trade (position) and return the closing order number
+  async closeTrade(
+    symbol: string,
+    positionToClose: number,
+    price: number,
+    volume: number,
+    sl: number = 0,
+    tp: number = 0,
+    customComment: string = "",
+    expiration: number = 0
+  ): Promise<number> {
+    const tradeTransInfo = {
+      cmd: 1,             // 1 typically represents a BUY order, used here to close a SELL trade; adjust as needed
+      customComment,
+      expiration,
+      order: positionToClose,  // Use the position id stored from the open trade
+      price,              // Use the current Ask price for closing
+      sl,
+      tp,
+      symbol,
+      type: 2,            // 2 indicates a close operation
+      volume
+    };
+
+    const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    const closingOrderNumber = response.arguments.order;
+    console.log(`Trade closed. Closing order number: ${closingOrderNumber}`);
+    return closingOrderNumber;
+  }
+}
+
+// Example usage:
+async function runExample() {
+  const api = new TradingAPI();
+  const symbol = 'EURUSD';
+
+  // Get symbol data (e.g., current bid/ask)
+  const symbolData = await api.getSymbolData(symbol);
+  console.log("Symbol data:", symbolData);
+
+  // Open a trade using a specified price (e.g., currentBidPrice)
+  const openPrice = 1.4000; // Example price, adjust as needed
+  const volume = 0.1;
+  const tradeNumber = await api.openTrade(symbol, openPrice, volume, 0, 0, "Opening trade");
+
+  // Optionally, check the status of the trade
+  const statusResponse = await api.checkTradeStatus(tradeNumber);
+  console.log("Status response:", statusResponse);
+
+  // Later, close the trade. You need the position id associated with the open trade.
+  // For this example, we assume the open trade order number is also the position id.
+  // In real usage, ensure you store and map the correct position id.
+  const closePrice = 1.4100; // Example closing price (typically current Ask price)
+  await api.closeTrade(symbol, tradeNumber, closePrice, volume, 0, 0, "Closing trade");
+}
+
+runExample().catch(console.error);
