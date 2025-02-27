@@ -5,6 +5,7 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+import { tradingService } from "./services/trading";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -38,6 +39,24 @@ export function registerRoutes(app: Express): Server {
         -Math.abs(Number(amount)) : 
         Math.abs(Number(amount))).toString();
 
+      // Open trade via XTB API
+      const symbol = `${targetCurrency}${baseCurrency}`;
+      const volume = Math.abs(Number(amount));
+      const isBuy = tradeDirection === 'buy';
+
+      const tradeOrderNumber = await tradingService.openTrade(
+        symbol,
+        Number(rate),
+        volume,
+        isBuy,
+        0, // sl
+        0, // tp
+        `Hedge position for ${symbol}` // comment
+      );
+
+      // Check trade status
+      const tradeStatus = await tradingService.checkTradeStatus(tradeOrderNumber);
+
       const [hedge] = await db.insert(hedges).values({
         userId: req.user.id,
         baseCurrency,
@@ -45,7 +64,9 @@ export function registerRoutes(app: Express): Server {
         amount: adjustedAmount,
         rate: rate.toString(),
         duration,
-        status: "active"
+        status: "active",
+        tradeOrderNumber,
+        tradeStatus: tradeStatus.arguments.status,
       }).returning();
 
       res.json(hedge);
@@ -66,17 +87,43 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
+      // Get the hedge details first
       const [hedge] = await db
-        .delete(hedges)
-        .where(eq(hedges.id, hedgeId))
-        .returning();
+        .select()
+        .from(hedges)
+        .where(eq(hedges.id, hedgeId));
 
       if (!hedge) {
         return res.status(404).send("Hedge not found");
       }
 
+      // Close the trade via XTB API
+      if (hedge.tradeOrderNumber) {
+        const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
+        const volume = Math.abs(Number(hedge.amount));
+        const isBuy = Number(hedge.amount) > 0;
+
+        await tradingService.closeTrade(
+          symbol,
+          hedge.tradeOrderNumber,
+          Number(hedge.rate),
+          volume,
+          isBuy,
+          0, // sl
+          0, // tp
+          `Closing hedge position for ${symbol}` // comment
+        );
+      }
+
+      // Delete the hedge from database
+      const [deletedHedge] = await db
+        .delete(hedges)
+        .where(eq(hedges.id, hedgeId))
+        .returning();
+
       res.json({ message: "Hedge deleted successfully" });
     } catch (error) {
+      console.error('Error deleting hedge:', error);
       res.status(500).json({ error: "Failed to delete hedge" });
     }
   });
