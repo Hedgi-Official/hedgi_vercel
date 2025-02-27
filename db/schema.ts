@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, decimal, integer, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, decimal, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -8,8 +8,6 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   email: text("email").unique().notNull(),
   fullName: text("full_name").notNull(),
-  dateOfBirth: date("date_of_birth").notNull(),
-  cpf: text("cpf").unique().notNull(),
   phoneNumber: text("phone_number"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -38,7 +36,6 @@ export const hedgeRelations = relations(hedges, ({ one }) => ({
   }),
 }));
 
-// Update schemas to include new fields
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type User = typeof users.$inferSelect;

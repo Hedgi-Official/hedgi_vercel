@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import WebSocket from 'ws';
-import { XTBService } from '../../shared/services/xtb-service';
+import { XTBService } from '../../client/src/lib/xtb-service';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ initializeXTB();
 
 router.get('/api/xtb/rates', async (req, res) => {
   try {
-    if (!xtbService.getConnectionStatus()) {
+    if (!xtbService.isConnected) {
       await initializeXTB();
     }
 
