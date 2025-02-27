@@ -66,13 +66,13 @@ export function registerRoutes(app: Express): Server {
         duration,
         status: "active",
         tradeOrderNumber,
-        tradeStatus: tradeStatus.arguments.status,
+        tradeStatus: tradeStatus.returnData.status,
       }).returning();
 
       res.json(hedge);
     } catch (error) {
       console.error('Error creating hedge:', error);
-      res.status(400).json({ error: "Failed to create hedge" });
+      res.status(400).json({ error: error instanceof Error ? error.message : "Failed to create hedge" });
     }
   });
 
@@ -124,7 +124,7 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Hedge deleted successfully" });
     } catch (error) {
       console.error('Error deleting hedge:', error);
-      res.status(500).json({ error: "Failed to delete hedge" });
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to delete hedge" });
     }
   });
 

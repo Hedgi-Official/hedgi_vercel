@@ -1,11 +1,16 @@
 import { z } from "zod";
+import WebSocket from "ws";
 
 // Define interfaces for API interactions
 interface XTBResponse {
   command: string;
-  info?: string;
-  status?: number;
-  arguments: any;
+  status: boolean;
+  returnData: {
+    order: number;
+    status: string;
+    errorCode?: string;
+    errorDescr?: string;
+  };
 }
 
 interface TradeTransInfo {
@@ -36,21 +41,113 @@ const tradeTransInfoSchema = z.object({
 });
 
 export class TradingService {
-  private async sendCommand(command: string, args: any): Promise<XTBResponse> {
-    // Here we would typically make the actual API call
-    // For now, we'll simulate the API response
-    console.log(`[Trading Service] Sending command: ${command}`, args);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          command,
-          arguments: { 
-            order: Math.floor(Math.random() * 1000) + 1,
-            status: "Accepted"
-          }
-        });
-      }, 500);
+  private ws: WebSocket | null = null;
+  private streamSessionId: string | null = null;
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 5;
+
+  private async connect(): Promise<void> {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      throw new Error('Maximum reconnection attempts reached');
+    }
+
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket('wss://ws.xtb.com/real');
+
+      this.ws.on('open', () => {
+        console.log('[Trading Service] Connected to XTB WebSocket');
+        this.reconnectAttempts = 0;
+        resolve();
+      });
+
+      this.ws.on('error', (error) => {
+        console.error('[Trading Service] WebSocket error:', error);
+        reject(error);
+      });
+
+      this.ws.on('close', () => {
+        console.log('[Trading Service] WebSocket connection closed');
+        this.streamSessionId = null;
+        this.reconnectAttempts++;
+        setTimeout(() => this.connect(), 2000); // Reconnect after 2 seconds
+      });
+    });
+  }
+
+  private async login(): Promise<void> {
+    if (!this.ws) throw new Error('WebSocket not connected');
+
+    const loginCommand = {
+      command: "login",
+      arguments: {
+        userId: process.env.XTB_USER_ID,
+        password: process.env.XTB_PASSWORD,
+        appName: "Hedgi"
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      if (!this.ws) {
+        reject(new Error('WebSocket not connected'));
+        return;
+      }
+
+      this.ws.send(JSON.stringify(loginCommand), (error) => {
+        if (error) {
+          console.error('[Trading Service] Login error:', error);
+          reject(error);
+        }
+      });
+
+      this.ws.once('message', (data) => {
+        const response = JSON.parse(data.toString());
+        if (response.status) {
+          this.streamSessionId = response.streamSessionId;
+          console.log('[Trading Service] Successfully logged in to XTB');
+          resolve();
+        } else {
+          const error = response.errorCode ? 
+            `Login failed: ${response.errorDescr} (${response.errorCode})` : 
+            'Login failed';
+          reject(new Error(error));
+        }
+      });
+    });
+  }
+
+  private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
+    await this.connect();
+    if (!this.streamSessionId) {
+      await this.login();
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!this.ws) {
+        reject(new Error('WebSocket not connected'));
+        return;
+      }
+
+      const message = {
+        command: cmd,
+        arguments: params
+      };
+
+      this.ws.send(JSON.stringify(message), (error) => {
+        if (error) reject(error);
+      });
+
+      this.ws.once('message', (data) => {
+        const response = JSON.parse(data.toString());
+        if (!response.status && response.errorCode) {
+          reject(new Error(`${response.errorDescr} (${response.errorCode})`));
+        } else {
+          resolve(response);
+        }
+      });
     });
   }
 
@@ -84,7 +181,11 @@ export class TradingService {
     });
 
     const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
-    const tradeNumber = response.arguments.order;
+    if (!response.status) {
+      throw new Error(`Failed to open trade: ${response.returnData.errorDescr || 'Unknown error'}`);
+    }
+
+    const tradeNumber = response.returnData.order;
     console.log(`[Trading Service] Trade opened. Order number: ${tradeNumber}`);
     return tradeNumber;
   }
@@ -122,7 +223,11 @@ export class TradingService {
     });
 
     const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
-    const closingOrderNumber = response.arguments.order;
+    if (!response.status) {
+      throw new Error(`Failed to close trade: ${response.returnData.errorDescr || 'Unknown error'}`);
+    }
+
+    const closingOrderNumber = response.returnData.order;
     console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
     return closingOrderNumber;
   }
