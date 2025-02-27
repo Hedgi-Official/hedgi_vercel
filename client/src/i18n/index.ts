@@ -85,7 +85,8 @@ const enUS = {
       hedgeTitles: {
         bought: 'Bought',
         sold: 'Sold'
-      }
+      },
+      tradeOrderNumber: 'Trade Order'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -201,7 +202,8 @@ const ptBR = {
       hedgeTitles: {
         bought: 'Comprou',
         sold: 'Vendeu'
-      }
+      },
+      tradeOrderNumber: 'Ordem de Negociação'
     },
     'What is a Hedge?': 'O que é um Hedge?',
     'Using Hedgi': 'Usando o Hedgi',

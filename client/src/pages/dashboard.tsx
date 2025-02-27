@@ -126,6 +126,9 @@ export default function Dashboard() {
                             })}
                             {' '}{hedge.baseCurrency}
                             • {t('simulator.currentRate')}: {rate.toFixed(4)}
+                            {hedge.tradeOrderNumber && (
+                              <> • {t('simulator.tradeOrderNumber')}: #{hedge.tradeOrderNumber}</>
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
