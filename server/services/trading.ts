@@ -43,7 +43,6 @@ const tradeTransInfoSchema = z.object({
 
 export class TradingService {
   private ws: WebSocket | null = null;
-  private streamWs: WebSocket | null = null;
   private streamSessionId: string | null = null;
   private connectionPromise: Promise<void> | null = null;
   private readonly connectionTimeout = 10000; // 10 seconds
@@ -99,9 +98,7 @@ export class TradingService {
   }
 
   private async login(): Promise<void> {
-    if (!this.ws) {
-      throw new Error('WebSocket not connected');
-    }
+    if (!this.ws) throw new Error('WebSocket not connected');
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
@@ -213,9 +210,26 @@ export class TradingService {
   // API Methods
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
-    const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
-    console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
-    return response;
+    try {
+      // Create a new WebSocket connection for each status check
+      this.ws = null;
+      this.streamSessionId = null;
+      this.connectionPromise = null;
+
+      await this.ensureConnection();
+      const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
+      console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
+      return response;
+    } catch (error) {
+      console.error(`[Trading Service] Error checking trade status for order ${tradeNumber}:`, error);
+      throw error;
+    } finally {
+      // Close the connection after getting the status
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+    }
   }
 
   async openTrade(
