@@ -87,13 +87,30 @@ export class TradingService {
         this.ws = null;
         this.streamSessionId = null;
         this.connectionPromise = null;
+        this.isLoggedIn = false;
       });
     });
 
     return this.connectionPromise;
   }
 
+  private isLoggedIn = false;
+  private lastLoginTime = 0;
+  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
+
   private async login(): Promise<void> {
+    // If already logged in and the session is still valid, just return
+    const currentTime = Date.now();
+    if (this.isLoggedIn && this.streamSessionId && 
+        (currentTime - this.lastLoginTime < this.sessionTimeout)) {
+      console.log('[Trading Service] Already logged in with valid session');
+      return;
+    }
+
+    // Reset login state
+    this.isLoggedIn = false;
+    this.streamSessionId = null;
+
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       await this.ensureConnection();
     }
@@ -132,22 +149,50 @@ export class TradingService {
 
         if (response.status) {
           this.streamSessionId = response.streamSessionId;
+          this.isLoggedIn = true;
+          this.lastLoginTime = Date.now();
+          console.log('[Trading Service] Successfully logged in with session ID:', this.streamSessionId);
           resolve();
         } else {
+          this.isLoggedIn = false;
+          this.streamSessionId = null;
           const error = response.errorCode ? 
             `Login failed: ${response.errorDescr} (${response.errorCode})` : 
             'Login failed';
+          console.error('[Trading Service] Login failed:', error);
           reject(new Error(error));
         }
       });
     });
   }
 
-  private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
-    try {
+  // Helper method to check login status and reconnect if needed
+  private async ensureLoggedIn(): Promise<void> {
+    // If we have a connection but aren't logged in, try to login
+    if (this.ws?.readyState === WebSocket.OPEN && !this.isLoggedIn) {
+      await this.login();
+      return;
+    }
+    
+    // If we don't have a connection or it's not open, establish connection and login
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       await this.ensureConnection();
       await this.login();
+      return;
+    }
+    
+    // Otherwise, just ensure our login session is still valid
+    const currentTime = Date.now();
+    if (currentTime - this.lastLoginTime >= this.sessionTimeout) {
+      console.log('[Trading Service] Session timed out, logging in again');
+      await this.login();
+    }
+  }
 
+  private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
+    try {
+      await this.ensureLoggedIn();
+      
       return this.sendCommandWithoutLogin(cmd, params);
     } catch (error) {
       console.error(`[Trading Service] Error in sendCommand(${cmd}):`, error);
@@ -207,8 +252,8 @@ export class TradingService {
     try {
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      // Only ensure connection, as login is already done
-      await this.ensureConnection();
+      // Ensure we're logged in
+      await this.ensureLoggedIn();
 
       const response = await this.sendCommandWithoutLogin('tradeTransactionStatus', { order: tradeNumber });
       console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
@@ -246,10 +291,10 @@ export class TradingService {
       volume,
     });
 
-    // Only ensure connection but don't login, as login is handled in sendCommand
-    await this.ensureConnection();
+    // Ensure we have a valid login session
+    await this.ensureLoggedIn();
 
-    // Use sendCommandWithoutLogin instead to avoid repeated login
+    // Send the trade command
     const tradeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });
     if (!tradeResponse.status) {
       throw new Error(`Failed to open trade: ${tradeResponse.returnData.errorDescr || 'Unknown error'}`);
@@ -294,8 +339,8 @@ export class TradingService {
       volume,
     });
 
-    // Only ensure connection but don't login again
-    await this.ensureConnection();
+    // Ensure we have a valid login session
+    await this.ensureLoggedIn();
     
     const closeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });
     if (!closeResponse.status) {
