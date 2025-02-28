@@ -1,24 +1,7 @@
 import { z } from "zod";
 import WebSocket from "ws";
 
-// Constants from Python implementation remain unchanged
-const TRANSACTION_TYPE = {
-  ORDER_OPEN: 0,
-  ORDER_CLOSE: 2,
-  ORDER_MODIFY: 3,
-  ORDER_DELETE: 4,
-} as const;
-
-const TRANSACTION_SIDE = {
-  BUY: 0,
-  SELL: 1,
-  BUY_LIMIT: 2,
-  SELL_LIMIT: 3,
-  BUY_STOP: 4,
-  SELL_STOP: 5,
-} as const;
-
-// Interfaces remain unchanged
+// Define interfaces for API interactions
 interface XTBResponse {
   command: string;
   status: boolean;
@@ -33,12 +16,10 @@ interface XTBResponse {
     errorDescr?: string;
   };
   streamSessionId?: string;
-  errorCode?: string;
-  errorDescr?: string;
 }
 
 interface TradeTransInfo {
-  cmd: number;      // TRANSACTION_SIDE values
+  cmd: number;      // 0 for BUY, 1 for SELL
   customComment: string;
   expiration: number;
   order: number;
@@ -46,11 +27,11 @@ interface TradeTransInfo {
   sl: number;      // Stop loss
   tp: number;      // Take profit
   symbol: string;
-  type: number;    // TRANSACTION_TYPE values
+  type: number;    // 0 for open, 2 for close
   volume: number;
 }
 
-// Schema validation remains unchanged
+// Schema for trade transaction info validation
 const tradeTransInfoSchema = z.object({
   cmd: z.number(),
   customComment: z.string(),
@@ -64,6 +45,7 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
+// Map for trade status codes
 const REQUEST_STATUS = {
   ERROR: 0,
   PENDING: 1,
@@ -91,112 +73,68 @@ export class TradingService {
   private streamWs: WebSocket | null = null;
   private streamSessionId: string | null = null;
   private connectionPromise: Promise<void> | null = null;
-  private readonly connectionTimeout = 5000; // Reduced to 5 seconds
-  private isLoggedIn = false;
-  private lastLoginTime = 0;
-  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes
-  private isInitialized = false;
-  private initializeStartTime = 0;
-
-  private async initialize(): Promise<void> {
-    if (this.isInitialized) {
-      return;
-    }
-
-    this.initializeStartTime = Date.now();
-    console.log('[Trading Service] Starting initialization');
-
-    try {
-      await this.ensureConnection();
-      await this.login();
-      this.isInitialized = true;
-
-      const initDuration = Date.now() - this.initializeStartTime;
-      console.log(`[Trading Service] Service initialized successfully in ${initDuration}ms`);
-    } catch (error) {
-      const failureDuration = Date.now() - this.initializeStartTime;
-      console.error(`[Trading Service] Initialization failed after ${failureDuration}ms:`, error);
-      this.isInitialized = false;
-      throw error;
-    }
-  }
+  private readonly connectionTimeout = 10000; // 10 seconds
 
   private async ensureConnection(): Promise<void> {
-    const startTime = Date.now();
-    console.log('[Trading Service] Checking connection status');
-
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log('[Trading Service] Using existing connection');
       return;
     }
 
     if (this.connectionPromise) {
-      console.log('[Trading Service] Connection attempt already in progress');
       return this.connectionPromise;
     }
 
     this.connectionPromise = new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        const duration = Date.now() - startTime;
-        console.log(`[Trading Service] Connection attempt timed out after ${duration}ms`);
-        if (this.ws) {
-          this.ws.close();
-        }
+        this.ws?.close();
         this.ws = null;
         this.connectionPromise = null;
         reject(new Error('Connection timeout'));
       }, this.connectionTimeout);
 
-      try {
-        console.log('[Trading Service] Initiating new connection to XTB demo server');
-        this.ws = new WebSocket('wss://ws.xtb.com/demo');
+      console.log('[Trading Service] Initiating connection to XTB demo server');
+      this.ws = new WebSocket('wss://ws.xtb.com/demo');
 
-        this.ws.on('open', () => {
-          const duration = Date.now() - startTime;
-          console.log(`[Trading Service] Connected to XTB WebSocket in ${duration}ms`);
-          clearTimeout(timeoutId);
-          resolve();
-        });
-
-        this.ws.on('error', (error) => {
-          const duration = Date.now() - startTime;
-          console.error(`[Trading Service] WebSocket error after ${duration}ms:`, error);
-          clearTimeout(timeoutId);
-          this.ws = null;
-          this.connectionPromise = null;
-          reject(error);
-        });
-
-        this.ws.on('close', () => {
-          console.log('[Trading Service] WebSocket connection closed');
-          this.ws = null;
-          this.streamSessionId = null;
-          this.connectionPromise = null;
-          this.isLoggedIn = false;
-          this.isInitialized = false;
-        });
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        console.error(`[Trading Service] Error creating WebSocket after ${duration}ms:`, error);
+      this.ws.on('open', () => {
+        console.log('[Trading Service] Connected to XTB WebSocket');
         clearTimeout(timeoutId);
+        resolve();
+      });
+
+      this.ws.on('error', (error) => {
+        console.error('[Trading Service] WebSocket error:', error);
+        clearTimeout(timeoutId);
+        this.ws = null;
+        this.connectionPromise = null;
         reject(error);
-      }
+      });
+
+      this.ws.on('close', () => {
+        console.log('[Trading Service] WebSocket connection closed');
+        this.ws = null;
+        this.streamSessionId = null;
+        this.connectionPromise = null;
+        this.isLoggedIn = false;
+      });
     });
 
     return this.connectionPromise;
   }
 
-  private async login(): Promise<void> {
-    const startTime = Date.now();
-    console.log('[Trading Service] Checking login status');
+  private isLoggedIn = false;
+  private lastLoginTime = 0;
+  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
 
+  private async login(): Promise<void> {
+    // If already logged in and the session is still valid, just return
     const currentTime = Date.now();
     if (this.isLoggedIn && this.streamSessionId &&
         (currentTime - this.lastLoginTime < this.sessionTimeout)) {
-      console.log('[Trading Service] Using existing login session');
+      console.log('[Trading Service] Already logged in with valid session');
       return;
     }
 
+    // Reset login state
     this.isLoggedIn = false;
     this.streamSessionId = null;
 
@@ -206,92 +144,71 @@ export class TradingService {
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        const duration = Date.now() - startTime;
-        console.log(`[Trading Service] Login attempt timed out after ${duration}ms`);
         reject(new Error('Login timeout'));
       }, this.connectionTimeout);
 
-      try {
-        const loginCommand = {
-          command: "login",
-          arguments: {
-            userId: process.env.XTB_USER_ID || '17474971',
-            password: process.env.XTB_PASSWORD || 'xoh74681',
-            appName: "Hedgi"
-          }
-        };
-
-        console.log('[Trading Service] Sending login command');
-
-        if (!this.ws) {
-          clearTimeout(timeoutId);
-          reject(new Error('WebSocket not connected'));
-          return;
+      const loginCommand = {
+        command: "login",
+        arguments: {
+          userId: '17474971',
+          password: 'xoh74681',
+          appName: "Hedgi"
         }
+      };
 
-        this.ws.send(JSON.stringify(loginCommand), (error) => {
-          if (error) {
-            clearTimeout(timeoutId);
-            console.error('[Trading Service] Login send error:', error);
-            reject(error);
-          }
-        });
+      console.log('[Trading Service] Sending login command with user ID 17474971');
 
-        this.ws.once('message', (data) => {
+      this.ws.send(JSON.stringify(loginCommand), (error) => {
+        if (error) {
           clearTimeout(timeoutId);
-          try {
-            const response = JSON.parse(data.toString());
-            const duration = Date.now() - startTime;
-            console.log(`[Trading Service] Login response received in ${duration}ms:`, {
-              status: response.status,
-              hasStreamSessionId: !!response.streamSessionId
-            });
+          console.error('[Trading Service] Login send error:', error);
+          reject(error);
+        }
+      });
 
-            if (response.status) {
-              this.streamSessionId = response.streamSessionId;
-              this.isLoggedIn = true;
-              this.lastLoginTime = Date.now();
-              console.log('[Trading Service] Successfully logged in with session ID:', this.streamSessionId);
-              resolve();
-            } else {
-              this.isLoggedIn = false;
-              this.streamSessionId = null;
-              const error = new Error(response.errorCode ?
-                `Login failed: ${response.errorDescr} (${response.errorCode})` :
-                'Login failed');
-              console.error('[Trading Service] Login failed:', error);
-              reject(error);
-            }
-          } catch (error) {
-            console.error('[Trading Service] Error parsing login response:', error);
-            reject(new Error('Failed to parse login response'));
-          }
-        });
-      } catch (error) {
-        console.error('[Trading Service] Error during login:', error);
+      this.ws.once('message', (data) => {
         clearTimeout(timeoutId);
-        reject(error);
-      }
+        const response = JSON.parse(data.toString());
+        console.log('[Trading Service] Login response:', {
+          status: response.status,
+          hasStreamSessionId: !!response.streamSessionId
+        });
+
+        if (response.status) {
+          this.streamSessionId = response.streamSessionId;
+          this.isLoggedIn = true;
+          this.lastLoginTime = Date.now();
+          console.log('[Trading Service] Successfully logged in with session ID:', this.streamSessionId);
+          resolve();
+        } else {
+          this.isLoggedIn = false;
+          this.streamSessionId = null;
+          const error = response.errorCode ?
+            `Login failed: ${response.errorDescr} (${response.errorCode})` :
+            'Login failed';
+          console.error('[Trading Service] Login failed:', error);
+          reject(new Error(error));
+        }
+      });
     });
   }
 
+  // Helper method to check login status and reconnect if needed
   private async ensureLoggedIn(): Promise<void> {
-    if (!this.isInitialized) {
-      await this.initialize();
-      return;
-    }
-
+    // If we have a connection but aren't logged in, try to login
     if (this.ws?.readyState === WebSocket.OPEN && !this.isLoggedIn) {
       await this.login();
       return;
     }
 
+    // If we don't have a connection or it's not open, establish connection and login
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       await this.ensureConnection();
       await this.login();
       return;
     }
 
+    // Otherwise, just ensure our login session is still valid
     const currentTime = Date.now();
     if (currentTime - this.lastLoginTime >= this.sessionTimeout) {
       console.log('[Trading Service] Session timed out, logging in again');
@@ -302,6 +219,7 @@ export class TradingService {
   private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
     try {
       await this.ensureLoggedIn();
+
       return this.sendCommandWithoutLogin(cmd, params);
     } catch (error) {
       console.error(`[Trading Service] Error in sendCommand(${cmd}):`, error);
@@ -317,7 +235,6 @@ export class TradingService {
       }
 
       const timeoutId = setTimeout(() => {
-        console.log(`[Trading Service] Command ${cmd} timed out`);
         if (this.ws) {
           this.ws.removeEventListener('message', handleMessage);
         }
@@ -328,6 +245,7 @@ export class TradingService {
         try {
           let response: XTBResponse;
 
+          // Handle both string and Buffer data types
           if (Buffer.isBuffer(data.data)) {
             response = JSON.parse(data.data.toString());
           } else if (typeof data.data === 'string') {
@@ -339,8 +257,7 @@ export class TradingService {
           console.log(`[Trading Service] Received response for ${cmd}:`, {
             status: response.status,
             hasReturnData: !!response.returnData,
-            errorCode: response.errorCode,
-            errorDescr: response.errorDescr
+            rawData: response
           });
 
           if (!response.status && response.errorCode) {
@@ -348,9 +265,8 @@ export class TradingService {
           } else {
             resolve(response);
           }
-        } catch (error) {
-          console.error('[Trading Service] Error parsing response:', error);
-          console.error('[Trading Service] Raw response data:', data.data);
+        } catch (e) {
+          console.error('[Trading Service] Error parsing response:', e, data.data);
           reject(new Error('Failed to parse XTB response'));
         } finally {
           clearTimeout(timeoutId);
@@ -365,29 +281,32 @@ export class TradingService {
         arguments: params
       });
 
-      console.log(`[Trading Service] Sending ${cmd} command:`, {
+      console.log(`[Trading Service] Sending command ${cmd}:`, {
         command: cmd,
         ...params,
-        password: undefined
+        password: undefined // Never log passwords
       });
 
-      this.ws.addEventListener('message', handleMessage);
-      this.ws.send(message, (error) => {
-        if (error) {
-          clearTimeout(timeoutId);
-          if (this.ws) {
-            this.ws.removeEventListener('message', handleMessage);
+      if (this.ws) {
+        this.ws.addEventListener('message', handleMessage);
+        this.ws.send(message, (error) => {
+          if (error) {
+            clearTimeout(timeoutId);
+            if (this.ws) {
+              this.ws.removeEventListener('message', handleMessage);
+            }
+            reject(error);
           }
-          console.error(`[Trading Service] Error sending ${cmd} command:`, error);
-          reject(error);
-        }
-      });
+        });
+      }
     });
   }
 
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
+
+      // Ensure we're logged in
       await this.ensureLoggedIn();
 
       const response = await this.sendCommandWithoutLogin('tradeTransactionStatus', { order: tradeNumber });
@@ -396,6 +315,7 @@ export class TradingService {
         throw new Error('Invalid response format from XTB');
       }
 
+      // Format the response to match STREAMING_TRADE_STATUS_RECORD
       const formattedResponse: XTBResponse = {
         command: 'tradeTransactionStatus',
         status: response.status,
@@ -429,6 +349,7 @@ export class TradingService {
     customComment: string = "",
     expiration: number = 0
   ): Promise<number> {
+    // Adjust volume: For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
     const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
 
     console.log(`[Trading Service] Opening trade for ${symbol}`, {
@@ -436,20 +357,22 @@ export class TradingService {
     });
 
     const tradeTransInfo = tradeTransInfoSchema.parse({
-      cmd: isBuy ? TRANSACTION_SIDE.BUY : TRANSACTION_SIDE.SELL,
+      cmd: isBuy ? 0 : 1,
       customComment,
       expiration,
-      order: 0,  // For new orders, always set to 0
+      order: 0,
       price,
       sl,
       tp,
       symbol,
-      type: TRANSACTION_TYPE.ORDER_OPEN,
+      type: 0,
       volume: adjustedVolume,
     });
 
+    // Ensure we have a valid login session
     await this.ensureLoggedIn();
 
+    // Send the trade command
     const tradeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });
     if (!tradeResponse.status) {
       throw new Error(`Failed to open trade: ${tradeResponse.returnData.errorDescr || 'Unknown error'}`);
@@ -477,6 +400,7 @@ export class TradingService {
     customComment: string = "",
     expiration: number = 0
   ): Promise<number> {
+    // Adjust volume: For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
     const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
 
     console.log(`[Trading Service] Closing trade for ${symbol}`, {
@@ -484,7 +408,7 @@ export class TradingService {
     });
 
     const tradeTransInfo = tradeTransInfoSchema.parse({
-      cmd: isBuy ? TRANSACTION_SIDE.SELL : TRANSACTION_SIDE.BUY,  // Opposite of opening trade
+      cmd: isBuy ? 1 : 0,
       customComment,
       expiration,
       order: positionToClose,
@@ -492,10 +416,11 @@ export class TradingService {
       sl,
       tp,
       symbol,
-      type: TRANSACTION_TYPE.ORDER_CLOSE,
+      type: 2,
       volume: adjustedVolume,
     });
 
+    // Ensure we have a valid login session
     await this.ensureLoggedIn();
 
     const closeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });

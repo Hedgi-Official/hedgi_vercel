@@ -13,53 +13,54 @@ class BackendXTBService extends XTBService {
 
 const xtbService = new BackendXTBService();
 
-// Update server URL for demo
-xtbService.serverUrl = 'wss://ws.xtb.com/demo';
-xtbService.streamUrl = 'wss://ws.xtb.com/demoStream';
+// Initialize XTB connection with backend credentials
+const initializeXTB = async () => {
+  try {
+    // Update server URL for demo
+    xtbService.serverUrl = 'wss://ws.xtb.com/demo';
+    xtbService.streamUrl = 'wss://ws.xtb.com/demoStream';
+    
+    // Use environment variables for credentials
+    await xtbService.connect({
+      userId: process.env.XTB_USER_ID!,
+      password: process.env.XTB_PASSWORD!,
+    });
+    console.log('[XTB Backend] Connected successfully');
+    return true;
+  } catch (error) {
+    console.error('[XTB Backend] Connection error:', error);
+    return false;
+  }
+};
+
+// Initialize connection when the server starts
+initializeXTB();
 
 router.get('/api/xtb/rates', async (req, res) => {
   try {
     if (!xtbService.isConnected) {
-      try {
-        await xtbService.connect({
-          userId: process.env.XTB_USER_ID!,
-          password: process.env.XTB_PASSWORD!,
-        });
-      } catch (error) {
-        console.error('[XTB Backend] Connection error:', error);
-        res.status(503).json({ error: 'XTB service temporarily unavailable' });
-        return;
-      }
+      await initializeXTB();
     }
 
     const symbols = ['USDBRL', 'EURUSD', 'USDMXN'];
     const rates = [];
 
     for (const symbol of symbols) {
-      try {
-        const symbolResponse = await xtbService.getSymbolData(symbol);
+      const symbolResponse = await xtbService.getSymbolData(symbol);
 
-        if (!symbolResponse.status || !symbolResponse.returnData) {
-          console.error(`[XTB Backend] Failed to get data for ${symbol}`);
-          continue;
-        }
-
-        rates.push({
-          symbol,
-          bid: symbolResponse.returnData.bid,
-          ask: symbolResponse.returnData.ask,
-          timestamp: symbolResponse.returnData.time,
-          swapLong: Math.abs(symbolResponse.returnData.swapLong),
-          swapShort: Math.abs(symbolResponse.returnData.swapShort),
-        });
-      } catch (error) {
-        console.error(`[XTB Backend] Error fetching ${symbol}:`, error);
+      if (!symbolResponse.status || !symbolResponse.returnData) {
+        console.error(`[XTB Backend] Failed to get data for ${symbol}`);
+        continue;
       }
-    }
 
-    if (rates.length === 0) {
-      res.status(503).json({ error: 'Unable to fetch any rates' });
-      return;
+      rates.push({
+        symbol,
+        bid: symbolResponse.returnData.bid,
+        ask: symbolResponse.returnData.ask,
+        timestamp: symbolResponse.returnData.time,
+        swapLong: Math.abs(symbolResponse.returnData.swapLong),
+        swapShort: Math.abs(symbolResponse.returnData.swapShort),
+      });
     }
 
     res.json(rates);
