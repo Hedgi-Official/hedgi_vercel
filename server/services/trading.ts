@@ -222,6 +222,50 @@ export class TradingService {
     return tradeNumber;
   }
 
+  async closeTrade(
+    symbol: string,
+    positionToClose: number,
+    price: number,
+    volume: number,
+    isBuy: boolean,
+    sl: number = 0,
+    tp: number = 0,
+    customComment: string = "",
+    expiration: number = 0
+  ): Promise<number> {
+    const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
+
+    console.log(`[Trading Service] Closing trade for ${symbol}`, {
+      positionToClose, price, originalVolume: volume, adjustedVolume, isBuy, customComment
+    });
+
+    const tradeTransInfo = tradeTransInfoSchema.parse({
+      cmd: isBuy ? 0 : 1,
+      customComment,
+      expiration,
+      order: positionToClose,
+      price,
+      sl,
+      tp,
+      symbol,
+      type: 2,
+      volume: adjustedVolume,
+    });
+
+    const response = await this.sendCommand('closeTrade', { closeInfo: tradeTransInfo });
+
+    if (!response.status) {
+      throw new Error(response.error || 'Failed to close trade');
+    }
+
+    const closingOrderNumber = response.returnData?.order;
+    if (!closingOrderNumber) {
+      throw new Error('No closing order number received');
+    }
+
+    console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
+    return closingOrderNumber;
+  }
   private isLoggedIn = false;
   private lastLoginTime = 0;
   private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
@@ -316,58 +360,6 @@ export class TradingService {
   }
   private readonly connectionTimeout = 10000; // 10 seconds
 
-  async closeTrade(
-    symbol: string,
-    positionToClose: number,
-    price: number,
-    volume: number,
-    isBuy: boolean,
-    sl: number = 0,
-    tp: number = 0,
-    customComment: string = "",
-    expiration: number = 0
-  ): Promise<number> {
-    // Adjust volume: For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
-    const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
-
-    console.log(`[Trading Service] Closing trade for ${symbol}`, {
-      positionToClose, price, originalVolume: volume, adjustedVolume, isBuy, customComment
-    });
-
-    const tradeTransInfo = tradeTransInfoSchema.parse({
-      cmd: isBuy ? 1 : 0,
-      customComment,
-      expiration,
-      order: positionToClose,
-      price,
-      sl,
-      tp,
-      symbol,
-      type: 2,
-      volume: adjustedVolume,
-    });
-
-    // Ensure we have a valid login session
-    await this.ensureLoggedIn();
-
-    const closeResponse = await this.sendCommand('tradeTransaction', { tradeTransInfo });
-    if (!closeResponse.status) {
-      throw new Error(`Failed to close trade: ${closeResponse.returnData?.errorDescr || 'Unknown error'}`);
-    }
-
-    const closingOrderNumber = closeResponse.returnData?.order;
-    if (!closingOrderNumber) {
-      throw new Error('No closing order number received');
-    }
-    console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
-
-    const statusResponse = await this.checkTradeStatus(closingOrderNumber);
-    if (statusResponse.returnData?.errorCode) {
-      throw new Error(`Close trade status error: ${statusResponse.returnData.errorDescr}`);
-    }
-
-    return closingOrderNumber;
-  }
 }
 
 export const tradingService = new TradingService();
