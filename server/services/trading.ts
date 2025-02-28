@@ -57,11 +57,6 @@ export class TradingService {
       return this.connectionPromise;
     }
 
-    // Check credentials before attempting connection
-    if (!process.env.XTB_USER_ID || !process.env.XTB_PASSWORD) {
-      throw new Error('XTB credentials not found in environment variables');
-    }
-
     this.connectionPromise = new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.ws?.close();
@@ -99,8 +94,8 @@ export class TradingService {
   }
 
   private async login(): Promise<void> {
-    if (!this.ws) {
-      throw new Error('WebSocket not connected');
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      await this.ensureConnection();
     }
 
     return new Promise((resolve, reject) => {
@@ -111,20 +106,13 @@ export class TradingService {
       const loginCommand = {
         command: "login",
         arguments: {
-          userId: process.env.XTB_USER_ID || '17474971',
-          password: process.env.XTB_PASSWORD || 'xoh74681',
+          userId: '17474971',
+          password: 'xoh74681',
           appName: "Hedgi"
         }
       };
 
-      console.log('[Trading Service] Attempting login with:', {
-        command: loginCommand.command,
-        arguments: {
-          userId: `${loginCommand.arguments.userId?.substring(0, 3)}...`,
-          password: '***',
-          appName: loginCommand.arguments.appName
-        }
-      });
+      console.log('[Trading Service] Sending login command with user ID 17474971');
 
       this.ws.send(JSON.stringify(loginCommand), (error) => {
         if (error) {
@@ -214,11 +202,11 @@ export class TradingService {
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
-      
+
       // Ensure connection is established with same parameters as other operations
       await this.ensureConnection();
       await this.login();
-      
+
       const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
       console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
       return response;
