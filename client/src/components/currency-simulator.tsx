@@ -103,10 +103,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
   const handlePlaceHedge = () => {
     if (onPlaceHedge && simulation) {
+      // Calculate the correct volume for XTB API
+      // For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
+      const formattedAmount = amount.toString();
+      
       onPlaceHedge({
         baseCurrency,
         targetCurrency,
-        amount: amount.toString(),
+        amount: formattedAmount,
         rate: simulation.rate.toString(),
         duration,
         tradeDirection 

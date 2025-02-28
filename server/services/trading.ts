@@ -274,8 +274,11 @@ export class TradingService {
     customComment: string = "",
     expiration: number = 0
   ): Promise<number> {
+    // Adjust volume: For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
+    const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
+    
     console.log(`[Trading Service] Opening trade for ${symbol}`, {
-      price, volume, isBuy, customComment
+      price, originalVolume: volume, adjustedVolume, isBuy, customComment
     });
 
     const tradeTransInfo = tradeTransInfoSchema.parse({
@@ -288,7 +291,7 @@ export class TradingService {
       tp,
       symbol,
       type: 0,
-      volume,
+      volume: adjustedVolume,
     });
 
     // Ensure we have a valid login session
@@ -322,8 +325,11 @@ export class TradingService {
     customComment: string = "",
     expiration: number = 0
   ): Promise<number> {
+    // Adjust volume: For USDBRL and USDMXN, the volume is the USD amount divided by 100,000
+    const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
+    
     console.log(`[Trading Service] Closing trade for ${symbol}`, {
-      positionToClose, price, volume, isBuy, customComment
+      positionToClose, price, originalVolume: volume, adjustedVolume, isBuy, customComment
     });
 
     const tradeTransInfo = tradeTransInfoSchema.parse({
@@ -336,7 +342,7 @@ export class TradingService {
       tp,
       symbol,
       type: 2,
-      volume,
+      volume: adjustedVolume,
     });
 
     // Ensure we have a valid login session
