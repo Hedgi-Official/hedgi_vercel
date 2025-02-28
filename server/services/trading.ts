@@ -53,6 +53,7 @@ export class TradingService {
 
   private async ensureConnection(): Promise<void> {
     if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
+      console.log('[Trading Service] WebSocket already connected');
       return;
     }
 
@@ -60,10 +61,18 @@ export class TradingService {
       throw new Error('Max reconnection attempts reached');
     }
 
-    return new Promise((resolve, reject) => {
-      console.log('[Trading Service] Attempting to connect to WebSocket bridge');
+    console.log('[Trading Service] Attempting to connect to WebSocket bridge');
 
-      // Create WebSocket with explicit headers
+    return new Promise((resolve, reject) => {
+      // Clean up any existing connection
+      if (this.ws) {
+        try {
+          this.ws.close();
+        } catch (e) {
+          console.error('[Trading Service] Error closing existing connection:', e);
+        }
+      }
+
       this.ws = new WebSocket(this.bridgeUrl, {
         headers: {
           "Connection": "Upgrade",
@@ -110,6 +119,8 @@ export class TradingService {
         throw new Error('WebSocket not connected');
       }
 
+      console.log(`[Trading Service] Sending command ${command}:`, params);
+
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           this.ws?.removeListener('message', handleMessage);
@@ -119,11 +130,7 @@ export class TradingService {
         const handleMessage = (data: WebSocket.Data) => {
           try {
             const response = JSON.parse(data.toString()) as XTBResponse;
-            console.log(`[Trading Service] Received response for ${command}:`, {
-              status: response.status,
-              error: response.error,
-              returnData: response.returnData
-            });
+            console.log(`[Trading Service] Received response for ${command}:`, response);
 
             clearTimeout(timeout);
             this.ws?.removeListener('message', handleMessage);
@@ -147,8 +154,6 @@ export class TradingService {
           command,
           ...params
         });
-
-        console.log(`[Trading Service] Sending command ${command}:`, params);
 
         this.ws.send(message, (error) => {
           if (error) {

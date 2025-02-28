@@ -2,7 +2,7 @@ import json
 import asyncio
 import websockets
 import websockets.exceptions
-from threading import Thread, Timer
+from threading import Thread
 import logging
 import ssl
 from typing import Dict, Any, Optional
@@ -13,13 +13,13 @@ import os
 # Import the XTB API wrapper classes
 from APIClient import APIClient, APIStreamClient, TransactionSide, TransactionType, loginCommand, baseCommand
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# Configure logging with the same format as working example
 logger = logging.getLogger("XTB_Bridge")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 class XTBBridge:
     def __init__(self):
@@ -27,41 +27,40 @@ class XTBBridge:
         self.stream_client: Optional[APIStreamClient] = None
         self.connected = False
         self.ssid = None
-        self._reconnect_attempts = 0
-        self._max_reconnect_attempts = 3
 
     async def connect(self, credentials: Dict[str, str]) -> Dict[str, Any]:
-        """
-        Connect to XTB API using the provided credentials.
-        This implementation follows the working example's approach.
-        """
+        """Establish connection and log in."""
         try:
             logger.info("Attempting to connect to XTB")
 
-            # Create client with encryption enabled (important for XTB)
+            # Create client as per working example
             self.client = APIClient(address='xapia.x-station.eu', port=5124, encrypt=True)
 
-            # Execute login command using the helper function from working example
-            response = self.client.execute(loginCommand(
-                userId=credentials.get("userId", "17535100"),  # Default from working example
-                password=credentials.get("password", "GuiZarHoh2711!"),  # Default from working example
-                appName="Hedgi"
-            ))
+            # Use exact credentials from working example as defaults
+            userId = credentials.get("userId", "17535100")
+            password = credentials.get("password", "GuiZarHoh2711!")
+
+            logger.info(f"Attempting login with user ID: {userId}")
+            response = self.client.execute(loginCommand(userId, password))
 
             if response.get("status"):
                 logger.info("✅ Logged in successfully!")
                 self.ssid = response.get("streamSessionId")
                 logger.info("🔗 Stream session ID: %s", self.ssid)
                 self.connected = True
-                self._reconnect_attempts = 0
 
-                # Initialize streaming client as in working example
-                self.stream_client = APIStreamClient(
-                    address='xapia.x-station.eu',
-                    port=5125,  # Streaming port
-                    encrypt=True,
-                    ssId=self.ssid,
-                )
+                # Initialize streaming client with proper parameters
+                try:
+                    self.stream_client = APIStreamClient(
+                        address='xapia.x-station.eu',
+                        port=5125,
+                        encrypt=True,
+                        ssId=self.ssid
+                    )
+                    logger.info("Stream client initialized successfully")
+                except Exception as e:
+                    logger.error(f"Failed to initialize stream client: {e}")
+                    # Continue even if streaming fails, as main connection is established
 
                 return {
                     "status": True,
@@ -82,26 +81,23 @@ class XTBBridge:
             }
 
     def disconnect(self):
-        """Disconnect from XTB API, following working example pattern"""
-        logger.info("Disconnecting from XTB")
+        """Disconnect from API."""
+        if self.client:
+            try:
+                self.client.disconnect()
+                logger.info("🔌 Disconnected from XTB API.")
+            except Exception as e:
+                logger.error(f"Error during disconnect: {e}")
 
         if self.stream_client:
             try:
                 self.stream_client.disconnect()
+                logger.info("🔌 Disconnected streaming client.")
             except Exception as e:
-                logger.error(f"Error disconnecting stream client: {str(e)}")
-            self.stream_client = None
-
-        if self.client:
-            try:
-                self.client.disconnect()
-            except Exception as e:
-                logger.error(f"Error disconnecting main client: {str(e)}")
-            self.client = None
+                logger.error(f"Error during stream disconnect: {e}")
 
         self.connected = False
         self.ssid = None
-        logger.info("Disconnected from XTB")
 
 async def handle_client(websocket, path):
     bridge = XTBBridge()
@@ -116,6 +112,7 @@ async def handle_client(websocket, path):
 
                 if command == 'connect':
                     response = await bridge.connect(data.get('credentials', {}))
+                    logger.info(f"Connect response: {response}")
                 else:
                     logger.warning(f"Unknown command received: {command}")
                     response = {
@@ -123,11 +120,10 @@ async def handle_client(websocket, path):
                         "error": f"Unknown command: {command}"
                     }
 
-                logger.info(f"Sending response for {command}: {response}")
                 await websocket.send(json.dumps(response))
 
             except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON received: {e}", exc_info=True)
+                logger.error(f"Invalid JSON received: {e}")
                 await websocket.send(json.dumps({
                     "status": False,
                     "error": "Invalid JSON message"
@@ -148,14 +144,12 @@ async def start_server():
                 logger.info(f"Retrying to start server (attempt {attempt + 1}/{max_retries})")
                 await asyncio.sleep(retry_delay)
 
-            # Start WebSocket server with explicit settings
             server = await websockets.serve(
                 handle_client,
-                "0.0.0.0",    # Listen on all interfaces
-                8765,         # Port for WebSocket server
-                ping_interval=None,  # Disable automatic ping
-                ping_timeout=None,   # Disable ping timeout
-                process_request=None  # Let websockets handle the handshake
+                "0.0.0.0",
+                8765,
+                ping_interval=None,
+                ping_timeout=None
             )
 
             logger.info("XTB Bridge WebSocket server started on port 8765")
