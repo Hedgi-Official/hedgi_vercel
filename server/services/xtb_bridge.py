@@ -30,8 +30,8 @@ class XTBBridge:
             self.client = APIClient()
 
             login_response = self.client.execute(loginCommand(
-                userId=credentials.get("userId", "17474971"),
-                password=credentials.get("password", "xoh74681"),
+                userId=credentials.get("userId", "17535100"),
+                password=credentials.get("password", "GuiZarHoh2711!"),
                 appName="Hedgi"
             ))
 

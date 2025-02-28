@@ -1,9 +1,14 @@
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app)
+
+# Default XTB credentials
+XTB_USER_ID = os.environ.get('XTB_USER_ID', '17535100')
+XTB_PASSWORD = os.environ.get('XTB_PASSWORD', 'GuiZarHoh2711!')
 
 @app.route('/symbol_info')
 def symbol_info():
@@ -14,6 +19,13 @@ def symbol_info():
         "swap_long": -58.99,
         "swap_short": 11.97,
         "symbol": "USDBRL"
+    })
+
+@app.route('/credentials', methods=['GET'])
+def get_credentials():
+    return jsonify({
+        "userId": XTB_USER_ID,
+        "password": XTB_PASSWORD
     })
 
 if __name__ == '__main__':
