@@ -1,6 +1,32 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { spawn } from "child_process";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Function to start the XTB bridge service
+function startXTBBridge() {
+  const pythonBridge = spawn('python3', [join(__dirname, 'services/xtb_bridge.py')]);
+
+  pythonBridge.stdout.on('data', (data) => {
+    log(`[XTB Bridge] ${data}`);
+  });
+
+  pythonBridge.stderr.on('data', (data) => {
+    console.error(`[XTB Bridge Error] ${data}`);
+  });
+
+  pythonBridge.on('close', (code) => {
+    log(`[XTB Bridge] Process exited with code ${code}`);
+    // Restart the bridge if it crashes
+    setTimeout(startXTBBridge, 5000);
+  });
+}
 
 const app = express();
 app.use(express.json());
@@ -37,29 +63,44 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = registerRoutes(app);
+  try {
+    // Start the XTB bridge service
+    startXTBBridge();
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const server = registerRoutes(app);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+      res.status(status).json({ message });
+      throw err;
+    });
+
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // First try to kill any existing process on port 5000
+    try {
+      const killCommand = process.platform === 'win32' ? 
+        `taskkill /F /IM node.exe /FI "PID ne ${process.pid}"` :
+        `lsof -ti:5000 | xargs kill -9`;
+
+      require('child_process').execSync(killCommand, { stdio: 'ignore' });
+      log('Cleaned up port 5000');
+    } catch (e) {
+      // Ignore errors if no process was found
+    }
+
+    const PORT = 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Express server serving on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
 })();
