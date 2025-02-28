@@ -8,8 +8,8 @@ export class XTBService {
   private streamListeners: Map<string, (data: any) => void> = new Map();
 
   constructor(
-    public serverUrl = 'wss://xapia.x-station.eu:5124',
-    public streamUrl = 'wss://xapia.x-station.eu:5125'
+    public serverUrl = 'wss://ws.xtb.com/demo',
+    public streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {}
 
   get isConnected(): boolean {
