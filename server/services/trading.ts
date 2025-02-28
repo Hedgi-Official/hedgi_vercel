@@ -212,20 +212,10 @@ export class TradingService {
 
   // API Methods
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
-    try {
-      console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
-      
-      // Ensure connection is established with same parameters as other operations
-      await this.ensureConnection();
-      await this.login();
-      
-      const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
-      console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
-      return response;
-    } catch (error) {
-      console.error(`[Trading Service] Error checking trade status for order ${tradeNumber}:`, error);
-      throw error;
-    }
+    console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
+    const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
+    console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
+    return response;
   }
 
   async openTrade(
