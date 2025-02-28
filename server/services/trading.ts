@@ -50,10 +50,12 @@ export class TradingService {
 
   private async ensureConnection(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log('[Trading Service] Using existing WebSocket connection');
       return;
     }
 
     if (this.connectionPromise) {
+      console.log('[Trading Service] Connection already in progress, waiting...');
       return this.connectionPromise;
     }
 
@@ -62,22 +64,27 @@ export class TradingService {
       throw new Error('XTB credentials not found in environment variables');
     }
 
+    console.log('[Trading Service] Creating new connection promise');
     this.connectionPromise = new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        this.ws?.close();
-        this.ws = null;
+        console.log('[Trading Service] Connection attempt timed out');
+        if (this.ws) {
+          this.ws.close();
+          this.ws = null;
+        }
         this.connectionPromise = null;
         reject(new Error('Connection timeout'));
       }, this.connectionTimeout);
 
-      console.log('[Trading Service] Initiating connection to XTB demo server');
-      this.ws = new WebSocket('wss://ws.xtb.com/demo');
+      try {
+        console.log('[Trading Service] Initiating connection to XTB demo server');
+        this.ws = new WebSocket('wss://ws.xtb.com/demo');
 
-      this.ws.on('open', () => {
-        console.log('[Trading Service] Connected to XTB WebSocket');
-        clearTimeout(timeoutId);
-        resolve();
-      });
+        this.ws.on('open', () => {
+          console.log('[Trading Service] Connected to XTB WebSocket');
+          clearTimeout(timeoutId);
+          resolve();
+        });
 
       this.ws.on('error', (error) => {
         console.error('[Trading Service] WebSocket error:', error);
@@ -108,6 +115,14 @@ export class TradingService {
         reject(new Error('Login timeout'));
       }, this.connectionTimeout);
 
+      // Ensure credentials are properly loaded
+      if (!process.env.XTB_USER_ID || !process.env.XTB_PASSWORD) {
+        clearTimeout(timeoutId);
+        reject(new Error('XTB credentials not found in environment variables'));
+        return;
+      }
+
+      // Make sure we're using the exact same credential format that works for price fetching
       const loginCommand = {
         command: "login",
         arguments: {
@@ -126,38 +141,54 @@ export class TradingService {
         }
       });
 
-      this.ws.send(JSON.stringify(loginCommand), (error) => {
-        if (error) {
-          clearTimeout(timeoutId);
-          console.error('[Trading Service] Login send error:', error);
-          reject(error);
-        }
-      });
-
-      this.ws.once('message', (data) => {
-        clearTimeout(timeoutId);
-        const response = JSON.parse(data.toString());
-        console.log('[Trading Service] Login response:', {
-          status: response.status,
-          hasStreamSessionId: !!response.streamSessionId
+      try {
+        this.ws.send(JSON.stringify(loginCommand), (error) => {
+          if (error) {
+            clearTimeout(timeoutId);
+            console.error('[Trading Service] Login send error:', error);
+            reject(error);
+          }
         });
 
-        if (response.status) {
-          this.streamSessionId = response.streamSessionId;
-          resolve();
-        } else {
-          const error = response.errorCode ? 
-            `Login failed: ${response.errorDescr} (${response.errorCode})` : 
-            'Login failed';
-          reject(new Error(error));
-        }
-      });
+        this.ws.once('message', (data) => {
+          clearTimeout(timeoutId);
+          try {
+            const response = JSON.parse(data.toString());
+            console.log('[Trading Service] Login response:', {
+              status: response.status,
+              errorCode: response.errorCode,
+              errorDescr: response.errorDescr,
+              hasStreamSessionId: !!response.streamSessionId
+            });
+
+            if (response.status) {
+              this.streamSessionId = response.streamSessionId;
+              resolve();
+            } else {
+              const error = response.errorCode ? 
+                `Login failed: ${response.errorDescr} (${response.errorCode})` : 
+                'Login failed';
+              reject(new Error(error));
+            }
+          } catch (parseError) {
+            console.error('[Trading Service] Error parsing login response:', parseError, data.toString());
+            reject(new Error(`Error parsing login response: ${parseError.message}`));
+          }
+        });
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('[Trading Service] Error during login:', error);
+        reject(error);
+      }
     });
   }
 
   private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
     try {
+      console.log(`[Trading Service] Ensuring connection for command: ${cmd}`);
       await this.ensureConnection();
+      
+      console.log(`[Trading Service] Logging in for command: ${cmd}`);
       await this.login();
 
       return new Promise((resolve, reject) => {
@@ -167,6 +198,7 @@ export class TradingService {
         }
 
         const timeoutId = setTimeout(() => {
+          console.error(`[Trading Service] Command ${cmd} timed out`);
           reject(new Error(`Command ${cmd} timeout`));
         }, this.connectionTimeout);
 
@@ -180,29 +212,42 @@ export class TradingService {
           password: undefined // Never log passwords
         });
 
-        this.ws.send(JSON.stringify(message), (error) => {
-          if (error) {
-            clearTimeout(timeoutId);
-            console.error(`[Trading Service] Error sending ${cmd} command:`, error);
-            reject(error);
-          }
-        });
-
-        this.ws.once('message', (data) => {
-          clearTimeout(timeoutId);
-          const response = JSON.parse(data.toString());
-
-          console.log(`[Trading Service] Received response for ${cmd}:`, {
-            status: response.status,
-            hasReturnData: !!response.returnData
+        try {
+          this.ws.send(JSON.stringify(message), (error) => {
+            if (error) {
+              clearTimeout(timeoutId);
+              console.error(`[Trading Service] Error sending ${cmd} command:`, error);
+              reject(error);
+            }
           });
 
-          if (!response.status && response.errorCode) {
-            reject(new Error(`${response.errorDescr} (${response.errorCode})`));
-          } else {
-            resolve(response);
-          }
-        });
+          this.ws.once('message', (data) => {
+            clearTimeout(timeoutId);
+            try {
+              const response = JSON.parse(data.toString());
+
+              console.log(`[Trading Service] Received response for ${cmd}:`, {
+                status: response.status,
+                hasReturnData: !!response.returnData,
+                errorCode: response.errorCode,
+                errorDescr: response.errorDescr
+              });
+
+              if (!response.status && response.errorCode) {
+                reject(new Error(`${response.errorDescr} (${response.errorCode})`));
+              } else {
+                resolve(response);
+              }
+            } catch (parseError) {
+              console.error(`[Trading Service] Error parsing response for ${cmd}:`, parseError, data.toString());
+              reject(new Error(`Error parsing response: ${parseError.message}`));
+            }
+          });
+        } catch (sendError) {
+          clearTimeout(timeoutId);
+          console.error(`[Trading Service] Error in WebSocket communication for ${cmd}:`, sendError);
+          reject(sendError);
+        }
       });
     } catch (error) {
       console.error(`[Trading Service] Error in sendCommand(${cmd}):`, error);
