@@ -42,6 +42,7 @@ const tradeTransInfoSchema = z.object({
 
 export class TradingService {
   private ws: WebSocket | null = null;
+  private streamWs: WebSocket | null = null;
   private streamSessionId: string | null = null;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
@@ -78,6 +79,36 @@ export class TradingService {
     });
   }
 
+  private async connectStream(): Promise<void> {
+    if (this.streamWs && this.streamWs.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!this.streamSessionId) {
+        reject(new Error('No stream session ID available'));
+        return;
+      }
+
+      this.streamWs = new WebSocket('wss://ws.xtb.com/demoStream');
+
+      this.streamWs.on('open', () => {
+        console.log('[Trading Service] Connected to XTB Streaming WebSocket');
+        resolve();
+      });
+
+      this.streamWs.on('error', (error) => {
+        console.error('[Trading Service] Streaming WebSocket error:', error);
+        reject(error);
+      });
+
+      this.streamWs.on('close', () => {
+        console.log('[Trading Service] Streaming WebSocket connection closed');
+        setTimeout(() => this.connectStream(), 2000);
+      });
+    });
+  }
+
   private async login(): Promise<void> {
     if (!this.ws) throw new Error('WebSocket not connected');
 
@@ -87,7 +118,8 @@ export class TradingService {
         userId: process.env.VITE_XTB_USER_ID || '17474971',
         password: process.env.VITE_XTB_PASSWORD || 'xoh74681',
         appName: "Hedgi"
-      }
+      },
+      streamSessionId: this.streamSessionId
     };
 
     return new Promise((resolve, reject) => {
@@ -95,6 +127,14 @@ export class TradingService {
         reject(new Error('WebSocket not connected'));
         return;
       }
+
+      console.log('[Trading Service] Attempting login with command:', {
+        ...loginCommand,
+        arguments: {
+          ...loginCommand.arguments,
+          password: '***'
+        }
+      });
 
       this.ws.send(JSON.stringify(loginCommand), (error) => {
         if (error) {
@@ -105,10 +145,18 @@ export class TradingService {
 
       this.ws.once('message', (data) => {
         const response = JSON.parse(data.toString());
+        console.log('[Trading Service] Login response:', response);
+
         if (response.status) {
           this.streamSessionId = response.streamSessionId;
-          console.log('[Trading Service] Successfully logged in to XTB');
-          resolve();
+          console.log('[Trading Service] Successfully logged in to XTB, streamSessionId:', this.streamSessionId);
+          // After successful login, connect to the streaming socket
+          this.connectStream()
+            .then(() => resolve())
+            .catch((error) => {
+              console.error('[Trading Service] Failed to connect to streaming socket:', error);
+              resolve(); // Still resolve as main connection is established
+            });
         } else {
           const error = response.errorCode ? 
             `Login failed: ${response.errorDescr} (${response.errorCode})` : 
@@ -136,12 +184,16 @@ export class TradingService {
         arguments: params
       };
 
+      console.log(`[Trading Service] Sending command: ${cmd}`, params);
+
       this.ws.send(JSON.stringify(message), (error) => {
         if (error) reject(error);
       });
 
       this.ws.once('message', (data) => {
         const response = JSON.parse(data.toString());
+        console.log(`[Trading Service] Received response for ${cmd}:`, response);
+
         if (!response.status && response.errorCode) {
           reject(new Error(`${response.errorDescr} (${response.errorCode})`));
         } else {
