@@ -148,54 +148,58 @@ export class TradingService {
       await this.ensureConnection();
       await this.login();
 
-      return new Promise((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error('WebSocket not connected'));
-          return;
-        }
-
-        const timeoutId = setTimeout(() => {
-          reject(new Error(`Command ${cmd} timeout`));
-        }, this.connectionTimeout);
-
-        const message = {
-          command: cmd,
-          arguments: params
-        };
-
-        console.log(`[Trading Service] Sending command: ${cmd}`, {
-          ...params,
-          password: undefined // Never log passwords
-        });
-
-        this.ws.send(JSON.stringify(message), (error) => {
-          if (error) {
-            clearTimeout(timeoutId);
-            console.error(`[Trading Service] Error sending ${cmd} command:`, error);
-            reject(error);
-          }
-        });
-
-        this.ws.once('message', (data) => {
-          clearTimeout(timeoutId);
-          const response = JSON.parse(data.toString());
-
-          console.log(`[Trading Service] Received response for ${cmd}:`, {
-            status: response.status,
-            hasReturnData: !!response.returnData
-          });
-
-          if (!response.status && response.errorCode) {
-            reject(new Error(`${response.errorDescr} (${response.errorCode})`));
-          } else {
-            resolve(response);
-          }
-        });
-      });
+      return this.sendCommandWithoutLogin(cmd, params);
     } catch (error) {
       console.error(`[Trading Service] Error in sendCommand(${cmd}):`, error);
       throw error;
     }
+  }
+
+  private async sendCommandWithoutLogin(cmd: string, params: any): Promise<XTBResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.ws) {
+        reject(new Error('WebSocket not connected'));
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Command ${cmd} timeout`));
+      }, this.connectionTimeout);
+
+      const message = {
+        command: cmd,
+        arguments: params
+      };
+
+      console.log(`[Trading Service] Sending command: ${cmd}`, {
+        ...params,
+        password: undefined // Never log passwords
+      });
+
+      this.ws.send(JSON.stringify(message), (error) => {
+        if (error) {
+          clearTimeout(timeoutId);
+          console.error(`[Trading Service] Error sending ${cmd} command:`, error);
+          reject(error);
+        }
+      });
+
+      this.ws.once('message', (data) => {
+        clearTimeout(timeoutId);
+        const response = JSON.parse(data.toString());
+
+        console.log(`[Trading Service] Received response for ${cmd}:`, {
+          status: response.status,
+          hasReturnData: !!response.returnData
+        });
+
+        if (!response.status && response.errorCode) {
+          reject(new Error(`${response.errorDescr} (${response.errorCode})`));
+        } else {
+          resolve(response);
+        }
+      });
+    });
   }
 
   // API Methods
@@ -203,11 +207,10 @@ export class TradingService {
     try {
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      // Ensure connection is established with same parameters as other operations
+      // Only ensure connection, as login is already done
       await this.ensureConnection();
-      await this.login();
 
-      const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
+      const response = await this.sendCommandWithoutLogin('tradeTransactionStatus', { order: tradeNumber });
       console.log(`[Trading Service] Trade status for order ${tradeNumber}:`, response);
       return response;
     } catch (error) {
@@ -243,7 +246,11 @@ export class TradingService {
       volume,
     });
 
-    const tradeResponse = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    // Only ensure connection but don't login, as login is handled in sendCommand
+    await this.ensureConnection();
+
+    // Use sendCommandWithoutLogin instead to avoid repeated login
+    const tradeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });
     if (!tradeResponse.status) {
       throw new Error(`Failed to open trade: ${tradeResponse.returnData.errorDescr || 'Unknown error'}`);
     }
@@ -287,7 +294,10 @@ export class TradingService {
       volume,
     });
 
-    const closeResponse = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    // Only ensure connection but don't login again
+    await this.ensureConnection();
+    
+    const closeResponse = await this.sendCommandWithoutLogin('tradeTransaction', { tradeTransInfo });
     if (!closeResponse.status) {
       throw new Error(`Failed to close trade: ${closeResponse.returnData.errorDescr || 'Unknown error'}`);
     }
