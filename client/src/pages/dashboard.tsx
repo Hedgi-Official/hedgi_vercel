@@ -167,17 +167,17 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  // Convert request status code to description
+  // Convert request status code to description based on XTB API docs
   const getRequestStatusName = (status: number) => {
     switch(status) {
       case 0:
-        return 'Error';
+        return 'ERROR - error';
       case 1:
-        return 'Pending';
+        return 'PENDING - pending';
       case 3:
-        return 'Accepted';
+        return 'ACCEPTED - The transaction has been executed successfully';
       case 4:
-        return 'Rejected';
+        return 'REJECTED - The transaction has been rejected';
       default:
         return `Unknown (${status})`;
     }
