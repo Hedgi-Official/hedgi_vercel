@@ -84,8 +84,8 @@ export class TradingService {
     const loginCommand = {
       command: "login",
       arguments: {
-        userId: process.env.XTB_USER_ID,
-        password: process.env.XTB_PASSWORD,
+        userId: process.env.VITE_XTB_USER_ID,
+        password: process.env.VITE_XTB_PASSWORD,
         appName: "Hedgi"
       }
     };
