@@ -37,17 +37,48 @@ export default function Dashboard() {
       return response.json();
     },
     onSuccess: (data) => {
+      const statusColor = {
+        Accepted: 'text-green-600',
+        Pending: 'text-yellow-600',
+        Rejected: 'text-red-600',
+        Error: 'text-red-600',
+      }[data.returnData.status] || 'text-muted-foreground';
+
       toast({
         title: t('Trade Status Details'),
         description: (
           <div className="mt-2 space-y-2">
-            <p><strong>Order:</strong> #{data.returnData.order}</p>
-            <p><strong>Status:</strong> {data.returnData.status}</p>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">{t('Order')}:</span>
+              <span>#{data.returnData.order}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">{t('Status')}:</span>
+              <span className={statusColor}>{data.returnData.status}</span>
+            </div>
+            {data.returnData.price && (
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{t('Price')}:</span>
+                <span>{data.returnData.price.toFixed(4)}</span>
+              </div>
+            )}
             {data.returnData.customComment && (
-              <p><strong>Comment:</strong> {data.returnData.customComment}</p>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{t('Comment')}:</span>
+                <span>{data.returnData.customComment}</span>
+              </div>
             )}
             {data.returnData.message && (
-              <p><strong>Message:</strong> {data.returnData.message}</p>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{t('Message')}:</span>
+                <span>{data.returnData.message}</span>
+              </div>
+            )}
+            {data.returnData.errorDescr && (
+              <div className="flex justify-between items-center text-red-600">
+                <span className="font-medium">{t('Error')}:</span>
+                <span>{data.returnData.errorDescr}</span>
+              </div>
             )}
           </div>
         ),
