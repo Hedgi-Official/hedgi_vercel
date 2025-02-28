@@ -28,7 +28,7 @@ class XTBBridge:
     async def connect(self, credentials: Dict[str, str]) -> Dict[str, Any]:
         try:
             logger.info("Attempting to connect to XTB")
-            self.client = APIClient()
+            self.client = APIClient(encrypt=True)  # Ensure encryption is enabled
             response = self.client.execute(loginCommand(
                 userId=credentials.get("userId", "17535100"),
                 password=credentials.get("password", "GuiZarHoh2711!"),
@@ -78,114 +78,6 @@ class XTBBridge:
                 "error": str(e)
             }
 
-    async def place_trade(self, trade_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Place a market order."""
-        if not self.client or not self.connected:
-            logger.error("Cannot place trade: Not connected to XTB")
-            return {
-                "status": False,
-                "error": "Not connected to XTB"
-            }
-
-        try:
-            trade_trans_info = {
-                "cmd": TransactionSide.BUY if trade_info.get("isBuy", True) else TransactionSide.SELL,
-                "customComment": "Open trade test",
-                "expiration": 0,
-                "offset": 0,
-                "order": 0,  # For new orders, this is set to 0
-                "price": float(trade_info.get("price", 0)),
-                "sl": float(trade_info.get("sl", 0)),
-                "symbol": trade_info.get("symbol", ""),
-                "tp": float(trade_info.get("tp", 0)),
-                "type": TransactionType.ORDER_OPEN,
-                "volume": float(trade_info.get("volume", 0))
-            }
-
-            logger.info("Placing trade with info: %s", trade_trans_info)
-            response = self.client.commandExecute("tradeTransaction", {"tradeTransInfo": trade_trans_info})
-
-            if response.get("status"):
-                order_number = response["returnData"]["order"]
-                logger.info("✅ Trade placed successfully, order number: %s", order_number)
-                return {
-                    "status": True,
-                    "returnData": {
-                        "order": order_number,
-                        "status": "Accepted",
-                        "customComment": trade_trans_info["customComment"]
-                    }
-                }
-            else:
-                logger.error("❌ Trade placement failed: %s", response)
-                return response
-
-        except Exception as e:
-            logger.error("❌ Error placing trade: %s", str(e), exc_info=True)
-            return {
-                "status": False,
-                "error": str(e)
-            }
-
-    async def close_trade(self, close_info: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Close an existing trade using the tradeTransaction command with ORDER_CLOSE.
-        """
-        if not self.client or not self.connected:
-            logger.error("Cannot close trade: Not connected to XTB")
-            return {
-                "status": False,
-                "error": "Not connected to XTB"
-            }
-
-        try:
-            order = close_info.get("order")
-            symbol = close_info.get("symbol")
-            volume = float(close_info.get("volume", 0))
-            price = float(close_info.get("price", 0))
-
-            # Use order number + 1 for closing, as suggested in example
-            close_order = order + 1
-            logger.info("Using order number %s (open order %s + 1) for closing", close_order, order)
-
-            close_trans_info = {
-                "cmd": TransactionSide.BUY,  # As per tutorial, use BUY to close a BUY trade.
-                "customComment": "Close trade test",
-                "expiration": 0,
-                "order": close_order,
-                "price": price,
-                "sl": 0.0,
-                "symbol": symbol,
-                "tp": 0.0,
-                "type": TransactionType.ORDER_CLOSE,
-                "volume": volume
-            }
-
-            logger.info("Closing trade with info: %s", close_trans_info)
-            response = self.client.commandExecute("tradeTransaction", {"tradeTransInfo": close_trans_info})
-
-            if response.get("status"):
-                close_order = response["returnData"]["order"]
-                logger.info("✅ Trade closed successfully, order: %s", close_order)
-                return {
-                    "status": True,
-                    "returnData": {
-                        "order": close_order,
-                        "status": "Closed",
-                        "customComment": close_trans_info["customComment"]
-                    }
-                }
-            else:
-                logger.error("❌ Trade close failed: %s", response)
-                return response
-
-        except Exception as e:
-            logger.error("❌ Error closing trade: %s", str(e), exc_info=True)
-            return {
-                "status": False,
-                "error": str(e)
-            }
-
     def disconnect(self):
         logger.info("Disconnecting from XTB")
         if self.stream_client:
@@ -209,10 +101,6 @@ async def handle_client(websocket, path):
                     response = await bridge.connect(data.get('credentials', {}))
                 elif command == 'checkTradeStatus':
                     response = await bridge.check_trade_status(data.get('orderNumber'))
-                elif command == 'placeTrade':
-                    response = await bridge.place_trade(data.get('tradeInfo', {}))
-                elif command == 'closeTrade':
-                    response = await bridge.close_trade(data.get('closeInfo', {}))
                 else:
                     logger.warning(f"Unknown command received: {command}")
                     response = {
@@ -247,9 +135,9 @@ async def start_server():
             server = await websockets.serve(
                 handle_client,
                 "0.0.0.0",  # Listen on all interfaces
-                8765,  # Port for WebSocket server
+                8765,       # Port for WebSocket server
                 ping_interval=None,  # Disable automatic ping
-                ping_timeout=None,    # Disable ping timeout
+                ping_timeout=None,   # Disable ping timeout
                 process_request=None  # Let websockets handle the handshake
             )
             logger.info("XTB Bridge WebSocket server started on port 8765")

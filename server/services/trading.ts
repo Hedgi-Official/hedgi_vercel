@@ -256,6 +256,11 @@ export class TradingService {
     console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
     return closingOrderNumber;
   }
+
+  async connect(credentials: { userId: string; password: string }): Promise<XTBResponse> {
+    console.log('[Trading Service] Attempting to connect to XTB');
+    return this.sendCommand('connect', { credentials });
+  }
 }
 
 export const tradingService = new TradingService();
