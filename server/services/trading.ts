@@ -186,6 +186,70 @@ export class TradingService {
     if (currentTime - this.lastLoginTime >= this.sessionTimeout) {
       console.log('[Trading Service] Session timed out, logging in again');
       await this.login();
+
+  /**
+   * Gets the detailed status of a trade with formatted request status description
+   * @param tradeNumber The order number to check
+   * @returns Formatted trade status with request status description
+   */
+  async getFormattedTradeStatus(tradeNumber: number): Promise<{
+    customComment: string;
+    message: string | null;
+    order: number;
+    price: number;
+    requestStatus: number;
+    statusDescription: string;
+  }> {
+    try {
+      console.log(`[Trading Service] Getting formatted status for trade ${tradeNumber}`);
+      
+      // Ensure we're logged in
+      await this.ensureLoggedIn();
+
+      // Get the trade status
+      const response = await this.sendCommandWithoutLogin('tradeTransactionStatus', { order: tradeNumber });
+      
+      if (!response.status) {
+        throw new Error(response.errorCode ? `${response.errorDescr} (${response.errorCode})` : 'Status check failed');
+      }
+
+      // Format the response according to STREAMING_TRADE_STATUS_RECORD
+      const statusCode = response.returnData.requestStatus;
+      let statusDescription = 'UNKNOWN';
+      
+      // Map the status code to description
+      switch (statusCode) {
+        case 0:
+          statusDescription = 'ERROR';
+          break;
+        case 1:
+          statusDescription = 'PENDING';
+          break;
+        case 3:
+          statusDescription = 'ACCEPTED';
+          break;
+        case 4:
+          statusDescription = 'REJECTED';
+          break;
+      }
+
+      const formattedStatus = {
+        customComment: response.returnData.customComment || '',
+        message: response.returnData.message || null,
+        order: response.returnData.order,
+        price: response.returnData.price || 0,
+        requestStatus: statusCode,
+        statusDescription,
+      };
+
+      console.log(`[Trading Service] Formatted trade status for order ${tradeNumber}:`, formattedStatus);
+      return formattedStatus;
+    } catch (error) {
+      console.error(`[Trading Service] Error getting formatted trade status for order ${tradeNumber}:`, error);
+      throw error;
+    }
+  }
+
     }
   }
 

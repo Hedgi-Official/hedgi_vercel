@@ -105,6 +105,62 @@ export class XTBService {
         reject(new Error('WebSocket connection failed'));
       });
 
+  /**
+   * Gets the detailed status of a trade with formatted status description
+   * @param tradeNumber The order number to check
+   * @returns Formatted trade status response
+   */
+  async getFormattedTradeStatus(tradeNumber: number): Promise<{
+    customComment: string;
+    message: string | null;
+    order: number;
+    price: number;
+    requestStatus: number;
+    statusDescription: string;
+  }> {
+    if (!this.isConnected) {
+      await this.connect({
+        userId: import.meta.env.VITE_XTB_USER_ID || '',
+        password: import.meta.env.VITE_XTB_PASSWORD || '',
+      });
+    }
+    
+    const response = await this.sendCommand('tradeTransactionStatus', { order: tradeNumber });
+    
+    if (!response.status) {
+      throw new Error(response.errorCode ? `${response.errorDescr} (${response.errorCode})` : 'Status check failed');
+    }
+    
+    // Map the status code to description
+    const statusCode = response.returnData.requestStatus;
+    let statusDescription = 'UNKNOWN';
+    
+    switch (statusCode) {
+      case 0:
+        statusDescription = 'ERROR';
+        break;
+      case 1:
+        statusDescription = 'PENDING';
+        break;
+      case 3:
+        statusDescription = 'ACCEPTED';
+        break;
+      case 4:
+        statusDescription = 'REJECTED';
+        break;
+    }
+    
+    return {
+      customComment: response.returnData.customComment || '',
+      message: response.returnData.message || null,
+      order: response.returnData.order,
+      price: response.returnData.price || 0,
+      requestStatus: statusCode,
+      statusDescription,
+    };
+  }
+
+
       this.ws.addEventListener('close', () => {
         console.log('[XTB] Main socket closed');
         clearTimeout(connectionTimeout);
