@@ -43,28 +43,6 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const REQUEST_STATUS = {
-  ERROR: 0,
-  PENDING: 1,
-  ACCEPTED: 3,
-  REJECTED: 4,
-} as const;
-
-const getStatusDescription = (status: number): string => {
-  switch (status) {
-    case REQUEST_STATUS.ERROR:
-      return 'Error';
-    case REQUEST_STATUS.PENDING:
-      return 'Pending';
-    case REQUEST_STATUS.ACCEPTED:
-      return 'Accepted';
-    case REQUEST_STATUS.REJECTED:
-      return 'Rejected';
-    default:
-      return 'Unknown';
-  }
-};
-
 export class TradingService {
   private ws: WebSocket | null = null;
   private isConnected = false;
@@ -186,7 +164,6 @@ export class TradingService {
 
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
-
     return this.sendCommand('checkTradeStatus', {
       orderNumber: tradeNumber
     });

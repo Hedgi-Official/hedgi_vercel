@@ -29,7 +29,6 @@ class XTBBridge:
         try:
             logger.info("Attempting to connect to XTB")
             self.client = APIClient()
-
             response = self.client.execute(loginCommand(
                 userId=credentials.get("userId", "17535100"),
                 password=credentials.get("password", "GuiZarHoh2711!"),
@@ -58,7 +57,8 @@ class XTBBridge:
                 "error": str(e)
             }
 
-    async def check_trade_status(self, order_number: int) -> Dict[str, Any]:
+    async def check_trade_status(self, order: int) -> Dict[str, Any]:
+        """Check the trade status."""
         if not self.client or not self.connected:
             logger.error("Cannot check trade status: Not connected to XTB")
             return {
@@ -67,23 +67,10 @@ class XTBBridge:
             }
 
         try:
-            logger.info("📊 Checking trade status for order: %s", order_number)
-            response = self.client.commandExecute("tradeTransactionStatus", {"order": order_number})
-            logger.info("Trade status response: %s", response)
-
-            if response.get("status"):
-                return {
-                    "status": True,
-                    "returnData": {
-                        "order": order_number,
-                        "requestStatus": response["returnData"].get("requestStatus"),
-                        "message": response["returnData"].get("message"),
-                        "customComment": response["returnData"].get("customComment"),
-                        "price": response["returnData"].get("price")
-                    }
-                }
+            logger.info("📊 Checking trade status for order: %s", order)
+            response = self.client.commandExecute("tradeTransactionStatus", {"order": order})
+            logger.info("📊 Trade status: %s", response)
             return response
-
         except Exception as e:
             logger.error("❌ Error checking trade status: %s", str(e), exc_info=True)
             return {
@@ -92,6 +79,7 @@ class XTBBridge:
             }
 
     async def place_trade(self, trade_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Place a market order."""
         if not self.client or not self.connected:
             logger.error("Cannot place trade: Not connected to XTB")
             return {
@@ -100,11 +88,10 @@ class XTBBridge:
             }
 
         try:
-            # Match the working example's trade info structure
             trade_trans_info = {
                 "cmd": TransactionSide.BUY if trade_info.get("isBuy", True) else TransactionSide.SELL,
-                "customComment": trade_info.get("customComment", "Open trade test"),
-                "expiration": trade_info.get("expiration", 0),
+                "customComment": "Open trade test",
+                "expiration": 0,
                 "offset": 0,
                 "order": 0,  # For new orders, this is set to 0
                 "price": float(trade_info.get("price", 0)),
@@ -116,10 +103,7 @@ class XTBBridge:
             }
 
             logger.info("Placing trade with info: %s", trade_trans_info)
-            response = self.client.execute({
-                "command": "tradeTransaction",
-                "arguments": {"tradeTransInfo": trade_trans_info}
-            })
+            response = self.client.commandExecute("tradeTransaction", {"tradeTransInfo": trade_trans_info})
 
             if response.get("status"):
                 order_number = response["returnData"]["order"]
@@ -144,6 +128,9 @@ class XTBBridge:
             }
 
     async def close_trade(self, close_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Close an existing trade using the tradeTransaction command with ORDER_CLOSE.
+        """
         if not self.client or not self.connected:
             logger.error("Cannot close trade: Not connected to XTB")
             return {
@@ -157,15 +144,15 @@ class XTBBridge:
             volume = float(close_info.get("volume", 0))
             price = float(close_info.get("price", 0))
 
-            # Use order number + 1 for closing as per working example
+            # Use order number + 1 for closing, as suggested in example
             close_order = order + 1
             logger.info("Using order number %s (open order %s + 1) for closing", close_order, order)
 
             close_trans_info = {
-                "cmd": TransactionSide.BUY,  # As per tutorial, use BUY to close a BUY trade
+                "cmd": TransactionSide.BUY,  # As per tutorial, use BUY to close a BUY trade.
                 "customComment": "Close trade test",
                 "expiration": 0,
-                "order": close_order,       # Use order number + 1 as recommended
+                "order": close_order,
                 "price": price,
                 "sl": 0.0,
                 "symbol": symbol,
@@ -175,10 +162,7 @@ class XTBBridge:
             }
 
             logger.info("Closing trade with info: %s", close_trans_info)
-            response = self.client.execute({
-                "command": "tradeTransaction",
-                "arguments": {"tradeTransInfo": close_trans_info}
-            })
+            response = self.client.commandExecute("tradeTransaction", {"tradeTransInfo": close_trans_info})
 
             if response.get("status"):
                 close_order = response["returnData"]["order"]
