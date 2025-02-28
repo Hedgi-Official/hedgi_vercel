@@ -83,7 +83,13 @@ export class TradingService {
     }
 
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(this.bridgeUrl);
+      this.ws = new WebSocket(this.bridgeUrl, {
+        headers: {
+          "Connection": "Upgrade",
+          "Upgrade": "websocket",
+        },
+        handshakeTimeout: this.connectionTimeout,
+      });
 
       const timeout = setTimeout(() => {
         this.ws?.close();
@@ -110,7 +116,6 @@ export class TradingService {
       this.ws.on('close', () => {
         console.log('[Trading Service] WebSocket connection closed');
         this.isConnected = false;
-        // Don't increment reconnectAttempts here as it should only increment on explicit reconnection attempts
       });
     });
   }
@@ -182,24 +187,9 @@ export class TradingService {
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-    const response = await this.sendCommand('checkTradeStatus', {
+    return this.sendCommand('checkTradeStatus', {
       orderNumber: tradeNumber
     });
-
-    return {
-      command: 'tradeTransactionStatus',
-      status: response.status,
-      returnData: {
-        order: tradeNumber,
-        status: response.returnData?.status || 'Unknown',
-        customComment: response.returnData?.customComment || '',
-        message: response.returnData?.message || null,
-        requestStatus: response.returnData?.requestStatus || 0,
-        price: response.returnData?.price || 0,
-        errorCode: response.returnData?.errorCode,
-        errorDescr: response.returnData?.errorDescr,
-      }
-    };
   }
 
   async openTrade(

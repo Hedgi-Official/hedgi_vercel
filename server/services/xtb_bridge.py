@@ -10,6 +10,7 @@ import time
 # Import the XTB API wrapper classes
 from APIClient import APIClient, APIStreamClient, TransactionSide, TransactionType, loginCommand
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -29,15 +30,15 @@ class XTBBridge:
             logger.info("Attempting to connect to XTB")
             self.client = APIClient()
 
-            login_response = self.client.execute(loginCommand(
+            response = self.client.execute(loginCommand(
                 userId=credentials.get("userId", "17535100"),
                 password=credentials.get("password", "GuiZarHoh2711!"),
                 appName="Hedgi"
             ))
 
-            if login_response.get("status"):
+            if response.get("status"):
                 logger.info("✅ Logged in successfully!")
-                self.ssid = login_response.get("streamSessionId")
+                self.ssid = response.get("streamSessionId")
                 logger.info("🔗 Stream session ID: %s", self.ssid)
                 self.connected = True
                 return {
@@ -45,10 +46,10 @@ class XTBBridge:
                     "streamSessionId": self.ssid
                 }
             else:
-                logger.error("❌ Login failed: %s", login_response)
+                logger.error("❌ Login failed: %s", response)
                 return {
                     "status": False,
-                    "error": login_response.get("errorDescr", "Login failed")
+                    "error": response.get("errorDescr", "Login failed")
                 }
         except Exception as e:
             logger.error("❌ Connection error: %s", str(e), exc_info=True)
@@ -67,11 +68,7 @@ class XTBBridge:
 
         try:
             logger.info("📊 Checking trade status for order: %s", order_number)
-            response = self.client.execute({
-                "command": "tradeTransactionStatus",
-                "arguments": {"order": order_number}
-            })
-
+            response = self.client.commandExecute("tradeTransactionStatus", {"order": order_number})
             logger.info("Trade status response: %s", response)
 
             if response.get("status"):
@@ -103,10 +100,12 @@ class XTBBridge:
             }
 
         try:
+            # Match the working example's trade info structure
             trade_trans_info = {
                 "cmd": TransactionSide.BUY if trade_info.get("isBuy", True) else TransactionSide.SELL,
-                "customComment": trade_info.get("customComment", "Hedgi trade"),
+                "customComment": trade_info.get("customComment", "Open trade test"),
                 "expiration": trade_info.get("expiration", 0),
+                "offset": 0,
                 "order": 0,  # For new orders, this is set to 0
                 "price": float(trade_info.get("price", 0)),
                 "sl": float(trade_info.get("sl", 0)),
@@ -158,11 +157,15 @@ class XTBBridge:
             volume = float(close_info.get("volume", 0))
             price = float(close_info.get("price", 0))
 
+            # Use order number + 1 for closing as per working example
+            close_order = order + 1
+            logger.info("Using order number %s (open order %s + 1) for closing", close_order, order)
+
             close_trans_info = {
                 "cmd": TransactionSide.BUY,  # As per tutorial, use BUY to close a BUY trade
-                "customComment": "Close trade via Hedgi",
+                "customComment": "Close trade test",
                 "expiration": 0,
-                "order": order + 1,  # Use order + 1 for closing as per working example
+                "order": close_order,       # Use order number + 1 as recommended
                 "price": price,
                 "sl": 0.0,
                 "symbol": symbol,
@@ -260,7 +263,10 @@ async def start_server():
             server = await websockets.serve(
                 handle_client,
                 "0.0.0.0",  # Listen on all interfaces
-                8765  # Port for WebSocket server
+                8765,  # Port for WebSocket server
+                ping_interval=None,  # Disable automatic ping
+                ping_timeout=None,    # Disable ping timeout
+                process_request=None  # Let websockets handle the handshake
             )
             logger.info("XTB Bridge WebSocket server started on port 8765")
             await server.wait_closed()
