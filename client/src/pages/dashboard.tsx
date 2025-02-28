@@ -56,7 +56,13 @@ export default function Dashboard() {
               <span className="font-medium">{t('Status')}:</span>
               <span className={statusColor}>{data.returnData.status}</span>
             </div>
-            {data.returnData.price && (
+            {data.returnData.requestStatus !== undefined && (
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Request Status:</span>
+                <span>{getRequestStatusName(data.returnData.requestStatus)}</span>
+              </div>
+            )}
+            {(data.returnData.price !== undefined && data.returnData.price !== null) && (
               <div className="flex justify-between items-center">
                 <span className="font-medium">{t('Price')}:</span>
                 <span>{data.returnData.price.toFixed(4)}</span>
@@ -160,6 +166,39 @@ export default function Dashboard() {
     await logout();
     navigate("/");
   };
+
+  // Convert request status code to description
+  const getRequestStatusName = (status: number) => {
+    switch(status) {
+      case 0:
+        return 'Error';
+      case 1:
+        return 'Pending';
+      case 3:
+        return 'Accepted';
+      case 4:
+        return 'Rejected';
+      default:
+        return `Unknown (${status})`;
+    }
+  };
+
+  // Helper function to determine the color based on status
+  const getStatusColor = (status: string) => {
+    switch(status.toLowerCase()) {
+      case 'pending':
+        return 'text-yellow-500';
+      case 'completed':
+      case 'accepted':
+        return 'text-green-500';
+      case 'rejected':
+      case 'error':
+        return 'text-red-500';
+      default:
+        return '';
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
