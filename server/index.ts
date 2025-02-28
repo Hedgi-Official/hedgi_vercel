@@ -64,6 +64,18 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // First try to kill any existing process on port 5000 and 8765
+    try {
+      const killCommand = process.platform === 'win32' ? 
+        `taskkill /F /IM node.exe /FI "PID ne ${process.pid}" && taskkill /F /IM python.exe` :
+        `lsof -ti:5000,8765 | xargs kill -9`;
+
+      require('child_process').execSync(killCommand, { stdio: 'ignore' });
+      log('Cleaned up ports 5000 and 8765');
+    } catch (e) {
+      // Ignore errors if no process was found
+    }
+
     // Start the XTB bridge service
     startXTBBridge();
 
@@ -81,18 +93,6 @@ app.use((req, res, next) => {
       await setupVite(app, server);
     } else {
       serveStatic(app);
-    }
-
-    // First try to kill any existing process on port 5000
-    try {
-      const killCommand = process.platform === 'win32' ? 
-        `taskkill /F /IM node.exe /FI "PID ne ${process.pid}"` :
-        `lsof -ti:5000 | xargs kill -9`;
-
-      require('child_process').execSync(killCommand, { stdio: 'ignore' });
-      log('Cleaned up port 5000');
-    } catch (e) {
-      // Ignore errors if no process was found
     }
 
     const PORT = 5000;

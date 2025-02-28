@@ -5,9 +5,10 @@ from threading import Thread
 import logging
 import ssl
 from typing import Dict, Any, Optional
+import time
 
 # Import the XTB API wrapper classes
-from APIClient import APIClient, APIStreamClient, TransactionSide, TransactionType
+from APIClient import APIClient, APIStreamClient, TransactionSide, TransactionType, loginCommand
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,20 +22,18 @@ class XTBBridge:
         self.client: Optional[APIClient] = None
         self.stream_client: Optional[APIStreamClient] = None
         self.connected = False
+        self.ssid = None
 
     async def connect(self, credentials: Dict[str, str]) -> Dict[str, Any]:
         try:
             logger.info("Attempting to connect to XTB")
             self.client = APIClient()
 
-            login_response = self.client.execute({
-                "command": "login",
-                "arguments": {
-                    "userId": credentials.get("userId", "17474971"),
-                    "password": credentials.get("password", "xoh74681"),
-                    "appName": "Hedgi"
-                }
-            })
+            login_response = self.client.execute(loginCommand(
+                userId=credentials.get("userId", "17474971"),
+                password=credentials.get("password", "xoh74681"),
+                appName="Hedgi"
+            ))
 
             if login_response.get("status"):
                 logger.info("✅ Logged in successfully!")
@@ -53,6 +52,43 @@ class XTBBridge:
                 }
         except Exception as e:
             logger.error("❌ Connection error: %s", str(e), exc_info=True)
+            return {
+                "status": False,
+                "error": str(e)
+            }
+
+    async def check_trade_status(self, order_number: int) -> Dict[str, Any]:
+        if not self.client or not self.connected:
+            logger.error("Cannot check trade status: Not connected to XTB")
+            return {
+                "status": False,
+                "error": "Not connected to XTB"
+            }
+
+        try:
+            logger.info("📊 Checking trade status for order: %s", order_number)
+            response = self.client.execute({
+                "command": "tradeTransactionStatus",
+                "arguments": {"order": order_number}
+            })
+
+            logger.info("Trade status response: %s", response)
+
+            if response.get("status"):
+                return {
+                    "status": True,
+                    "returnData": {
+                        "order": order_number,
+                        "requestStatus": response["returnData"].get("requestStatus"),
+                        "message": response["returnData"].get("message"),
+                        "customComment": response["returnData"].get("customComment"),
+                        "price": response["returnData"].get("price")
+                    }
+                }
+            return response
+
+        except Exception as e:
+            logger.error("❌ Error checking trade status: %s", str(e), exc_info=True)
             return {
                 "status": False,
                 "error": str(e)
@@ -108,43 +144,6 @@ class XTBBridge:
                 "error": str(e)
             }
 
-    async def check_trade_status(self, order_number: int) -> Dict[str, Any]:
-        if not self.client or not self.connected:
-            logger.error("Cannot check trade status: Not connected to XTB")
-            return {
-                "status": False,
-                "error": "Not connected to XTB"
-            }
-
-        try:
-            logger.info("📊 Checking trade status for order: %s", order_number)
-            response = self.client.execute({
-                "command": "tradeTransactionStatus",
-                "arguments": {"order": order_number}
-            })
-
-            logger.info("Trade status response: %s", response)
-
-            if response.get("status"):
-                return {
-                    "status": True,
-                    "returnData": {
-                        "order": order_number,
-                        "requestStatus": response["returnData"].get("requestStatus"),
-                        "message": response["returnData"].get("message"),
-                        "customComment": response["returnData"].get("customComment"),
-                        "price": response["returnData"].get("price")
-                    }
-                }
-            return response
-
-        except Exception as e:
-            logger.error("❌ Error checking trade status: %s", str(e), exc_info=True)
-            return {
-                "status": False,
-                "error": str(e)
-            }
-
     async def close_trade(self, close_info: Dict[str, Any]) -> Dict[str, Any]:
         if not self.client or not self.connected:
             logger.error("Cannot close trade: Not connected to XTB")
@@ -163,7 +162,7 @@ class XTBBridge:
                 "cmd": TransactionSide.BUY,  # As per tutorial, use BUY to close a BUY trade
                 "customComment": "Close trade via Hedgi",
                 "expiration": 0,
-                "order": order,
+                "order": order + 1,  # Use order + 1 for closing as per working example
                 "price": price,
                 "sl": 0.0,
                 "symbol": symbol,
@@ -248,17 +247,28 @@ async def handle_client(websocket, path):
         bridge.disconnect()
 
 async def start_server():
-    try:
-        server = await websockets.serve(
-            handle_client,
-            "0.0.0.0",  # Listen on all interfaces
-            8765  # Port for WebSocket server
-        )
-        logger.info("XTB Bridge WebSocket server started on port 8765")
-        await server.wait_closed()
-    except Exception as e:
-        logger.error(f"Error starting WebSocket server: {str(e)}", exc_info=True)
-        raise
+    max_retries = 5
+    retry_delay = 2  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            # Wait a bit before starting to ensure old process is cleaned up
+            if attempt > 0:
+                logger.info(f"Retrying to start server (attempt {attempt + 1}/{max_retries})")
+                await asyncio.sleep(retry_delay)
+
+            server = await websockets.serve(
+                handle_client,
+                "0.0.0.0",  # Listen on all interfaces
+                8765  # Port for WebSocket server
+            )
+            logger.info("XTB Bridge WebSocket server started on port 8765")
+            await server.wait_closed()
+            break
+        except Exception as e:
+            logger.error(f"Error starting WebSocket server: {str(e)}", exc_info=True)
+            if attempt == max_retries - 1:
+                raise
 
 if __name__ == "__main__":
     logger.info("Starting XTB Bridge service")
