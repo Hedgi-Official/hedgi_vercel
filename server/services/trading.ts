@@ -56,7 +56,7 @@ export class TradingService {
     }
 
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket('wss://ws.xtb.com/demo:5124');
+      this.ws = new WebSocket('wss://ws.xtb.com/demo');
 
       this.ws.on('open', () => {
         console.log('[Trading Service] Connected to XTB WebSocket');

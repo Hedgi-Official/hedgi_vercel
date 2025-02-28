@@ -17,8 +17,8 @@ const xtbService = new BackendXTBService();
 const initializeXTB = async () => {
   try {
     // Update server URL for demo
-    xtbService.serverUrl = 'wss://ws.xtb.com/demo:5124';
-    xtbService.streamUrl = 'wss://ws.xtb.com/demoStream:5125';
+    xtbService.serverUrl = 'wss://ws.xtb.com/demo';
+    xtbService.streamUrl = 'wss://ws.xtb.com/demoStream';
     
     // Use environment variables for credentials
     await xtbService.connect({
