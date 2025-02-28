@@ -48,26 +48,6 @@ router.get('/api/xtb/rates', async (req, res) => {
     for (const symbol of symbols) {
       const symbolResponse = await xtbService.getSymbolData(symbol);
 
-
-router.get('/api/xtb/trade-status/:orderNumber', async (req, res) => {
-  try {
-    if (!xtbService.isConnected) {
-      await initializeXTB();
-    }
-
-    const orderNumber = parseInt(req.params.orderNumber);
-    if (isNaN(orderNumber)) {
-      return res.status(400).json({ error: 'Invalid order number' });
-    }
-
-    const formattedStatus = await xtbService.getFormattedTradeStatus(orderNumber);
-    res.json(formattedStatus);
-  } catch (error) {
-    console.error('[XTB Backend] Error getting trade status:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
       if (!symbolResponse.status || !symbolResponse.returnData) {
         console.error(`[XTB Backend] Failed to get data for ${symbol}`);
         continue;
