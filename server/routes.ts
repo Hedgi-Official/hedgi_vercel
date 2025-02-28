@@ -26,26 +26,6 @@ export function registerRoutes(app: Express): Server {
     res.json(userHedges);
   });
 
-  // New endpoint to check trade status
-  app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    const tradeOrderNumber = parseInt(req.params.tradeOrderNumber);
-    if (isNaN(tradeOrderNumber)) {
-      return res.status(400).send("Invalid trade order number");
-    }
-
-    try {
-      const statusResponse = await tradingService.checkTradeStatus(tradeOrderNumber);
-      res.json(statusResponse);
-    } catch (error) {
-      console.error('Error checking trade status:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to check trade status" });
-    }
-  });
-
   app.post("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
