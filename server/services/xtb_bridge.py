@@ -1,11 +1,14 @@
 import json
 import asyncio
 import websockets
-from threading import Thread
+import websockets.exceptions
+from threading import Thread, Timer
 import logging
 import ssl
 from typing import Dict, Any, Optional
 import time
+import sys
+import os
 
 # Import the XTB API wrapper classes
 from APIClient import APIClient, APIStreamClient, TransactionSide, TransactionType, loginCommand
@@ -24,11 +27,30 @@ class XTBBridge:
         self.stream_client: Optional[APIStreamClient] = None
         self.connected = False
         self.ssid = None
+        self.reconnect_timer = None
+        self.credentials = None
+        self.reconnect_attempts = 0
+        self.max_reconnect_attempts = 5
+        self.reconnect_delay = 5  # seconds
 
     async def connect(self, credentials: Dict[str, str]) -> Dict[str, Any]:
+        self.credentials = credentials  # Store credentials for reconnection
         try:
+            if self.reconnect_timer:
+                self.reconnect_timer.cancel()
+                self.reconnect_timer = None
+                
             logger.info("Attempting to connect to XTB")
             self.client = APIClient(encrypt=True)  # Ensure encryption is enabled
+            
+            # Ensure we have credentials
+            if not credentials.get("userId") or not credentials.get("password"):
+                logger.error("❌ Missing credentials")
+                return {
+                    "status": False,
+                    "error": "Missing credentials"
+                }
+                
             response = self.client.execute(loginCommand(
                 userId=credentials.get("userId", "17535100"),
                 password=credentials.get("password", "GuiZarHoh2711!"),
@@ -40,21 +62,68 @@ class XTBBridge:
                 self.ssid = response.get("streamSessionId")
                 logger.info("🔗 Stream session ID: %s", self.ssid)
                 self.connected = True
+                self.reconnect_attempts = 0  # Reset reconnect attempts on success
+                
+                # Schedule heartbeat to keep connection alive
+                self._schedule_heartbeat()
+                
                 return {
                     "status": True,
                     "streamSessionId": self.ssid
                 }
             else:
                 logger.error("❌ Login failed: %s", response)
+                self._schedule_reconnect()
                 return {
                     "status": False,
                     "error": response.get("errorDescr", "Login failed")
                 }
         except Exception as e:
             logger.error("❌ Connection error: %s", str(e), exc_info=True)
+            self._schedule_reconnect()
             return {
                 "status": False,
                 "error": str(e)
+            }
+            
+    def _schedule_heartbeat(self):
+        """Schedule a heartbeat to keep the connection alive"""
+        async def heartbeat():
+            while self.connected and self.client:
+                try:
+                    logger.debug("Sending heartbeat to XTB server")
+                    response = self.client.execute({"command": "ping"})
+                    if not response.get("status", False):
+                        logger.warning("Heartbeat failed, scheduling reconnect")
+                        self._schedule_reconnect()
+                        break
+                except Exception as e:
+                    logger.error("❌ Heartbeat error: %s", str(e))
+                    self._schedule_reconnect()
+                    break
+                await asyncio.sleep(30)  # Send heartbeat every 30 seconds
+                
+        # Start heartbeat in background
+        asyncio.create_task(heartbeat())
+        
+    def _schedule_reconnect(self):
+        """Schedule a reconnection attempt"""
+        if self.reconnect_attempts >= self.max_reconnect_attempts:
+            logger.error("❌ Max reconnection attempts reached")
+            return
+            
+        self.reconnect_attempts += 1
+        delay = self.reconnect_delay * self.reconnect_attempts
+        
+        logger.info(f"Scheduling reconnection attempt {self.reconnect_attempts} in {delay} seconds")
+        
+        async def do_reconnect():
+            logger.info("Attempting to reconnect to XTB")
+            await self.connect(self.credentials)
+            
+        self.reconnect_timer = Timer(delay, lambda: asyncio.create_task(do_reconnect()))
+        self.reconnect_timer.daemon = True
+        self.reconnect_timer.start()
             }
 
     async def check_trade_status(self, order: int) -> Dict[str, Any]:
@@ -79,12 +148,38 @@ class XTBBridge:
             }
 
     def disconnect(self):
+        """Properly disconnect from XTB services"""
         logger.info("Disconnecting from XTB")
+        
+        # Cancel any pending reconnection attempts
+        if self.reconnect_timer:
+            self.reconnect_timer.cancel()
+            self.reconnect_timer = None
+            
+        # Disconnect stream client if exists
         if self.stream_client:
-            self.stream_client.disconnect()
+            try:
+                self.stream_client.disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting stream client: {str(e)}")
+            self.stream_client = None
+            
+        # Disconnect main client if exists
         if self.client:
-            self.client.disconnect()
+            try:
+                # Try to send logout command before disconnecting
+                try:
+                    self.client.execute({"command": "logout"})
+                except:
+                    pass
+                self.client.disconnect()
+            except Exception as e:
+                logger.error(f"Error disconnecting client: {str(e)}")
+            self.client = None
+            
         self.connected = False
+        self.ssid = None
+        logger.info("Successfully disconnected from XTB")
 
 async def handle_client(websocket, path):
     bridge = XTBBridge()
@@ -95,7 +190,7 @@ async def handle_client(websocket, path):
             try:
                 data = json.loads(message)
                 command = data.get('command')
-                logger.info(f"Received command: {command}")
+                logger.info(f"Received command: {command}")mand: {command}")
 
                 if command == 'connect':
                     response = await bridge.connect(data.get('credentials', {}))
