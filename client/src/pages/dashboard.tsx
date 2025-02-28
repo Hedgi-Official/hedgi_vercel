@@ -9,7 +9,7 @@ import { ExchangeRatesWidget } from "@/components/exchange-rates-widget";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
@@ -21,6 +21,46 @@ export default function Dashboard() {
 
   const { data: hedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
+  });
+
+  const checkTradeStatusMutation = useMutation({
+    mutationFn: async (tradeOrderNumber: number) => {
+      const response = await fetch(`/api/hedges/status/${tradeOrderNumber}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: t('Trade Status Details'),
+        description: (
+          <div className="mt-2 space-y-2">
+            <p><strong>Order:</strong> #{data.returnData.order}</p>
+            <p><strong>Status:</strong> {data.returnData.status}</p>
+            {data.returnData.customComment && (
+              <p><strong>Comment:</strong> {data.returnData.customComment}</p>
+            )}
+            {data.returnData.message && (
+              <p><strong>Message:</strong> {data.returnData.message}</p>
+            )}
+          </div>
+        ),
+        duration: 10000,
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: t('simulator.notifications.error'),
+        description: error.message,
+      });
+    }
   });
 
   const createHedgeMutation = useMutation({
@@ -38,12 +78,16 @@ export default function Dashboard() {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
         title: t('simulator.notifications.hedgeCreated'),
         description: t('simulator.notifications.hedgeCreatedDesc'),
       });
+      // Check trade status after successful creation
+      if (data.tradeOrderNumber) {
+        checkTradeStatusMutation.mutate(data.tradeOrderNumber);
+      }
     },
     onError: (error) => {
       toast({
@@ -133,6 +177,16 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge>{t(`simulator.status.${hedge.status}`)}</Badge>
+                          {hedge.tradeOrderNumber && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => checkTradeStatusMutation.mutate(hedge.tradeOrderNumber!)}
+                            >
+                              <AlertCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
