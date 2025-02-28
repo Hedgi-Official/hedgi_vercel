@@ -41,7 +41,8 @@ class XTBBridge:
                 self.reconnect_timer = None
                 
             logger.info("Attempting to connect to XTB")
-            self.client = APIClient(encrypt=True)  # Ensure encryption is enabled
+            # Use XTB demo server - the same URL used in the Express server
+            self.client = APIClient(address="xapi.xtb.com", port=5124, encrypt=True)  # Ensure encryption is enabled
             
             # Ensure we have credentials
             if not credentials.get("userId") or not credentials.get("password"):
@@ -124,7 +125,6 @@ class XTBBridge:
         self.reconnect_timer = Timer(delay, lambda: asyncio.create_task(do_reconnect()))
         self.reconnect_timer.daemon = True
         self.reconnect_timer.start()
-            }
 
     async def check_trade_status(self, order: int) -> Dict[str, Any]:
         """Check the trade status."""
