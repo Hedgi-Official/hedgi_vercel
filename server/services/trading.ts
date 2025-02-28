@@ -61,6 +61,9 @@ export class TradingService {
     }
 
     return new Promise((resolve, reject) => {
+      console.log('[Trading Service] Attempting to connect to WebSocket bridge');
+
+      // Create WebSocket with explicit headers
       this.ws = new WebSocket(this.bridgeUrl, {
         headers: {
           "Connection": "Upgrade",
@@ -70,22 +73,23 @@ export class TradingService {
       });
 
       const timeout = setTimeout(() => {
+        console.error('[Trading Service] Connection timeout');
         this.ws?.close();
         this.reconnectAttempts++;
         reject(new Error('Connection timeout'));
       }, this.connectionTimeout);
 
       this.ws.on('open', () => {
+        console.log('[Trading Service] WebSocket connection established');
         clearTimeout(timeout);
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        console.log('[Trading Service] Connected to XTB Bridge');
         resolve();
       });
 
       this.ws.on('error', (error) => {
-        clearTimeout(timeout);
         console.error('[Trading Service] WebSocket error:', error);
+        clearTimeout(timeout);
         this.isConnected = false;
         this.reconnectAttempts++;
         reject(error);
@@ -108,9 +112,7 @@ export class TradingService {
 
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          if (this.ws) {
-            this.ws.removeListener('message', handleMessage);
-          }
+          this.ws?.removeListener('message', handleMessage);
           reject(new Error(`Command ${command} timeout`));
         }, this.connectionTimeout);
 
@@ -162,6 +164,10 @@ export class TradingService {
     }
   }
 
+  async connect(credentials: { userId: string; password: string }): Promise<XTBResponse> {
+    console.log('[Trading Service] Attempting to connect to XTB');
+    return this.sendCommand('connect', { credentials });
+  }
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
     return this.sendCommand('checkTradeStatus', {
@@ -255,11 +261,6 @@ export class TradingService {
 
     console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
     return closingOrderNumber;
-  }
-
-  async connect(credentials: { userId: string; password: string }): Promise<XTBResponse> {
-    console.log('[Trading Service] Attempting to connect to XTB');
-    return this.sendCommand('connect', { credentials });
   }
 }
 
