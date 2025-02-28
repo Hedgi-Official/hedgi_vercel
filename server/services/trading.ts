@@ -241,12 +241,23 @@ export class TradingService {
         reject(new Error(`Command ${cmd} timeout`));
       }, this.connectionTimeout);
 
-      const handleMessage = (data: MessageEvent) => {
+      const handleMessage = (data: WebSocket.MessageEvent) => {
         try {
-          const response = JSON.parse(data.toString());
+          let response: XTBResponse;
+
+          // Handle both string and Buffer data types
+          if (Buffer.isBuffer(data.data)) {
+            response = JSON.parse(data.data.toString());
+          } else if (typeof data.data === 'string') {
+            response = JSON.parse(data.data);
+          } else {
+            throw new Error('Unexpected WebSocket message format');
+          }
+
           console.log(`[Trading Service] Received response for ${cmd}:`, {
             status: response.status,
-            hasReturnData: !!response.returnData
+            hasReturnData: !!response.returnData,
+            rawData: response
           });
 
           if (!response.status && response.errorCode) {
@@ -255,7 +266,8 @@ export class TradingService {
             resolve(response);
           }
         } catch (e) {
-          reject(e);
+          console.error('[Trading Service] Error parsing response:', e, data.data);
+          reject(new Error('Failed to parse XTB response'));
         } finally {
           clearTimeout(timeoutId);
           if (this.ws) {
@@ -264,19 +276,20 @@ export class TradingService {
         }
       };
 
-      const message = {
+      const message = JSON.stringify({
         command: cmd,
         arguments: params
-      };
+      });
 
-      console.log(`[Trading Service] Sending command: ${cmd}`, {
+      console.log(`[Trading Service] Sending command ${cmd}:`, {
+        command: cmd,
         ...params,
         password: undefined // Never log passwords
       });
 
       if (this.ws) {
         this.ws.addEventListener('message', handleMessage);
-        this.ws.send(JSON.stringify(message), (error) => {
+        this.ws.send(message, (error) => {
           if (error) {
             clearTimeout(timeoutId);
             if (this.ws) {
@@ -289,7 +302,6 @@ export class TradingService {
     });
   }
 
-  // API Methods
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
@@ -299,17 +311,21 @@ export class TradingService {
 
       const response = await this.sendCommandWithoutLogin('tradeTransactionStatus', { order: tradeNumber });
 
+      if (!response.returnData?.requestStatus) {
+        throw new Error('Invalid response format from XTB');
+      }
+
       // Format the response to match STREAMING_TRADE_STATUS_RECORD
       const formattedResponse: XTBResponse = {
         command: 'tradeTransactionStatus',
         status: response.status,
         returnData: {
-          order: response.returnData.order,
+          order: tradeNumber,
           status: getStatusDescription(response.returnData.requestStatus),
           customComment: response.returnData.customComment || '',
           message: response.returnData.message || null,
           requestStatus: response.returnData.requestStatus,
-          price: response.returnData.price,
+          price: response.returnData.price || 0,
           errorCode: response.returnData.errorCode,
           errorDescr: response.returnData.errorDescr,
         }
