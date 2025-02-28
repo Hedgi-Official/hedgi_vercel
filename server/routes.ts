@@ -26,7 +26,6 @@ export function registerRoutes(app: Express): Server {
     res.json(userHedges);
   });
 
-  // New endpoint to check trade status
   app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -38,11 +37,24 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const statusResponse = await tradingService.checkTradeStatus(tradeOrderNumber);
+      const statusResponse = await Promise.race([
+        tradingService.checkTradeStatus(tradeOrderNumber),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Trade status check timeout')), 10000)
+        )
+      ]);
       res.json(statusResponse);
     } catch (error) {
       console.error('Error checking trade status:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to check trade status" });
+      res.status(503).json({ 
+        error: error instanceof Error ? error.message : "Failed to check trade status",
+        status: false,
+        returnData: {
+          order: tradeOrderNumber,
+          status: 'Error',
+          message: 'Service temporarily unavailable'
+        }
+      });
     }
   });
 
@@ -59,21 +71,25 @@ export function registerRoutes(app: Express): Server {
         -Math.abs(Number(amount)) : 
         Math.abs(Number(amount))).toString();
 
-      // Open trade via XTB API
+      // Open trade via XTB API with timeout
       const symbol = `${targetCurrency}${baseCurrency}`;
       const volume = Math.abs(Number(amount));
       const isBuy = tradeDirection === 'buy';
 
-      // Open the trade and get the order number
-      const tradeOrderNumber = await tradingService.openTrade(
-        symbol,
-        Number(rate),
-        volume,
-        isBuy,
-        0, // sl
-        0, // tp
-        `Hedge position for ${symbol}` // comment
-      );
+      const tradeOrderNumber = await Promise.race([
+        tradingService.openTrade(
+          symbol,
+          Number(rate),
+          volume,
+          isBuy,
+          0, // sl
+          0, // tp
+          `Hedge position for ${symbol}` // comment
+        ),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Trade open timeout')), 10000)
+        )
+      ]);
 
       // Check trade status
       const tradeStatus = await tradingService.checkTradeStatus(tradeOrderNumber);
@@ -94,7 +110,10 @@ export function registerRoutes(app: Express): Server {
       res.json(hedge);
     } catch (error) {
       console.error('Error creating hedge:', error);
-      res.status(400).json({ error: error instanceof Error ? error.message : "Failed to create hedge" });
+      res.status(503).json({ 
+        error: error instanceof Error ? error.message : "Failed to create hedge",
+        details: "Trading service temporarily unavailable"
+      });
     }
   });
 
@@ -119,23 +138,27 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Hedge not found");
       }
 
-      // Close the trade via XTB API
+      // Close the trade via XTB API with timeout
       if (hedge.tradeOrderNumber) {
         const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
         const volume = Math.abs(Number(hedge.amount));
         const isBuy = Number(hedge.amount) > 0;
 
-        // Close the trade and verify its status
-        const closingOrderNumber = await tradingService.closeTrade(
-          symbol,
-          hedge.tradeOrderNumber,
-          Number(hedge.rate),
-          volume,
-          isBuy,
-          0, // sl
-          0, // tp
-          `Closing hedge position for ${symbol}` // comment
-        );
+        const closingOrderNumber = await Promise.race([
+          tradingService.closeTrade(
+            symbol,
+            hedge.tradeOrderNumber,
+            Number(hedge.rate),
+            volume,
+            isBuy,
+            0, // sl
+            0, // tp
+            `Closing hedge position for ${symbol}` // comment
+          ),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Trade close timeout')), 10000)
+          )
+        ]);
 
         console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
       }
@@ -149,7 +172,10 @@ export function registerRoutes(app: Express): Server {
       res.json({ message: "Hedge deleted successfully" });
     } catch (error) {
       console.error('Error deleting hedge:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to delete hedge" });
+      res.status(503).json({ 
+        error: error instanceof Error ? error.message : "Failed to delete hedge",
+        details: "Trading service temporarily unavailable"
+      });
     }
   });
 
