@@ -44,6 +44,7 @@ export function registerRoutes(app: Express): Server {
       const volume = Math.abs(Number(amount));
       const isBuy = tradeDirection === 'buy';
 
+      // Open the trade and get the order number
       const tradeOrderNumber = await tradingService.openTrade(
         symbol,
         Number(rate),
@@ -56,6 +57,7 @@ export function registerRoutes(app: Express): Server {
 
       // Check trade status
       const tradeStatus = await tradingService.checkTradeStatus(tradeOrderNumber);
+      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, tradeStatus);
 
       const [hedge] = await db.insert(hedges).values({
         userId: req.user.id,
@@ -103,7 +105,8 @@ export function registerRoutes(app: Express): Server {
         const volume = Math.abs(Number(hedge.amount));
         const isBuy = Number(hedge.amount) > 0;
 
-        await tradingService.closeTrade(
+        // Close the trade and verify its status
+        const closingOrderNumber = await tradingService.closeTrade(
           symbol,
           hedge.tradeOrderNumber,
           Number(hedge.rate),
@@ -113,6 +116,8 @@ export function registerRoutes(app: Express): Server {
           0, // tp
           `Closing hedge position for ${symbol}` // comment
         );
+
+        console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
       }
 
       // Delete the hedge from database
