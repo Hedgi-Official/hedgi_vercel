@@ -43,171 +43,92 @@ const tradeTransInfoSchema = z.object({
 
 export class TradingService {
   private ws: WebSocket | null = null;
-  private streamWs: WebSocket | null = null;
   private streamSessionId: string | null = null;
-  private connectionPromise: Promise<void> | null = null;
-  private readonly connectionTimeout = 10000; // 10 seconds
 
-  private async ensureConnection(): Promise<void> {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+  private async connect(): Promise<void> {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return;
     }
 
-    if (this.connectionPromise) {
-      return this.connectionPromise;
-    }
-
-    // Check credentials before attempting connection
-    if (!process.env.XTB_USER_ID || !process.env.XTB_PASSWORD) {
-      throw new Error('XTB credentials not found in environment variables');
-    }
-
-    this.connectionPromise = new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        this.ws?.close();
-        this.ws = null;
-        this.connectionPromise = null;
-        reject(new Error('Connection timeout'));
-      }, this.connectionTimeout);
-
+    return new Promise((resolve, reject) => {
       console.log('[Trading Service] Initiating connection to XTB demo server');
       this.ws = new WebSocket('wss://ws.xtb.com/demo');
 
       this.ws.on('open', () => {
         console.log('[Trading Service] Connected to XTB WebSocket');
-        clearTimeout(timeoutId);
         resolve();
       });
 
       this.ws.on('error', (error) => {
         console.error('[Trading Service] WebSocket error:', error);
-        clearTimeout(timeoutId);
-        this.ws = null;
-        this.connectionPromise = null;
         reject(error);
       });
 
       this.ws.on('close', () => {
         console.log('[Trading Service] WebSocket connection closed');
-        this.ws = null;
         this.streamSessionId = null;
-        this.connectionPromise = null;
       });
     });
-
-    return this.connectionPromise;
   }
 
   private async login(): Promise<void> {
-    if (!this.ws) {
-      throw new Error('WebSocket not connected');
-    }
+    if (!this.ws) throw new Error('WebSocket not connected');
+
+    const loginCommand = {
+      command: "login",
+      arguments: {
+        userId: process.env.XTB_USER_ID,
+        password: process.env.XTB_PASSWORD,
+        appName: "Hedgi"
+      }
+    };
 
     return new Promise((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error('Login timeout'));
-      }, this.connectionTimeout);
-
-      const loginCommand = {
-        command: "login",
-        arguments: {
-          userId: process.env.XTB_USER_ID,
-          password: process.env.XTB_PASSWORD,
-          appName: "Hedgi"
-        }
-      };
-
-      console.log('[Trading Service] Attempting login with:', {
-        command: loginCommand.command,
-        arguments: {
-          userId: `${loginCommand.arguments.userId?.substring(0, 3)}...`,
-          password: '***',
-          appName: loginCommand.arguments.appName
-        }
-      });
-
-      this.ws.send(JSON.stringify(loginCommand), (error) => {
+      this.ws!.send(JSON.stringify(loginCommand), (error) => {
         if (error) {
-          clearTimeout(timeoutId);
-          console.error('[Trading Service] Login send error:', error);
+          console.error('[Trading Service] Login error:', error);
           reject(error);
         }
       });
 
-      this.ws.once('message', (data) => {
-        clearTimeout(timeoutId);
+      this.ws!.once('message', (data) => {
         const response = JSON.parse(data.toString());
-        console.log('[Trading Service] Login response:', {
-          status: response.status,
-          hasStreamSessionId: !!response.streamSessionId
-        });
-
         if (response.status) {
           this.streamSessionId = response.streamSessionId;
+          console.log('[Trading Service] Successfully logged in to XTB');
           resolve();
         } else {
-          const error = response.errorCode ? 
-            `Login failed: ${response.errorDescr} (${response.errorCode})` : 
-            'Login failed';
-          reject(new Error(error));
+          reject(new Error('Login failed'));
         }
       });
     });
   }
 
   private async sendCommand(cmd: string, params: any): Promise<XTBResponse> {
-    try {
-      await this.ensureConnection();
+    await this.connect();
+    if (!this.streamSessionId) {
       await this.login();
-
-      return new Promise((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error('WebSocket not connected'));
-          return;
-        }
-
-        const timeoutId = setTimeout(() => {
-          reject(new Error(`Command ${cmd} timeout`));
-        }, this.connectionTimeout);
-
-        const message = {
-          command: cmd,
-          arguments: params
-        };
-
-        console.log(`[Trading Service] Sending command: ${cmd}`, {
-          ...params,
-          password: undefined // Never log passwords
-        });
-
-        this.ws.send(JSON.stringify(message), (error) => {
-          if (error) {
-            clearTimeout(timeoutId);
-            console.error(`[Trading Service] Error sending ${cmd} command:`, error);
-            reject(error);
-          }
-        });
-
-        this.ws.once('message', (data) => {
-          clearTimeout(timeoutId);
-          const response = JSON.parse(data.toString());
-
-          console.log(`[Trading Service] Received response for ${cmd}:`, {
-            status: response.status,
-            hasReturnData: !!response.returnData
-          });
-
-          if (!response.status && response.errorCode) {
-            reject(new Error(`${response.errorDescr} (${response.errorCode})`));
-          } else {
-            resolve(response);
-          }
-        });
-      });
-    } catch (error) {
-      console.error(`[Trading Service] Error in sendCommand(${cmd}):`, error);
-      throw error;
     }
+
+    return new Promise((resolve, reject) => {
+      const message = {
+        command: cmd,
+        arguments: params
+      };
+
+      this.ws!.send(JSON.stringify(message), (error) => {
+        if (error) reject(error);
+      });
+
+      this.ws!.once('message', (data) => {
+        const response = JSON.parse(data.toString());
+        if (!response.status && response.errorCode) {
+          reject(new Error(`${response.errorDescr} (${response.errorCode})`));
+        } else {
+          resolve(response);
+        }
+      });
+    });
   }
 
   // API Methods
@@ -245,19 +166,13 @@ export class TradingService {
       volume,
     });
 
-    const tradeResponse = await this.sendCommand('tradeTransaction', { tradeTransInfo });
-    if (!tradeResponse.status) {
-      throw new Error(`Failed to open trade: ${tradeResponse.returnData.errorDescr || 'Unknown error'}`);
+    const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    if (!response.status) {
+      throw new Error(`Failed to open trade: ${response.returnData.errorDescr || 'Unknown error'}`);
     }
 
-    const tradeNumber = tradeResponse.returnData.order;
+    const tradeNumber = response.returnData.order;
     console.log(`[Trading Service] Trade opened. Order number: ${tradeNumber}`);
-
-    const statusResponse = await this.checkTradeStatus(tradeNumber);
-    if (statusResponse.returnData.errorCode) {
-      throw new Error(`Trade status error: ${statusResponse.returnData.errorDescr}`);
-    }
-
     return tradeNumber;
   }
 
@@ -289,19 +204,13 @@ export class TradingService {
       volume,
     });
 
-    const closeResponse = await this.sendCommand('tradeTransaction', { tradeTransInfo });
-    if (!closeResponse.status) {
-      throw new Error(`Failed to close trade: ${closeResponse.returnData.errorDescr || 'Unknown error'}`);
+    const response = await this.sendCommand('tradeTransaction', { tradeTransInfo });
+    if (!response.status) {
+      throw new Error(`Failed to close trade: ${response.returnData.errorDescr || 'Unknown error'}`);
     }
 
-    const closingOrderNumber = closeResponse.returnData.order;
+    const closingOrderNumber = response.returnData.order;
     console.log(`[Trading Service] Trade closed. Closing order number: ${closingOrderNumber}`);
-
-    const statusResponse = await this.checkTradeStatus(closingOrderNumber);
-    if (statusResponse.returnData.errorCode) {
-      throw new Error(`Close trade status error: ${statusResponse.returnData.errorDescr}`);
-    }
-
     return closingOrderNumber;
   }
 }
