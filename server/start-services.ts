@@ -22,7 +22,7 @@ function getPythonExecutable() {
         python3Check.stdout.on('data', (data) => {
             output += data.toString();
         });
-        
+
         return new Promise((resolve) => {
             python3Check.on('close', (code) => {
                 if (code === 0 && output.trim()) {
@@ -46,10 +46,10 @@ log('Starting Python bridge service...');
 (async () => {
     const pythonCommand = await getPythonExecutable();
     log(`Using Python executable: ${pythonCommand}`);
-    
+
     const bridgePath = join(__dirname, 'services/xtb_bridge.py');
     log(`Bridge script path: ${bridgePath}`);
-    
+
     // Check if the bridge file exists
     try {
         const fs = await import('fs');
@@ -69,7 +69,7 @@ log('Starting Python bridge service...');
     } catch (error) {
         log(`Error checking bridge file: ${error}`);
     }
-    
+
     const pythonBridge = spawn(pythonCommand, [bridgePath], {
         stdio: ['inherit', 'pipe', 'pipe'],
         env: {
@@ -100,30 +100,30 @@ log('Starting Python bridge service...');
     // More sophisticated exit handling with automatic restart
     let restartAttempts = 0;
     const maxRestartAttempts = 3;
-    
+
     pythonBridge.on('exit', (code, signal) => {
         if (code !== 0) {
             log(`Python bridge exited with code ${code} and signal ${signal}`);
-            
+
             // Attempt to restart the bridge a few times before giving up
             if (restartAttempts < maxRestartAttempts) {
                 restartAttempts++;
                 const delay = restartAttempts * 2000; // Progressive backoff
                 log(`Attempting to restart Python bridge in ${delay/1000} seconds... (Attempt ${restartAttempts}/${maxRestartAttempts})`);
-                
+
                 setTimeout(() => {
                     log('Restarting Python bridge...');
                     const newBridge = spawn(pythonCommand, [bridgePath], {
                         stdio: ['inherit', 'pipe', 'pipe'],
                         env: pythonBridge.spawnargs[2].env
                     });
-                    
+
                     // Transfer all event handlers
                     newBridge.stdout.on('data', data => log(`Python bridge stdout: ${data}`));
                     newBridge.stderr.on('data', data => log(`Python bridge stderr: ${data}`));
                     newBridge.on('error', logBridgeError);
                     newBridge.on('exit', pythonBridge.listeners('exit')[0]);
-                    
+
                     // Replace the global reference
                     global.bridgeProcess = newBridge;
                 }, delay);
@@ -133,7 +133,7 @@ log('Starting Python bridge service...');
             }
         }
     });
-    
+
     // Make the bridge available globally
     global.bridgeProcess = pythonBridge;
 })().catch(error => {
@@ -141,9 +141,11 @@ log('Starting Python bridge service...');
 });
 
 process.on('SIGINT', () => {
-    pythonBridge.kill();
+    if (global.bridgeProcess) {
+        global.bridgeProcess.kill();
+    }
     process.exit();
 });
 
 // Export the process for cleanup
-export const bridgeProcess = pythonBridge;
+export const bridgeProcess = global.bridgeProcess;
