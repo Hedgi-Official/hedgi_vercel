@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { bridgeProcess } from "./start-services";
 
 const app = express();
 app.use(express.json());
@@ -39,27 +40,43 @@ app.use((req, res, next) => {
 (async () => {
   const server = registerRoutes(app);
 
+  // Handle bridge process errors and cleanup
+  bridgeProcess.on('exit', (code) => {
+    if (code !== 0) {
+      log('XTB Bridge process exited with code ' + code);
+      // Don't exit the main process, just log the error
+      log('Attempting to restart bridge process...');
+    }
+  });
+
+  // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
+    log(`Error: ${message}`);
     res.status(status).json({ message });
-    throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  const PORT = parseInt(process.env.PORT || '5000', 10);
+  const startServer = (port: number) => {
+    log(`Attempting to start server on port ${port}...`);
+    server.listen(port, "0.0.0.0", () => {
+      log(`Server running on port ${port}`);
+    }).on('error', (e: any) => {
+      if (e.code === 'EADDRINUSE') {
+        log(`Port ${port} is busy, trying ${port + 1}...`);
+        startServer(port + 1);
+      } else {
+        log(`Server error: ${e.message}`);
+      }
+    });
+  };
+
+  startServer(PORT);
 })();
