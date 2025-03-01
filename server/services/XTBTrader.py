@@ -41,6 +41,10 @@ class XTBTrader:
             logger.info(f"Successfully connected to XTB API with session ID: {self.stream_session_id}")
             return {"success": True, "sessionId": self.stream_session_id}
 
+        except ValueError as e:
+            error_msg = f"Invalid user ID format. Expected a numeric value, got: {user_id}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
         except Exception as e:
             error_msg = f"Connection error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
             logger.exception(error_msg) #Use logger.exception to include traceback

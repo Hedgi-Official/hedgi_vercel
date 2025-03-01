@@ -103,7 +103,7 @@ export class TradingService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: process.env.XTB_USER_ID || '17535100',
+          userId: process.env.XTB_USER_ID || '17535100',  // Ensure this is a numeric string
           password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
         })
       });
