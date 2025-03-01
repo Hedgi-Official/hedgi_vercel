@@ -57,56 +57,6 @@ async function checkBridgeHealth(): Promise<boolean> {
   }
 }
 
-async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean> {
-  let lastError = null;
-  
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      console.log(`[Trading Service] Checking bridge health (attempt ${i + 1}/${maxRetries})...`);
-      const isHealthy = await checkBridgeHealth();
-      if (isHealthy) {
-        console.log('[Trading Service] Bridge is healthy and ready');
-        return true;
-      }
-      
-      // Try to get more detailed error information
-      try {
-        const response = await fetch(`${BRIDGE_URL}/ping`);
-        const data = await response.json();
-        if (data.error) {
-          lastError = data.error;
-          console.error(`[Trading Service] Bridge reported error: ${lastError}`);
-        } else {
-          console.log(`[Trading Service] Bridge health check returned: ready=${data.ready}, status=${data.status}`);
-        }
-      } catch (pingError) {
-        console.error(`[Trading Service] Couldn't get detailed bridge status:`, pingError);
-      }
-    } catch (error) {
-      lastError = error;
-      console.error(`[Trading Service] Bridge health check error:`, error);
-    }
-    
-    if (i === maxRetries - 1) {
-      // On last attempt, try to restart the bridge via a special endpoint
-      try {
-        console.log('[Trading Service] Last attempt, trying to trigger bridge restart...');
-        await fetch(`${BRIDGE_URL}/disconnect`, { method: 'POST' }).catch(() => {});
-      } catch (error) {
-        // Ignore errors here, just an attempt
-      }
-    }
-    
-    // Exponential backoff with jitter
-    const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, i), 10000) + Math.random() * 1000;
-    console.log(`[Trading Service] Bridge not ready, retrying in ${Math.round(delay)}ms... (attempt ${i + 1}/${maxRetries})`);
-    await wait(delay);
-  }
-  
-  console.error('[Trading Service] Bridge connection failed after maximum retries');
-  throw new Error(`Python bridge service is not available after maximum retries. Last error: ${lastError || 'Unknown'}`);
-}
-
 export class TradingService {
   private isLoggedIn = false;
   private lastLoginTime = 0;
@@ -115,13 +65,15 @@ export class TradingService {
   private async ensureLoggedIn(): Promise<void> {
     const currentTime = Date.now();
     if (this.isLoggedIn && (currentTime - this.lastLoginTime < this.sessionTimeout)) {
-      console.log('[Trading Service] Already logged in with valid session');
       return;
     }
 
     // Enhanced bridge connection handling
     try {
-      await waitForBridge();
+      const bridgeReady = await checkBridgeHealth();
+      if (!bridgeReady) {
+        throw new Error('Python bridge is not ready');
+      }
       console.log('[Trading Service] Bridge is available, proceeding with login');
     } catch (error) {
       console.error('[Trading Service] Bridge connection failed:', error);
@@ -291,7 +243,11 @@ export class TradingService {
       throw error;
     }
   }
+
+  get isConnected(): boolean {
+    return this.isLoggedIn;
+  }
 }
 
 // Export a singleton instance
-export const tradingService = new TradingService();
+export const xtbService = new TradingService();
