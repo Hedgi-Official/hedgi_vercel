@@ -2,7 +2,6 @@ import os
 import json
 import logging
 import sys
-import time
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,31 +54,6 @@ async def ping():
         "ready": is_ready
     }
 
-@app.get("/health")
-async def health_check():
-    """Enhanced health check endpoint with detailed status information"""
-    global is_ready
-    try:
-        status = {
-            "message": "pong",
-            "status": "XTB Bridge is running",
-            "ready": is_ready,
-            "timestamp": time.time(),
-            "pid": os.getpid(),
-            "uptime": time.time() - app.state.start_time if hasattr(app.state, 'start_time') else 0
-        }
-        logger.info(f"Health check called, status: {status}")
-        return status
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {
-            "message": "error",
-            "status": "XTB Bridge error",
-            "ready": False,
-            "error": str(e),
-            "timestamp": time.time()
-        }
-
 class LoginRequest(BaseModel):
     userId: str
     password: str
@@ -98,6 +72,9 @@ async def initialize_bridge():
     """Initialize the bridge asynchronously"""
     global is_ready
     try:
+        # Log Python and dependencies versions
+        import sys
+        logger.info(f"Python version: {sys.version}")
         logger.info("Bridge initialization starting...")
 
         # Any additional initialization can go here
@@ -111,9 +88,7 @@ async def initialize_bridge():
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler to initialize the bridge"""
-    app.state.start_time = time.time()
     await initialize_bridge()
-    logger.info("Bridge startup complete")
 
 @app.post("/connect")
 async def connect(request: LoginRequest):
@@ -226,8 +201,7 @@ if __name__ == "__main__":
             app,
             host="0.0.0.0",  # Explicitly bind to all interfaces
             port=port,
-            log_level="info",
-            access_log=True  # Enable access logging
+            log_level="info"
         )
     except Exception as e:
         logger.exception(f"Failed to start XTB Bridge: {e}")
