@@ -38,6 +38,24 @@ const tradeTransInfoSchema = z.object({
 });
 
 const BRIDGE_URL = 'http://localhost:8000';
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+async function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function checkBridgeHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BRIDGE_URL}/ping`);
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.message === 'pong';
+  } catch (error) {
+    console.error('[Trading Service] Health check failed:', error);
+    return false;
+  }
+}
 
 export class TradingService {
   private isLoggedIn = false;
@@ -49,6 +67,21 @@ export class TradingService {
     if (this.isLoggedIn && (currentTime - this.lastLoginTime < this.sessionTimeout)) {
       console.log('[Trading Service] Already logged in with valid session');
       return;
+    }
+
+    // Wait for bridge to be healthy
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      const isHealthy = await checkBridgeHealth();
+      if (isHealthy) {
+        console.log('[Trading Service] Bridge is healthy, proceeding with login');
+        break;
+      }
+      if (i < MAX_RETRIES - 1) {
+        console.log(`[Trading Service] Bridge not ready, retrying in ${RETRY_DELAY}ms...`);
+        await wait(RETRY_DELAY);
+      } else {
+        throw new Error('Python bridge service is not available');
+      }
     }
 
     console.log('[Trading Service] Logging in...');
