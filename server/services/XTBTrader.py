@@ -24,9 +24,9 @@ class XTBTrader:
             login_response = self.client.execute({
                 "command": "login",
                 "arguments": {
-                    "userId": user_id,
+                    "userId": int(user_id),  # Convert to integer as XTB expects numeric userId
                     "password": password,
-                    "appName": "Hedgi"
+                    "appName": "Hedgi"  # Keep consistent app name
                 }
             })
 

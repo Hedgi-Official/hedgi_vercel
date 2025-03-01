@@ -67,7 +67,12 @@ async def connect(request: LoginRequest):
     try:
         logger.info("Attempting to connect to XTB API...")
         xtb_trader = XTBTrader()
-        response = xtb_trader.connect(request.userId, request.password)
+
+        # Ensure userId is a string when passed to connect
+        response = xtb_trader.connect(
+            str(request.userId),  # Convert to string first to handle both string/int inputs
+            request.password
+        )
 
         if not response["success"]:
             logger.error(f"Login failed: {response.get('error')}")
