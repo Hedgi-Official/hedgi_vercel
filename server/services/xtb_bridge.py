@@ -1,98 +1,45 @@
 import os
-import sys
+import json
 import logging
-import traceback
+import sys
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-# Configure logging - Use more verbose settings
+# Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more detailed logs
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)  # Ensure logs go to stdout
-    ]
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("xtb_bridge")
-logger.info("XTB Bridge starting up...")
+logger = logging.getLogger(__name__)
 
-# Log Python environment info
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Current working directory: {os.getcwd()}")
-logger.info(f"Current script directory: {Path(__file__).resolve().parent}")
+# Add the current directory to Python path to find the modules
+current_dir = str(Path(__file__).resolve().parent)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+    logger.info(f"Added {current_dir} to Python path")
 
-# Directly use the assets path without modifying sys.path first
-assets_path = Path(__file__).resolve().parent.parent.parent / 'attached_assets'
-logger.info(f"Attached assets path: {assets_path}")
-
-# Verify that the XTBTrader.py file exists in the assets path
-xtb_trader_path = assets_path / 'XTBTrader.py'
-logger.info(f"XTBTrader.py exists: {xtb_trader_path.exists()}")
-
-# Add attached_assets to sys.path first, before any other potential paths
-if assets_path.exists():
-    sys.path.insert(0, str(assets_path))
-    logger.info(f"Added {assets_path} to sys.path")
-else:
-    logger.error(f"Attached assets directory does not exist: {assets_path}")
-
-# Log all directories in sys.path for debugging
-logger.info(f"sys.path: {sys.path}")
-
-# Now try to import XTBTrader
 try:
-    # Import directly from the module in attached_assets
-    logger.info("Attempting to import XTBTrader...")
-    from XTBTrader import XTBTrader
-    logger.info("Successfully imported XTBTrader")
-
-    # Log the imported module details
-    logger.info(f"XTBTrader module located at: {XTBTrader.__file__ if hasattr(XTBTrader, '__file__') else 'Unknown'}")
-
+    # First try local import
+    try:
+        from XTBTrader import XTBTrader
+        logger.info("Successfully imported XTBTrader from local path")
+    except ImportError:
+        # Try from attached_assets directory
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))
+        logger.info(f"Added attached_assets to Python path: {str(Path(__file__).resolve().parent.parent.parent / 'attached_assets')}")
+        from XTBTrader import XTBTrader
+        logger.info("Successfully imported XTBTrader from attached_assets")
 except ImportError as e:
     logger.error(f"Failed to import XTBTrader: {e}")
-    logger.error(f"Import error traceback: {traceback.format_exc()}")
-
-    # List contents of the attached_assets directory
-    if assets_path.exists():
-        logger.error(f"Files in attached_assets: {os.listdir(str(assets_path))}")
-
-        # Read the content of XTBTrader.py if it exists
-        if xtb_trader_path.exists():
-            with open(xtb_trader_path, 'r') as f:
-                logger.info(f"First 50 chars of XTBTrader.py: {f.read(50)}...")
-
-    # Try to copy the file to the current directory as a fallback
-    try:
-        import shutil
-        current_dir = Path(__file__).resolve().parent
-        if xtb_trader_path.exists():
-            dest_path = current_dir / 'XTBTrader.py'
-            shutil.copy(str(xtb_trader_path), str(dest_path))
-            logger.info(f"Copied XTBTrader.py to {dest_path}")
-
-            # Also copy xAPIConnector.py
-            connector_path = assets_path / 'xAPIConnector.py'
-            if connector_path.exists():
-                shutil.copy(str(connector_path), str(current_dir / 'xAPIConnector.py'))
-                logger.info(f"Copied xAPIConnector.py to {current_dir}")
-
-            # Now try to import it from the current directory
-            sys.path.insert(0, str(current_dir))
-            from XTBTrader import XTBTrader
-            logger.info("Successfully imported XTBTrader after copying to current directory")
-        else:
-            logger.error("XTBTrader.py doesn't exist, cannot copy")
-    except Exception as copy_error:
-        logger.error(f"Failed to copy and import as fallback: {copy_error}")
-        logger.error(traceback.format_exc())
-        raise RuntimeError(f"Could not import XTBTrader: {e}") from e
-
+    logger.error(f"Python path: {sys.path}")
+    # List all available modules in current directory
+    logger.error(f"Files in current directory: {os.listdir(current_dir)}")
+    logger.error(f"Files in attached_assets: {os.listdir(str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))}")
+    raise
 
 # Create FastAPI app with CORS support
 app = FastAPI(title="XTB Trading Bridge")
