@@ -2,19 +2,19 @@ import os
 import json
 import logging
 from sys import path
-from os.path import dirname, join
+from os.path import dirname, join, abspath
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
 # Add the current directory to Python path to find the modules
-current_dir = dirname(__file__)
+current_dir = dirname(abspath(__file__))
 path.append(current_dir)
 
 from XTBTrader import XTBTrader
 
-# Enhanced logging setup
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -34,6 +34,11 @@ app.add_middleware(
 
 # Global trader instance
 xtb_trader = None
+
+@app.get("/ping")
+async def ping():
+    logger.info("Ping endpoint called")
+    return {"message": "pong", "status": "XTB Bridge is running"}
 
 class LoginRequest(BaseModel):
     userId: str
