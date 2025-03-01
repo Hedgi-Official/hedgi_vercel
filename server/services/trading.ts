@@ -1,5 +1,3 @@
-import { z } from "zod";
-import fetch from 'node-fetch';
 
 interface XTBResponse {
   success: boolean;
@@ -8,6 +6,7 @@ interface XTBResponse {
   orderId?: number;
   message?: string;
   debug_info?: any;
+  returnData?: any;
 }
 
 const BRIDGE_URL = 'http://localhost:8003'; // Bridge running on port 8003
@@ -186,11 +185,12 @@ class TradingService {
       throw error;
     }
   }
+  
   get isConnected(): boolean {
     return this.isLoggedIn;
   }
 }
 
-// Export a singleton instance
+// Export as proper named exports
 export const tradingService = new TradingService();
 export const xtbService = new TradingService();
