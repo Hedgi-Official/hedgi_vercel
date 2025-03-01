@@ -1,94 +1,35 @@
+import json
+import logging
+import time
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import logging
-import sys
-import os
-import traceback
-from typing import Optional, Dict, Any, Union
-import json
-import time
+import uvicorn
 from websocket import create_connection
-from websocket import create_connection
-# Not importing websocket_client as it's not needed with create_connection
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
+logger = logging.getLogger(__name__)
 
-class ContextLogger:
-    def __init__(self, logger):
-        self.logger = logger
-
-    def _format_context(self, context):
-        if not context:
-            return ""
-        return " | " + " | ".join(f"{k}={v}" for k, v in context.items())
-
-    def info(self, msg, context=None, *args, **kwargs):
-        formatted_msg = msg + self._format_context(context)
-        return self.logger.info(formatted_msg, *args, **kwargs)
-
-    def error(self, msg, context=None, *args, **kwargs):
-        formatted_msg = msg + self._format_context(context)
-        return self.logger.error(formatted_msg, *args, **kwargs)
-
-    def warning(self, msg, context=None, *args, **kwargs):
-        formatted_msg = msg + self._format_context(context)
-        return self.logger.warning(formatted_msg, *args, **kwargs)
-
-    def debug(self, msg, context=None, *args, **kwargs):
-        formatted_msg = msg + self._format_context(context)
-        return self.logger.debug(formatted_msg, *args, **kwargs)
-
-logger = ContextLogger(logging.getLogger(__name__))
-
-# Make sure we can find XTBTrader
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
-
-# Import the XTBTrader
+# Import XTBTrader class
 try:
     from XTBTrader import XTBTrader
     logger.info("Successfully imported XTBTrader")
-except ImportError as e:
-    logger.error(f"Failed to import XTBTrader: {e}")
-    # Try to debug import
-    logger.error(f"Current directory: {current_dir}")
-    logger.error(f"Python path: {sys.path}")
-    logger.error(f"Files in directory: {os.listdir(current_dir)}")
-    raise
+except ImportError:
+    try:
+        from .XTBTrader import XTBTrader
+        logger.info("Successfully imported XTBTrader from relative path")
+    except ImportError:
+        logger.error("Failed to import XTBTrader")
+        raise ImportError("XTBTrader module not found")
 
-# Global variables
-trader = None
-is_ready = False
-last_error = None
-
-# API models
-class LoginRequest(BaseModel):
-    userId: str
-    password: str
-
-class TradeRequest(BaseModel):
-    symbol: str
-    volume: float
-    command: int  # 0 for BUY, 1 for SELL
-    orderType: int  # 0 for OPEN, 2 for CLOSE
-    order: Optional[int] = None  # For closing trades
-
-class StatusRequest(BaseModel):
-    orderId: int
-
-# Setup FastAPI app
-app = FastAPI(title="XTB API Bridge", description="Bridge service for XTB API")
+# Create FastAPI app
+app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
@@ -99,217 +40,234 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/", response_class=JSONResponse)
-async def root():
-    """Check if the service is ready with detailed status"""
-    global trader, is_ready, last_error
+# Initialize XTBTrader
+trader = None
+is_ready = False
+last_error = None
 
-    context = {
-        "is_ready": is_ready,
-        "trader_initialized": trader is not None
+# Define models
+class ConnectRequest(BaseModel):
+    userId: str
+    password: str
+
+class TradeRequest(BaseModel):
+    symbol: str
+    volume: float
+    is_buy: bool
+
+class CloseTradeRequest(BaseModel):
+    symbol: str
+    volume: float
+    order_id: int
+    is_buy: bool
+
+class StatusRequest(BaseModel):
+    orderId: int
+
+@app.get("/ping", response_class=JSONResponse)
+async def ping():
+    """Health check endpoint"""
+    global is_ready, last_error
+    return {
+        "message": "pong",
+        "ready": is_ready,
+        "error": last_error
     }
 
-    if is_ready:
-        logger.info("Service is ready", context=context)
-        return {"status": "ready", "message": "XTB bridge service is ready", "details": context}
-    else:
-        error_message = last_error or "Service not yet initialized"
-        logger.warning("Service not ready", context={"error": error_message, **context})
-        return {"status": "not_ready", "message": error_message, "details": context}
-
 @app.post("/connect", response_class=JSONResponse)
-async def connect(request: LoginRequest):
-    """Connect to XTB API with detailed logging"""
+async def connect(request: ConnectRequest):
+    """Connect to XTB API"""
     global trader, is_ready, last_error
 
-    context = {"userId": request.userId}
-    logger.info("Connection request received", context=context)
+    logger.info(f"Connect request received for user: {request.userId}")
 
     try:
-        # Initialize trader if not already initialized
-        if trader is None:
-            trader = XTBTrader()
-            logger.info("XTBTrader instance created", context=context)
-
+        trader = XTBTrader()
         result = trader.connect(request.userId, request.password)
 
-        context.update({
-            "success": result.get("success"),
-            "error": result.get("error"),
-            "sessionId": result.get("sessionId")
-        })
-
         if not result.get("success"):
+            error_msg = result.get("error") or "Unknown connection error"
+            logger.error(f"Connection failed: {error_msg}")
             is_ready = False
-            last_error = result.get("error") or "Unknown connection error"
-            logger.error("Connection failed", context=context)
+            last_error = error_msg
             return JSONResponse(status_code=400, content={
-                "detail": last_error,
-                "status": "error",
-                "debug_info": result
+                "success": False,
+                "error": error_msg
             })
 
         is_ready = True
         last_error = None
-        logger.info("Connection successful", context=context)
-        return result
+        logger.info("Connection successful")
+        return JSONResponse(status_code=200, content={
+            "success": True,
+            "sessionId": result.get("sessionId")
+        })
 
     except Exception as e:
+        error_msg = f"Unexpected error during connection: {str(e)}"
+        logger.error(error_msg)
         is_ready = False
-        last_error = str(e)
-        error_msg = f"Connection error: {str(e)}"
-        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc()})
+        last_error = error_msg
         return JSONResponse(status_code=500, content={
-            "detail": error_msg,
-            "status": "error",
-            "debug_info": {"error": str(e), "traceback": traceback.format_exc()}
+            "success": False,
+            "error": error_msg
         })
 
 @app.post("/trade", response_class=JSONResponse)
 async def trade(request: TradeRequest):
-    """Execute a trade with detailed logging"""
+    """Open a new trade"""
     global trader, is_ready, last_error
 
-    context = {
-        "symbol": request.symbol,
-        "volume": request.volume,
-        "command": request.command,
-        "orderType": request.orderType,
-        "order": request.order
-    }
-
-    logger.info("Trade request received", context=context)
+    logger.info(f"Trade request received: {request.dict()}")
 
     if not is_ready or trader is None:
         error_msg = "XTB bridge service is not ready"
-        logger.error(error_msg, context=context)
-        return JSONResponse(status_code=400, content={"detail": error_msg})
-
-    try:
-        # Determine if it's an open or close trade
-        if request.orderType == 0:  # OPEN trade
-            is_buy = request.command == 0  # 0 is BUY, 1 is SELL
-            logger.info("Opening trade", context={**context, "is_buy": is_buy})
-            result = trader.open_trade(request.symbol, request.volume, is_buy)
-        elif request.orderType == 2:  # CLOSE trade
-            if request.order is None:
-                error_msg = "Order ID is required for closing trades"
-                logger.error(error_msg, context=context)
-                return JSONResponse(status_code=400, content={"detail": error_msg})
-
-            # For closing, command is opposite (if opened with BUY, close with SELL)
-            is_buy = request.command == 0  # 0 is BUY, 1 is SELL
-            logger.info("Closing trade", context={**context, "is_buy": is_buy})
-            result = trader.close_trade(request.symbol, request.volume, request.order, is_buy)
-        else:
-            error_msg = f"Unsupported order type: {request.orderType}"
-            logger.error(error_msg, context=context)
-            return JSONResponse(status_code=400, content={"detail": error_msg})
-
-        context.update({
-            "success": result.get("success"),
-            "error": result.get("error"),
-            "orderId": result.get("orderId")
+        logger.error(f"{error_msg}")
+        return JSONResponse(status_code=400, content={
+            "success": False,
+            "error": error_msg
         })
 
+    try:
+        result = trader.open_trade(request.symbol, request.volume, request.is_buy)
+
         if not result.get("success"):
-            logger.error("Trade failed", context=context)
+            error_msg = result.get("error") or "Unknown trade error"
+            logger.error(f"Trade failed: {error_msg}")
             return JSONResponse(status_code=400, content={
-                "detail": result.get("error") or "Unknown trade error",
-                "status": "error",
-                "debug_info": result
+                "success": False,
+                "error": error_msg
             })
 
-        logger.info("Trade successful", context=context)
-        return result
+        logger.info(f"Trade successful: {result}")
+        return JSONResponse(status_code=200, content=result)
 
     except Exception as e:
-        error_msg = f"Trade error: {str(e)}"
-        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc(), **context})
+        error_msg = f"Unexpected error during trade: {str(e)}"
+        logger.error(error_msg)
         return JSONResponse(status_code=500, content={
-            "detail": error_msg,
-            "status": "error",
-            "debug_info": {"error": str(e), "traceback": traceback.format_exc()}
+            "success": False,
+            "error": error_msg
+        })
+
+@app.post("/close_trade", response_class=JSONResponse)
+async def close_trade(request: CloseTradeRequest):
+    """Close an existing trade"""
+    global trader, is_ready, last_error
+
+    logger.info(f"Close trade request received: {request.dict()}")
+
+    if not is_ready or trader is None:
+        error_msg = "XTB bridge service is not ready"
+        logger.error(f"{error_msg}")
+        return JSONResponse(status_code=400, content={
+            "success": False,
+            "error": error_msg
+        })
+
+    try:
+        result = trader.close_trade(request.symbol, request.volume, request.order_id, request.is_buy)
+
+        if not result.get("success"):
+            error_msg = result.get("error") or "Unknown close trade error"
+            logger.error(f"Close trade failed: {error_msg}")
+            return JSONResponse(status_code=400, content={
+                "success": False,
+                "error": error_msg
+            })
+
+        logger.info(f"Close trade successful: {result}")
+        return JSONResponse(status_code=200, content=result)
+
+    except Exception as e:
+        error_msg = f"Unexpected error during close trade: {str(e)}"
+        logger.error(error_msg)
+        return JSONResponse(status_code=500, content={
+            "success": False,
+            "error": error_msg
         })
 
 @app.post("/status", response_class=JSONResponse)
 async def check_status(request: StatusRequest):
-    """Check trade status with detailed logging"""
+    """Check trade status"""
     global trader, is_ready, last_error
 
-    context = {"orderId": request.orderId}
-    logger.info("Status check request received", context=context)
+    logger.info(f"Status check request received for order: {request.orderId}")
 
     if not is_ready or trader is None:
         error_msg = "XTB bridge service is not ready"
-        logger.error(error_msg, context=context)
-        return JSONResponse(status_code=400, content={"detail": error_msg})
+        logger.error(f"{error_msg}")
+        return JSONResponse(status_code=400, content={
+            "success": False,
+            "error": error_msg
+        })
 
     try:
-        logger.info("Checking trade status", context=context)
         result = trader.check_trade_status(request.orderId)
 
-        context.update({
-            "success": result.get("success"),
-            "error": result.get("error"),
-            "status": result.get("status")
-        })
-
         if not result.get("success"):
-            logger.error("Status check failed", context=context)
+            error_msg = result.get("error") or "Unknown status check error"
+            logger.error(f"Status check failed: {error_msg}")
             return JSONResponse(status_code=400, content={
-                "detail": result.get("error") or "Unknown status check error",
-                "status": "error",
-                "debug_info": result
+                "success": False,
+                "error": error_msg
             })
 
-        logger.info("Status check successful", context=context)
-        return result
+        logger.info(f"Status check successful: {result}")
+        return JSONResponse(status_code=200, content=result)
 
     except Exception as e:
-        error_msg = f"Status check error: {str(e)}"
-        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc()})
+        error_msg = f"Unexpected error during status check: {str(e)}"
+        logger.error(error_msg)
         return JSONResponse(status_code=500, content={
-            "detail": error_msg,
-            "status": "error",
-            "debug_info": {"error": str(e), "traceback": traceback.format_exc()}
+            "success": False,
+            "error": error_msg
         })
 
-@app.post("/disconnect", response_class=JSONResponse)
+@app.get("/disconnect", response_class=JSONResponse)
 async def disconnect():
-    """Disconnect from XTB API with detailed logging"""
+    """Disconnect from XTB API"""
     global trader, is_ready, last_error
 
-    try:
-        if trader is not None:
-            logger.info("Disconnecting from XTB API")
-            result = trader.disconnect()
+    logger.info("Disconnect request received")
 
-            context = {
-                'success': result.get('success'),
-                'error': result.get('error')
-            }
-
-            if not result.get('success'):
-                logger.error("Disconnect failed", context=context)
-            else:
-                logger.info("Disconnect successful", context=context)
-                trader = None
-                is_ready = False
-
-            return result
-        else:
-            logger.info("No active connection to disconnect")
-            return {"success": True, "message": "No active connection"}
-    except Exception as e:
-        error_msg = f"Disconnect error: {str(e)}"
-        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc()})
-        return JSONResponse(status_code=500, content={
-            "detail": error_msg,
-            "status": "error",
-            "debug_info": {"error": str(e), "traceback": traceback.format_exc()}
+    if not is_ready or trader is None:
+        logger.info("Not connected, no need to disconnect")
+        return JSONResponse(status_code=200, content={
+            "success": True,
+            "message": "Not connected, no need to disconnect"
         })
 
+    try:
+        result = trader.disconnect()
+        is_ready = False
+
+        if not result.get("success"):
+            error_msg = result.get("error") or "Unknown disconnect error"
+            logger.error(f"Disconnect failed: {error_msg}")
+            last_error = error_msg
+            return JSONResponse(status_code=400, content={
+                "success": False,
+                "error": error_msg
+            })
+
+        logger.info("Disconnect successful")
+        return JSONResponse(status_code=200, content={
+            "success": True
+        })
+
+    except Exception as e:
+        error_msg = f"Unexpected error during disconnect: {str(e)}"
+        logger.error(error_msg)
+        last_error = error_msg
+        return JSONResponse(status_code=500, content={
+            "success": False,
+            "error": error_msg
+        })
+
+# Run the FastAPI app when this script is executed directly
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=8003)
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}")
