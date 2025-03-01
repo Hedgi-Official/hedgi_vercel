@@ -24,8 +24,8 @@ const pythonBridge = spawn('python3', [
         ...process.env,
         XTB_BRIDGE_PORT: '8001',  // Changed to port 8001
         PYTHONUNBUFFERED: '1',  // Ensure Python output isn't buffered
-        XTB_USER_ID: process.env.XTB_USER_ID || '17535100',
-        XTB_PASSWORD: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
+        XTB_USER_ID: '17535100',
+        XTB_PASSWORD: 'GuiZarHoh2711!'
     }
 });
 
