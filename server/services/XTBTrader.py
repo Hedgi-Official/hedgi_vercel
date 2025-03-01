@@ -20,12 +20,12 @@ class XTBTrader:
             logger.info("Connecting to XTB API...")
             self.client = APIClient()
 
-            # Use the correct credentials
+            # Execute login command
             login_response = self.client.execute({
                 "command": "login",
                 "arguments": {
-                    "userId": "17535100",
-                    "password": "GuiZarHoh2711!",
+                    "userId": user_id,
+                    "password": password,
                     "appName": "Hedgi"
                 }
             })
@@ -42,14 +42,15 @@ class XTBTrader:
             return {"success": True, "sessionId": self.stream_session_id}
 
         except Exception as e:
-            error_msg = f"Connection error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"Connection error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
+            logger.exception(error_msg) #Use logger.exception to include traceback
             return {"success": False, "error": error_msg}
 
     def open_trade(self, symbol: str, volume: float, is_buy: bool) -> dict:
         """Open a new trade position"""
         try:
             if not self.client:
+                logger.error("Not connected to XTB API")
                 return {"success": False, "error": "Not connected to XTB API"}
 
             # Prepare trade transaction info
@@ -72,7 +73,7 @@ class XTBTrader:
             })
 
             if not response.get('status'):
-                error_msg = f"Trade failed: {response.get('errorCode')}"
+                error_msg = f"Trade failed: {response.get('errorCode')} - {response.get('errorDescr', 'Unknown error')}" #Added error description
                 logger.error(error_msg)
                 return {"success": False, "error": error_msg}
 
@@ -83,14 +84,15 @@ class XTBTrader:
             return {"success": True, "orderId": order_number}
 
         except Exception as e:
-            error_msg = f"Trade error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"Trade error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
+            logger.exception(error_msg) #Use logger.exception to include traceback
             return {"success": False, "error": error_msg}
 
     def close_trade(self, symbol: str, volume: float, order_id: int, is_buy: bool) -> dict:
         """Close an existing trade position"""
         try:
             if not self.client:
+                logger.error("Not connected to XTB API")
                 return {"success": False, "error": "Not connected to XTB API"}
 
             # Prepare trade transaction info for closing
@@ -114,7 +116,7 @@ class XTBTrader:
             })
 
             if not response.get('status'):
-                error_msg = f"Close trade failed: {response.get('errorCode')}"
+                error_msg = f"Close trade failed: {response.get('errorCode')} - {response.get('errorDescr', 'Unknown error')}" #Added error description
                 logger.error(error_msg)
                 return {"success": False, "error": error_msg}
 
@@ -125,14 +127,15 @@ class XTBTrader:
             return {"success": True, "orderId": close_order_number}
 
         except Exception as e:
-            error_msg = f"Close trade error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"Close trade error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
+            logger.exception(error_msg) #Use logger.exception to include traceback
             return {"success": False, "error": error_msg}
 
     def check_trade_status(self, order_id: int) -> dict:
         """Check the status of a trade"""
         try:
             if not self.client:
+                logger.error("Not connected to XTB API")
                 return {"success": False, "error": "Not connected to XTB API"}
 
             logger.info(f"Checking trade status for order: {order_id}")
@@ -146,7 +149,7 @@ class XTBTrader:
             })
 
             if not response.get('status'):
-                error_msg = f"Status check failed: {response.get('errorCode')}"
+                error_msg = f"Status check failed: {response.get('errorCode')} - {response.get('errorDescr', 'Unknown error')}" #Added error description
                 logger.error(error_msg)
                 return {"success": False, "error": error_msg}
 
@@ -154,8 +157,8 @@ class XTBTrader:
             return {"success": True, "status": response['returnData']}
 
         except Exception as e:
-            error_msg = f"Status check error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"Status check error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
+            logger.exception(error_msg) #Use logger.exception to include traceback
             return {"success": False, "error": error_msg}
 
     def disconnect(self) -> dict:
@@ -171,6 +174,6 @@ class XTBTrader:
             return {"success": True}
 
         except Exception as e:
-            error_msg = f"Disconnect error: {str(e)}"
-            logger.error(error_msg)
+            error_msg = f"Disconnect error: {str(e)} - Traceback: {e.__traceback__}" #Added detailed traceback
+            logger.exception(error_msg) #Use logger.exception to include traceback
             return {"success": False, "error": error_msg}

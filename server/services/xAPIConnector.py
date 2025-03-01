@@ -65,7 +65,7 @@ class JsonSocket(object):
     def connect(self):
         for i in range(API_MAX_CONN_TRIES):
             try:
-                self.socket.connect((self.address, self.port))
+                self.socket.connect( (self.address, self.port) )
             except socket.error as msg:
                 logger.error("SockThread Error: %s" % msg)
                 time.sleep(0.25)
@@ -165,7 +165,7 @@ class APIClient(JsonSocket):
 
     def disconnect(self):
         self.close()
-        
+
     def commandExecute(self,commandName, arguments=None):
         return self.execute(baseCommand(commandName, arguments))
 
