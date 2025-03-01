@@ -23,10 +23,22 @@ if current_dir not in sys.path:
     logger.info(f"Added {current_dir} to Python path")
 
 try:
-    from XTBTrader import XTBTrader
-    logger.info("Successfully imported XTBTrader")
+    # First try local import
+    try:
+        from XTBTrader import XTBTrader
+        logger.info("Successfully imported XTBTrader from local path")
+    except ImportError:
+        # Try from attached_assets directory
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))
+        logger.info(f"Added attached_assets to Python path: {str(Path(__file__).resolve().parent.parent.parent / 'attached_assets')}")
+        from XTBTrader import XTBTrader
+        logger.info("Successfully imported XTBTrader from attached_assets")
 except ImportError as e:
     logger.error(f"Failed to import XTBTrader: {e}")
+    logger.error(f"Python path: {sys.path}")
+    # List all available modules in current directory
+    logger.error(f"Files in current directory: {os.listdir(current_dir)}")
+    logger.error(f"Files in attached_assets: {os.listdir(str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))}")
     raise
 
 # Create FastAPI app with CORS support

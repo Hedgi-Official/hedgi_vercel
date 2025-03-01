@@ -59,16 +59,24 @@ async function checkBridgeHealth(): Promise<boolean> {
 
 async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean> {
   for (let i = 0; i < maxRetries; i++) {
-    const isHealthy = await checkBridgeHealth();
-    if (isHealthy) {
-      console.log('[Trading Service] Bridge is healthy');
-      return true;
+    try {
+      const isHealthy = await checkBridgeHealth();
+      if (isHealthy) {
+        console.log('[Trading Service] Bridge is healthy');
+        return true;
+      }
+      console.log(`[Trading Service] Bridge health check returned false`);
+    } catch (error) {
+      console.error(`[Trading Service] Bridge health check error:`, error);
     }
+    
     // Exponential backoff with jitter
     const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, i), 10000) + Math.random() * 1000;
     console.log(`[Trading Service] Bridge not ready, retrying in ${Math.round(delay)}ms... (attempt ${i + 1}/${maxRetries})`);
     await wait(delay);
   }
+  
+  console.error('[Trading Service] Bridge connection failed after maximum retries');
   throw new Error('Python bridge service is not available after maximum retries');
 }
 

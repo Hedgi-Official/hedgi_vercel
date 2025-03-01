@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const BRIDGE_URL = 'http://localhost:8000';
+const BRIDGE_URL = 'http://localhost:8001';
 
 class XTBService {
     private sessionId: string | null = null;
