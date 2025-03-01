@@ -32,6 +32,7 @@ class XTBService {
         volume: number;
         command: number; // 0 for BUY, 1 for SELL
         orderType: number; // 0 for OPEN, 2 for CLOSE
+        order?: number; // Required when closing trades
     }) {
         try {
             const response = await fetch(`${BRIDGE_URL}/trade`, {
