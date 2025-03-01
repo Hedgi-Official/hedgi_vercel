@@ -47,17 +47,67 @@ async function wait(ms: number) {
 
 async function checkBridgeHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${BRIDGE_URL}/ping`);
-    if (!response.ok) return false;
-    const data: any = await response.json();
-    return data.message === 'pong' && data.ready === true;
+    console.log(`[Trading Service] Checking bridge health at ${BRIDGE_URL}/health`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch(`${BRIDGE_URL}/health`, {
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`[Trading Service] Bridge health response:`, data);
+      return true;
+    } else {
+      console.error(`[Trading Service] Bridge health check failed with status ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[Trading Service] Bridge error response: ${errorText}`);
+      return false;
+    }
   } catch (error) {
-    console.error('[Trading Service] Health check failed:', error);
+    if (error.name === 'AbortError') {
+      console.error('[Trading Service] Bridge health check timed out after 5 seconds');
+    } else {
+      console.error('[Trading Service] Error checking bridge health:', error);
+    }
     return false;
   }
 }
 
 async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean> {
+  console.log(`[Trading Service] Starting bridge health check with ${maxRetries} max retries`);
+
+  // First, try to manually start the bridge if it's not running
+  try {
+    const { spawn } = require('child_process');
+    const path = require('path');
+
+    console.log('[Trading Service] Attempting to manually start Python bridge...');
+    const scriptPath = path.join(__dirname, 'xtb_bridge.py');
+    const assetsPath = path.join(process.cwd(), 'attached_assets');
+
+    // This is a fallback attempt to start the bridge
+    const pythonProcess = spawn('python', [scriptPath], {
+      env: {
+        ...process.env,
+        XTB_BRIDGE_PORT: "8001",
+        PYTHONPATH: assetsPath,
+        PYTHONUNBUFFERED: "1"
+      },
+      detached: true,
+      stdio: 'ignore'
+    });
+
+    pythonProcess.unref(); // Detach from parent process
+    console.log('[Trading Service] Attempted to start Python bridge as fallback');
+  } catch (startError) {
+    console.error('[Trading Service] Failed to manually start bridge:', startError);
+  }
+
+  // Now try to connect with retries
   for (let i = 0; i < maxRetries; i++) {
     try {
       const isHealthy = await checkBridgeHealth();
@@ -69,14 +119,20 @@ async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean>
     } catch (error) {
       console.error(`[Trading Service] Bridge health check error:`, error);
     }
-    
+
     // Exponential backoff with jitter
     const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, i), 10000) + Math.random() * 1000;
     console.log(`[Trading Service] Bridge not ready, retrying in ${Math.round(delay)}ms... (attempt ${i + 1}/${maxRetries})`);
     await wait(delay);
   }
-  
+
   console.error('[Trading Service] Bridge connection failed after maximum retries');
+  console.error('[Trading Service] This could be because:');
+  console.error('- The Python bridge service is not running');
+  console.error('- XTBTrader.py could not be imported properly');
+  console.error('- Port 8001 is not accessible');
+  console.error('- The Python bridge service crashed during startup');
+
   throw new Error('Python bridge service is not available after maximum retries');
 }
 
