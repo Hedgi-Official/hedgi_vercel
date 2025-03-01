@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from typing import Optional
+from .XTBTrader import XTBTrader
 
 # Configure logging
 logging.basicConfig(
@@ -22,24 +24,6 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
     logger.info(f"Added {current_dir} to Python path")
 
-try:
-    # First try local import
-    try:
-        from XTBTrader import XTBTrader
-        logger.info("Successfully imported XTBTrader from local path")
-    except ImportError:
-        # Try from attached_assets directory
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))
-        logger.info(f"Added attached_assets to Python path: {str(Path(__file__).resolve().parent.parent.parent / 'attached_assets')}")
-        from XTBTrader import XTBTrader
-        logger.info("Successfully imported XTBTrader from attached_assets")
-except ImportError as e:
-    logger.error(f"Failed to import XTBTrader: {e}")
-    logger.error(f"Python path: {sys.path}")
-    # List all available modules in current directory
-    logger.error(f"Files in current directory: {os.listdir(current_dir)}")
-    logger.error(f"Files in attached_assets: {os.listdir(str(Path(__file__).resolve().parent.parent.parent / 'attached_assets'))}")
-    raise
 
 # Create FastAPI app with CORS support
 app = FastAPI(title="XTB Trading Bridge")
@@ -66,6 +50,7 @@ async def ping():
         "ready": is_ready
     }
 
+# Define request models
 class LoginRequest(BaseModel):
     userId: str
     password: str
@@ -75,7 +60,7 @@ class TradeRequest(BaseModel):
     volume: float
     command: int  # 0 for BUY, 1 for SELL
     orderType: int  # 0 for OPEN, 2 for CLOSE
-    order: int | None = None  # Required for closing trades
+    order: Optional[int] = None  # Required for close operations
 
 class StatusRequest(BaseModel):
     orderId: int
@@ -104,26 +89,19 @@ async def startup_event():
 
 @app.post("/connect")
 async def connect(request: LoginRequest):
-    """Connect to XTB API with the provided credentials"""
-    global xtb_trader, is_ready
-
-    if not is_ready:
-        logger.error("Bridge not ready for connections")
-        raise HTTPException(status_code=503, detail="Bridge not ready")
+    """Connect to XTB API with user credentials"""
+    global xtb_trader
 
     try:
-        logger.info("Attempting to connect to XTB API...")
+        # Create new XTBTrader instance
         xtb_trader = XTBTrader()
 
-        # Ensure userId is a string when passed to connect
-        response = xtb_trader.connect(
-            str(request.userId),  # Convert to string first to handle both string/int inputs
-            request.password
-        )
+        logger.info(f"Connecting with user ID: {request.userId}")
+        response = xtb_trader.connect(request.userId, request.password)
 
         if not response["success"]:
-            logger.error(f"Login failed: {response.get('error')}")
-            raise HTTPException(status_code=401, detail=response["error"])
+            logger.error(f"Connection failed: {response.get('error')}")
+            raise HTTPException(status_code=401, detail=response.get("error", "Authentication failed"))
 
         logger.info("Successfully connected to XTB API")
         return response
@@ -135,11 +113,14 @@ async def connect(request: LoginRequest):
 @app.post("/trade")
 async def place_trade(request: TradeRequest):
     """Place a trade via XTB API"""
+    global xtb_trader
+
     if not xtb_trader:
+        logger.error("Not connected to XTB API")
         raise HTTPException(status_code=400, detail="Not connected to XTB API")
 
     try:
-        logger.info(f"Placing trade: {request.symbol}, volume: {request.volume}")
+        logger.info(f"Placing trade: {request.symbol}, volume: {request.volume}, type: {'BUY' if request.command == 0 else 'SELL'}, operation: {'OPEN' if request.orderType == 0 else 'CLOSE'}")
 
         if request.orderType == 0:  # OPEN
             response = xtb_trader.open_trade(
@@ -149,7 +130,9 @@ async def place_trade(request: TradeRequest):
             )
         else:  # CLOSE
             if request.order is None:
+                logger.error("Order ID required for closing trades")
                 raise HTTPException(status_code=400, detail="Order ID required for closing trades")
+
             response = xtb_trader.close_trade(
                 request.symbol,
                 request.volume,
@@ -158,6 +141,7 @@ async def place_trade(request: TradeRequest):
             )
 
         if not response["success"]:
+            logger.error(f"Trade operation failed: {response.get('error')}")
             raise HTTPException(status_code=400, detail=response["error"])
 
         logger.info(f"Trade response: {response}")
@@ -169,15 +153,20 @@ async def place_trade(request: TradeRequest):
 
 @app.post("/status")
 async def check_status(request: StatusRequest):
-    """Check trade status via XTB API"""
+    """Check the status of a trade"""
+    global xtb_trader
+
     if not xtb_trader:
+        logger.error("Not connected to XTB API")
         raise HTTPException(status_code=400, detail="Not connected to XTB API")
 
     try:
         logger.info(f"Checking status for order: {request.orderId}")
+
         response = xtb_trader.check_trade_status(request.orderId)
 
         if not response["success"]:
+            logger.error(f"Status check failed: {response.get('error')}")
             raise HTTPException(status_code=400, detail=response["error"])
 
         logger.info(f"Status response: {response}")
@@ -191,16 +180,22 @@ async def check_status(request: StatusRequest):
 async def disconnect():
     """Disconnect from XTB API"""
     global xtb_trader
-    if xtb_trader:
-        try:
-            logger.info("Disconnecting from XTB API")
-            response = xtb_trader.disconnect()
-            xtb_trader = None
-            return response
-        except Exception as e:
-            logger.exception(f"Disconnect error: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-    return {"success": True}
+
+    if not xtb_trader:
+        return {"success": True, "message": "Already disconnected"}
+
+    try:
+        logger.info("Disconnecting from XTB API")
+
+        response = xtb_trader.disconnect()
+        xtb_trader = None
+
+        logger.info("Disconnected from XTB API")
+        return response
+
+    except Exception as e:
+        logger.exception(f"Disconnect error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     try:
