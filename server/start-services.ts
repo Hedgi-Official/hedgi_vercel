@@ -1,151 +1,140 @@
-import { spawn } from 'child_process';
+
+import { spawn, ChildProcess } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { log } from './vite';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Enhanced error logging
-function logBridgeError(error: any) {
-    log(`Python bridge error: ${error.message}`);
-    if (error.stack) {
-        log(`Stack trace: ${error.stack}`);
-    }
+// Constants
+const BRIDGE_PORT = 8003;
+const MAX_RETRIES = 5;
+const RETRY_INTERVAL = 2000; // 2 seconds
+
+// Store service processes
+let xtbBridgeProcess: ChildProcess | null = null;
+
+// Helper function to check if a port is in use
+async function isPortInUse(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const net = require('net');
+    const tester = net.createServer()
+      .once('error', () => resolve(true))
+      .once('listening', () => {
+        tester.once('close', () => resolve(false));
+        tester.close();
+      })
+      .listen(port, '0.0.0.0');
+  });
 }
 
-// Get Python executable path (try python3 first, then python)
-function getPythonExecutable() {
-    try {
-        const python3Check = spawn('which', ['python3']);
-        let output = '';
-        python3Check.stdout.on('data', (data) => {
-            output += data.toString();
-        });
-
-        return new Promise((resolve) => {
-            python3Check.on('close', (code) => {
-                if (code === 0 && output.trim()) {
-                    resolve('python3');
-                } else {
-                    log('python3 not found, trying python...');
-                    resolve('python');
-                }
-            });
-        });
-    } catch (error) {
-        log('Error checking python3, defaulting to python');
-        return Promise.resolve('python');
-    }
+export async function startPythonServices() {
+  console.log('[Services] Starting Python services...');
+  
+  try {
+    // Ensure we have the necessary Python files
+    await ensurePythonFiles();
+    
+    // Start XTB bridge
+    await startXTBBridge();
+    
+    console.log('[Services] All Python services started');
+  } catch (error) {
+    console.error('[Services] Failed to start Python services:', error);
+    throw error;
+  }
 }
 
-// Start Python FastAPI bridge with improved error handling
-log('Starting Python bridge service...');
-
-// Use an async IIFE to allow await
-(async () => {
-    const pythonCommand = await getPythonExecutable();
-    log(`Using Python executable: ${pythonCommand}`);
-
-    const bridgePath = join(__dirname, 'services/xtb_bridge.py');
-    log(`Bridge script path: ${bridgePath}`);
-
-    // Check if the bridge file exists
+async function ensurePythonFiles() {
+  const sourceDir = path.join(__dirname, 'services');
+  const requiredFiles = ['XTBTrader.py', 'xtb_bridge.py', 'xAPIConnector.py'];
+  
+  for (const file of requiredFiles) {
+    const filePath = path.join(sourceDir, file);
     try {
-        const fs = await import('fs');
-        if (!fs.existsSync(bridgePath)) {
-            log(`ERROR: Bridge file not found at ${bridgePath}`);
-            // List files in the directory to help debug
-            const dir = join(__dirname, 'services');
-            log(`Contents of ${dir}:`);
-            if (fs.existsSync(dir)) {
-                fs.readdirSync(dir).forEach(file => {
-                    log(`- ${file}`);
-                });
-            } else {
-                log(`Services directory does not exist: ${dir}`);
-            }
-        }
+      await fs.access(filePath);
+      console.log(`[Services] Found ${file}`);
     } catch (error) {
-        log(`Error checking bridge file: ${error}`);
+      console.error(`[Services] Error: ${file} not found in ${sourceDir}`);
+      throw new Error(`Required Python file ${file} not found`);
     }
+  }
+}
 
-    const pythonBridge = spawn(pythonCommand, [bridgePath], {
-        stdio: ['inherit', 'pipe', 'pipe'],
-        env: {
-            ...process.env,
-            XTB_BRIDGE_PORT: '8003',  // Changed to port 8003
-            PYTHONUNBUFFERED: '1',  // Ensure Python output isn't buffered
-            PYTHONIOENCODING: 'utf-8',  // Set encoding explicitly
-            XTB_USER_ID: process.env.XTB_USER_ID || '17535100',
-            XTB_PASSWORD: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
-        }
-    });
+async function startXTBBridge() {
+  // Check if the port is already in use
+  const portInUse = await isPortInUse(BRIDGE_PORT);
+  
+  if (portInUse) {
+    console.log(`[Services] Port ${BRIDGE_PORT} is already in use. XTB bridge may already be running.`);
+    return;
+  }
+  
+  console.log('[Services] Starting XTB bridge service...');
+  
+  // Define the script path
+  const scriptPath = path.join(__dirname, 'services', 'xtb_bridge.py');
+  
+  // Start the process
+  xtbBridgeProcess = spawn('python', [scriptPath], {
+    stdio: 'pipe',
+    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+  });
+  
+  // Handle output
+  xtbBridgeProcess.stdout?.on('data', (data) => {
+    console.log(`[XTB Bridge] ${data.toString().trim()}`);
+  });
+  
+  xtbBridgeProcess.stderr?.on('data', (data) => {
+    console.error(`[XTB Bridge ERROR] ${data.toString().trim()}`);
+  });
+  
+  // Handle process exit
+  xtbBridgeProcess.on('exit', (code, signal) => {
+    console.log(`[Services] XTB bridge exited with code ${code} and signal ${signal}`);
+    xtbBridgeProcess = null;
+  });
+  
+  // Wait for the service to be ready
+  await waitForServiceReady(`http://localhost:${BRIDGE_PORT}`, MAX_RETRIES);
+  
+  console.log('[Services] XTB bridge service started and ready');
+}
 
-    // Capture and log stdout
-    pythonBridge.stdout.on('data', (data) => {
-        log(`Python bridge stdout: ${data}`);
-    });
+async function waitForServiceReady(url: string, maxRetries: number): Promise<void> {
+  console.log(`[Services] Waiting for service at ${url} to be ready...`);
+  
+  for (let retry = 0; retry < maxRetries; retry++) {
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      console.log(`[Services] Service status check (attempt ${retry + 1}/${maxRetries}):`, data);
+      
+      if (response.ok) {
+        console.log('[Services] Service is responding, considering it ready');
+        return;
+      }
+    } catch (error) {
+      console.log(`[Services] Service not ready yet (attempt ${retry + 1}/${maxRetries})`);
+    }
+    
+    // Wait before next retry
+    await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+  }
+  
+  throw new Error(`Service at ${url} is not available after ${maxRetries} retries`);
+}
 
-    // Capture and log stderr
-    pythonBridge.stderr.on('data', (data) => {
-        log(`Python bridge stderr: ${data}`);
-    });
-
-    pythonBridge.on('error', (error) => {
-        logBridgeError(error);
-        log('Failed to start Python bridge process');
-    });
-
-    // More sophisticated exit handling with automatic restart
-    let restartAttempts = 0;
-    const maxRestartAttempts = 3;
-
-    pythonBridge.on('exit', (code, signal) => {
-        if (code !== 0) {
-            log(`Python bridge exited with code ${code} and signal ${signal}`);
-
-            // Attempt to restart the bridge a few times before giving up
-            if (restartAttempts < maxRestartAttempts) {
-                restartAttempts++;
-                const delay = restartAttempts * 2000; // Progressive backoff
-                log(`Attempting to restart Python bridge in ${delay/1000} seconds... (Attempt ${restartAttempts}/${maxRestartAttempts})`);
-
-                setTimeout(() => {
-                    log('Restarting Python bridge...');
-                    const newBridge = spawn(pythonCommand, [bridgePath], {
-                        stdio: ['inherit', 'pipe', 'pipe'],
-                        env: pythonBridge.spawnargs[2].env
-                    });
-
-                    // Transfer all event handlers
-                    newBridge.stdout.on('data', data => log(`Python bridge stdout: ${data}`));
-                    newBridge.stderr.on('data', data => log(`Python bridge stderr: ${data}`));
-                    newBridge.on('error', logBridgeError);
-                    newBridge.on('exit', pythonBridge.listeners('exit')[0]);
-
-                    // Replace the global reference
-                    global.bridgeProcess = newBridge;
-                }, delay);
-            } else {
-                log(`Maximum restart attempts (${maxRestartAttempts}) reached. Giving up.`);
-                log('You may need to restart the application manually.');
-            }
-        }
-    });
-
-    // Make the bridge available globally
-    global.bridgeProcess = pythonBridge;
-})().catch(error => {
-    log(`Error starting Python bridge: ${error}`);
-});
-
+// Handle shutdown
 process.on('SIGINT', () => {
-    if (global.bridgeProcess) {
-        global.bridgeProcess.kill();
-    }
-    process.exit();
+  console.log('[Services] Shutting down Python services...');
+  
+  if (xtbBridgeProcess) {
+    xtbBridgeProcess.kill();
+    console.log('[Services] XTB bridge service stopped');
+  }
+  
+  process.exit(0);
 });
-
-// Export the process for cleanup
-export const bridgeProcess = global.bridgeProcess;

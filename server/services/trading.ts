@@ -1,7 +1,6 @@
 import { z } from "zod";
 import fetch from 'node-fetch';
 
-// Define interfaces for API interactions
 interface XTBResponse {
   success: boolean;
   error?: string;
@@ -27,7 +26,7 @@ async function checkBridgeHealth(): Promise<boolean> {
   }
 }
 
-export class TradingService {
+class TradingService {
   private isLoggedIn = false;
   private lastLoginTime = 0;
   private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes
@@ -82,28 +81,29 @@ export class TradingService {
 
   async openTrade(
     symbol: string,
+    price: number,
     volume: number,
     isBuy: boolean,
-  ): Promise<number> {
+    sl: number = 0,
+    tp: number = 0,
+    comment: string = ''
+  ) {
     try {
       await this.ensureLoggedIn();
-
-      // Adjust volume for USDBRL and USDMXN
       const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
-
-      console.log(`[Trading Service] Opening trade for ${symbol}`, {
-        volume: adjustedVolume,
-        isBuy
-      });
+      console.log(`[TradingService] Opening trade: ${symbol}, volume: ${adjustedVolume}, isBuy: ${isBuy}`);
 
       const response = await fetch(`${BRIDGE_URL}/trade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          symbol,
+          symbol: symbol,
           volume: adjustedVolume,
-          command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
-          orderType: 0  // 0 for OPEN
+          command: isBuy ? 0 : 1, // 0 for BUY, 1 for SELL
+          orderType: 0, // 0 for OPEN
+          sl,
+          tp,
+          comment
         })
       });
 
@@ -112,49 +112,41 @@ export class TradingService {
       }
 
       const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Trade response:', data);
-
-      if (!data.success) {
-        throw new Error(data.error || 'Trade failed');
-      }
-
-      if (!data.orderId) {
-        throw new Error('No order ID returned');
-      }
-
+      console.log(`[TradingService] Trade opened successfully, order ID: ${data.orderId}`);
       return data.orderId;
     } catch (error) {
-      console.error('[Trading Service] Open trade error:', error);
+      console.error('[TradingService] Failed to open trade:', error);
       throw error;
     }
   }
 
   async closeTrade(
     symbol: string,
-    positionId: number,
+    orderId: number,
+    price: number,
     volume: number,
     isBuy: boolean,
-  ): Promise<number> {
+    sl: number = 0,
+    tp: number = 0,
+    comment: string = ''
+  ) {
     try {
       await this.ensureLoggedIn();
-
       const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
-
-      console.log(`[Trading Service] Closing trade for ${symbol}`, {
-        positionId,
-        volume: adjustedVolume,
-        isBuy
-      });
+      console.log(`[TradingService] Closing trade: ${symbol}, order: ${orderId}, volume: ${adjustedVolume}`);
 
       const response = await fetch(`${BRIDGE_URL}/trade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          symbol,
+          symbol: symbol,
           volume: adjustedVolume,
-          command: isBuy ? 0 : 1,
-          orderType: 2,  // 2 for CLOSE
-          order: positionId
+          command: isBuy ? 1 : 0, // Opposite of opening command
+          orderType: 2, // 2 for CLOSE
+          order: orderId,
+          sl,
+          tp,
+          comment
         })
       });
 
@@ -163,28 +155,18 @@ export class TradingService {
       }
 
       const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Close trade response:', data);
-
-      if (!data.success) {
-        throw new Error(data.error || 'Close trade failed');
-      }
-
-      if (!data.orderId) {
-        throw new Error('No order ID returned');
-      }
-
+      console.log(`[TradingService] Trade closed successfully, closing order ID: ${data.orderId}`);
       return data.orderId;
     } catch (error) {
-      console.error('[Trading Service] Close trade error:', error);
+      console.error('[TradingService] Failed to close trade:', error);
       throw error;
     }
   }
 
-  async checkTradeStatus(orderId: number): Promise<XTBResponse> {
+  async checkTradeStatus(orderId: number) {
     try {
       await this.ensureLoggedIn();
-
-      console.log(`[Trading Service] Checking status for trade ${orderId}`);
+      console.log(`[TradingService] Checking status for order: ${orderId}`);
 
       const response = await fetch(`${BRIDGE_URL}/status`, {
         method: 'POST',
@@ -197,23 +179,18 @@ export class TradingService {
       }
 
       const data = await response.json() as XTBResponse;
-      console.log(`[Trading Service] Trade status response:`, data);
-
-      if (!data.success) {
-        throw new Error(data.error || 'Status check failed');
-      }
-
+      console.log(`[TradingService] Trade status received:`, data);
       return data;
     } catch (error) {
-      console.error(`[Trading Service] Status check error:`, error);
+      console.error('[TradingService] Failed to check trade status:', error);
       throw error;
     }
   }
-
   get isConnected(): boolean {
     return this.isLoggedIn;
   }
 }
 
 // Export a singleton instance
+export const tradingService = new TradingService();
 export const xtbService = new TradingService();
