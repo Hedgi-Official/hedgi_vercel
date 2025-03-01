@@ -37,80 +37,103 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const BRIDGE_URL = 'http://localhost:8001'; // Updated to use port 8001
-const MAX_RETRIES = 5; 
-const INITIAL_RETRY_DELAY = 1000; 
+const BRIDGE_URL = 'http://localhost:8001';
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 5000; // Increased to 5 seconds for initial delay
 
-async function wait(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// Helper function to wait for specified milliseconds
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Initial startup delay to allow Python bridge to initialize
+const STARTUP_DELAY = 10000; // 10 seconds startup delay
+
+// Wait for startup delay
+await wait(STARTUP_DELAY);
 
 async function checkBridgeHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${BRIDGE_URL}/ping`);
-    if (!response.ok) return false;
-    const data: any = await response.json();
-    return data.message === 'pong' && data.ready === true;
+    console.log('[Trading Service] Checking bridge health...');
+    const response = await fetch(`${BRIDGE_URL}/health`);
+
+    if (!response.ok) {
+      console.error(`[Trading Service] Health check failed with status ${response.status}`);
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (!data.ready) {
+      console.error('[Trading Service] Bridge reports not ready');
+      return false;
+    }
+
+    console.log('[Trading Service] Bridge health check passed');
+    return true;
   } catch (error) {
     console.error('[Trading Service] Health check failed:', error);
     return false;
   }
 }
 
-async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean> {
-  for (let i = 0; i < maxRetries; i++) {
+async function waitForBridge(): Promise<boolean> {
+  console.log('[Trading Service] Starting bridge connection checks...');
+
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    console.log(`[Trading Service] Connection attempt ${i + 1}/${MAX_RETRIES}`);
+
     const isHealthy = await checkBridgeHealth();
     if (isHealthy) {
-      console.log('[Trading Service] Bridge is healthy');
+      console.log('[Trading Service] Bridge is healthy and ready');
       return true;
     }
-    // Exponential backoff with jitter
-    const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, i), 10000) + Math.random() * 1000;
-    console.log(`[Trading Service] Bridge not ready, retrying in ${Math.round(delay)}ms... (attempt ${i + 1}/${maxRetries})`);
-    await wait(delay);
+
+    if (i < MAX_RETRIES - 1) {
+      const delay = INITIAL_RETRY_DELAY * (i + 1); // Linear backoff
+      console.log(`[Trading Service] Bridge not ready, waiting ${delay}ms before retry...`);
+      await wait(delay);
+    }
   }
+
   throw new Error('Python bridge service is not available after maximum retries');
 }
 
 export class TradingService {
   private isLoggedIn = false;
   private lastLoginTime = 0;
-  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
+  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes
+  private bridgeReady = false;
 
-  private async ensureLoggedIn(): Promise<void> {
+  private async ensureBridgeAndLogin(): Promise<void> {
+    if (!this.bridgeReady) {
+      console.log('[Trading Service] Ensuring bridge is ready...');
+      await waitForBridge();
+      this.bridgeReady = true;
+    }
+
     const currentTime = Date.now();
     if (this.isLoggedIn && (currentTime - this.lastLoginTime < this.sessionTimeout)) {
-      console.log('[Trading Service] Already logged in with valid session');
+      console.log('[Trading Service] Using existing valid session');
       return;
     }
 
-    // Enhanced bridge connection handling
-    try {
-      await waitForBridge();
-      console.log('[Trading Service] Bridge is available, proceeding with login');
-    } catch (error) {
-      console.error('[Trading Service] Bridge connection failed:', error);
-      throw error;
-    }
-
-    console.log('[Trading Service] Logging in...');
     await this.login();
   }
 
   private async login(): Promise<void> {
     try {
+      console.log('[Trading Service] Attempting login...');
       const response = await fetch(`${BRIDGE_URL}/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: '17535100',  // Use the exact user ID
-          password: 'GuiZarHoh2711!'  // Use the exact password
+          userId: '17535100',
+          password: 'GuiZarHoh2711!'
         })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Login failed');
       }
 
       const data = await response.json();
@@ -123,6 +146,7 @@ export class TradingService {
       console.log('[Trading Service] Successfully logged in');
     } catch (error) {
       console.error('[Trading Service] Login error:', error);
+      this.isLoggedIn = false;
       throw error;
     }
   }
@@ -138,7 +162,7 @@ export class TradingService {
     expiration: number = 0
   ): Promise<number> {
     try {
-      await this.ensureLoggedIn();
+      await this.ensureBridgeAndLogin();
 
       // Adjust volume for USDBRL and USDMXN
       const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
@@ -188,7 +212,7 @@ export class TradingService {
     expiration: number = 0
   ): Promise<number> {
     try {
-      await this.ensureLoggedIn();
+      await this.ensureBridgeAndLogin();
 
       // Adjust volume for USDBRL and USDMXN
       const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
@@ -229,7 +253,7 @@ export class TradingService {
 
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
-      await this.ensureLoggedIn();
+      await this.ensureBridgeAndLogin();
 
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
