@@ -20,13 +20,13 @@ class XTBTrader:
             logger.info("Connecting to XTB API...")
             self.client = APIClient()
 
-            # Use the working credentials
+            # Use the correct credentials
             login_response = self.client.execute({
                 "command": "login",
                 "arguments": {
-                    "userId": "17474971",
-                    "password": "xoh74681",
-                    "appName": "Hedgi"  # Added appName as it was in the working implementation
+                    "userId": "17535100",
+                    "password": "GuiZarHoh2711!",
+                    "appName": "Hedgi"
                 }
             })
 

@@ -1,11 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./vite";
 import { bridgeProcess } from "./start-services";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add test endpoint
+app.get('/ping', (req, res) => {
+  log('Ping endpoint called');
+  res.json({ message: 'pong' });
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -38,16 +44,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  log("Starting server initialization...");
   const server = registerRoutes(app);
-
-  // Handle bridge process errors and cleanup
-  bridgeProcess.on('exit', (code) => {
-    if (code !== 0) {
-      log('XTB Bridge process exited with code ' + code);
-      // Don't exit the main process, just log the error
-      log('Attempting to restart bridge process...');
-    }
-  });
+  log("Routes registered successfully");
 
   // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -57,17 +56,12 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
   const PORT = parseInt(process.env.PORT || '5000', 10);
   const startServer = (port: number) => {
     log(`Attempting to start server on port ${port}...`);
     server.listen(port, "0.0.0.0", () => {
-      log(`Server running on port ${port}`);
+      log(`Server successfully bound and listening on port ${port}`);
+      log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
     }).on('error', (e: any) => {
       if (e.code === 'EADDRINUSE') {
         log(`Port ${port} is busy, trying ${port + 1}...`);

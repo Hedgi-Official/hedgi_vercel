@@ -61,8 +61,8 @@ export class TradingService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: process.env.XTB_USER_ID || '17474971',
-          password: process.env.XTB_PASSWORD || 'xoh74681'
+          userId: process.env.XTB_USER_ID || '17535100',
+          password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
         })
       });
 
