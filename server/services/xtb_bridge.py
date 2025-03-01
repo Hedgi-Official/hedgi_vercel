@@ -10,7 +10,8 @@ from typing import Optional, Dict, Any, Union
 import json
 import time
 from websocket import create_connection
-import websocket_client
+from websocket import create_connection
+# Not importing websocket_client as it's not needed with create_connection
 
 # Configure logging
 logging.basicConfig(
