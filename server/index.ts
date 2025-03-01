@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { log } from "./vite";
+import { setupVite, serveStatic, log } from "./vite";
 import { bridgeProcess } from "./start-services";
 
 const app = express();
@@ -55,6 +55,16 @@ app.use((req, res, next) => {
     log(`Error: ${message}`);
     res.status(status).json({ message });
   });
+
+  if (app.get("env") === "development") {
+    log("Setting up Vite in development mode...");
+    await setupVite(app, server);
+    log("Vite setup completed");
+  } else {
+    log("Setting up static serving for production...");
+    serveStatic(app);
+    log("Static serving setup completed");
+  }
 
   const PORT = parseInt(process.env.PORT || '5000', 10);
   const startServer = (port: number) => {
