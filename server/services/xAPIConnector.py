@@ -33,7 +33,6 @@ if DEBUG:
 else:
     logger.setLevel(logging.CRITICAL)
 
-
 class TransactionSide(object):
     BUY = 0
     SELL = 1
@@ -66,7 +65,7 @@ class JsonSocket(object):
     def connect(self):
         for i in range(API_MAX_CONN_TRIES):
             try:
-                self.socket.connect((self.address, self.port))
+                self.socket.connect( (self.address, self.port) )
             except socket.error as msg:
                 logger.error("SockThread Error: %s" % msg)
                 time.sleep(0.25)
@@ -154,7 +153,6 @@ class JsonSocket(object):
     port = property(_get_port, _set_port, doc='read only property socket port')
     encrypt = property(_get_encrypt, _set_encrypt, doc='read only property socket port')
 
-
 class APIClient(JsonSocket):
     def __init__(self, address=DEFAULT_XAPI_ADDRESS, port=DEFAULT_XAPI_PORT, encrypt=True):
         super(APIClient, self).__init__(address, port, encrypt)
@@ -170,101 +168,6 @@ class APIClient(JsonSocket):
 
     def commandExecute(self,commandName, arguments=None):
         return self.execute(baseCommand(commandName, arguments))
-
-class APIStreamClient(JsonSocket):
-    def __init__(self, address=DEFAULT_XAPI_ADDRESS, port=DEFAULT_XAPI_STREAMING_PORT, encrypt=True, ssId=None, 
-                 tickFun=None, tradeFun=None, balanceFun=None, tradeStatusFun=None, profitFun=None, newsFun=None):
-        super(APIStreamClient, self).__init__(address, port, encrypt)
-        self._ssId = ssId
-
-        self._tickFun = tickFun
-        self._tradeFun = tradeFun
-        self._balanceFun = balanceFun
-        self._tradeStatusFun = tradeStatusFun
-        self._profitFun = profitFun
-        self._newsFun = newsFun
-
-        if(not self.connect()):
-            raise Exception("Cannot connect to streaming on " + address + ":" + str(port) + " after " + str(API_MAX_CONN_TRIES) + " retries")
-
-        self._running = True
-        self._t = Thread(target=self._readStream, args=())
-        self._t.setDaemon(True)
-        self._t.start()
-
-    def _readStream(self):
-        while (self._running):
-            try:
-                msg = self._readObj()
-                logger.info("Stream received: " + str(msg))
-                if (msg["command"]=='tickPrices'):
-                    self._tickFun(msg) if self._tickFun else None
-                elif (msg["command"]=='trade'):
-                    self._tradeFun(msg) if self._tradeFun else None
-                elif (msg["command"]=="balance"):
-                    self._balanceFun(msg) if self._balanceFun else None
-                elif (msg["command"]=="tradeStatus"):
-                    self._tradeStatusFun(msg) if self._tradeStatusFun else None
-                elif (msg["command"]=="profit"):
-                    self._profitFun(msg) if self._profitFun else None
-                elif (msg["command"]=="news"):
-                    self._newsFun(msg) if self._newsFun else None
-            except Exception as e:
-                logger.error(f"Error in readStream: {str(e)}")
-                time.sleep(1)  # Avoid busy-waiting on errors
-
-    def disconnect(self):
-        self._running = False
-        self._t.join()
-        self.close()
-
-    def execute(self, dictionary):
-        self._sendObj(dictionary)
-
-    def subscribePrice(self, symbol):
-        self.execute(dict(command='getTickPrices', symbol=symbol, streamSessionId=self._ssId))
-
-    def subscribePrices(self, symbols):
-        for symbolX in symbols:
-            self.subscribePrice(symbolX)
-
-    def subscribeTrades(self):
-        self.execute(dict(command='getTrades', streamSessionId=self._ssId))
-
-    def subscribeBalance(self):
-        self.execute(dict(command='getBalance', streamSessionId=self._ssId))
-
-    def subscribeTradeStatus(self):
-        self.execute(dict(command='getTradeStatus', streamSessionId=self._ssId))
-
-    def subscribeProfits(self):
-        self.execute(dict(command='getProfits', streamSessionId=self._ssId))
-
-    def subscribeNews(self):
-        self.execute(dict(command='getNews', streamSessionId=self._ssId))
-
-    def unsubscribePrice(self, symbol):
-        self.execute(dict(command='stopTickPrices', symbol=symbol, streamSessionId=self._ssId))
-
-    def unsubscribePrices(self, symbols):
-        for symbolX in symbols:
-            self.unsubscribePrice(symbolX)
-
-    def unsubscribeTrades(self):
-        self.execute(dict(command='stopTrades', streamSessionId=self._ssId))
-
-    def unsubscribeBalance(self):
-        self.execute(dict(command='stopBalance', streamSessionId=self._ssId))
-
-    def unsubscribeTradeStatus(self):
-        self.execute(dict(command='stopTradeStatus', streamSessionId=self._ssId))
-
-    def unsubscribeProfits(self):
-        self.execute(dict(command='stopProfits', streamSessionId=self._ssId))
-
-    def unsubscribeNews(self):
-        self.execute(dict(command='stopNews', streamSessionId=self._ssId))
-
 
 # Command templates
 def baseCommand(commandName, arguments=None):
