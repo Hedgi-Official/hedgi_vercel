@@ -71,7 +71,7 @@ class TradeRequest(BaseModel):
     volume: float
     command: int  # 0 for BUY, 1 for SELL
     orderType: int  # 0 for OPEN, 2 for CLOSE
-    order: int = None  # Order number for closing trades
+    order: int | None = None  # Order number for closing trades
 
 class StatusRequest(BaseModel):
     orderId: int
@@ -129,13 +129,27 @@ async def log_requests(request: Request, call_next):
 @app.get("/ping")
 async def ping():
     """Check if the service is running and ready"""
-    global is_ready, last_error
-    logger.info("Health check called", context={'ready': is_ready, 'last_error': last_error})
+    global is_ready, last_error, trader
+
+    debug_info = {
+        'ready': is_ready,
+        'last_error': last_error,
+        'trader_initialized': trader is not None,
+        'python_version': sys.version,
+        'environment': {
+            'bridge_port': os.getenv('XTB_BRIDGE_PORT'),
+            'has_user_id': bool(os.getenv('XTB_USER_ID')),
+            'has_password': bool(os.getenv('XTB_PASSWORD'))
+        }
+    }
+
+    logger.info("Health check called", context=debug_info)
     return {
         "message": "pong",
         "ready": is_ready,
         "status": "ready" if is_ready else "initializing",
-        "error": last_error
+        "error": last_error,
+        "debug_info": debug_info
     }
 
 @app.post("/connect")
@@ -170,7 +184,7 @@ async def connect(request: ConnectRequest):
         return result
     except Exception as e:
         error_msg = f"Connection error: {str(e)}"
-        logger.error(error_msg, context=context)
+        logger.error(error_msg, context={'error': str(e), 'traceback': traceback.format_exc()})
         return {"success": False, "error": error_msg}
 
 @app.post("/trade")
@@ -260,12 +274,13 @@ async def trade(request: TradeRequest):
 
     except Exception as e:
         error_msg = f"Trade error: {str(e)}"
-        logger.error(error_msg, context=context)
+        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc(), **context})
         return {
             "success": False,
             "error": error_msg,
             "debug_info": debug_info,
-            "exception": str(e)
+            "exception": str(e),
+            "traceback": traceback.format_exc()
         }
 
 @app.post("/status")
@@ -301,7 +316,7 @@ async def status(request: StatusRequest):
         return result
     except Exception as e:
         error_msg = f"Status check error: {str(e)}"
-        logger.error(error_msg, context=context)
+        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc()})
         return {"success": False, "error": error_msg}
 
 @app.post("/disconnect")
@@ -330,7 +345,7 @@ async def disconnect():
             return {"success": True, "message": "No active connection"}
     except Exception as e:
         error_msg = f"Disconnect error: {str(e)}"
-        logger.error(error_msg)
+        logger.error(error_msg, context={"error": str(e), "traceback": traceback.format_exc()})
         return {"success": False, "error": error_msg}
 
 # Initialize the bridge on startup
@@ -341,13 +356,18 @@ async def startup_event():
     try:
         logger.info("Bridge initialization starting...")
         #Added more detailed logging for startup
-        logger.info(f"Starting XTB Bridge API on port {os.getenv('XTB_BRIDGE_PORT', '8001')}")
+        logger.info(f"Starting XTB Bridge API on port {os.getenv('XTB_BRIDGE_PORT', '8003')}")
         logger.info(f"Python version: {sys.version}")
+
+        # Initialize global trader instance
+        global trader
+        trader = XTBTrader()
+
         is_ready = True
         last_error = None
         logger.info("Bridge initialization complete")
     except Exception as e:
-        logger.error(f"Bridge initialization failed: {e}")
+        logger.error(f"Bridge initialization failed: {e}\nTraceback:\n{traceback.format_exc()}")
         is_ready = False
         last_error = str(e)
 
@@ -364,20 +384,25 @@ async def debug_endpoint(request: Request):
         "url": str(request.url),
         "headers": dict(request.headers),
         "body": body,
-        "client": request.client.host if request.client else "unknown"
+        "client": request.client.host if request.client else "unknown",
+        "bridge_status": {
+            "ready": is_ready,
+            "trader_initialized": trader is not None,
+            "last_error": last_error,
+            "python_version": sys.version,
+            "environment": {
+                "bridge_port": os.getenv("XTB_BRIDGE_PORT"),
+                "has_user_id": bool(os.getenv("XTB_USER_ID")),
+                "has_password": bool(os.getenv("XTB_PASSWORD"))
+            }
+        }
     }
 
     logger.info("Debug request received", context=debug_info)
     return {
         "success": True,
-        "debug_info": debug_info,
-        "bridge_status": {
-            "ready": is_ready,
-            "trader_initialized": trader is not None,
-            "last_error": last_error
-        }
+        "debug_info": debug_info
     }
-
 
 # Run the server
 if __name__ == "__main__":
