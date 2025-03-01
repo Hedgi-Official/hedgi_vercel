@@ -1,14 +1,10 @@
 import os
 import json
 import logging
-from sys import path
-from os.path import dirname, join
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 
-# Add the directory containing XTBTrader and xAPIConnector to Python path
-path.append(join(dirname(__file__), '../../attached_assets'))
 from XTBTrader import XTBTrader
 
 # Enhanced logging setup
