@@ -37,7 +37,6 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-// Update BRIDGE_URL with additional configuration
 const BRIDGE_URL = 'http://localhost:8000';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second

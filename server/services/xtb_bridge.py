@@ -12,11 +12,7 @@ import uvicorn
 current_dir = dirname(abspath(__file__))
 path.append(current_dir)
 
-try:
-    from XTBTrader import XTBTrader
-except ImportError as e:
-    print(f"Failed to import XTBTrader: {e}")
-    raise
+from XTBTrader import XTBTrader
 
 # Configure logging
 logging.basicConfig(
@@ -152,10 +148,6 @@ async def disconnect():
     return {"success": True}
 
 if __name__ == "__main__":
-    try:
-        port = int(os.environ.get("XTB_BRIDGE_PORT", "8000"))
-        logger.info(f"Starting XTB Bridge API on port {port}")
-        uvicorn.run(app, host="0.0.0.0", port=port)
-    except Exception as e:
-        logger.error(f"Failed to start XTB Bridge: {str(e)}")
-        raise
+    port = int(os.environ.get("XTB_BRIDGE_PORT", "8000"))
+    logger.info(f"Starting XTB Bridge API on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
