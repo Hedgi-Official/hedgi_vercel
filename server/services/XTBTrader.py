@@ -18,8 +18,8 @@ class XTBTrader:
         """Connect to XTB API and login"""
         try:
             logger.info("Connecting to XTB API...")
-            # Initialize client with demo server address
-            self.client = APIClient(address='demo.xtb.com')
+            # Initialize client with default settings from xAPIConnector
+            self.client = APIClient()
 
             # Execute login command
             login_response = self.client.execute({
