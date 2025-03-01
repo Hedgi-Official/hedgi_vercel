@@ -1,61 +1,30 @@
-import WebSocket from 'ws';
+import fetch from 'node-fetch';
+
+const BRIDGE_URL = 'http://localhost:8000';
 
 class XTBService {
-    private ws: WebSocket | null = null;
-    private connected: boolean = false;
-
-    constructor() {
-        this.connect();
-    }
-
-    private connect() {
-        this.ws = new WebSocket('ws://localhost:8765');
-
-        this.ws.on('open', () => {
-            console.log('Connected to XTB Bridge');
-            this.connected = true;
-        });
-
-        this.ws.on('close', () => {
-            console.log('Disconnected from XTB Bridge');
-            this.connected = false;
-            // Attempt to reconnect after 5 seconds
-            setTimeout(() => this.connect(), 5000);
-        });
-
-        this.ws.on('error', (error) => {
-            console.error('WebSocket error:', error);
-            this.connected = false;
-        });
-    }
-
-    private async sendCommand(command: string, data: any): Promise<any> {
-        if (!this.ws || !this.connected) {
-            throw new Error('WebSocket is not connected');
-        }
-
-        return new Promise((resolve, reject) => {
-            const messageHandler = (response: WebSocket.Data) => {
-                try {
-                    const parsedResponse = JSON.parse(response.toString());
-                    this.ws!.removeListener('message', messageHandler);
-                    if (!parsedResponse.success) {
-                        reject(new Error(parsedResponse.error));
-                    } else {
-                        resolve(parsedResponse);
-                    }
-                } catch (error) {
-                    reject(error);
-                }
-            };
-
-            this.ws!.on('message', messageHandler);
-            this.ws!.send(JSON.stringify({ command, ...data }));
-        });
-    }
+    private sessionId: string | null = null;
 
     async login(userId: string, password: string) {
-        return this.sendCommand('connect', { userId, password });
+        try {
+            const response = await fetch(`${BRIDGE_URL}/connect`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, password })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Login failed');
+            }
+
+            const data = await response.json();
+            this.sessionId = data.sessionId;
+            return data;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
     }
 
     async placeTrade(params: {
@@ -64,15 +33,62 @@ class XTBService {
         command: number; // 0 for BUY, 1 for SELL
         orderType: number; // 0 for OPEN, 2 for CLOSE
     }) {
-        return this.sendCommand('trade', params);
+        try {
+            const response = await fetch(`${BRIDGE_URL}/trade`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Trade failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Trade error:', error);
+            throw error;
+        }
     }
 
     async checkTradeStatus(orderId: number) {
-        return this.sendCommand('status', { orderId });
+        try {
+            const response = await fetch(`${BRIDGE_URL}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Status check failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Status check error:', error);
+            throw error;
+        }
     }
 
     async disconnect() {
-        return this.sendCommand('disconnect', {});
+        try {
+            const response = await fetch(`${BRIDGE_URL}/disconnect`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Disconnect failed');
+            }
+
+            this.sessionId = null;
+            return response.json();
+        } catch (error) {
+            console.error('Disconnect error:', error);
+            throw error;
+        }
     }
 }
 

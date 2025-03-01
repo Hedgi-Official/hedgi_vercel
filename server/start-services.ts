@@ -5,11 +5,15 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Start Python WebSocket bridge
+// Start Python FastAPI bridge
 const pythonBridge = spawn('python', [
     join(__dirname, 'services/xtb_bridge.py')
 ], {
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: {
+        ...process.env,
+        XTB_BRIDGE_PORT: '8000'
+    }
 });
 
 pythonBridge.on('error', (error) => {
