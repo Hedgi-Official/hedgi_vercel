@@ -37,7 +37,7 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const BRIDGE_URL = 'http://localhost:8001'; // Updated to use port 8001
+const BRIDGE_URL = 'http://localhost:8003'; // Updated to use port 8003
 const MAX_RETRIES = 5; 
 const INITIAL_RETRY_DELAY = 1000; 
 

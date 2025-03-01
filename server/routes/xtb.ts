@@ -63,7 +63,7 @@ router.post('/api/xtb/trade', async (req, res) => {
     console.log('[XTB Backend] Trade request received:', req.body);
 
     // Try to get bridge status first
-    const statusResponse = await fetch('http://localhost:8001/ping');
+    const statusResponse = await fetch('http://localhost:8003/ping'); // Port changed to 8003
     const bridgeStatus = await statusResponse.json();
     console.log('[XTB Backend] Bridge status:', bridgeStatus);
 
@@ -76,7 +76,7 @@ router.post('/api/xtb/trade', async (req, res) => {
     }
 
     // Forward the request to Python bridge
-    const response = await fetch('http://localhost:8001/trade', {
+    const response = await fetch('http://localhost:8003/trade', { // Port changed to 8003
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
@@ -103,7 +103,7 @@ router.post('/api/xtb/trade', async (req, res) => {
 // Debug endpoint to test bridge connection
 router.get('/api/xtb/debug', async (req, res) => {
   try {
-    const response = await fetch('http://localhost:8001/debug', {
+    const response = await fetch('http://localhost:8002/debug', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ test: true })

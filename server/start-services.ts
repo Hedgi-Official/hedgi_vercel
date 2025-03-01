@@ -74,7 +74,7 @@ log('Starting Python bridge service...');
         stdio: ['inherit', 'pipe', 'pipe'],
         env: {
             ...process.env,
-            XTB_BRIDGE_PORT: '8001',
+            XTB_BRIDGE_PORT: '8003',  // Changed to port 8003
             PYTHONUNBUFFERED: '1',  // Ensure Python output isn't buffered
             PYTHONIOENCODING: 'utf-8',  // Set encoding explicitly
             XTB_USER_ID: process.env.XTB_USER_ID || '17535100',

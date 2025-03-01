@@ -3,6 +3,17 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { bridgeProcess } from "./start-services";
 
+// Add global error handlers
+process.on('uncaughtException', (error) => {
+  log(`Uncaught Exception: ${error.message}`);
+  log(error.stack || 'No stack trace available');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log('Unhandled Rejection at:', promise);
+  log('Reason:', reason);
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -66,7 +77,9 @@ app.use((req, res, next) => {
     log("Static serving setup completed");
   }
 
-  const PORT = parseInt(process.env.PORT || '5000', 10);
+  // Port configuration moved to the top for clarity
+  const PORT = 5000; // Fixed to port 5000 as required
+
   const startServer = (port: number) => {
     log(`Attempting to start server on port ${port}...`);
     server.listen(port, "0.0.0.0", () => {

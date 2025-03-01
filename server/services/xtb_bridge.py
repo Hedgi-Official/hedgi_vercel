@@ -382,7 +382,7 @@ async def debug_endpoint(request: Request):
 # Run the server
 if __name__ == "__main__":
     try:
-        port = int(os.getenv("XTB_BRIDGE_PORT", "8001"))
+        port = int(os.getenv("XTB_BRIDGE_PORT", "8003"))
         logger.info(f"Starting XTB Bridge API on port {port}")
         logger.info(f"Python version: {sys.version}")
 
@@ -394,4 +394,5 @@ if __name__ == "__main__":
         )
     except Exception as e:
         logger.error(f"Failed to start XTB Bridge: {e}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         sys.exit(1)
