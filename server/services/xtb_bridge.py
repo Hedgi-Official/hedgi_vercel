@@ -1,9 +1,16 @@
 import os
 import json
 import logging
+from sys import path
+from os.path import dirname, join
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+
+# Add the current directory to Python path to find the modules
+current_dir = dirname(__file__)
+path.append(current_dir)
 
 from XTBTrader import XTBTrader
 
@@ -15,7 +22,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Create FastAPI app with CORS support
 app = FastAPI(title="XTB Trading Bridge")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global trader instance
 xtb_trader = None
@@ -34,6 +49,13 @@ class TradeRequest(BaseModel):
 class StatusRequest(BaseModel):
     orderId: int
 
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting XTB Bridge API...")
+    # Log Python and dependencies versions
+    import sys
+    logger.info(f"Python version: {sys.version}")
+
 @app.post("/connect")
 async def connect(request: LoginRequest):
     global xtb_trader
@@ -43,6 +65,7 @@ async def connect(request: LoginRequest):
         response = xtb_trader.connect(request.userId, request.password)
 
         if not response["success"]:
+            logger.error(f"Login failed: {response.get('error')}")
             raise HTTPException(status_code=401, detail=response["error"])
 
         logger.info("Successfully connected to XTB API")

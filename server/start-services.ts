@@ -1,23 +1,41 @@
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { log } from './vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Enhanced error logging
+function logBridgeError(error: any) {
+    log(`Python bridge error: ${error.message}`);
+    if (error.stack) {
+        log(`Stack trace: ${error.stack}`);
+    }
+}
+
 // Start Python FastAPI bridge
-const pythonBridge = spawn('python', [
+log('Starting Python bridge service...');
+const pythonBridge = spawn('python3', [
     join(__dirname, 'services/xtb_bridge.py')
 ], {
-    stdio: 'inherit',
+    stdio: ['inherit', 'inherit', 'inherit'],
     env: {
         ...process.env,
-        XTB_BRIDGE_PORT: '8000'
+        XTB_BRIDGE_PORT: '8000',
+        PYTHONUNBUFFERED: '1'  // Ensure Python output isn't buffered
     }
 });
 
 pythonBridge.on('error', (error) => {
-    console.error('Failed to start Python bridge:', error);
+    logBridgeError(error);
+    log('Failed to start Python bridge process');
+});
+
+pythonBridge.on('exit', (code, signal) => {
+    if (code !== 0) {
+        log(`Python bridge exited with code ${code} and signal ${signal}`);
+    }
 });
 
 process.on('SIGINT', () => {
