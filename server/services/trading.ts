@@ -37,15 +37,13 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const BRIDGE_URL = 'http://localhost:8001';
+const BRIDGE_URL = 'http://127.0.0.1:8001';  // Use loopback address
 const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 5000; // Increased to 5 seconds for initial delay
+const INITIAL_RETRY_DELAY = 5000; // 5 seconds
+const STARTUP_DELAY = 15000; // 15 seconds startup delay
 
 // Helper function to wait for specified milliseconds
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Initial startup delay to allow Python bridge to initialize
-const STARTUP_DELAY = 10000; // 10 seconds startup delay
 
 // Wait for startup delay
 await wait(STARTUP_DELAY);
@@ -53,7 +51,17 @@ await wait(STARTUP_DELAY);
 async function checkBridgeHealth(): Promise<boolean> {
   try {
     console.log('[Trading Service] Checking bridge health...');
-    const response = await fetch(`${BRIDGE_URL}/health`);
+    const response = await fetch(`${BRIDGE_URL}/health`, {
+      timeout: 5000 // 5 second timeout
+    }).catch((error) => {
+      console.error('[Trading Service] Fetch error:', error.message);
+      return null;
+    });
+
+    if (!response) {
+      console.error('[Trading Service] No response from health check');
+      return false;
+    }
 
     if (!response.ok) {
       console.error(`[Trading Service] Health check failed with status ${response.status}`);
@@ -61,6 +69,7 @@ async function checkBridgeHealth(): Promise<boolean> {
     }
 
     const data = await response.json();
+    console.log('[Trading Service] Health check response:', data);
 
     if (!data.ready) {
       console.error('[Trading Service] Bridge reports not ready');
@@ -106,8 +115,14 @@ export class TradingService {
   private async ensureBridgeAndLogin(): Promise<void> {
     if (!this.bridgeReady) {
       console.log('[Trading Service] Ensuring bridge is ready...');
-      await waitForBridge();
-      this.bridgeReady = true;
+      try {
+        await waitForBridge();
+        this.bridgeReady = true;
+      } catch (error) {
+        console.error('[Trading Service] Bridge initialization failed:', error);
+        this.bridgeReady = false; // Reset flag on failure
+        throw error;
+      }
     }
 
     const currentTime = Date.now();
@@ -128,7 +143,11 @@ export class TradingService {
         body: JSON.stringify({
           userId: '17535100',
           password: 'GuiZarHoh2711!'
-        })
+        }),
+        timeout: 10000 // 10 second timeout
+      }).catch((error) => {
+        console.error('[Trading Service] Login fetch error:', error.message);
+        throw error;
       });
 
       if (!response.ok) {
@@ -179,7 +198,8 @@ export class TradingService {
           volume: adjustedVolume,
           command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
           orderType: 0  // 0 for OPEN
-        })
+        }),
+        timeout: 10000 // 10 second timeout
       });
 
       if (!response.ok) {
@@ -230,7 +250,8 @@ export class TradingService {
           command: isBuy ? 0 : 1,
           orderType: 2,  // 2 for CLOSE
           order: positionToClose
-        })
+        }),
+        timeout: 10000 // 10 second timeout
       });
 
       if (!response.ok) {
@@ -260,7 +281,8 @@ export class TradingService {
       const response = await fetch(`${BRIDGE_URL}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: tradeNumber })
+        body: JSON.stringify({ orderId: tradeNumber }),
+        timeout: 10000 // 10 second timeout
       });
 
       if (!response.ok) {

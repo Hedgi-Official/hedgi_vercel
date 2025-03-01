@@ -98,9 +98,6 @@ async def initialize_bridge():
     """Initialize the bridge asynchronously"""
     global is_ready
     try:
-        # Log Python and dependencies versions
-        import sys
-        logger.info(f"Python version: {sys.version}")
         logger.info("Bridge initialization starting...")
 
         # Any additional initialization can go here
