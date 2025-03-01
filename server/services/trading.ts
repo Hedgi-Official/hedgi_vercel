@@ -38,8 +38,8 @@ const tradeTransInfoSchema = z.object({
 });
 
 const BRIDGE_URL = 'http://localhost:8000';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 5; // Increased from 3
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -49,12 +49,27 @@ async function checkBridgeHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${BRIDGE_URL}/ping`);
     if (!response.ok) return false;
-    const data = await response.json();
-    return data.message === 'pong';
+    const data: any = await response.json();
+    return data.message === 'pong' && data.ready === true;
   } catch (error) {
     console.error('[Trading Service] Health check failed:', error);
     return false;
   }
+}
+
+async function waitForBridge(maxRetries: number = MAX_RETRIES): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    const isHealthy = await checkBridgeHealth();
+    if (isHealthy) {
+      console.log('[Trading Service] Bridge is healthy');
+      return true;
+    }
+    // Exponential backoff with jitter
+    const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, i), 10000) + Math.random() * 1000;
+    console.log(`[Trading Service] Bridge not ready, retrying in ${Math.round(delay)}ms... (attempt ${i + 1}/${maxRetries})`);
+    await wait(delay);
+  }
+  throw new Error('Python bridge service is not available after maximum retries');
 }
 
 export class TradingService {
@@ -69,19 +84,13 @@ export class TradingService {
       return;
     }
 
-    // Wait for bridge to be healthy
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      const isHealthy = await checkBridgeHealth();
-      if (isHealthy) {
-        console.log('[Trading Service] Bridge is healthy, proceeding with login');
-        break;
-      }
-      if (i < MAX_RETRIES - 1) {
-        console.log(`[Trading Service] Bridge not ready, retrying in ${RETRY_DELAY}ms...`);
-        await wait(RETRY_DELAY);
-      } else {
-        throw new Error('Python bridge service is not available');
-      }
+    // Enhanced bridge connection handling
+    try {
+      await waitForBridge();
+      console.log('[Trading Service] Bridge is available, proceeding with login');
+    } catch (error) {
+      console.error('[Trading Service] Bridge connection failed:', error);
+      throw error;
     }
 
     console.log('[Trading Service] Logging in...');

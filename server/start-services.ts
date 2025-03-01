@@ -19,7 +19,7 @@ log('Starting Python bridge service...');
 const pythonBridge = spawn('python3', [
     join(__dirname, 'services/xtb_bridge.py')
 ], {
-    stdio: ['inherit', 'inherit', 'inherit'],
+    stdio: ['inherit', 'pipe', 'pipe'],
     env: {
         ...process.env,
         XTB_BRIDGE_PORT: '8000',
@@ -27,6 +27,16 @@ const pythonBridge = spawn('python3', [
         XTB_USER_ID: process.env.XTB_USER_ID || '17535100',
         XTB_PASSWORD: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
     }
+});
+
+// Capture and log stdout
+pythonBridge.stdout.on('data', (data) => {
+    log(`Python bridge stdout: ${data}`);
+});
+
+// Capture and log stderr
+pythonBridge.stderr.on('data', (data) => {
+    log(`Python bridge stderr: ${data}`);
 });
 
 pythonBridge.on('error', (error) => {
@@ -37,6 +47,9 @@ pythonBridge.on('error', (error) => {
 pythonBridge.on('exit', (code, signal) => {
     if (code !== 0) {
         log(`Python bridge exited with code ${code} and signal ${signal}`);
+        // Attempt to restart the bridge
+        log('Attempting to restart Python bridge...');
+        process.exit(1); // Force Node process to exit, PM2 or similar should restart it
     }
 });
 
