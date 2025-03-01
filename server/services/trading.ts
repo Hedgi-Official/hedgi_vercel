@@ -37,9 +37,9 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const BRIDGE_URL = 'http://localhost:8000';
-const MAX_RETRIES = 5; // Increased from 3
-const INITIAL_RETRY_DELAY = 1000; // 1 second
+const BRIDGE_URL = 'http://localhost:8001'; // Updated to use port 8001
+const MAX_RETRIES = 5; 
+const INITIAL_RETRY_DELAY = 1000; 
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));

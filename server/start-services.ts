@@ -22,7 +22,7 @@ const pythonBridge = spawn('python3', [
     stdio: ['inherit', 'pipe', 'pipe'],
     env: {
         ...process.env,
-        XTB_BRIDGE_PORT: '8000',
+        XTB_BRIDGE_PORT: '8001',  // Changed to port 8001
         PYTHONUNBUFFERED: '1',  // Ensure Python output isn't buffered
         XTB_USER_ID: process.env.XTB_USER_ID || '17535100',
         XTB_PASSWORD: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'

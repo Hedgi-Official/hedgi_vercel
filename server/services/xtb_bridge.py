@@ -192,7 +192,7 @@ async def disconnect():
 
 if __name__ == "__main__":
     try:
-        port = int(os.environ.get("XTB_BRIDGE_PORT", "8000"))
+        port = int(os.environ.get("XTB_BRIDGE_PORT", "8001"))
         logger.info(f"Starting XTB Bridge API on port {port}")
         logger.info(f"Python version: {sys.version}")
         logger.info(f"Current directory: {current_dir}")
