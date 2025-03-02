@@ -39,8 +39,8 @@ const tradeTransInfoSchema = z.object({
 
 const BRIDGE_URL = 'http://localhost:8000';
 const HEDGE_EXECUTION_URL = 'https://your-flask-app-434424736588.us-central1.run.app/execute-trade';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 10; // Increased from 3 to 10
+const RETRY_DELAY = 3000; // Increased from 1000 to 3000 ms
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -48,10 +48,16 @@ async function wait(ms: number) {
 
 async function checkBridgeHealth(): Promise<boolean> {
   try {
+    console.log('[Trading Service] Checking bridge health...');
     const response = await fetch(`${BRIDGE_URL}/ping`);
-    if (!response.ok) return false;
+    if (!response.ok) {
+      console.log('[Trading Service] Bridge health check failed: non-200 response');
+      return false;
+    }
     const data = await response.json() as { message: string };
-    return data.message === 'pong';
+    const isHealthy = data.message === 'pong';
+    console.log(`[Trading Service] Bridge health check result: ${isHealthy ? 'healthy' : 'unhealthy'}`);
+    return isHealthy;
   } catch (error) {
     console.error('[Trading Service] Health check failed:', error);
     return false;
@@ -83,8 +89,10 @@ export class TradingService {
       return;
     }
 
-    // Wait for bridge to be healthy
+    // Wait for bridge to be healthy with enhanced logging
+    console.log(`[Trading Service] Starting bridge health check with ${MAX_RETRIES} retries...`);
     for (let i = 0; i < MAX_RETRIES; i++) {
+      console.log(`[Trading Service] Health check attempt ${i + 1}/${MAX_RETRIES}`);
       const isHealthy = await checkBridgeHealth();
       if (isHealthy) {
         console.log('[Trading Service] Bridge is healthy, proceeding with login');
@@ -94,7 +102,7 @@ export class TradingService {
         console.log(`[Trading Service] Bridge not ready, retrying in ${RETRY_DELAY}ms...`);
         await wait(RETRY_DELAY);
       } else {
-        throw new Error('Python bridge service is not available');
+        throw new Error('Python bridge service is not available after maximum retries');
       }
     }
 

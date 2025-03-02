@@ -32,9 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global trader instance
-xtb_trader = None
-
+# Define request models
 class LoginRequest(BaseModel):
     userId: str
     password: str
@@ -52,6 +50,9 @@ class StatusRequest(BaseModel):
 class SymbolRequest(BaseModel):
     symbol: str
 
+# Global trader instance
+xtb_trader = None
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting XTB Bridge API...")
@@ -61,8 +62,13 @@ async def startup_event():
 
 @app.get("/ping")
 async def ping():
-    logger.info("Ping endpoint called")
-    return {"message": "pong", "status": "XTB Bridge is running"}
+    """Health check endpoint"""
+    try:
+        logger.info("Ping endpoint called")
+        return {"message": "pong", "status": "XTB Bridge is running"}
+    except Exception as e:
+        logger.error(f"Error in ping endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/connect")
 async def connect(request: LoginRequest):
