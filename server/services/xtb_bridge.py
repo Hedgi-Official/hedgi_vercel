@@ -14,8 +14,6 @@ path.append(current_dir)
 
 from XTBTrader import XTBTrader
 
-
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
