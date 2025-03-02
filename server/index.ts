@@ -13,6 +13,7 @@ app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
 
+// Enhanced request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -45,6 +46,8 @@ app.use((req, res, next) => {
 
 (async () => {
   log("Starting server initialization...");
+
+  // Initialize routes first to ensure API endpoints are ready
   const server = registerRoutes(app);
   log("Routes registered successfully");
 
@@ -56,6 +59,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
+  // Setup Vite or static serving based on environment
   if (app.get("env") === "development") {
     log("Setting up Vite in development mode...");
     await setupVite(app, server);
@@ -66,7 +70,9 @@ app.use((req, res, next) => {
     log("Static serving setup completed");
   }
 
+  // Bind server to port with better error handling and logging
   const PORT = parseInt(process.env.PORT || '5000', 10);
+
   const startServer = (port: number) => {
     log(`Attempting to start server on port ${port}...`);
     server.listen(port, "0.0.0.0", () => {
@@ -78,9 +84,15 @@ app.use((req, res, next) => {
         startServer(port + 1);
       } else {
         log(`Server error: ${e.message}`);
+        throw e;  // Rethrow non-port-related errors
       }
     });
   };
 
-  startServer(PORT);
+  try {
+    startServer(PORT);
+  } catch (error) {
+    log(`Failed to start server: ${error}`);
+    process.exit(1);
+  }
 })();

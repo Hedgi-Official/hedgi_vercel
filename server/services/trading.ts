@@ -38,6 +38,7 @@ const tradeTransInfoSchema = z.object({
 });
 
 const BRIDGE_URL = 'http://localhost:8000';
+const HEDGE_EXECUTION_URL = 'https://your-flask-app-434424736588.us-central1.run.app/execute-trade';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -49,7 +50,7 @@ async function checkBridgeHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${BRIDGE_URL}/ping`);
     if (!response.ok) return false;
-    const data = await response.json();
+    const data = await response.json() as { message: string };
     return data.message === 'pong';
   } catch (error) {
     console.error('[Trading Service] Health check failed:', error);
@@ -61,6 +62,19 @@ export class TradingService {
   private isLoggedIn = false;
   private lastLoginTime = 0;
   private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
+
+  get isConnected(): boolean {
+    return this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
+  }
+
+  async connect(): Promise<void> {
+    try {
+      await this.ensureLoggedIn();
+    } catch (error) {
+      console.error('[Trading Service] Connection error:', error);
+      throw error;
+    }
+  }
 
   private async ensureLoggedIn(): Promise<void> {
     const currentTime = Date.now();
@@ -100,11 +114,11 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { detail: string };
         throw new Error(error.detail || 'Login failed');
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBResponse;
       if (!data.success) {
         throw new Error(data.error || 'Login failed');
       }
@@ -114,6 +128,51 @@ export class TradingService {
       console.log('[Trading Service] Successfully logged in');
     } catch (error) {
       console.error('[Trading Service] Login error:', error);
+      throw error;
+    }
+  }
+
+  async executeHedge(hedgeParams: any): Promise<any> {
+    try {
+      console.log('[Trading Service] Executing hedge with params:', hedgeParams);
+
+      const response = await fetch(HEDGE_EXECUTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hedgeParams)
+      });
+
+      if (!response.ok) {
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Hedge execution failed');
+      }
+
+      const data = await response.json();
+      console.log('[Trading Service] Hedge executed successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('[Trading Service] Hedge execution error:', error);
+      throw error;
+    }
+  }
+
+  async getSymbolData(symbol: string): Promise<any> {
+    try {
+      await this.ensureLoggedIn();
+      const response = await fetch(`${BRIDGE_URL}/symbol`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol })
+      });
+
+      if (!response.ok) {
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Failed to get symbol data');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`[Trading Service] Get symbol data error for ${symbol}:`, error);
       throw error;
     }
   }
@@ -150,7 +209,7 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { detail: string };
         throw new Error(error.detail || 'Trade failed');
       }
 
@@ -201,7 +260,7 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { detail: string };
         throw new Error(error.detail || 'Close trade failed');
       }
 
@@ -231,7 +290,7 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { detail: string };
         throw new Error(error.detail || 'Status check failed');
       }
 

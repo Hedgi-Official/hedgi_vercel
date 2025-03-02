@@ -35,11 +35,6 @@ app.add_middleware(
 # Global trader instance
 xtb_trader = None
 
-@app.get("/ping")
-async def ping():
-    logger.info("Ping endpoint called")
-    return {"message": "pong", "status": "XTB Bridge is running"}
-
 class LoginRequest(BaseModel):
     userId: str
     password: str
@@ -54,12 +49,20 @@ class TradeRequest(BaseModel):
 class StatusRequest(BaseModel):
     orderId: int
 
+class SymbolRequest(BaseModel):
+    symbol: str
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting XTB Bridge API...")
     # Log Python and dependencies versions
     import sys
     logger.info(f"Python version: {sys.version}")
+
+@app.get("/ping")
+async def ping():
+    logger.info("Ping endpoint called")
+    return {"message": "pong", "status": "XTB Bridge is running"}
 
 @app.post("/connect")
 async def connect(request: LoginRequest):
@@ -112,6 +115,27 @@ async def place_trade(request: TradeRequest):
 
     except Exception as e:
         logger.error(f"Trade error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/symbol")
+async def get_symbol(request: SymbolRequest):
+    if not xtb_trader:
+        raise HTTPException(status_code=400, detail="Not connected to XTB API")
+
+    try:
+        logger.info(f"Getting symbol data for: {request.symbol}")
+        response = xtb_trader.client.commandExecute('getSymbol', {'symbol': request.symbol})
+
+        if not response.get('status'):
+            error_msg = f"Failed to get symbol data: {response.get('errorCode')} - {response.get('errorDescr', 'Unknown error')}"
+            logger.error(error_msg)
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        logger.info(f"Symbol data response: {response}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Get symbol data error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/status")
