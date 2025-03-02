@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { log } from "./vite";
+import { setupVite, log } from "./vite";
 import { bridgeProcess } from "./start-services";
+import { createServer } from "http";
 
 const app = express();
 app.use(express.json());
@@ -46,9 +47,9 @@ app.use((req, res, next) => {
 (async () => {
   log("Starting server initialization...");
 
-  // Initialize routes first to ensure API endpoints are ready
-  const server = require('http').createServer(app);
-  log("Routes registered successfully");
+  // Create HTTP server first
+  const server = createServer(app);
+  log("HTTP server created");
 
   // Enhanced error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -58,10 +59,7 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Temporarily disable Vite setup to speed up binding
-  log("Skipping heavy startup tasks for faster binding");
-
-  // Bind server to port with better error handling and logging
+  // Bind server to port first
   const PORT = parseInt(process.env.PORT || '5000', 10);
 
   const startServer = (port: number) => {
@@ -69,6 +67,15 @@ app.use((req, res, next) => {
     server.listen(port, "0.0.0.0", () => {
       log(`Server successfully bound and listening on port ${port}`);
       log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
+
+      // Setup Vite after server is bound
+      if (process.env.NODE_ENV !== 'production') {
+        log("Setting up Vite in development mode...");
+        setupVite(app, server).catch((error) => {
+          log(`Vite setup error: ${error}`);
+          // Don't exit process, just log the error
+        });
+      }
     }).on('error', (e: any) => {
       if (e.code === 'EADDRINUSE') {
         log(`Port ${port} is busy, trying ${port + 1}...`);
