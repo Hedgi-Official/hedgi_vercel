@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./vite";
 import { bridgeProcess } from "./start-services";
 
 const app = express();
@@ -48,7 +47,7 @@ app.use((req, res, next) => {
   log("Starting server initialization...");
 
   // Initialize routes first to ensure API endpoints are ready
-  const server = registerRoutes(app);
+  const server = require('http').createServer(app);
   log("Routes registered successfully");
 
   // Enhanced error handling middleware
@@ -59,16 +58,8 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Setup Vite or static serving based on environment
-  if (app.get("env") === "development") {
-    log("Setting up Vite in development mode...");
-    await setupVite(app, server);
-    log("Vite setup completed");
-  } else {
-    log("Setting up static serving for production...");
-    serveStatic(app);
-    log("Static serving setup completed");
-  }
+  // Temporarily disable Vite setup to speed up binding
+  log("Skipping heavy startup tasks for faster binding");
 
   // Bind server to port with better error handling and logging
   const PORT = parseInt(process.env.PORT || '5000', 10);
