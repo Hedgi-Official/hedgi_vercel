@@ -87,13 +87,13 @@ export function registerRoutes(app: Express): Server {
       // Get the current price from XTB API
       const symbolData = await tradingService.getSymbolData(symbol);
       
-      // Log the actual API response from XTB
+      // Log the actual API response from XTB (remove any mock formatting)
       console.log(`[Routes] Symbol data for ${symbol}:`, symbolData);
 
       // Use the appropriate price based on trade direction (ask for buy, bid for sell)
       const currentPrice = isBuy ? 
-        symbolData?.returnData?.ask : 
-        symbolData?.returnData?.bid;
+        (symbolData?.status && symbolData?.returnData ? symbolData.returnData.ask : null) : 
+        (symbolData?.status && symbolData?.returnData ? symbolData.returnData.bid : null);
 
       console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for ${symbol}: ${currentPrice}`);
 
@@ -163,13 +163,13 @@ export function registerRoutes(app: Express): Server {
         // Get the current price from XTB API
         const symbolData = await tradingService.getSymbolData(symbol);
         
-        // Log the actual API response for debugging
+        // Log the actual API response for debugging (without mock formatting)
         console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
 
         // Use the appropriate price based on trade direction (ask for buy, bid for sell)
         const currentPrice = isBuy ? 
-          symbolData?.returnData?.ask : 
-          symbolData?.returnData?.bid;
+          (symbolData?.status && symbolData?.returnData ? symbolData.returnData.ask : null) : 
+          (symbolData?.status && symbolData?.returnData ? symbolData.returnData.bid : null);
 
         console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for closing ${symbol}: ${currentPrice}`);
 
