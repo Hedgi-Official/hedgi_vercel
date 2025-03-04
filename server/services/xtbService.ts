@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const BRIDGE_URL = 'http://localhost:8000';
+const BRIDGE_URL = 'https://your-flask-app-434424736588.us-central1.run.app';
 
 class XTBService {
     private sessionId: string | null = null;

@@ -39,12 +39,22 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const statusResponse = await tradingService.checkTradeStatus(tradeOrderNumber);
+
+      // Log the entire statusResponse for debugging purposes.
+      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, statusResponse);
+
+      // If you want to check specifically if the "status" property is undefined:
+      if (!statusResponse || typeof statusResponse.status === 'undefined') {
+        console.error(`Trade status for order ${tradeOrderNumber} is missing the "status" property:`, statusResponse);
+      }
+
       res.json(statusResponse);
     } catch (error) {
       console.error('Error checking trade status:', error);
       res.status(500).json({ error: error instanceof Error ? error.message : "Failed to check trade status" });
     }
   });
+
 
   app.post("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -88,7 +98,7 @@ export function registerRoutes(app: Express): Server {
         duration,
         status: "active",
         tradeOrderNumber,
-        tradeStatus: tradeStatus.returnData.status,
+        tradeStatus: tradeStatus.status,
       }).returning();
 
       res.json(hedge);

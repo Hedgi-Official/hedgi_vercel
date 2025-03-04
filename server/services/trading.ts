@@ -37,7 +37,7 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-const BRIDGE_URL = 'http://localhost:8000';
+const BRIDGE_URL = 'https://your-flask-app-434424736588.us-central1.run.app';
 const HEDGE_EXECUTION_URL = 'https://your-flask-app-434424736588.us-central1.run.app/execute-trade';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
@@ -48,10 +48,16 @@ async function wait(ms: number) {
 
 async function checkBridgeHealth(): Promise<boolean> {
   try {
+    console.log('Using BRIDGE_URL:', BRIDGE_URL);
     const response = await fetch(`${BRIDGE_URL}/ping`);
     if (!response.ok) return false;
-    const data = await response.json() as { message: string };
-    return data.message === 'pong';
+
+    // Clone the response to log the raw text without consuming the original response
+    const rawText = await response.clone().text();
+    console.log('Raw /ping response:', rawText);
+
+    const data = await response.json() as { status: string };
+    return data.status === 'ok';
   } catch (error) {
     console.error('[Trading Service] Health check failed:', error);
     return false;
@@ -118,9 +124,10 @@ export class TradingService {
         throw new Error(error.detail || 'Login failed');
       }
 
-      const data = await response.json() as XTBResponse;
-      if (!data.success) {
-        throw new Error(data.error || 'Login failed');
+      // Use the "status" field returned by the API
+      const data = await response.json() as { status: string };
+      if (data.status !== 'connected') {
+        throw new Error('Login failed');
       }
 
       this.isLoggedIn = true;
@@ -131,6 +138,7 @@ export class TradingService {
       throw error;
     }
   }
+
 
   async executeHedge(hedgeParams: any): Promise<any> {
     try {
@@ -280,7 +288,6 @@ export class TradingService {
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
       await this.ensureLoggedIn();
-
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
       const response = await fetch(`${BRIDGE_URL}/status`, {
@@ -289,24 +296,39 @@ export class TradingService {
         body: JSON.stringify({ orderId: tradeNumber })
       });
 
+      if (response.status === 304) {
+        console.warn('Received 304 Not Modified, returning fallback trade status');
+        return {
+          success: true,
+          message: 'No change',
+          orderId: tradeNumber,
+          status: 'unknown'
+        };
+      }
+
       if (!response.ok) {
         const error = await response.json() as { detail: string };
         throw new Error(error.detail || 'Status check failed');
       }
 
       const data: XTBResponse = await response.json();
+      console.log(`[Trading Service] Trade status response:`, data);
+
       if (!data.success) {
         throw new Error(data.error || 'Status check failed');
       }
 
-      console.log(`[Trading Service] Trade status response:`, data);
       return data;
     } catch (error) {
       console.error(`[Trading Service] Status check error:`, error);
       throw error;
     }
   }
+
+
 }
+
+
 
 // Export a singleton instance
 export const tradingService = new TradingService();

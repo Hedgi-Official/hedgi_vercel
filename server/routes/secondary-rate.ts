@@ -27,6 +27,18 @@ router.get('/api/fbs-rate', async (req, res) => {
       return;
     }
 
+    // Check if the response is HTML (which would indicate an error, e.g. due to an expired API key)
+    if (stdout.trim().startsWith('<!DOCTYPE')) {
+      console.warn('Received HTML instead of JSON. Returning fallback response.');
+      res.json({
+        bid: 0,
+        ask: 0,
+        price: 0,
+        error: 'FBS rate API unavailable due to invalid API key or service issue'
+      });
+      return;
+    }
+
     try {
       const data = JSON.parse(stdout);
       console.log('FBS rate data:', data);
@@ -40,5 +52,6 @@ router.get('/api/fbs-rate', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch FBS rate' });
   }
 });
+
 
 export default router;
