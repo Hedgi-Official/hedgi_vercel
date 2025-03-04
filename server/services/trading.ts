@@ -167,20 +167,28 @@ export class TradingService {
   async getSymbolData(symbol: string): Promise<any> {
     try {
       await this.ensureLoggedIn();
+
+      console.log(`[Trading Service] Getting symbol data for ${symbol}`);
+
       const response = await fetch(`${BRIDGE_URL}/symbol`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol })
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          symbol
+        })
       });
 
       if (!response.ok) {
         const error = await response.json() as { detail: string };
-        throw new Error(error.detail || 'Failed to get symbol data');
+        throw new Error(error.detail || 'Symbol data fetch failed');
       }
 
-      return response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.error(`[Trading Service] Get symbol data error for ${symbol}:`, error);
+      console.error('[Trading Service] Symbol data error:', error);
       throw error;
     }
   }
@@ -201,7 +209,7 @@ export class TradingService {
       // XTB uses standard lots where 1 lot = 100,000 units of base currency
       // Convert to lots properly - this is the ONLY place we should do the conversion
       const adjustedVolume = volume / 100000;
-      
+
       // Make sure we're not below minimum lot size (usually 0.01)
       const finalVolume = Math.max(adjustedVolume, 0.01);
 
@@ -211,13 +219,18 @@ export class TradingService {
 
       const response = await fetch(`${BRIDGE_URL}/trade`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           symbol,
           volume: finalVolume,
           command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
           orderType: 0,  // 0 for OPEN
-          price: price || 0  // 0 means market price, use specified price if available
+          price: price,  // Must be a valid price, not 0
+          sl: sl,        // Stop loss
+          tp: tp,        // Take profit
+          customComment: customComment
         })
       });
 
@@ -256,7 +269,7 @@ export class TradingService {
       // XTB uses standard lots where 1 lot = 100,000 units of base currency
       // Convert to lots properly - this is the ONLY place we should do the conversion
       const adjustedVolume = volume / 100000;
-      
+
       // Make sure we're not below minimum lot size (usually 0.01)
       const finalVolume = Math.max(adjustedVolume, 0.01);
 

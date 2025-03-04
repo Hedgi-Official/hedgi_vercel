@@ -92,22 +92,32 @@ async def place_trade(request: TradeRequest):
         logger.info(f"Placing trade: {request.symbol}, volume: {request.volume}")
 
         if request.orderType == 0:  # OPEN
-            response = xtb_trader.open_trade(
-                request.symbol,
-                request.volume,
-                request.command == 0,  # True for BUY, False for SELL
-                getattr(request, 'price', 0.0),  # Pass price if available
-                getattr(request, 'customComment', None)  # Pass custom comment if available
-            )
+            # Construct trade transaction info according to XTB documentation
+            trade_info = {
+                "cmd": request.command,  # 0 for BUY, 1 for SELL
+                "symbol": request.symbol,
+                "volume": request.volume,
+                "type": request.orderType,  # 0 for OPEN
+                "price": getattr(request, 'price', 0.0),  # Use market price if 0
+                "sl": getattr(request, 'sl', 0.0),  # Stop loss
+                "tp": getattr(request, 'tp', 0.0),  # Take profit
+                "customComment": getattr(request, 'customComment', f"Hedge position for {request.symbol}")
+            }
+            response = xtb_trader.execute_transaction(trade_info)
         else:  # CLOSE
             if request.order is None:
                 raise HTTPException(status_code=400, detail="Order ID required for closing trades")
-            response = xtb_trader.close_trade(
-                request.symbol,
-                request.volume,
-                request.order,
-                request.command == 0  # True for BUY, False for SELL
-            )
+            
+            # Construct trade transaction info for closing
+            trade_info = {
+                "cmd": request.command,  # For close, we use the same direction
+                "symbol": request.symbol,
+                "volume": request.volume,
+                "type": 2,  # 2 for CLOSE
+                "price": getattr(request, 'price', 0.0),  # Use market price if 0
+                "order": request.order  # Required for closing specific position
+            }
+            response = xtb_trader.execute_transaction(trade_info)
 
         if not response["success"]:
             raise HTTPException(status_code=400, detail=response["error"])

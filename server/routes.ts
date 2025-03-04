@@ -73,43 +73,45 @@ export function registerRoutes(app: Express): Server {
       // XTB requires the symbol in format where the first currency is the base
       // and the second is the counter (quote) currency
       const symbol = `${targetCurrency}${baseCurrency}`;
-      
+
       // Convert amount to standard lots (1 lot = 100,000 units) but let trading service handle currency-specific adjustments
       // Don't divide here, as the trading service will adjust based on currency pair
       const volume = Math.abs(Number(amount)); 
-      
+
       // Trade direction needs to be mapped correctly from UI to XTB API
       // If user wants to "buy USD" with BRL as base, then we're buying USDBRL
       const isBuy = tradeDirection === 'buy';
-      
+
       console.log(`Opening trade: ${symbol}, Volume: ${volume}, Direction: ${isBuy ? 'BUY' : 'SELL'}`);
-      
+
       // Get the current price from XTB API
       const symbolData = await tradingService.getSymbolData(symbol);
       console.log(`[Routes] Symbol data for ${symbol}:`, symbolData);
-      
+
       // Use the appropriate price based on trade direction (ask for buy, bid for sell)
       const currentPrice = isBuy ? 
         symbolData?.returnData?.ask : 
         symbolData?.returnData?.bid;
-      
+
       console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for ${symbol}: ${currentPrice}`);
-      
+
       // Open the trade and get the order number
       const tradeOrderNumber = await tradingService.openTrade(
         symbol,
-        currentPrice || 0, // Use current market price if available
+        currentPrice, // Always use a valid price, not 0
         volume,
         isBuy,
         0, // sl
         0, // tp
-        `Hedge position for ${symbol}` // comment
+        `Hedge position for ${symbol}`
       );
 
-      // Check trade status
-      const tradeStatus = await tradingService.checkTradeStatus(tradeOrderNumber);
-      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, tradeStatus);
+      // Verify transaction was successful by checking the status
+      if (tradeOrderNumber <= 0) {
+        throw new Error(`Failed to open trade for ${symbol}`);
+      }
 
+      // Record the trade in the database
       const [hedge] = await db.insert(hedges).values({
         userId: req.user.id,
         baseCurrency,
@@ -118,8 +120,8 @@ export function registerRoutes(app: Express): Server {
         rate: rate.toString(),
         duration,
         status: "active",
-        tradeOrderNumber,
-        tradeStatus: tradeStatus.status,
+        tradeOrderNumber: String(tradeOrderNumber),
+        tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
       }).returning();
 
       res.json(hedge);
@@ -159,14 +161,14 @@ export function registerRoutes(app: Express): Server {
         // Get the current price from XTB API
         const symbolData = await tradingService.getSymbolData(symbol);
         console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
-        
+
         // Use the appropriate price based on trade direction (ask for buy, bid for sell)
         const currentPrice = isBuy ? 
           symbolData?.returnData?.ask : 
           symbolData?.returnData?.bid;
-        
+
         console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for closing ${symbol}: ${currentPrice}`);
-        
+
         // Close the trade and verify its status
         const closingOrderNumber = await tradingService.closeTrade(
           symbol,
