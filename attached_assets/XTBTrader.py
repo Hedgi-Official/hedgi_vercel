@@ -44,7 +44,7 @@ class XTBTrader:
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
             
-    def open_trade(self, symbol: str, volume: float, is_buy: bool) -> dict:
+    def open_trade(self, symbol: str, volume: float, is_buy: bool, price: float = 0.0, custom_comment: str = None) -> dict:
         """Open a new trade position"""
         try:
             if not self.client:
@@ -61,8 +61,8 @@ class XTBTrader:
                 "symbol": symbol,
                 "volume": volume,
                 "type": TransactionType.ORDER_OPEN,
-                "price": 0.0,  # Market price
-                "customComment": f"Hedge position for {symbol}"  # Add comment to track trades
+                "price": price,  # Use provided price or 0.0 for market price
+                "customComment": custom_comment or f"Hedge position for {symbol}"  # Add comment to track trades
             }
             
             logger.info(f"Opening trade: {trade_info}")

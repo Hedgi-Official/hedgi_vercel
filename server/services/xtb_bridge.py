@@ -95,7 +95,9 @@ async def place_trade(request: TradeRequest):
             response = xtb_trader.open_trade(
                 request.symbol,
                 request.volume,
-                request.command == 0  # True for BUY, False for SELL
+                request.command == 0,  # True for BUY, False for SELL
+                getattr(request, 'price', 0.0),  # Pass price if available
+                getattr(request, 'customComment', None)  # Pass custom comment if available
             )
         else:  # CLOSE
             if request.order is None:

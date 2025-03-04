@@ -84,10 +84,21 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`Opening trade: ${symbol}, Volume: ${volume}, Direction: ${isBuy ? 'BUY' : 'SELL'}`);
       
+      // Get the current price from XTB API
+      const symbolData = await tradingService.getSymbolData(symbol);
+      console.log(`[Routes] Symbol data for ${symbol}:`, symbolData);
+      
+      // Use the appropriate price based on trade direction (ask for buy, bid for sell)
+      const currentPrice = isBuy ? 
+        symbolData?.returnData?.ask : 
+        symbolData?.returnData?.bid;
+      
+      console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for ${symbol}: ${currentPrice}`);
+      
       // Open the trade and get the order number
       const tradeOrderNumber = await tradingService.openTrade(
         symbol,
-        0, // Use market price (0) instead of specified rate to avoid immediate closure
+        currentPrice || 0, // Use current market price if available
         volume,
         isBuy,
         0, // sl
@@ -145,11 +156,22 @@ export function registerRoutes(app: Express): Server {
         const volume = Math.abs(Number(hedge.amount));
         const isBuy = Number(hedge.amount) > 0;
 
+        // Get the current price from XTB API
+        const symbolData = await tradingService.getSymbolData(symbol);
+        console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
+        
+        // Use the appropriate price based on trade direction (ask for buy, bid for sell)
+        const currentPrice = isBuy ? 
+          symbolData?.returnData?.ask : 
+          symbolData?.returnData?.bid;
+        
+        console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for closing ${symbol}: ${currentPrice}`);
+        
         // Close the trade and verify its status
         const closingOrderNumber = await tradingService.closeTrade(
           symbol,
           hedge.tradeOrderNumber,
-          Number(hedge.rate),
+          currentPrice || 0, // Use current market price if available
           volume,
           isBuy,
           0, // sl

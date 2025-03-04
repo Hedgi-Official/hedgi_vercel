@@ -216,7 +216,8 @@ export class TradingService {
           symbol,
           volume: finalVolume,
           command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
-          orderType: 0  // 0 for OPEN
+          orderType: 0,  // 0 for OPEN
+          price: price || 0  // 0 means market price, use specified price if available
         })
       });
 
