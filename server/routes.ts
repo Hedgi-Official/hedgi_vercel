@@ -86,6 +86,8 @@ export function registerRoutes(app: Express): Server {
 
       // Get the current price from XTB API
       const symbolData = await tradingService.getSymbolData(symbol);
+      
+      // Log the actual API response from XTB
       console.log(`[Routes] Symbol data for ${symbol}:`, symbolData);
 
       // Use the appropriate price based on trade direction (ask for buy, bid for sell)
@@ -160,6 +162,8 @@ export function registerRoutes(app: Express): Server {
 
         // Get the current price from XTB API
         const symbolData = await tradingService.getSymbolData(symbol);
+        
+        // Log the actual API response for debugging
         console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
 
         // Use the appropriate price based on trade direction (ask for buy, bid for sell)
