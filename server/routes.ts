@@ -70,14 +70,21 @@ export function registerRoutes(app: Express): Server {
         Math.abs(Number(amount))).toString();
 
       // Open trade via XTB API
+      // XTB requires the symbol in format where the first currency is the base
+      // and the second is the counter (quote) currency
       const symbol = `${targetCurrency}${baseCurrency}`;
-      const volume = Math.abs(Number(amount));
+      const volume = Math.abs(Number(amount)) / 100000; // Convert to standard lots (100,000 units)
+      
+      // Trade direction needs to be mapped correctly from UI to XTB API
+      // If user wants to "buy USD" with BRL as base, then we're buying USDBRL
       const isBuy = tradeDirection === 'buy';
-
+      
+      console.log(`Opening trade: ${symbol}, Volume: ${volume}, Direction: ${isBuy ? 'BUY' : 'SELL'}`);
+      
       // Open the trade and get the order number
       const tradeOrderNumber = await tradingService.openTrade(
         symbol,
-        Number(rate),
+        0, // Use market price (0) instead of specified rate to avoid immediate closure
         volume,
         isBuy,
         0, // sl

@@ -50,13 +50,19 @@ class XTBTrader:
             if not self.client:
                 return {"success": False, "error": "Not connected to XTB API"}
                 
+            # Make sure volume is within allowed limits (usually 0.01 to 100)
+            # XTB uses "lots" where 1 lot = 100,000 units of base currency
+            if volume < 0.01:
+                volume = 0.01  # Minimum allowed volume
+            
             # Prepare trade transaction info
             trade_info = {
                 "cmd": TransactionSide.BUY if is_buy else TransactionSide.SELL,
                 "symbol": symbol,
                 "volume": volume,
                 "type": TransactionType.ORDER_OPEN,
-                "price": 0.0  # Market price
+                "price": 0.0,  # Market price
+                "customComment": f"Hedge position for {symbol}"  # Add comment to track trades
             }
             
             logger.info(f"Opening trade: {trade_info}")
@@ -68,6 +74,9 @@ class XTBTrader:
                     "tradeTransInfo": trade_info
                 }
             })
+            
+            # Log detailed response for debugging
+            logger.info(f"Trade response: {response}")
             
             if not response.get('status'):
                 error_msg = f"Trade failed: {response.get('errorCode')}"
