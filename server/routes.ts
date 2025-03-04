@@ -73,7 +73,10 @@ export function registerRoutes(app: Express): Server {
       // XTB requires the symbol in format where the first currency is the base
       // and the second is the counter (quote) currency
       const symbol = `${targetCurrency}${baseCurrency}`;
-      const volume = Math.abs(Number(amount)) / 100000; // Convert to standard lots (100,000 units)
+      
+      // Convert amount to standard lots (1 lot = 100,000 units) but let trading service handle currency-specific adjustments
+      // Don't divide here, as the trading service will adjust based on currency pair
+      const volume = Math.abs(Number(amount)); 
       
       // Trade direction needs to be mapped correctly from UI to XTB API
       // If user wants to "buy USD" with BRL as base, then we're buying USDBRL

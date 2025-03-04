@@ -198,11 +198,15 @@ export class TradingService {
     try {
       await this.ensureLoggedIn();
 
-      // Adjust volume for USDBRL and USDMXN
-      const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
+      // XTB uses standard lots where 1 lot = 100,000 units of base currency
+      // Convert to lots properly - this is the ONLY place we should do the conversion
+      const adjustedVolume = volume / 100000;
+      
+      // Make sure we're not below minimum lot size (usually 0.01)
+      const finalVolume = Math.max(adjustedVolume, 0.01);
 
       console.log(`[Trading Service] Opening trade for ${symbol}`, {
-        price, originalVolume: volume, adjustedVolume, isBuy, customComment
+        price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
       const response = await fetch(`${BRIDGE_URL}/trade`, {
@@ -210,7 +214,7 @@ export class TradingService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
-          volume: adjustedVolume,
+          volume: finalVolume,
           command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
           orderType: 0  // 0 for OPEN
         })
@@ -248,11 +252,15 @@ export class TradingService {
     try {
       await this.ensureLoggedIn();
 
-      // Adjust volume for USDBRL and USDMXN
-      const adjustedVolume = ['USDBRL', 'USDMXN'].includes(symbol) ? volume / 100000 : volume;
+      // XTB uses standard lots where 1 lot = 100,000 units of base currency
+      // Convert to lots properly - this is the ONLY place we should do the conversion
+      const adjustedVolume = volume / 100000;
+      
+      // Make sure we're not below minimum lot size (usually 0.01)
+      const finalVolume = Math.max(adjustedVolume, 0.01);
 
       console.log(`[Trading Service] Closing trade for ${symbol}`, {
-        positionToClose, price, originalVolume: volume, adjustedVolume, isBuy, customComment
+        positionToClose, price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
       const response = await fetch(`${BRIDGE_URL}/trade`, {
@@ -260,7 +268,7 @@ export class TradingService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
-          volume: adjustedVolume,
+          volume: finalVolume,
           command: isBuy ? 0 : 1,
           orderType: 2,  // 2 for CLOSE
           order: positionToClose
