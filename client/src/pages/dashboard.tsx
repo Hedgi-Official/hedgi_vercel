@@ -142,8 +142,36 @@ export default function Dashboard() {
   });
 
   const deleteHedgeMutation = useMutation({
-    mutationFn: async (hedgeId: number) => {
-      const response = await fetch(`/api/hedges/${hedgeId}`, {
+    mutationFn: async (hedge: Hedge) => {
+      console.log('[Dashboard] Attempting to close hedge:', hedge);
+
+      // First close the trade if it exists
+      if (hedge.tradeOrderNumber) {
+        const response = await fetch(`/api/xtb/trades/${hedge.tradeOrderNumber}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: `${hedge.targetCurrency}${hedge.baseCurrency}`,
+            volume: Math.abs(Number(hedge.amount)) / 100000, // Convert to lots
+            tradeDirection: Number(hedge.amount) > 0 ? 'buy' : 'sell'
+          }),
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const data = await response.json();
+        console.log('[Dashboard] Trade close response:', data);
+
+        if (!data.status || !data.returnData?.order) {
+          throw new Error('Failed to close trade');
+        }
+      }
+
+      // Then delete the hedge from our database
+      const response = await fetch(`/api/hedges/${hedge.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -250,7 +278,7 @@ export default function Dashboard() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive/90"
-                            onClick={() => deleteHedgeMutation.mutate(hedge.id)}
+                            onClick={() => deleteHedgeMutation.mutate(hedge)}
                           >
                             <X className="h-4 w-4" />
                           </Button>

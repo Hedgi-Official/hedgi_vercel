@@ -193,7 +193,7 @@ export class TradingService {
           arguments: {
             tradeTransInfo: {
               cmd: isBuy ? 0 : 1,
-              customComment: "Close trade",
+              customComment: "Close trade test",
               expiration: 0,
               offset: 0,
               order: orderNumber + 1,  // According to example, use order + 1
