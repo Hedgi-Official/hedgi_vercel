@@ -111,28 +111,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         rate: simulation.rate.toString(),
         duration,
         tradeDirection,
-        tradeOrderNumber: null,
-        tradeStatus: null
+        volume: amount, // Include volume for XTB API
+        symbol: `${baseCurrency}${targetCurrency}`,
+        breakEvenRate: simulation.breakEvenRate
       };
-      try {
-        const response = await      fetch('https://your-flask-app-434424736588.us-central1.run.app/execute-trade', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(hedgeData),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to place hedge');
-        }
-        const result = await response.json();
-        console.log(result.message);
-        // Optionally handle response data
-      } catch (error) {
-        console.error('Error placing hedge:', error);
-      }
-      // Optionally call the original onPlaceHedge after
+      
+      // Let the parent component handle the API call
+      // This will typically go through our backend endpoint now
       onPlaceHedge(hedgeData);
     }
   };
