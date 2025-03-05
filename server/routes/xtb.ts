@@ -64,6 +64,8 @@ router.post('/api/xtb/hedge', async (req, res) => {
 
 // Keep existing routes but add fallback functionality
 router.get('/api/xtb/rates', async (req, res) => {
+  // Ensure we're setting the correct content type
+  res.setHeader('Content-Type', 'application/json');
   try {
     let isConnected = false;
     if (!tradingService.isConnected) {
