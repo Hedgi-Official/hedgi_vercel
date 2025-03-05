@@ -51,7 +51,6 @@ export function ExchangeRatesWidget() {
           <div className="flex items-center gap-2">
             {t('Live Exchange Rates')}
             {(isLoading || isLoadingFBS) && <Loader2 className="h-4 w-4 animate-spin" />}
-            {!isConnected && <span className="text-sm text-muted-foreground">(Connecting...)</span>}
           </div>
           <Select value={selectedPair} onValueChange={setSelectedPair}>
             <SelectTrigger className="w-[280px]">

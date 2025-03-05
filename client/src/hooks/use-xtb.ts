@@ -17,26 +17,36 @@ export interface ExchangeRate {
 const CURRENCY_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
 export function useXTB() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true); // Set to true immediately
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // We don't connect directly to XTB anymore - all trading operations go through Flask server
-    setIsConnected(true); // Just set this to true since we're only using the client for display
-    console.log('[useXTB] Only using XTB for display purposes - trades go through Flask server');
+    console.log('[useXTB] Using server API for exchange rates - trades go through Flask server');
     
     return () => {
-      // No need to disconnect since we're not connecting directly
+      // No need for cleanup
     };
-  }, [toast]);
+  }, []);
 
   const { data: exchangeRates, isLoading } = useQuery({
     queryKey: ['xtb-rates'],
     queryFn: async () => {
-      if (!isConnected) {
-        throw new Error('Not connected to XTB');
+      // Fetch rates directly from our server API
+      try {
+        const response = await fetch('/api/xtb/rates');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch rates: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('[useXTB] Loaded rates from server:', data);
+        return data;
+      } catch (err) {
+        console.error('[useXTB] Error fetching rates:', err);
+        throw err;
       }
+    },
+    initialData: [], // Provide empty initial data
 
       const streamStatus = await xtbService.checkStreamConnection();
       console.log('[useXTB] Stream connection status:', streamStatus);
