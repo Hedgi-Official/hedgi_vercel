@@ -398,46 +398,9 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // After a successful trade, fetch the current trade list to ensure
-      // we have the latest data with correct trade status
-      try {
-        // Get the trades status from XTB API to ensure we have latest data
-        console.log(`[XTB Backend] Trade successfully placed with order #${tradeOrderNumber}, updating status`);
-        
-        // Small delay to allow XTB API to register the trade
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get all trades to update local database status
-        const statusCmd = {
-          commandName: "getTrades",
-          arguments: { 
-            openedOnly: true
-          }
-        };
-        
-        // We don't need to wait for this to complete - it's just to refresh data in background
-        fetch('http://3.147.6.168/command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(statusCmd),
-          signal: AbortSignal.timeout(5000) // Short timeout since this is background refresh
-        }).then(resp => resp.json())
-          .then(statusResp => {
-            if (statusResp.status && Array.isArray(statusResp.returnData)) {
-              console.log(`[XTB Backend] Successfully refreshed trade data for ${statusResp.returnData.length} active trades`);
-            }
-          })
-          .catch(err => console.error('[XTB Backend] Background refresh error:', err));
-      } catch (refreshError) {
-        // Just log, don't interfere with the main response
-        console.error('[XTB Backend] Failed to refresh trade statuses:', refreshError);
-      }
-
       const hedgeResult = {
         status: apiResponse.status,
-        tradeOrderNumber: tradeOrderNumber,
-        // Include a refresh flag to tell client to refresh data
-        shouldRefresh: true
+        tradeOrderNumber: tradeOrderNumber
       };
 
       return res.send(JSON.stringify(hedgeResult));
