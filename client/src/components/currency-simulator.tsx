@@ -115,7 +115,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         tradeStatus: null
       };
       try {
-        const response = await fetch('http://3.147.6.168/execute-trade', { // Updated to use Flask server URL
+        // Use the Express backend API endpoint instead of directly calling Flask
+        const response = await fetch('/api/hedges', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

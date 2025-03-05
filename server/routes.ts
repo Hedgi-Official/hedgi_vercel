@@ -128,6 +128,7 @@ export function registerRoutes(app: Express): Server {
       
       // Ensure we're logged in first
       try {
+        // Set a timeout of 30 seconds for the login request
         const loginResponse = await fetch('http://3.147.6.168/login', {
           method: 'POST',
           headers: {
@@ -137,6 +138,8 @@ export function registerRoutes(app: Express): Server {
             userId: 17535100, 
             password: "GuiZarHoh2711!"
           }),
+          // Add timeout options
+          signal: AbortSignal.timeout(30000)
         });
         
         if (!loginResponse.ok) {
@@ -186,6 +189,8 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(commandData),
+        // Add timeout options
+        signal: AbortSignal.timeout(30000)
       });
       
       if (!response.ok) {
@@ -254,6 +259,8 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(commandData),
+        // Add timeout options
+        signal: AbortSignal.timeout(30000)
       });
       
       if (!response.ok) {
