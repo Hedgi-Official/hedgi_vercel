@@ -24,8 +24,8 @@ interface TradeTransInfo {
   [key: string]: any;    // To allow for dynamic properties
 }
 
-// External Flask server URL without port specification
-const XTB_SERVER_URL = 'http://3.147.6.168';
+// External Flask server URL with port 5000 - this is required for connection
+const XTB_SERVER_URL = 'http://3.147.6.168:5000';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -97,46 +97,35 @@ export class TradingService {
 
   private async login(): Promise<void> {
     try {
-      // In case the server is unavailable, we'll mock a successful login
-      // This allows the application to continue functioning while the server is down
-      // User will be shown simulated data instead of real trading data
+      // Use the EXACT format from the sample file: userId as a number, not a string
+      const userId = Number(process.env.XTB_USER_ID || '17535100');
       
-      try {
-        // Use the EXACT format from the sample file: userId as a number, not a string
-        const userId = Number(process.env.XTB_USER_ID || '17535100');
-        
-        console.log(`[Trading Service] Attempting login with userId: ${userId} to ${XTB_SERVER_URL}/login`);
-        
-        const response = await fetch(`${XTB_SERVER_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,  // Send as a number, not a string
-            password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!',
-            appName: "Hedgi-Web"
-          })
-        });
-  
-        if (!response.ok) {
-          console.error(`[Trading Service] Login response not OK: ${response.status} ${response.statusText}`);
-          throw new Error(`Login failed with status ${response.status}`);
-        }
-  
-        const data = await response.json() as XTBResponse;
-        console.log(`[Trading Service] Login response:`, data);
-        
-        if (!data.status) {
-          throw new Error(`Login failed: ${data.errorDescr || 'Unknown error'}`);
-        }
-        
-        console.log('[Trading Service] Login successful with external server');
-      } catch (loginError) {
-        console.warn('[Trading Service] External server unavailable, using simulated mode:', loginError);
-        // Continue execution in simulation mode
+      console.log(`[Trading Service] Attempting login with userId: ${userId} to ${XTB_SERVER_URL}/login`);
+      
+      const response = await fetch(`${XTB_SERVER_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId,  // Send as a number, not a string
+          password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!',
+          appName: "Hedgi-Web"
+        })
+      });
+
+      if (!response.ok) {
+        console.error(`[Trading Service] Login response not OK: ${response.status} ${response.statusText}`);
+        throw new Error(`Login failed with status ${response.status}`);
       }
 
-      // Set logged in status regardless of actual connection
-      // This allows the app to function in a degraded/simulated mode
+      const data = await response.json() as XTBResponse;
+      console.log(`[Trading Service] Login response:`, data);
+      
+      if (!data.status) {
+        throw new Error(`Login failed: ${data.errorDescr || 'Unknown error'}`);
+      }
+      
+      console.log('[Trading Service] Login successful with external server');
+
       this.isLoggedIn = true;
       this.lastLoginTime = Date.now();
       console.log('[Trading Service] Login process completed');
@@ -172,82 +161,32 @@ export class TradingService {
 
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
 
-      try {
-        // Execute a command to get symbol data from the external server
-        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            command: "getSymbol",
-            arguments: {
-              symbol
-            }
-          })
-        });
-  
-        if (!response.ok) {
-          throw new Error('Symbol data fetch failed');
-        }
-  
-        const data = await response.json() as XTBResponse;
-        
-        // Format the response to match what the rest of the app expects
-        return {
-          status: data.status,
-          returnData: data.returnData
-        };
-      } catch (symbolError) {
-        console.warn(`[Trading Service] Failed to get symbol data from server, using simulated data for ${symbol}:`, symbolError);
-        
-        // If server is down, provide simulated data so the UI can still function
-        // Generate realistic mock data based on the symbol
-        let bid = 0, ask = 0, swapLong = 0, swapShort = 0;
-        
-        // Use realistic exchange rates for common currency pairs
-        if (symbol === 'USDBRL') {
-          bid = 5.24;
-          ask = 5.25;
-          swapLong = 0.002;
-          swapShort = 0.003;
-        } else if (symbol === 'EURUSD') {
-          bid = 1.09;
-          ask = 1.10;
-          swapLong = 0.001;
-          swapShort = 0.002;
-        } else if (symbol === 'USDMXN') {
-          bid = 19.30;
-          ask = 19.35;
-          swapLong = 0.0015;
-          swapShort = 0.0025;
-        } else {
-          // Default values for any other symbol
-          bid = 1.0;
-          ask = 1.01;
-          swapLong = 0.001;
-          swapShort = 0.001;
-        }
-        
-        return {
-          status: true,
-          returnData: {
-            symbol,
-            bid,
-            ask,
-            time: Date.now(),
-            swapLong,
-            swapShort,
-            // Add other fields that might be needed by the UI
-            high: ask * 1.01,
-            low: bid * 0.99,
-            spreadRaw: ask - bid,
-            spreadTable: (ask - bid) * 10000,
-            currencyPair: true,
-            categoryName: "FX"
+      // No simulation fallback anymore
+      // Execute a command to get symbol data from the external server
+      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          command: "getSymbol",
+          arguments: {
+            symbol
           }
-        };
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Symbol data fetch failed');
       }
+
+      const data = await response.json() as XTBResponse;
+      
+      // Format the response to match what the rest of the app expects
+      return {
+        status: data.status,
+        returnData: data.returnData
+      };
     } catch (error) {
       console.error('[Trading Service] Symbol data error:', error);
       throw error;
@@ -295,47 +234,37 @@ export class TradingService {
       if (customComment) tradeTransInfo.customComment = customComment;
       if (expiration && expiration !== 0) tradeTransInfo.expiration = expiration;
 
-      try {
-        console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/execute:`, {
-          command: "tradeTransaction", 
+      // No simulation fallback anymore - we want to see real errors
+      console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/execute:`, {
+        command: "tradeTransaction", 
+        arguments: tradeTransInfo
+      });
+      
+      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          command: "tradeTransaction",
           arguments: tradeTransInfo
-        });
-        
-        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            command: "tradeTransaction",
-            arguments: tradeTransInfo
-          })
-        });
-  
-        if (!response.ok) {
-          console.error(`[Trading Service] Trade response not OK: ${response.status} ${response.statusText}`);
-          throw new Error(`Trade failed with status ${response.status}`);
-        }
-  
-        const data = await response.json() as XTBResponse;
-        console.log(`[Trading Service] Trade response:`, data);
-        
-        if (!data.status) {
-          throw new Error(data.errorDescr || 'Trade failed');
-        }
-  
-        console.log(`[Trading Service] Trade opened. Order number: ${data.returnData?.order}`);
-        return data.returnData?.order || 0;
-      } catch (tradeError) {
-        console.warn('[Trading Service] Failed to open trade with server, using simulated mode:', tradeError);
-        
-        // Generate a simulated order number
-        // This is just for UI functionality when server is down
-        // A real order will be created when the server is back online
-        const simulatedOrder = Math.floor(1000000 + Math.random() * 9000000);
-        console.log(`[Trading Service] Generated simulated order: ${simulatedOrder}`);
-        return simulatedOrder;
+        })
+      });
+
+      if (!response.ok) {
+        console.error(`[Trading Service] Trade response not OK: ${response.status} ${response.statusText}`);
+        throw new Error(`Trade failed with status ${response.status}`);
       }
+
+      const data = await response.json() as XTBResponse;
+      console.log(`[Trading Service] Trade response:`, data);
+      
+      if (!data.status) {
+        throw new Error(data.errorDescr || 'Trade failed');
+      }
+
+      console.log(`[Trading Service] Trade opened. Order number: ${data.returnData?.order}`);
+      return data.returnData?.order || 0;
     } catch (error) {
       console.error('[Trading Service] Open trade error:', error);
       throw error;
@@ -380,45 +309,37 @@ export class TradingService {
         expiration: expiration || 0
       };
 
-      try {
-        console.log(`[Trading Service] Sending close trade request to ${XTB_SERVER_URL}/execute:`, {
-          command: "tradeTransaction", 
+      // No simulation fallback anymore
+      console.log(`[Trading Service] Sending close trade request to ${XTB_SERVER_URL}/execute:`, {
+        command: "tradeTransaction", 
+        arguments: tradeTransInfo
+      });
+      
+      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          command: "tradeTransaction",
           arguments: tradeTransInfo
-        });
-        
-        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            command: "tradeTransaction",
-            arguments: tradeTransInfo
-          })
-        });
-  
-        if (!response.ok) {
-          console.error(`[Trading Service] Close trade response not OK: ${response.status} ${response.statusText}`);
-          throw new Error(`Close trade failed with status ${response.status}`);
-        }
-  
-        const data = await response.json() as XTBResponse;
-        console.log(`[Trading Service] Close trade response:`, data);
-        
-        if (!data.status) {
-          throw new Error(data.errorDescr || 'Close trade failed');
-        }
-  
-        console.log(`[Trading Service] Trade closed. Order number: ${data.returnData?.order}`);
-        return data.returnData?.order || 0;
-      } catch (closeError) {
-        console.warn('[Trading Service] Failed to close trade with server, using simulated mode:', closeError);
-        
-        // Generate a simulated closing order number - in real XTB API, closing orders are original order + 1
-        const simulatedClosingOrder = Number(positionToClose) + 1;
-        console.log(`[Trading Service] Generated simulated closing order: ${simulatedClosingOrder}`);
-        return simulatedClosingOrder;
+        })
+      });
+
+      if (!response.ok) {
+        console.error(`[Trading Service] Close trade response not OK: ${response.status} ${response.statusText}`);
+        throw new Error(`Close trade failed with status ${response.status}`);
       }
+
+      const data = await response.json() as XTBResponse;
+      console.log(`[Trading Service] Close trade response:`, data);
+      
+      if (!data.status) {
+        throw new Error(data.errorDescr || 'Close trade failed');
+      }
+
+      console.log(`[Trading Service] Trade closed. Order number: ${data.returnData?.order}`);
+      return data.returnData?.order || 0;
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       throw error;
@@ -430,65 +351,42 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      try {
-        // Get active trades to find status from the external server
-        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            command: "getTrades",
-            arguments: {
-              openedOnly: true
-            }
-          })
-        });
-  
-        if (!response.ok) {
-          throw new Error('Status check failed');
-        }
-  
-        const data = await response.json() as XTBResponse;
-        console.log(`[Trading Service] Trade status response:`, data);
-  
-        if (!data.status) {
-          throw new Error(data.errorDescr || 'Status check failed');
-        }
-  
-        // Find the trade with matching order number
-        const trades = data.returnData || [];
-        const trade = trades.find((t: any) => Number(t.order) === Number(tradeNumber));
-  
-        // Create response
-        const result: XTBResponse = {
-          status: true,
-          returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
-          message: trade ? 'Trade found' : 'Trade not found or closed'
-        };
-  
-        return result;
-      } catch (statusError) {
-        console.warn(`[Trading Service] Failed to check trade status with server, using simulated data for trade ${tradeNumber}:`, statusError);
-        
-        // If server is down, provide simulated status data
-        // For now, we'll assume the trade is active if we can't reach the server
-        // This prevents unnecessary errors in the UI
-        return {
-          status: true,
-          returnData: {
-            order: tradeNumber,
-            status: 'PENDING',
-            symbol: 'UNKNOWN',
-            volume: 0,
-            openPrice: 0,
-            openTime: Date.now(),
-            type: 0,
-            state: 'ACTIVE',
-            profit: 0,
-            simulated: true // Custom flag to indicate this is simulated data
-          },
-          message: 'Trade found (simulated data)'
-        };
+      // No simulation fallback anymore
+      // Get active trades to find status from the external server
+      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: "getTrades",
+          arguments: {
+            openedOnly: true
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Status check failed');
       }
+
+      const data = await response.json() as XTBResponse;
+      console.log(`[Trading Service] Trade status response:`, data);
+
+      if (!data.status) {
+        throw new Error(data.errorDescr || 'Status check failed');
+      }
+
+      // Find the trade with matching order number
+      const trades = data.returnData || [];
+      const trade = trades.find((t: any) => Number(t.order) === Number(tradeNumber));
+
+      // Create response
+      const result: XTBResponse = {
+        status: true,
+        returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
+        message: trade ? 'Trade found' : 'Trade not found or closed'
+      };
+
+      return result;
     } catch (error) {
       console.error(`[Trading Service] Status check error:`, error);
       throw error;
