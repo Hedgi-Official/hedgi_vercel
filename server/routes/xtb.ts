@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import WebSocket from 'ws';
 import { tradingService } from '../services/trading';
 
 const router = Router();

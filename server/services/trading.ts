@@ -5,10 +5,18 @@ import fetch from 'node-fetch';
 interface XTBResponse {
   success?: boolean;
   error?: string;
-  status?: boolean;
+  status?: boolean | string;
   returnData?: any;
   orderId?: number;
   message?: string;
+}
+
+// Define XTB API response type
+interface XTBApiResponse {
+  status: boolean;
+  returnData?: any;
+  errorCode?: string;
+  errorDescr?: string;
 }
 
 interface TradeTransInfo {
@@ -139,7 +147,7 @@ export class TradingService {
         throw new Error(`Login failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { status: boolean; streamSessionId?: string };
       console.log('[Trading Service] Login response:', data);
       
       if (!data.status) {
@@ -155,7 +163,12 @@ export class TradingService {
     }
   }
 
-  async executeHedge(hedgeParams: any): Promise<any> {
+  async executeHedge(hedgeParams: { 
+    symbol: string; 
+    volume: number; 
+    targetRate: number; 
+    direction: 'buy' | 'sell' 
+  }): Promise<{ success: boolean; orderId?: number; message: string }> {
     try {
       await this.ensureLoggedIn();
       
@@ -191,8 +204,12 @@ export class TradingService {
         throw new Error(`Hedge execution failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBApiResponse;
       console.log('[Trading Service] Hedge executed successfully:', data);
+      
+      if (!data.status) {
+        throw new Error(data.errorDescr || 'Hedge execution failed');
+      }
       
       // Extract order number from response
       const orderId = data.returnData?.order;
@@ -208,7 +225,7 @@ export class TradingService {
     }
   }
 
-  async getSymbolData(symbol: string): Promise<any> {
+  async getSymbolData(symbol: string): Promise<{ status: boolean; returnData: any }> {
     try {
       await this.ensureLoggedIn();
 
@@ -230,8 +247,12 @@ export class TradingService {
         throw new Error(`Symbol data fetch failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBApiResponse;
       console.log(`[Trading Service] Symbol data for ${symbol}:`, data);
+      
+      if (!data.status) {
+        throw new Error(data.errorDescr || `Failed to get data for ${symbol}`);
+      }
       
       // Transform response to match the expected format
       return {
@@ -297,15 +318,19 @@ export class TradingService {
         throw new Error(`Trade opening failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBApiResponse;
       console.log(`[Trading Service] Trade opening response:`, data);
       
       if (!data.status) {
-        throw new Error('Trade opening failed');
+        throw new Error(data.errorDescr || 'Trade opening failed');
       }
 
       const orderId = data.returnData?.order;
       console.log(`[Trading Service] Trade opened. Order number: ${orderId}`);
+      
+      if (!orderId) {
+        throw new Error('No order ID received from API');
+      }
       
       return orderId;
     } catch (error) {
@@ -368,15 +393,19 @@ export class TradingService {
         throw new Error(`Trade closing failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBApiResponse;
       console.log(`[Trading Service] Trade closing response:`, data);
       
       if (!data.status) {
-        throw new Error('Trade closing failed');
+        throw new Error(data.errorDescr || 'Trade closing failed');
       }
 
       const orderId = data.returnData?.order;
       console.log(`[Trading Service] Trade closed. Order number: ${orderId}`);
+      
+      if (!orderId) {
+        throw new Error('No order ID received from API');
+      }
       
       return orderId;
     } catch (error) {
@@ -407,11 +436,11 @@ export class TradingService {
         throw new Error(`Trade status check failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBApiResponse;
       console.log(`[Trading Service] Open trades response:`, data);
       
       if (!data.status) {
-        throw new Error('Failed to get trade status');
+        throw new Error(data.errorDescr || 'Failed to get trade status');
       }
 
       // Find the specific trade
@@ -421,7 +450,7 @@ export class TradingService {
       if (trade) {
         return {
           success: true,
-          status: 'open',
+          status: true,
           orderId: tradeNumber,
           message: 'Trade is open',
           returnData: trade
@@ -430,7 +459,7 @@ export class TradingService {
         // If not found in open trades, it might be closed
         return {
           success: true,
-          status: 'closed',
+          status: false,
           orderId: tradeNumber,
           message: 'Trade is closed or not found'
         };
