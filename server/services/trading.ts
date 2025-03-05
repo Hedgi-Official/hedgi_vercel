@@ -28,6 +28,28 @@ interface TradeTransInfo {
 const XTB_SERVER_URL = 'http://3.147.6.168:5000';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const FETCH_TIMEOUT = 5000; // 5 seconds timeout for fetch requests
+
+// Helper function to create fetch requests with a timeout
+async function fetchWithTimeout(url: string, options: any, timeout = FETCH_TIMEOUT): Promise<any> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error: any) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error(`Request to ${url} timed out after ${timeout}ms`);
+    }
+    throw error;
+  }
+}
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -39,7 +61,9 @@ async function checkServerHealth(): Promise<boolean> {
     // Try to reach the server with a simple GET request to the root path
     // If the server is reachable but ping doesn't exist, it will return a 404, 
     // which is still a sign that the server is alive
-    const response = await fetch(`${XTB_SERVER_URL}`);
+    const response = await fetchWithTimeout(`${XTB_SERVER_URL}/ping`, {
+      method: 'GET'
+    }, 3000); // Use a shorter timeout for health checks
     
     // Consider any response from the server as a sign it's available
     // Even if it's a 404, it means the server is running
