@@ -14,7 +14,7 @@ import type { Hedge } from '@db/schema';
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => void;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
@@ -103,55 +103,33 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     });
   };
 
-
   const handlePlaceHedge = async () => {
+    if (!onPlaceHedge || !simulation) return;
+
     setIsPlacingHedge(true);
     setHedgeError(null);
-    if (onPlaceHedge && simulation) {
-      const hedgeData = {
-        baseCurrency,
-        targetCurrency,
-        amount: amount.toString(),
-        rate: simulation.rate.toString(),
-        duration,
-        tradeDirection,
-        tradeOrderNumber: null,
-        tradeStatus: null
-      };
-      try {
-        // Use the Express backend API endpoint instead of directly calling Flask
-        const response = await fetch('/api/hedges', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(hedgeData),
-        });
 
-        if (!response.ok) {
-          throw new Error(`Failed to place hedge: ${response.statusText}`);
-        }
-        const result = await response.json();
-        console.log(result.message);
+    const hedgeData = {
+      baseCurrency,
+      targetCurrency,
+      amount: amount.toString(),
+      rate: simulation.rate.toString(),
+      duration,
+      tradeDirection,
+      tradeOrderNumber: null,
+      tradeStatus: null
+    };
 
-        // Instead of calling onPlaceHedge separately, pass the result data
-        if (onPlaceHedge) {
-          // Only call once with the updated data including order number if available
-          onPlaceHedge({
-            ...hedgeData,
-            tradeOrderNumber: result.tradeOrderNumber || null,
-            tradeStatus: result.status || null
-          });
-        }
-      } catch (error) {
-        console.error('Error placing hedge:', error);
-        setHedgeError(error.message);
-      } finally {
-        setIsPlacingHedge(false);
-      }
-      // Removed duplicate onPlaceHedge call
+    try {
+      onPlaceHedge(hedgeData);
+    } catch (error) {
+      console.error('Error placing hedge:', error);
+      setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
+    } finally {
+      setIsPlacingHedge(false);
     }
   };
+
   const getTradeDirectionHelp = () => {
     if (tradeDirection === 'buy') {
       return `I will make a payment in ${targetCurrency} in the future`;
@@ -307,8 +285,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                     {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {tradeDirection === 'buy' ? 
-                      `Buy ${targetCurrency} with ${baseCurrency}` : 
+                    {tradeDirection === 'buy' ?
+                      `Buy ${targetCurrency} with ${baseCurrency}` :
                       `Sell ${targetCurrency} for ${baseCurrency}`}
                   </p>
                 </div>
