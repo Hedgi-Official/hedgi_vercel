@@ -48,7 +48,7 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-// Flask server URL for XTB trading operations
+// New Flask server URL
 const XTB_SERVER_URL = 'http://3.147.6.168';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
@@ -130,14 +130,10 @@ export class TradingService {
   }
 
   private async login(): Promise<void> {
-    // Reset login state before attempting
-    this.isLoggedIn = false;
-    
     try {
       console.log('[Trading Service] Sending login request to XTB server');
       
-      // First, try the /login endpoint
-      const loginResponse = await fetch(`${XTB_SERVER_URL}/login`, {
+      const response = await fetch(`${XTB_SERVER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,51 +142,23 @@ export class TradingService {
         })
       });
 
-      if (!loginResponse.ok) {
-        console.warn('[Trading Service] Login endpoint failed with status:', loginResponse.status);
-        // Try an alternative approach - direct command
-        const commandResponse = await fetch(`${XTB_SERVER_URL}/command`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            commandName: "login",
-            arguments: {
-              userId: process.env.XTB_USER_ID || '17535100',
-              password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
-            }
-          })
-        });
-        
-        if (!commandResponse.ok) {
-          console.error('[Trading Service] Login command failed with status:', commandResponse.status);
-          throw new Error(`Login failed with status ${commandResponse.status}`);
-        }
-        
-        const cmdData = await commandResponse.json() as XTBApiResponse;
-        if (!cmdData.status) {
-          throw new Error(cmdData.errorDescr || 'Login command failed');
-        }
-        
-        // Success via command route
-        this.isLoggedIn = true;
-        this.lastLoginTime = Date.now();
-        console.log('[Trading Service] Successfully logged in via command route');
-        return;
+      if (!response.ok) {
+        console.error('[Trading Service] Login failed with status:', response.status);
+        throw new Error(`Login failed with status ${response.status}`);
       }
 
-      const data = await loginResponse.json() as { status: boolean; streamSessionId?: string };
+      const data = await response.json() as { status: boolean; streamSessionId?: string };
       console.log('[Trading Service] Login response:', data);
       
       if (!data.status) {
-        throw new Error('Login failed - status false');
+        throw new Error('Login failed');
       }
 
       this.isLoggedIn = true;
       this.lastLoginTime = Date.now();
-      console.log('[Trading Service] Successfully logged in via login endpoint');
+      console.log('[Trading Service] Successfully logged in');
     } catch (error) {
       console.error('[Trading Service] Login error:', error);
-      // Don't reset login state here - handled at beginning of method
       throw error;
     }
   }

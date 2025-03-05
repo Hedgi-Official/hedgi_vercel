@@ -14,16 +14,7 @@ import type { Hedge } from '@db/schema';
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: {
-    baseCurrency: string; 
-    targetCurrency: string;
-    amount: string;
-    rate: string;
-    duration: number;
-    tradeDirection: 'buy' | 'sell';
-    tradeOrderNumber: number | null;
-    tradeStatus: string | null;
-  }) => void;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => void;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
@@ -113,10 +104,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   
   const handlePlaceHedge = async () => {
     if (onPlaceHedge && simulation) {
-      // Generate a simulated trade order number to ensure consistent behavior
-      // even when the remote API is unavailable
-      const simulatedOrderNumber = Math.floor(Math.random() * 1000000) + 1000000;
-      
       const hedgeData = {
         baseCurrency,
         targetCurrency,
@@ -124,15 +111,28 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         rate: simulation.rate.toString(),
         duration,
         tradeDirection,
-        // Include a simulated trade order number to ensure the UI works consistently
-        tradeOrderNumber: simulatedOrderNumber,
-        tradeStatus: "SIMULATED"
+        tradeOrderNumber: null,
+        tradeStatus: null
       };
-      
-      console.log('[CurrencySimulator] Creating hedge with simulated trade:', hedgeData);
-      
-      // Let the parent component handle the API call
-      // This will go through our backend endpoint
+      try {
+        const response = await      fetch('https://your-flask-app-434424736588.us-central1.run.app/execute-trade', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(hedgeData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to place hedge');
+        }
+        const result = await response.json();
+        console.log(result.message);
+        // Optionally handle response data
+      } catch (error) {
+        console.error('Error placing hedge:', error);
+      }
+      // Optionally call the original onPlaceHedge after
       onPlaceHedge(hedgeData);
     }
   };

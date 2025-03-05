@@ -37,17 +37,12 @@ export default function Dashboard() {
       return response.json();
     },
     onSuccess: (data) => {
-      // Define a mapping for status colors
-      const statusMapping: Record<string, string> = {
-        'Accepted': 'text-green-600',
-        'Pending': 'text-yellow-600',
-        'Rejected': 'text-red-600',
-        'Error': 'text-red-600',
-      };
-      
-      // Get status color with safer type checking
-      const status = data.returnData.status as string;
-      const statusColor = statusMapping[status] || 'text-muted-foreground';
+      const statusColor = {
+        Accepted: 'text-green-600',
+        Pending: 'text-yellow-600',
+        Rejected: 'text-red-600',
+        Error: 'text-red-600',
+      }[data.returnData.status] || 'text-muted-foreground';
 
       toast({
         title: t('Trade Status Details'),
@@ -106,16 +101,7 @@ export default function Dashboard() {
   });
 
   const createHedgeMutation = useMutation({
-    mutationFn: async (hedgeData: {
-      baseCurrency: string; 
-      targetCurrency: string;
-      amount: string;
-      rate: string;
-      duration: number;
-      tradeDirection: 'buy' | 'sell';
-      tradeOrderNumber: number | null;
-      tradeStatus: string | null;
-    }) => {
+    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
