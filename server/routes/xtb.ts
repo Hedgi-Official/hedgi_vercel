@@ -64,8 +64,9 @@ router.post('/api/xtb/hedge', async (req, res) => {
 
 // Keep existing routes but add fallback functionality
 router.get('/api/xtb/rates', async (req, res) => {
-  // Ensure we're setting the correct content type
+  // Explicitly set the content type as JSON and ensure we bypass Vite's HMR handling
   res.setHeader('Content-Type', 'application/json');
+  res.removeHeader('X-Powered-By'); // Remove any Express headers
   try {
     let isConnected = false;
     if (!tradingService.isConnected) {

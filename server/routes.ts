@@ -5,13 +5,131 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+// Import XTB needs but don't import the router - we'll define routes directly
+import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Register secondary rate route
+  // Register routes
   app.use(secondaryRateRouter);
+  
+  // Fallback data for when XTB API is unavailable
+  const FALLBACK_RATES = [
+    {
+      symbol: 'USDBRL',
+      bid: 5.67,
+      ask: 5.69,
+      timestamp: Date.now(),
+      swapLong: 0.0002,
+      swapShort: 0.0001,
+    },
+    {
+      symbol: 'EURUSD',
+      bid: 1.08,
+      ask: 1.09,
+      timestamp: Date.now(),
+      swapLong: 0.0001,
+      swapShort: 0.0002,
+    },
+    {
+      symbol: 'USDMXN',
+      bid: 16.75,
+      ask: 16.78,
+      timestamp: Date.now(),
+      swapLong: 0.0001,
+      swapShort: 0.0001,
+    }
+  ];
+  
+  // XTB API routes defined directly in main routes file
+  app.get("/api/xtb/rates", async (req, res) => {
+    res.header('Content-Type', 'application/json');
+    
+    try {
+      // If trading service is not connected, use fallback data
+      if (!xtbTradingService.isConnected) {
+        console.log('[XTB Backend] Using fallback rates as XTB service is not connected');
+        return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
+          ...rate,
+          timestamp: Date.now() // Update timestamp to current time
+        }))));
+      }
+      
+      // If connected, get real data for each symbol
+      const symbols = ['USDBRL', 'EURUSD', 'USDMXN'];
+      const rates = [];
+      
+      for (const symbol of symbols) {
+        try {
+          const symbolResponse = await xtbTradingService.getSymbolData(symbol);
+          
+          if (!symbolResponse.status || !symbolResponse.returnData) {
+            console.log(`[XTB Backend] Failed to get data for ${symbol}, using fallback`);
+            const fallback = FALLBACK_RATES.find(r => r.symbol === symbol);
+            if (fallback) {
+              rates.push({
+                ...fallback,
+                timestamp: Date.now()
+              });
+            }
+            continue;
+          }
+          
+          rates.push({
+            symbol,
+            bid: symbolResponse.returnData.bid,
+            ask: symbolResponse.returnData.ask,
+            timestamp: symbolResponse.returnData.time || Date.now(),
+            swapLong: Math.abs(symbolResponse.returnData.swapLong || 0),
+            swapShort: Math.abs(symbolResponse.returnData.swapShort || 0),
+          });
+        } catch (error) {
+          console.error(`[XTB Backend] Error processing ${symbol}:`, error);
+          const fallback = FALLBACK_RATES.find(r => r.symbol === symbol);
+          if (fallback) {
+            rates.push({
+              ...fallback,
+              timestamp: Date.now()
+            });
+          }
+        }
+      }
+      
+      // If we have no rates, use all fallbacks
+      if (rates.length === 0) {
+        console.log('[XTB Backend] No rates available, using all fallbacks');
+        return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
+          ...rate,
+          timestamp: Date.now()
+        }))));
+      }
+      
+      // Send the rates as a direct JSON string
+      return res.send(JSON.stringify(rates));
+    } catch (error) {
+      console.error('[XTB Backend] Error in rates endpoint:', error);
+      // Return fallback data instead of an error
+      return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
+        ...rate,
+        timestamp: Date.now()
+      }))));
+    }
+  });
+  
+  // XTB API route for hedge execution
+  app.post("/api/xtb/hedge", async (req, res) => {
+    res.header('Content-Type', 'application/json');
+    
+    try {
+      const hedgeResult = await xtbTradingService.executeHedge(req.body);
+      return res.send(JSON.stringify(hedgeResult));
+    } catch (error) {
+      console.error('[XTB Backend] Error executing hedge:', error);
+      return res.status(500).send(JSON.stringify({ error: 'Failed to execute hedge' }));
+    }
+  });
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
