@@ -15,9 +15,10 @@ import type { Hedge } from '@db/schema';
 interface Props {
   showGraph?: boolean;
   onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
+  onOrdersUpdated?: () => void; // Added callback for refreshing orders list
 }
 
-export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
+export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
@@ -104,7 +105,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   };
 
   const handlePlaceHedge = async () => {
-    if (!onPlaceHedge || !simulation) return;
+    if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
 
     setIsPlacingHedge(true);
     setHedgeError(null);
@@ -121,7 +122,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     };
 
     try {
-      onPlaceHedge(hedgeData);
+      await onPlaceHedge(hedgeData); // Await the promise here
+      onOrdersUpdated(); // Call the callback to refresh the orders list
+
     } catch (error) {
       console.error('Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
