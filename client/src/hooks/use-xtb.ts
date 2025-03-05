@@ -66,10 +66,10 @@ export function useXTB() {
     },
     refetchInterval: 5000, // Refresh every 5 seconds
     retry: 3,
-    // Set staleTime to ensure we don't show stale data
     staleTime: 4000,
-    // Initialize with previous data while fetching
-    keepPreviousData: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 
   return {

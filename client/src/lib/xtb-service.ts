@@ -11,11 +11,44 @@ export class XTBService {
   private _isConnected = false;
   private streamSessionId: string | null = null;
   private streamListeners: Map<string, (data: any) => void> = new Map();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 2000;
 
   constructor(
     public serverUrl = 'wss://ws.xtb.com/demo',
     public streamUrl = 'wss://ws.xtb.com/demoStream'
-  ) {}
+  ) {
+    // Initialize connection immediately
+    this.initializeConnection();
+  }
+
+  private async initializeConnection() {
+    try {
+      console.log('[XTB] Initializing connection...');
+      // Use demo credentials for display-only functionality
+      await this.connect({
+        userId: "17535100",
+        password: "GuiZarHoh2711!"
+      });
+    } catch (error) {
+      console.error('[XTB] Initial connection failed:', error);
+      this.scheduleReconnect();
+    }
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('[XTB] Max reconnection attempts reached');
+      return;
+    }
+
+    console.log(`[XTB] Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${this.reconnectDelay}ms`);
+    setTimeout(() => {
+      this.reconnectAttempts++;
+      this.initializeConnection();
+    }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts)); // Exponential backoff
+  }
 
   get isConnected(): boolean {
     return this._isConnected && this.ws?.readyState === WebSocket.OPEN;
@@ -23,7 +56,10 @@ export class XTBService {
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('Not connected to XTB');
+      await this.initializeConnection();
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        throw new Error('Not connected to XTB');
+      }
     }
 
     return new Promise((resolve, reject) => {
@@ -54,7 +90,6 @@ export class XTBService {
 
       this.ws!.addEventListener('message', handleMessage);
 
-      // Add timeout to prevent hanging
       setTimeout(() => {
         this.ws!.removeEventListener('message', handleMessage);
         reject(new Error(`Command ${cmd} timed out after 10s`));
@@ -92,6 +127,7 @@ export class XTBService {
           if (response.streamSessionId) {
             this.streamSessionId = response.streamSessionId;
             this._isConnected = true;
+            this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
             await this.setupStreamingConnection();
             resolve();
           } else {
@@ -115,74 +151,29 @@ export class XTBService {
         clearTimeout(connectionTimeout);
         this._isConnected = false;
         this.streamSessionId = null;
+        this.scheduleReconnect();
       });
     });
   }
 
-  async getHistoricalData(symbol: string, period: number = 30): Promise<Array<{ date: string; rate: number }>> {
-    if (!this.isConnected) {
-      throw new Error('Not connected to XTB');
-    }
-
-    try {
-      const endTimestamp = Math.floor(Date.now() / 1000);
-      const startTimestamp = endTimestamp - (period * 24 * 60 * 60); // period days ago
-
-      console.log('[XTB] Requesting historical data:', {
-        symbol,
-        start: new Date(startTimestamp * 1000).toISOString(),
-        end: new Date(endTimestamp * 1000).toISOString(),
-      });
-
-      const response = await this.sendCommand('getChartRangeRequest', {
-        symbol,
-        start: startTimestamp * 1000, // XTB expects milliseconds
-        end: endTimestamp * 1000,
-        period: 1440, // Daily candles (1440 minutes = 24 hours)
-        ticks: 0
-      });
-
-      console.log('[XTB] Historical data response:', response);
-
-      if (!response.status || !response.returnData?.rateInfos) {
-        throw new Error('Failed to get historical data');
-      }
-
-      const data = response.returnData.rateInfos.map((info: any) => ({
-        date: new Date(info.ctm).toISOString(),
-        rate: (info.open + info.close) / 2 // Average of open and close prices
-      })).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      console.log('[XTB] Processed historical data:', data);
-      return data;
-    } catch (error) {
-      console.error('[XTB] Error fetching historical data:', error);
-      throw error;
-    }
-  }
-
   async getSymbolData(symbol: string): Promise<XTBResponse> {
     if (!this.isConnected) {
-      throw new Error('Not connected to XTB');
+      await this.initializeConnection();
     }
 
     try {
       console.log('[XTB] Fetching symbol data for:', symbol);
-
-      // Get symbol data
-      const response = await this.sendCommand('getSymbol', {
-        symbol: symbol
-      });
+      const response = await this.sendCommand('getSymbol', { symbol });
 
       if (!response.status) {
         throw new Error(response.errorDescr || 'Failed to get symbol data');
       }
 
-      // Ensure swap values are positive
       if (response.returnData) {
         response.returnData.swapLong = Math.abs(response.returnData.swapLong);
         response.returnData.swapShort = Math.abs(response.returnData.swapShort);
       }
+
       console.log('[XTB] Symbol data response for', symbol, ':', response);
       return response;
     } catch (error) {
@@ -193,7 +184,7 @@ export class XTBService {
 
   async checkStreamConnection(): Promise<boolean> {
     if (!this.streamWs || this.streamWs.readyState !== WebSocket.OPEN) {
-      console.error('[XTB] Stream connection not ready');
+      console.log('[XTB] Stream connection not ready, attempting setup...');
       try {
         await this.setupStreamingConnection();
       } catch (error) {
@@ -234,6 +225,8 @@ export class XTBService {
       this.streamWs.addEventListener('close', () => {
         console.log('[XTB] Streaming connection closed');
         clearTimeout(connectionTimeout);
+        // Try to reconnect streaming connection
+        setTimeout(() => this.setupStreamingConnection(), 5000);
       });
     });
   }
