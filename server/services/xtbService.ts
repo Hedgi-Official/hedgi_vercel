@@ -70,24 +70,39 @@ class XTBService {
         cmd: number; // 0 for BUY, 1 for SELL
         type: number; // 0 for OPEN, 2 for CLOSE
         price?: number;
-        order?: number; // Required when closing trades
+        order?: number;
         customComment?: string;
     }): Promise<any> {
         try {
-            console.log('[XTB Service] Placing trade:', params);
+            // Validate and format parameters
+            const formattedSymbol = params.symbol.toUpperCase();
+            const formattedVolume = Math.max(params.volume, 0.01); // Ensure minimum volume
+
+            console.log('[XTB Service] Placing trade with formatted params:', {
+                ...params,
+                symbol: formattedSymbol,
+                volume: formattedVolume
+            });
+
             const tradeTransInfo = {
                 cmd: params.cmd,
-                symbol: params.symbol,
-                volume: params.volume,
+                symbol: formattedSymbol,
+                volume: formattedVolume,
                 type: params.type,
                 price: params.price || 0.0,
                 order: params.order,
-                customComment: params.customComment || `Trade ${params.symbol}`,
+                customComment: params.customComment || `Trade ${formattedSymbol}`,
                 expiration: 0,
                 offset: 0
             };
 
+            console.log('[XTB Service] Sending trade transaction:', tradeTransInfo);
             const response = await this.executeCommand('tradeTransaction', { tradeTransInfo });
+
+            if (!response.status) {
+                throw new Error(response.errorDescr || 'Trade execution failed');
+            }
+
             console.log('[XTB Service] Trade response:', response);
             return response;
         } catch (error) {
@@ -108,5 +123,4 @@ class XTBService {
     }
 }
 
-// Export a singleton instance
 export const xtbService = new XTBService();
