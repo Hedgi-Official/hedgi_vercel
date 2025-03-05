@@ -5,6 +5,7 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+import xtbRouter from './routes/xtb';
 import { tradingService } from "./services/trading";
 
 export function registerRoutes(app: Express): Server {

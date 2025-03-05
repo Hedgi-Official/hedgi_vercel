@@ -202,32 +202,47 @@ export class TradingService {
 
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
 
-      // No simulation fallback anymore
-      // Execute a command to get symbol data from the external server
-      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          command: "getSymbol",
-          arguments: {
-            symbol
-          }
-        })
-      });
+      // Use fetchWithTimeout to ensure proper timeout handling
+      try {
+        // Execute a command to get symbol data from the external server
+        const response = await fetchWithTimeout(`${XTB_SERVER_URL}/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            command: "getSymbol",
+            arguments: {
+              symbol
+            }
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error('Symbol data fetch failed');
+        if (!response.ok) {
+          throw new Error(`Symbol data fetch failed with status ${response.status}`);
+        }
+
+        const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
+        
+        if (!data.status) {
+          throw new Error(data.errorDescr || `Failed to get symbol data for ${symbol}`);
+        }
+        
+        // Format the response to match what the rest of the app expects
+        return {
+          status: data.status,
+          returnData: data.returnData
+        };
+      } catch (connectionError: any) {
+        console.error(`[Trading Service] Symbol data connection error for ${symbol}:`, connectionError);
+        
+        // Expose the real error, not hiding behind generic messages
+        if (connectionError.message && connectionError.message.includes('timed out')) {
+          throw new Error(`Connection to XTB server timed out while getting data for ${symbol}`);
+        }
+        throw connectionError; // Let the actual error propagate
       }
-
-      const data = await response.json() as XTBResponse;
-      
-      // Format the response to match what the rest of the app expects
-      return {
-        status: data.status,
-        returnData: data.returnData
-      };
     } catch (error) {
       console.error('[Trading Service] Symbol data error:', error);
       throw error;
@@ -364,23 +379,34 @@ export class TradingService {
         arguments: tradeTransInfo
       });
       
-      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          command: "tradeTransaction",
-          arguments: tradeTransInfo
-        })
-      });
+      let responseData;
+      try {
+        const response = await fetchWithTimeout(`${XTB_SERVER_URL}/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            command: "tradeTransaction",
+            arguments: tradeTransInfo
+          })
+        });
 
-      if (!response.ok) {
-        console.error(`[Trading Service] Close trade response not OK: ${response.status} ${response.statusText}`);
-        throw new Error(`Close trade failed with status ${response.status}`);
+        if (!response.ok) {
+          console.error(`[Trading Service] Close trade response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(`Close trade failed with status ${response.status}`);
+        }
+        
+        responseData = await response.json() as XTBResponse;
+      } catch (connectionError: any) {
+        console.error('[Trading Service] Close trade connection error:', connectionError);
+        if (connectionError.message && connectionError.message.includes('timed out')) {
+          throw new Error(`Connection to XTB server timed out while closing trade`);
+        }
+        throw connectionError; // Let the actual error propagate
       }
 
-      const data = await response.json() as XTBResponse;
+      const data = responseData;
       console.log(`[Trading Service] Close trade response:`, data);
       
       if (!data.status) {
@@ -400,24 +426,36 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      // No simulation fallback anymore
-      // Get active trades to find status from the external server
-      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          command: "getTrades",
-          arguments: {
-            openedOnly: true
-          }
-        })
-      });
+      // Use fetchWithTimeout for consistency
+      let responseData;
+      try {
+        // No simulation fallback anymore
+        // Get active trades to find status from the external server
+        const response = await fetchWithTimeout(`${XTB_SERVER_URL}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: "getTrades",
+            arguments: {
+              openedOnly: true
+            }
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error('Status check failed');
+        if (!response.ok) {
+          throw new Error(`Status check failed with status ${response.status}`);
+        }
+
+        responseData = await response.json() as XTBResponse;
+      } catch (connectionError: any) {
+        console.error('[Trading Service] Trade status connection error:', connectionError);
+        if (connectionError.message && connectionError.message.includes('timed out')) {
+          throw new Error(`Connection to XTB server timed out while checking trade status`);
+        }
+        throw connectionError; // Let the actual error propagate
       }
 
-      const data = await response.json() as XTBResponse;
+      const data = responseData;
       console.log(`[Trading Service] Trade status response:`, data);
 
       if (!data.status) {
