@@ -1,5 +1,3 @@
-
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { xtbService } from '@/lib/xtb-service';
 import { useToast } from '@/hooks/use-toast';
@@ -17,27 +15,11 @@ export interface ExchangeRate {
 const CURRENCY_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
 export function useXTB() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // We don't connect directly to XTB anymore - all trading operations go through Flask server
-    setIsConnected(true); // Just set this to true since we're only using the client for display
-    console.log('[useXTB] Only using XTB for display purposes - trades go through Flask server');
-    
-    return () => {
-      // No need to disconnect since we're not connecting directly
-    };
-  }, [toast]);
-
-  const { data: exchangeRates, isLoading } = useQuery({
+  const { data: exchangeRates, isLoading, error } = useQuery({
     queryKey: ['xtb-rates'],
     queryFn: async () => {
-      if (!isConnected) {
-        throw new Error('Not connected to XTB');
-      }
-
       const streamStatus = await xtbService.checkStreamConnection();
       console.log('[useXTB] Stream connection status:', streamStatus);
 
@@ -82,15 +64,17 @@ export function useXTB() {
       console.log('[useXTB] Final rates:', rates);
       return rates;
     },
-    enabled: isConnected,
     refetchInterval: 5000, // Refresh every 5 seconds
     retry: 3,
+    // Set staleTime to ensure we don't show stale data
+    staleTime: 4000,
+    // Initialize with previous data while fetching
+    keepPreviousData: true,
   });
 
   return {
-    isConnected,
-    error,
     exchangeRates,
     isLoading,
+    error: error as Error | null,
   };
 }
