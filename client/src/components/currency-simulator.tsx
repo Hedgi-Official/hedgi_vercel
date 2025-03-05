@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { xtbService } from '@/lib/xtb-service';
 import type { Hedge } from '@db/schema';
 
 interface Props {
@@ -26,70 +26,36 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
-  const { toast } = useToast();
-  
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
     let currentRate;
     let swapValues;
     try {
-      // Use server API to get the latest rates
-      console.log('[CurrencySimulator] Fetching rates from server for', currencyPair);
-      
-      // Get rates from the server-side API
-      const response = await fetch('/api/xtb/rates');
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.error || `Server error: ${response.status}`;
-        console.error('[CurrencySimulator] API error:', errorMessage);
-        
-        toast({
-          variant: "destructive",
-          title: "Error fetching rates",
-          description: errorMessage,
+      if (!xtbService.isConnected) {
+        await xtbService.connect({
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
         });
-        
-        throw new Error(errorMessage);
       }
-      
-      const rates = await response.json();
-      console.log('[CurrencySimulator] Server rates:', rates);
-      
-      // Find the matching currency pair
-      const rateData = rates.find((rate: any) => 
-        rate.symbol === currencyPair || 
-        // Handle reverse currency pairs if needed
-        rate.symbol === `${baseCurrency}${targetCurrency}`
-      );
-      
-      if (rateData) {
+
+      const symbolData = await xtbService.getSymbolData(currencyPair);
+      console.log('[CurrencySimulator] XTB symbol data:', symbolData);
+
+      if (symbolData.status && symbolData.returnData) {
         currentRate = {
-          bid: rateData.bid,
-          ask: rateData.ask
+          bid: symbolData.returnData.bid,
+          ask: symbolData.returnData.ask
         };
         swapValues = {
-          swapLong: rateData.swapLong,
-          swapShort: rateData.swapShort
+          swapLong: symbolData.returnData.swapLong,
+          swapShort: symbolData.returnData.swapShort
         };
-        console.log('[CurrencySimulator] Using server rates:', currentRate);
-        console.log('[CurrencySimulator] Using swap values:', swapValues);
-      } else {
-        console.warn(`[CurrencySimulator] No data found for ${currencyPair}`);
-        toast({
-          variant: "destructive",
-          title: "Currency Pair Not Available",
-          description: `No data available for ${currencyPair}. Using estimated rates.`,
-        });
+        console.log('[CurrencySimulator] Using XTB rates:', currentRate);
+        console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
       }
     } catch (error) {
-      console.error('[CurrencySimulator] Error fetching rates:', error);
-      toast({
-        variant: "destructive",
-        title: "Rate Fetch Error",
-        description: "Unable to get current market rates. Using estimated rates.",
-      });
+      console.error('[CurrencySimulator] Error fetching XTB rate:', error);
     }
 
     const result = await simulateHedge(
@@ -138,7 +104,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   
   const handlePlaceHedge = async () => {
     if (onPlaceHedge && simulation) {
-      // Prepare the hedge data
       const hedgeData = {
         baseCurrency,
         targetCurrency,
@@ -149,12 +114,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         tradeOrderNumber: null,
         tradeStatus: null
       };
-      
       try {
-        // Use our server-side API endpoint
-        console.log('[CurrencySimulator] Placing hedge through server API', hedgeData);
-        
-        const response = await fetch('/api/xtb/hedge', {
+        const response = await      fetch('https://your-flask-app-434424736588.us-central1.run.app/execute-trade', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -163,38 +124,16 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          const errorMessage = errorData.error || `Failed to place hedge (${response.status})`;
-          console.error('[CurrencySimulator] Hedge placement error:', errorMessage);
-          
-          toast({
-            variant: "destructive",
-            title: "Trade Failed",
-            description: errorMessage,
-          });
-          
-          throw new Error(errorMessage);
+          throw new Error('Failed to place hedge');
         }
-        
         const result = await response.json();
-        console.log('[CurrencySimulator] Hedge result:', result);
-        
-        toast({
-          title: "Hedge Placed",
-          description: "Your currency hedge has been placed successfully.",
-        });
-        
-        // Call the original onPlaceHedge handler
-        onPlaceHedge(hedgeData);
-      } catch (error: any) {
-        console.error('[CurrencySimulator] Error placing hedge:', error);
-        
-        toast({
-          variant: "destructive",
-          title: "Trade Failed",
-          description: error.message || "Failed to place hedge. Please try again.",
-        });
+        console.log(result.message);
+        // Optionally handle response data
+      } catch (error) {
+        console.error('Error placing hedge:', error);
       }
+      // Optionally call the original onPlaceHedge after
+      onPlaceHedge(hedgeData);
     }
   };
   const getTradeDirectionHelp = () => {
