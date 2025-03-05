@@ -115,7 +115,9 @@ export default function Dashboard() {
         throw new Error(await response.text());
       }
 
-      return response.json();
+      const data = await response.json();
+      // Return the entire response to handle in onSuccess
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
@@ -123,10 +125,11 @@ export default function Dashboard() {
         title: t('simulator.notifications.hedgeCreated'),
         description: t('simulator.notifications.hedgeCreatedDesc'),
       });
-      // Check trade status after successful creation
-      if (data.tradeOrderNumber) {
-        console.log('[Dashboard] Trade created, checking status for order:', data.tradeOrderNumber);
-        checkTradeStatusMutation.mutate(data.tradeOrderNumber);
+
+      // Check if we have a valid trade order number in the response
+      if (data.returnData?.order) {
+        console.log('[Dashboard] Trade created, checking status for order:', data.returnData.order);
+        checkTradeStatusMutation.mutate(data.returnData.order);
       }
     },
     onError: (error) => {
@@ -185,23 +188,6 @@ export default function Dashboard() {
         return `Unknown (${status})`;
     }
   };
-
-  // Helper function to determine the color based on status
-  const getStatusColor = (status: string) => {
-    switch(status.toLowerCase()) {
-      case 'pending':
-        return 'text-yellow-500';
-      case 'completed':
-      case 'accepted':
-        return 'text-green-500';
-      case 'rejected':
-      case 'error':
-        return 'text-red-500';
-      default:
-        return '';
-    }
-  };
-
 
   return (
     <div className="min-h-screen bg-background">
