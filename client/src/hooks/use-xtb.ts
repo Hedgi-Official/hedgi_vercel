@@ -22,38 +22,12 @@ export function useXTB() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const connect = async () => {
-      try {
-        console.log('[useXTB] Connecting to XTB...');
-        await xtbService.connect({
-          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
-          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
-        });
-        console.log('[useXTB] Connected to XTB successfully');
-        setIsConnected(true);
-        setError(null);
-
-        toast({
-          title: "Connected to XTB",
-          description: "Successfully connected to trading platform",
-        });
-      } catch (err: any) {
-        console.error('[useXTB] Connection error:', err);
-        setError(err.message);
-        setIsConnected(false);
-
-        toast({
-          variant: "destructive",
-          title: "Connection Error",
-          description: err.message,
-        });
-      }
-    };
-
-    connect();
-
+    // We don't connect directly to XTB anymore - all trading operations go through Flask server
+    setIsConnected(true); // Just set this to true since we're only using the client for display
+    console.log('[useXTB] Only using XTB for display purposes - trades go through Flask server');
+    
     return () => {
-      xtbService.disconnect();
+      // No need to disconnect since we're not connecting directly
     };
   }, [toast]);
 

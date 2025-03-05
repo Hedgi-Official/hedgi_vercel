@@ -101,7 +101,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
     });
   };
 
-  
+
   const handlePlaceHedge = async () => {
     if (onPlaceHedge && simulation) {
       const hedgeData = {
@@ -115,7 +115,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         tradeStatus: null
       };
       try {
-        const response = await      fetch('https://your-flask-app-434424736588.us-central1.run.app/execute-trade', {
+        const response = await fetch('http://3.147.6.168/execute-trade', { // Updated to use Flask server URL
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

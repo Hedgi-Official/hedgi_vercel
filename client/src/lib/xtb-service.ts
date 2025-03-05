@@ -1,5 +1,10 @@
 import type { XTBCredentials, XTBResponse, SymbolRecord, CandleStreamResponse } from './xtb-types';
 
+/**
+ * IMPORTANT: THIS SERVICE IS FOR DISPLAY PURPOSES ONLY
+ * All trading operations must go through the Flask server at http://3.147.6.168
+ * Do not use any methods in this service for actual trading!
+ */
 export class XTBService {
   private ws: WebSocket | null = null;
   private streamWs: WebSocket | null = null;
