@@ -3,53 +3,42 @@ import fetch from 'node-fetch';
 
 // Define interfaces for API interactions
 interface XTBResponse {
-  success?: boolean;
+  success: boolean;
   error?: string;
-  status?: boolean | string;
-  returnData?: any;
+  status?: string;
   orderId?: number;
   message?: string;
 }
 
-// Define XTB API response type
-interface XTBApiResponse {
-  status: boolean;
-  returnData?: any;
-  errorCode?: string;
-  errorDescr?: string;
-}
-
 interface TradeTransInfo {
   cmd: number;      // 0 for BUY, 1 for SELL
-  customComment?: string;
-  expiration?: number;
-  order?: number;
-  offset?: number;
+  customComment: string;
+  expiration: number;
+  order: number;
   price: number;
-  sl?: number;      // Stop loss
-  tp?: number;      // Take profit
+  sl: number;      // Stop loss
+  tp: number;      // Take profit
   symbol: string;
-  type?: number;    // 0 for open, 2 for close
+  type: number;    // 0 for open, 2 for close
   volume: number;
 }
 
 // Schema for trade transaction info validation
 const tradeTransInfoSchema = z.object({
   cmd: z.number(),
-  customComment: z.string().optional(),
-  expiration: z.number().optional(),
-  order: z.number().optional(),
-  offset: z.number().optional(),
+  customComment: z.string(),
+  expiration: z.number(),
+  order: z.number(),
   price: z.number(),
-  sl: z.number().optional(),
-  tp: z.number().optional(),
+  sl: z.number(),
+  tp: z.number(),
   symbol: z.string(),
-  type: z.number().optional(),
+  type: z.number(),
   volume: z.number(),
 });
 
-// New Flask server URL
-const XTB_SERVER_URL = 'http://3.147.6.168';
+const BRIDGE_URL = 'https://your-flask-app-434424736588.us-central1.run.app';
+const HEDGE_EXECUTION_URL = 'https://your-flask-app-434424736588.us-central1.run.app/execute-trade';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -57,30 +46,20 @@ async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function checkServerHealth(): Promise<boolean> {
+async function checkBridgeHealth(): Promise<boolean> {
   try {
-    console.log('[Trading Service] Checking XTB server health...');
-    
-    // We don't have a specific health endpoint, so we'll try a basic command
-    // Most APIs support a ping or basic info endpoint
-    const response = await fetch(`${XTB_SERVER_URL}/command`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        commandName: 'getVersion'
-      })
-    });
-    
-    if (!response.ok) {
-      console.error('[Trading Service] Server health check failed with status:', response.status);
-      return false;
-    }
+    console.log('Using BRIDGE_URL:', BRIDGE_URL);
+    const response = await fetch(`${BRIDGE_URL}/ping`);
+    if (!response.ok) return false;
 
-    const data = await response.json();
-    console.log('[Trading Service] Server health check response:', data);
-    return true;
+    // Clone the response to log the raw text without consuming the original response
+    const rawText = await response.clone().text();
+    console.log('Raw /ping response:', rawText);
+
+    const data = await response.json() as { status: string };
+    return data.status === 'ok';
   } catch (error) {
-    console.error('[Trading Service] Server health check failed:', error);
+    console.error('[Trading Service] Health check failed:', error);
     return false;
   }
 }
@@ -110,18 +89,18 @@ export class TradingService {
       return;
     }
 
-    // Wait for XTB server to be healthy
+    // Wait for bridge to be healthy
     for (let i = 0; i < MAX_RETRIES; i++) {
-      const isHealthy = await checkServerHealth();
+      const isHealthy = await checkBridgeHealth();
       if (isHealthy) {
-        console.log('[Trading Service] XTB server is healthy, proceeding with login');
+        console.log('[Trading Service] Bridge is healthy, proceeding with login');
         break;
       }
       if (i < MAX_RETRIES - 1) {
-        console.log(`[Trading Service] XTB server not ready, retrying in ${RETRY_DELAY}ms...`);
+        console.log(`[Trading Service] Bridge not ready, retrying in ${RETRY_DELAY}ms...`);
         await wait(RETRY_DELAY);
       } else {
-        throw new Error('XTB server is not available');
+        throw new Error('Python bridge service is not available');
       }
     }
 
@@ -131,9 +110,7 @@ export class TradingService {
 
   private async login(): Promise<void> {
     try {
-      console.log('[Trading Service] Sending login request to XTB server');
-      
-      const response = await fetch(`${XTB_SERVER_URL}/login`, {
+      const response = await fetch(`${BRIDGE_URL}/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,14 +120,13 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        console.error('[Trading Service] Login failed with status:', response.status);
-        throw new Error(`Login failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Login failed');
       }
 
-      const data = await response.json() as { status: boolean; streamSessionId?: string };
-      console.log('[Trading Service] Login response:', data);
-      
-      if (!data.status) {
+      // Use the "status" field returned by the API
+      const data = await response.json() as { status: string };
+      if (data.status !== 'connected') {
         throw new Error('Login failed');
       }
 
@@ -163,102 +139,54 @@ export class TradingService {
     }
   }
 
-  async executeHedge(hedgeParams: { 
-    symbol: string; 
-    volume: number; 
-    targetRate: number; 
-    direction: 'buy' | 'sell' 
-  }): Promise<{ success: boolean; orderId?: number; message: string }> {
+
+  async executeHedge(hedgeParams: any): Promise<any> {
     try {
-      await this.ensureLoggedIn();
-      
-      const { symbol, volume, targetRate, direction } = hedgeParams;
       console.log('[Trading Service] Executing hedge with params:', hedgeParams);
 
-      // Map direction to XTB command (0 for BUY, 1 for SELL)
-      const cmd = direction === 'buy' ? 0 : 1;
-      
-      // Convert to XTB trade transaction format
-      const tradeTransaction = {
-        cmd,
-        symbol,
-        volume: volume / 100000, // Convert to lots (1 lot = 100,000 units)
-        price: targetRate,
-        offset: 0,
-        order: 0
-      };
-      
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+      const response = await fetch(HEDGE_EXECUTION_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo: tradeTransaction
-          }
-        })
+        body: JSON.stringify(hedgeParams)
       });
 
       if (!response.ok) {
-        console.error('[Trading Service] Hedge execution failed with status:', response.status);
-        throw new Error(`Hedge execution failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Hedge execution failed');
       }
 
-      const data = await response.json() as XTBApiResponse;
+      const data = await response.json();
       console.log('[Trading Service] Hedge executed successfully:', data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || 'Hedge execution failed');
-      }
-      
-      // Extract order number from response
-      const orderId = data.returnData?.order;
-      
-      return {
-        success: true,
-        orderId,
-        message: 'Hedge executed successfully'
-      };
+      return data;
     } catch (error) {
       console.error('[Trading Service] Hedge execution error:', error);
       throw error;
     }
   }
 
-  async getSymbolData(symbol: string): Promise<{ status: boolean; returnData: any }> {
+  async getSymbolData(symbol: string): Promise<any> {
     try {
       await this.ensureLoggedIn();
 
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
 
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+      const response = await fetch(`${BRIDGE_URL}/symbol`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          commandName: "getSymbol",
-          arguments: {
-            symbol
-          }
+          symbol
         })
       });
 
       if (!response.ok) {
-        console.error('[Trading Service] Symbol data fetch failed with status:', response.status);
-        throw new Error(`Symbol data fetch failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Symbol data fetch failed');
       }
 
-      const data = await response.json() as XTBApiResponse;
-      console.log(`[Trading Service] Symbol data for ${symbol}:`, data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || `Failed to get data for ${symbol}`);
-      }
-      
-      // Transform response to match the expected format
-      return {
-        status: true,
-        returnData: data.returnData
-      };
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('[Trading Service] Symbol data error:', error);
       throw error;
@@ -289,50 +217,35 @@ export class TradingService {
         price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
-      // Create trade transaction info
-      const tradeTransInfo = {
-        cmd: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
-        symbol,
-        volume: finalVolume,
-        price: price,  // Must be a valid price, not 0
-        offset: 0,
-        sl: sl,        // Stop loss
-        tp: tp,        // Take profit
-        type: 0,       // 0 for OPEN
-        order: 0
-      };
-
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+      const response = await fetch(`${BRIDGE_URL}/trade`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo
-          }
+          symbol,
+          volume: finalVolume,
+          command: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
+          orderType: 0,  // 0 for OPEN
+          price: price,  // Must be a valid price, not 0
+          sl: sl,        // Stop loss
+          tp: tp,        // Take profit
+          customComment: customComment
         })
       });
 
       if (!response.ok) {
-        console.error('[Trading Service] Trade opening failed with status:', response.status);
-        throw new Error(`Trade opening failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Trade failed');
       }
 
-      const data = await response.json() as XTBApiResponse;
-      console.log(`[Trading Service] Trade opening response:`, data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || 'Trade opening failed');
+      const data: XTBResponse = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Trade failed');
       }
 
-      const orderId = data.returnData?.order;
-      console.log(`[Trading Service] Trade opened. Order number: ${orderId}`);
-      
-      if (!orderId) {
-        throw new Error('No order ID received from API');
-      }
-      
-      return orderId;
+      console.log(`[Trading Service] Trade opened. Order number: ${data.orderId}`);
+      return data.orderId!;
     } catch (error) {
       console.error('[Trading Service] Open trade error:', error);
       throw error;
@@ -364,50 +277,30 @@ export class TradingService {
         positionToClose, price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
-      // Create trade transaction info for closing
-      const tradeTransInfo = {
-        cmd: isBuy ? 0 : 1,  // 0 for BUY, 1 for SELL
-        symbol,
-        volume: finalVolume,
-        price: price,
-        customComment: "Close trade",
-        expiration: 0,
-        offset: 0,
-        order: positionToClose,
-        type: 2  // 2 for CLOSE
-      };
-
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+      const response = await fetch(`${BRIDGE_URL}/trade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo
-          }
+          symbol,
+          volume: finalVolume,
+          command: isBuy ? 0 : 1,
+          orderType: 2,  // 2 for CLOSE
+          order: positionToClose
         })
       });
 
       if (!response.ok) {
-        console.error('[Trading Service] Trade closing failed with status:', response.status);
-        throw new Error(`Trade closing failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Close trade failed');
       }
 
-      const data = await response.json() as XTBApiResponse;
-      console.log(`[Trading Service] Trade closing response:`, data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || 'Trade closing failed');
+      const data: XTBResponse = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Close trade failed');
       }
 
-      const orderId = data.returnData?.order;
-      console.log(`[Trading Service] Trade closed. Order number: ${orderId}`);
-      
-      if (!orderId) {
-        throw new Error('No order ID received from API');
-      }
-      
-      return orderId;
+      console.log(`[Trading Service] Trade closed. Order number: ${data.orderId}`);
+      return data.orderId!;
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       throw error;
@@ -419,51 +312,35 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      // Get all open trades
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+      const response = await fetch(`${BRIDGE_URL}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "getTrades",
-          arguments: {
-            openedOnly: true
-          }
-        })
+        body: JSON.stringify({ orderId: tradeNumber })
       });
 
+      if (response.status === 304) {
+        console.warn('Received 304 Not Modified, returning fallback trade status');
+        return {
+          success: true,
+          message: 'No change',
+          orderId: tradeNumber,
+          status: 'unknown'
+        };
+      }
+
       if (!response.ok) {
-        console.error('[Trading Service] Trade status check failed with status:', response.status);
-        throw new Error(`Trade status check failed with status ${response.status}`);
+        const error = await response.json() as { detail: string };
+        throw new Error(error.detail || 'Status check failed');
       }
 
-      const data = await response.json() as XTBApiResponse;
-      console.log(`[Trading Service] Open trades response:`, data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || 'Failed to get trade status');
+      const data: XTBResponse = await response.json();
+      console.log(`[Trading Service] Trade status response:`, data);
+
+      if (!data.success) {
+        throw new Error(data.error || 'Status check failed');
       }
 
-      // Find the specific trade
-      const trades = data.returnData || [];
-      const trade = trades.find((t: any) => t.order === tradeNumber || t.position === tradeNumber);
-      
-      if (trade) {
-        return {
-          success: true,
-          status: true,
-          orderId: tradeNumber,
-          message: 'Trade is open',
-          returnData: trade
-        };
-      } else {
-        // If not found in open trades, it might be closed
-        return {
-          success: true,
-          status: false,
-          orderId: tradeNumber,
-          message: 'Trade is closed or not found'
-        };
-      }
+      return data;
     } catch (error) {
       console.error(`[Trading Service] Status check error:`, error);
       throw error;
