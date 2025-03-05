@@ -30,6 +30,15 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 const FETCH_TIMEOUT = 5000; // 5 seconds timeout for fetch requests
 
+// Common error messages to maintain consistency in error reporting
+const ERROR_MESSAGES = {
+  SERVER_UNREACHABLE: 'XTB trading server is currently unavailable. Please try again later.',
+  CONNECTION_TIMEOUT: 'Connection to XTB trading server timed out. Please try again later.',
+  LOGIN_FAILED: 'Failed to connect to XTB trading server. Please check your credentials and try again.',
+  TRADE_FAILED: 'The trade operation could not be completed at this time.',
+  GENERIC_ERROR: 'An error occurred while communicating with the trading server.'
+};
+
 // Helper function to create fetch requests with a timeout
 async function fetchWithTimeout(url: string, options: any, timeout = FETCH_TIMEOUT): Promise<any> {
   const controller = new AbortController();
@@ -111,7 +120,8 @@ export class TradingService {
         console.log(`[Trading Service] XTB server not ready, retrying in ${RETRY_DELAY}ms...`);
         await wait(RETRY_DELAY);
       } else {
-        throw new Error('XTB server is not available');
+        console.error('[Trading Service] XTB server is not available after multiple retries');
+        throw new Error(ERROR_MESSAGES.SERVER_UNREACHABLE);
       }
     }
 
@@ -126,33 +136,41 @@ export class TradingService {
       
       console.log(`[Trading Service] Attempting login with userId: ${userId} to ${XTB_SERVER_URL}/login`);
       
-      const response = await fetch(`${XTB_SERVER_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userId,  // Send as a number, not a string
-          password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!',
-          appName: "Hedgi-Web"
-        })
-      });
+      try {
+        const response = await fetchWithTimeout(`${XTB_SERVER_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,  // Send as a number, not a string
+            password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!',
+            appName: "Hedgi-Web"
+          })
+        });
 
-      if (!response.ok) {
-        console.error(`[Trading Service] Login response not OK: ${response.status} ${response.statusText}`);
-        throw new Error(`Login failed with status ${response.status}`);
+        if (!response.ok) {
+          console.error(`[Trading Service] Login response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(ERROR_MESSAGES.LOGIN_FAILED);
+        }
+
+        const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Login response:`, data);
+        
+        if (!data.status) {
+          throw new Error(data.errorDescr || ERROR_MESSAGES.LOGIN_FAILED);
+        }
+        
+        console.log('[Trading Service] Login successful with external server');
+
+        this.isLoggedIn = true;
+        this.lastLoginTime = Date.now();
+        console.log('[Trading Service] Login process completed');
+      } catch (connectionError: any) {
+        console.error('[Trading Service] Login connection error:', connectionError);
+        if (connectionError.message && connectionError.message.includes('timed out')) {
+          throw new Error(ERROR_MESSAGES.CONNECTION_TIMEOUT);
+        }
+        throw new Error(ERROR_MESSAGES.SERVER_UNREACHABLE);
       }
-
-      const data = await response.json() as XTBResponse;
-      console.log(`[Trading Service] Login response:`, data);
-      
-      if (!data.status) {
-        throw new Error(`Login failed: ${data.errorDescr || 'Unknown error'}`);
-      }
-      
-      console.log('[Trading Service] Login successful with external server');
-
-      this.isLoggedIn = true;
-      this.lastLoginTime = Date.now();
-      console.log('[Trading Service] Login process completed');
     } catch (error) {
       console.error('[Trading Service] Login error:', error);
       throw error;
@@ -264,31 +282,39 @@ export class TradingService {
         arguments: tradeTransInfo
       });
       
-      const response = await fetch(`${XTB_SERVER_URL}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          command: "tradeTransaction",
-          arguments: tradeTransInfo
-        })
-      });
+      try {
+        const response = await fetchWithTimeout(`${XTB_SERVER_URL}/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            command: "tradeTransaction",
+            arguments: tradeTransInfo
+          })
+        });
 
-      if (!response.ok) {
-        console.error(`[Trading Service] Trade response not OK: ${response.status} ${response.statusText}`);
-        throw new Error(`Trade failed with status ${response.status}`);
+        if (!response.ok) {
+          console.error(`[Trading Service] Trade response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(ERROR_MESSAGES.TRADE_FAILED);
+        }
+
+        const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Trade response:`, data);
+        
+        if (!data.status) {
+          throw new Error(data.errorDescr || ERROR_MESSAGES.TRADE_FAILED);
+        }
+
+        console.log(`[Trading Service] Trade opened. Order number: ${data.returnData?.order}`);
+        return data.returnData?.order || 0;
+      } catch (connectionError: any) {
+        console.error('[Trading Service] Trade connection error:', connectionError);
+        if (connectionError.message && connectionError.message.includes('timed out')) {
+          throw new Error(ERROR_MESSAGES.CONNECTION_TIMEOUT);
+        }
+        throw new Error(ERROR_MESSAGES.SERVER_UNREACHABLE);
       }
-
-      const data = await response.json() as XTBResponse;
-      console.log(`[Trading Service] Trade response:`, data);
-      
-      if (!data.status) {
-        throw new Error(data.errorDescr || 'Trade failed');
-      }
-
-      console.log(`[Trading Service] Trade opened. Order number: ${data.returnData?.order}`);
-      return data.returnData?.order || 0;
     } catch (error) {
       console.error('[Trading Service] Open trade error:', error);
       throw error;
