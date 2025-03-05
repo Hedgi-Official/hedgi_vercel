@@ -15,7 +15,7 @@ export function registerRoutes(app: Express): Server {
   // Register routes
   app.use(secondaryRateRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
-  
+
   // Fallback data for when XTB API is unavailable
   const FALLBACK_RATES = [
     {
@@ -43,11 +43,11 @@ export function registerRoutes(app: Express): Server {
       swapShort: 0.0001,
     }
   ];
-  
+
   // XTB API routes defined directly in main routes file
   app.get("/api/xtb/rates", async (req, res) => {
     res.header('Content-Type', 'application/json');
-    
+
     try {
       // If trading service is not connected, use fallback data
       if (!xtbTradingService.isConnected) {
@@ -57,15 +57,15 @@ export function registerRoutes(app: Express): Server {
           timestamp: Date.now() // Update timestamp to current time
         }))));
       }
-      
+
       // If connected, get real data for each symbol
       const symbols = ['USDBRL', 'EURUSD', 'USDMXN'];
       const rates = [];
-      
+
       for (const symbol of symbols) {
         try {
           const symbolResponse = await xtbTradingService.getSymbolData(symbol);
-          
+
           if (!symbolResponse.status || !symbolResponse.returnData) {
             console.log(`[XTB Backend] Failed to get data for ${symbol}, using fallback`);
             const fallback = FALLBACK_RATES.find(r => r.symbol === symbol);
@@ -77,7 +77,7 @@ export function registerRoutes(app: Express): Server {
             }
             continue;
           }
-          
+
           rates.push({
             symbol,
             bid: symbolResponse.returnData.bid,
@@ -97,7 +97,7 @@ export function registerRoutes(app: Express): Server {
           }
         }
       }
-      
+
       // If we have no rates, use all fallbacks
       if (rates.length === 0) {
         console.log('[XTB Backend] No rates available, using all fallbacks');
@@ -106,7 +106,7 @@ export function registerRoutes(app: Express): Server {
           timestamp: Date.now()
         }))));
       }
-      
+
       // Send the rates as a direct JSON string
       return res.send(JSON.stringify(rates));
     } catch (error) {
@@ -118,14 +118,14 @@ export function registerRoutes(app: Express): Server {
       }))));
     }
   });
-  
+
   // XTB API route for hedge execution - ROUTED THROUGH FLASK SERVER at http://3.147.6.168
   app.post("/api/xtb/hedge", async (req, res) => {
     res.header('Content-Type', 'application/json');
-    
+
     try {
       console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
-      
+
       // Ensure we're logged in first
       try {
         // Set a timeout of 30 seconds for the login request
@@ -141,14 +141,14 @@ export function registerRoutes(app: Express): Server {
           // Add timeout options
           signal: AbortSignal.timeout(30000)
         });
-        
+
         if (!loginResponse.ok) {
           throw new Error(`Login failed with status ${loginResponse.status}`);
         }
-        
+
         const loginData = await loginResponse.json();
         console.log('[XTB Backend] Login response:', loginData);
-        
+
         if (!loginData.status) {
           throw new Error(loginData.errorDescr || 'Login failed');
         }
@@ -156,16 +156,16 @@ export function registerRoutes(app: Express): Server {
         console.error('[XTB Backend] Login error:', loginError);
         throw loginError;
       }
-      
+
       // Format the request according to XTB API format
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
-      
+
       // Calculate volume in lots (1 lot = 100,000 units)
       const volume = Math.abs(Number(amount)) / 100000;
-      
+
       // Format symbol correctly (e.g., EURUSD)
       const symbol = `${targetCurrency}${baseCurrency}`;
-      
+
       // Format the command according to XTB API format
       const commandData = {
         commandName: "tradeTransaction",
@@ -181,7 +181,7 @@ export function registerRoutes(app: Express): Server {
           }
         }
       };
-      
+
       // Send the request to the Flask server's command endpoint
       const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
@@ -192,23 +192,23 @@ export function registerRoutes(app: Express): Server {
         // Add timeout options
         signal: AbortSignal.timeout(30000)
       });
-      
+
       if (!response.ok) {
         throw new Error(`Flask server responded with status: ${response.status}`);
       }
-      
+
       const apiResponse = await response.json();
-      
+
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
-      
+
       // Format response to match what the client expects
       const hedgeResult = {
         status: apiResponse.status,
         tradeOrderNumber: apiResponse.returnData?.order || null
       };
-      
+
       return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge via Flask server:', error);
@@ -251,7 +251,7 @@ export function registerRoutes(app: Express): Server {
           openedOnly: true
         }
       };
-      
+
       // Send the command to the Flask server
       const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
@@ -262,21 +262,21 @@ export function registerRoutes(app: Express): Server {
         // Add timeout options
         signal: AbortSignal.timeout(30000)
       });
-      
+
       if (!response.ok) {
         throw new Error(`Flask server responded with status: ${response.status}`);
       }
-      
+
       const apiResponse = await response.json();
       console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, apiResponse);
-      
+
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
-      
+
       // Find the specific trade in the returned array
       const trade = apiResponse.returnData?.find(t => t.order === tradeOrderNumber);
-      
+
       if (!trade) {
         return res.json({ 
           status: true, 
@@ -284,7 +284,7 @@ export function registerRoutes(app: Express): Server {
           message: `Trade with order number ${tradeOrderNumber} not found` 
         });
       }
-      
+
       res.json({
         status: true,
         found: true,
@@ -301,10 +301,10 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
-    
+
     try {
       console.log('[XTB Backend] Processing hedge request from /api/hedges');
-      
+
       // Forward the request to the Flask server directly instead of redirecting
       const response = await fetch('http://3.147.6.168/login', {
         method: 'POST',
@@ -317,26 +317,26 @@ export function registerRoutes(app: Express): Server {
         }),
         signal: AbortSignal.timeout(30000)
       });
-      
+
       if (!response.ok) {
         throw new Error(`Login failed with status ${response.status}`);
       }
-      
+
       const loginData = await response.json();
-      
+
       if (!loginData.status) {
         throw new Error(loginData.errorDescr || 'Login failed');
       }
-      
+
       // Format the request according to XTB API format
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
-      
+
       // Calculate volume in lots (1 lot = 100,000 units)
       const volume = Math.abs(Number(amount)) / 100000;
-      
+
       // Format symbol correctly (e.g., EURUSD)
       const symbol = `${targetCurrency}${baseCurrency}`;
-      
+
       // Format the command according to XTB API format
       const commandData = {
         commandName: "tradeTransaction",
@@ -352,7 +352,7 @@ export function registerRoutes(app: Express): Server {
           }
         }
       };
-      
+
       // Send the request to the Flask server
       const tradeResponse = await fetch('http://3.147.6.168/command', {
         method: 'POST',
@@ -362,23 +362,47 @@ export function registerRoutes(app: Express): Server {
         body: JSON.stringify(commandData),
         signal: AbortSignal.timeout(30000)
       });
-      
+
       if (!tradeResponse.ok) {
         throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
       }
-      
+
       const apiResponse = await tradeResponse.json();
-      
+
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
-      
-      // Format response to match what the client expects
+
+      const tradeOrderNumber = apiResponse.returnData?.order || null;
+
+      // Save the trade information to the database
+      if (tradeOrderNumber) {
+        try {
+          // Create a new hedge record in the database
+          const newHedge = await db.insert(hedges).values({
+            userId: req.user.id,
+            baseCurrency: baseCurrency,
+            targetCurrency: targetCurrency,
+            amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1), // Convert volume back to original amount
+            rate: 1.0, // We can update this with the actual rate if available
+            duration: 30, // Default duration in days
+            status: 'active',
+            tradeOrderNumber: tradeOrderNumber,
+            tradeStatus: 'open'
+          }).returning();
+
+          console.log('[XTB Backend] Saved new hedge to database:', newHedge);
+        } catch (dbError) {
+          console.error('[XTB Backend] Error saving hedge to database:', dbError);
+          // Continue with the response even if DB save fails
+        }
+      }
+
       const hedgeResult = {
         status: apiResponse.status,
-        tradeOrderNumber: apiResponse.returnData?.order || null
+        tradeOrderNumber: tradeOrderNumber
       };
-      
+
       return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge via Flask server:', error);
@@ -418,7 +442,7 @@ export function registerRoutes(app: Express): Server {
 
         // Get the current price from XTB API
         const symbolData = await tradingService.getSymbolData(symbol);
-        
+
         // Log the actual API response for debugging (without mock formatting)
         console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
 
