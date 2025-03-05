@@ -63,7 +63,7 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
 
-    const { baseCurrency, targetCurrency, amount, rate, duration, tradeDirection } = req.body;
+    const { baseCurrency, targetCurrency, amount, rate, duration, tradeDirection, tradeOrderNumber = null, tradeStatus = null } = req.body;
 
     try {
       // Convert amount to number, apply direction, then back to string
@@ -71,62 +71,61 @@ export function registerRoutes(app: Express): Server {
         -Math.abs(Number(amount)) : 
         Math.abs(Number(amount))).toString();
 
-      // Open trade via XTB API
-      // XTB requires the symbol in format where the first currency is the base
-      // and the second is the counter (quote) currency
+      // Set up trade parameters
       const symbol = `${targetCurrency}${baseCurrency}`;
-
-      // Convert amount to standard lots (1 lot = 100,000 units) but let trading service handle currency-specific adjustments
-      // Don't divide here, as the trading service will adjust based on currency pair
       const volume = Math.abs(Number(amount)); 
-
-      // Trade direction needs to be mapped correctly from UI to XTB API
-      // If user wants to "buy USD" with BRL as base, then we're buying USDBRL
       const isBuy = tradeDirection === 'buy';
-
-      console.log(`Opening trade: ${symbol}, Volume: ${volume}, Direction: ${isBuy ? 'BUY' : 'SELL'}`);
-
-      // Get the current price from XTB API
-      const symbolData = await tradingService.getSymbolData(symbol);
       
-      // Log the actual API response from XTB (remove any mock formatting)
-      console.log(`[Routes] Symbol data for ${symbol}:`, symbolData);
+      console.log(`Creating hedge record: ${symbol}, Volume: ${volume}, Direction: ${isBuy ? 'BUY' : 'SELL'}`);
 
-      // Use the appropriate price based on trade direction (ask for buy, bid for sell)
-      const currentPrice = isBuy ? 
-        (symbolData?.status && symbolData?.returnData ? symbolData.returnData.ask : null) : 
-        (symbolData?.status && symbolData?.returnData ? symbolData.returnData.bid : null);
-
-      console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for ${symbol}: ${currentPrice}`);
-
-      // Open the trade and get the order number
-      const tradeOrderNumber = await tradingService.openTrade(
-        symbol,
-        currentPrice, // Always use a valid price, not 0
-        volume,
-        isBuy,
-        0, // sl
-        0, // tp
-        `Hedge position for ${symbol}`
-      );
-
-      // Verify transaction was successful by checking the status
-      if (tradeOrderNumber <= 0) {
-        throw new Error(`Failed to open trade for ${symbol}`);
+      // Check if the client already provided a tradeOrderNumber (e.g., from simulation)
+      // If not, we'll attempt to execute a real trade
+      let finalTradeOrderNumber = tradeOrderNumber;
+      let finalTradeStatus = tradeStatus;
+      
+      // Only try to execute a trade if no trade order number was provided
+      if (!finalTradeOrderNumber) {
+        try {
+          // Try to execute real trade only if a trade order wasn't provided by the client
+          const symbolData = await tradingService.getSymbolData(symbol);
+          
+          let currentPrice = null;
+          if (symbolData?.status && symbolData?.returnData) {
+            currentPrice = isBuy ? symbolData.returnData.ask : symbolData.returnData.bid;
+            console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for ${symbol}: ${currentPrice}`);
+            
+            // Open the trade and get the order number
+            finalTradeOrderNumber = await tradingService.openTrade(
+              symbol,
+              currentPrice,
+              volume,
+              isBuy,
+              0, // sl
+              0, // tp
+              `Hedge position for ${symbol}`
+            );
+            
+            finalTradeStatus = "ACTIVE";
+            console.log(`[Routes] Successfully opened trade with order number: ${finalTradeOrderNumber}`);
+          }
+        } catch (tradeError) {
+          console.error('Error executing trade (will continue with database record):', tradeError);
+          // We'll continue and create the hedge record without an associated trade
+        }
       }
 
-      // Record the trade in the database
-      // Create a properly typed hedge record
+      // Always record the hedge in the database, even if trade execution failed
+      // This ensures users can still track their intended hedges
       const newHedge = {
         userId: req.user.id,
         baseCurrency,
         targetCurrency,
-        amount: adjustedAmount.toString(), // Convert to string as required by schema
-        rate: rate.toString(), // Store as string in database as per schema
-        duration, // Integer is fine
-        status: "active",
-        tradeOrderNumber, // Integer is fine for tradeOrderNumber
-        tradeStatus: "ACTIVE", // String is fine
+        amount: adjustedAmount.toString(),
+        rate: rate.toString(), 
+        duration,
+        status: finalTradeOrderNumber ? "active" : "simulated",
+        tradeOrderNumber: finalTradeOrderNumber,
+        tradeStatus: finalTradeStatus || "SIMULATED",
       };
       
       const [hedge] = await db.insert(hedges).values(newHedge).returning();
