@@ -19,7 +19,7 @@ interface XTBTradeResponse extends XTBResponse {
   };
 }
 
-const XTB_SERVER_URL = 'http://3.147.6.168';
+const XTB_SERVER_URL = 'http://3.147.6.168:5000';
 
 class XTBService {
     private sessionId: string | null = null;

@@ -1,4 +1,11 @@
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
+import AbortController from 'abort-controller';
+
+// Constants for better performance, with increased timeouts
+const API_TIMEOUT = 20000; // 20 seconds timeout for API calls
+const LOGIN_TIMEOUT = 30000; // 30 seconds timeout for login
+const MAX_RETRIES = 3; // Maximum number of retries for operations
+const RETRY_DELAY = 2000; // Delay between retries in ms
 
 // Define interfaces for API interactions
 interface XTBResponse {
@@ -32,6 +39,13 @@ interface XTBCommandResponse {
   errorDescr?: string;
 }
 
+// Helper for better error messages
+function getErrorMessage(error: any): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return JSON.stringify(error);
+}
+
 interface TradeTransInfo {
   cmd: number;      // 0 for BUY, 1 for SELL
   customComment?: string;
@@ -47,12 +61,184 @@ interface TradeTransInfo {
 }
 
 // Server URL for the external XTB Flask service
-const XTB_SERVER_URL = 'http://3.147.6.168';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+// Using port 5000 since that's the standard Flask port as shown in the documentation
+const XTB_SERVER_URL = process.env.XTB_SERVER_URL || 'http://3.147.6.168:5000';
+
+// Fallback parameters
+const USE_FALLBACK = process.env.USE_XTB_FALLBACK === 'true' || false;
+const MAX_CONNECTION_RETRIES = parseInt(process.env.XTB_MAX_RETRIES || '4', 10);
+
+// Log configuration on startup
+console.log(`[Trading Service] Configuration:
+  Server URL: ${XTB_SERVER_URL}
+  Use Fallback: ${USE_FALLBACK}
+  Max Retries: ${MAX_CONNECTION_RETRIES}
+`);
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Helper function for API calls with advanced timeout and retry logic
+async function callXTBApi<T>(
+  endpoint: string,
+  method: string,
+  body: any,
+  timeout: number = API_TIMEOUT,
+  retries: number = MAX_RETRIES
+): Promise<T> {
+  let lastError: any = null;
+  
+  // Exponential backoff with jitter for retries
+  const getBackoffTime = (attempt: number) => {
+    const baseDelay = RETRY_DELAY;
+    const maxDelay = 15000; // 15 seconds max
+    // Calculate exponential backoff with a small random jitter
+    const expBackoff = Math.min(baseDelay * Math.pow(2, attempt) + (Math.random() * 1000), maxDelay);
+    return expBackoff;
+  };
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Increase timeout with each retry attempt
+      const dynamicTimeout = timeout + (attempt * 5000); // Add 5s per retry
+      const controller = new AbortController();
+      
+      // Set up timeout with logging
+      const timeoutId = setTimeout(() => {
+        console.warn(`[Trading Service] Request to ${endpoint} timed out after ${dynamicTimeout}ms`);
+        controller.abort();
+      }, dynamicTimeout);
+      
+      const startTime = Date.now();
+      console.log(`[Trading Service] API call to ${endpoint} (Attempt ${attempt + 1}/${retries + 1}, timeout: ${dynamicTimeout}ms)`);
+      
+      // Try to detect if the network is down before making the request
+      let isServerReachable = true;
+      
+      // Only check server health on retry attempts (not on first attempt)
+      if (attempt > 0) {
+        try {
+          const healthController = new AbortController();
+          const healthTimeoutId = setTimeout(() => healthController.abort(), 3000);
+          
+          console.log('[Trading Service] Checking server health before retry...');
+          const healthCheck = await fetch(`${XTB_SERVER_URL}/health`, {
+            method: 'GET',
+            signal: healthController.signal
+          }).catch(() => null);
+          
+          clearTimeout(healthTimeoutId);
+          isServerReachable = !!healthCheck && healthCheck.ok;
+          
+          if (!isServerReachable) {
+            console.warn('[Trading Service] Server health check failed, but attempting request anyway');
+          }
+        } catch (healthErr) {
+          console.warn('[Trading Service] Server health check error:', getErrorMessage(healthErr));
+          isServerReachable = false;
+        }
+      }
+      
+      // Proceed with the main request
+      const response = await fetch(`${XTB_SERVER_URL}${endpoint}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Retry-Attempt': String(attempt), // For debugging
+          'X-Client-Timestamp': String(Date.now()) // For debugging
+        },
+        body: method !== 'GET' ? JSON.stringify(body) : undefined,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      console.log(`[Trading Service] API call completed in ${duration}ms`);
+      
+      // Log slow responses for performance analysis
+      if (duration > 5000) {
+        console.warn(`[Trading Service] Slow API response (${duration}ms) for ${endpoint}`);
+      }
+      
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorData: any;
+        
+        if (contentType && contentType.includes('application/json')) {
+          errorData = await response.json().catch(() => null);
+        } else {
+          errorData = await response.text().catch(() => 'Failed to read error response');
+        }
+        
+        // Different handling based on status code
+        if (response.status >= 500) {
+          console.error(`[Trading Service] Server error ${response.status}:`, errorData);
+          throw new Error(`API server error ${response.status}: ${JSON.stringify(errorData)}`);
+        } else if (response.status === 429) {
+          // Rate limiting - use longer backoff
+          console.warn(`[Trading Service] Rate limited (429). Will retry with longer backoff.`);
+          await wait(getBackoffTime(attempt + 1)); // Use higher backoff for rate limits
+          continue;
+        } else if (response.status === 401) {
+          // Authentication error - might need to re-login
+          console.error(`[Trading Service] Authentication error (401):`, errorData);
+          throw new Error(`Authentication error: ${JSON.stringify(errorData)}`);
+        } else {
+          console.error(`[Trading Service] API error ${response.status}:`, errorData);
+          
+          // Return a formatted error response instead of throwing
+          return {
+            status: false,
+            errorCode: String(response.status),
+            errorDescr: typeof errorData === 'string' ? errorData : JSON.stringify(errorData)
+          } as unknown as T;
+        }
+      }
+      
+      // Successfully got response
+      try {
+        const jsonData = await response.json();
+        return jsonData as T;
+      } catch (jsonError) {
+        console.error('[Trading Service] Failed to parse JSON response:', getErrorMessage(jsonError));
+        throw new Error(`Failed to parse API response as JSON: ${getErrorMessage(jsonError)}`);
+      }
+    } catch (error) {
+      lastError = error;
+      const errorMsg = getErrorMessage(error);
+      console.error(`[Trading Service] API call failed (attempt ${attempt + 1}/${retries + 1}):`, errorMsg);
+      
+      // Special handling for network errors
+      const isNetworkError = 
+        errorMsg.includes('ECONNREFUSED') || 
+        errorMsg.includes('ETIMEDOUT') || 
+        errorMsg.includes('network') ||
+        errorMsg.includes('aborted');
+        
+      if (isNetworkError) {
+        console.warn('[Trading Service] Network error detected, using longer backoff before retry');
+      }
+      
+      // If this was the last attempt, throw the error
+      if (attempt === retries) {
+        // Wrap error with more context for debugging
+        const contextError = new Error(`API call to ${endpoint} failed after ${retries + 1} attempts: ${errorMsg}`);
+        (contextError as any).originalError = error;
+        throw contextError;
+      }
+      
+      // Wait before retrying, with exponential backoff
+      const backoffTime = getBackoffTime(attempt);
+      console.log(`[Trading Service] Retrying in ${Math.round(backoffTime / 1000)}s (backoff)`);
+      await wait(backoffTime);
+    }
+  }
+  
+  // This should never be reached due to throw in the catch block above
+  throw lastError || new Error(`Failed to call ${endpoint} after ${retries + 1} attempts for unknown reason`);
 }
 
 export class TradingService {
@@ -89,22 +275,18 @@ export class TradingService {
     try {
       console.log('[Trading Service] Sending login request to XTB server');
       
-      const response = await fetch(`${XTB_SERVER_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use the callXTBApi helper with timeout and retry logic
+      // Use the hardcoded password from the attached curl example for now
+      const data = await callXTBApi<XTBLoginResponse>(
+        '/login',
+        'POST',
+        {
           userId: 17535100, // Use the numeric ID that works with the API
-          password: process.env.XTB_PASSWORD ? process.env.XTB_PASSWORD.trim() : ''
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Trading Service] Login failed with status: ${response.status}, body: ${errorText}`);
-        throw new Error(`Login failed with status: ${response.status}`);
-      }
-
-      const data = await response.json() as XTBLoginResponse;
+          password: 'xoh74681' // Hardcoded for now based on curl example
+        },
+        LOGIN_TIMEOUT  // Use longer timeout for login
+      );
+      
       if (!data.status) {
         throw new Error('Login failed: ' + (data.errorDescr || 'Unknown error'));
       }
@@ -114,6 +296,8 @@ export class TradingService {
       this.lastLoginTime = Date.now();
       console.log('[Trading Service] Successfully logged in with session ID:', this.streamSessionId);
     } catch (error) {
+      this.isLoggedIn = false;
+      this.streamSessionId = null;
       console.error('[Trading Service] Login error:', error);
       throw error;
     }
@@ -151,24 +335,18 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
 
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use our improved API helper with timeout and retry
+      const data = await callXTBApi<XTBCommandResponse>(
+        '/command', 
+        'POST',
+        {
           commandName: 'getSymbol',
           arguments: {
             symbol: symbol
           }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Trading Service] Failed to get symbol data with status: ${response.status}, body: ${errorText}`);
-        throw new Error(`Failed to get symbol data with status: ${response.status}`);
-      }
-
-      const data = await response.json() as XTBCommandResponse;
+        }
+      );
+      
       return data;
     } catch (error) {
       console.error('[Trading Service] Symbol data error:', error);
@@ -216,24 +394,17 @@ export class TradingService {
       if (sl > 0) tradeTransInfo.sl = sl;
       if (tp > 0) tradeTransInfo.tp = tp;
 
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use our improved API helper with timeout and retry for trade execution
+      const data = await callXTBApi<XTBTradeResponse>(
+        '/command',
+        'POST',
+        {
           commandName: 'tradeTransaction',
           arguments: {
             tradeTransInfo: tradeTransInfo
           }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Trading Service] Trade failed with status: ${response.status}, body: ${errorText}`);
-        throw new Error(`Trade failed with status: ${response.status}`);
-      }
-
-      const data = await response.json() as XTBTradeResponse;
+        }
+      );
       if (!data.status) {
         throw new Error('Trade failed: ' + (data.errorDescr || 'Unknown error'));
       }
@@ -293,24 +464,17 @@ export class TradingService {
         offset: 0
       };
 
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use our improved API helper with timeout and retry for trade execution
+      const data = await callXTBApi<XTBTradeResponse>(
+        '/command',
+        'POST',
+        {
           commandName: 'tradeTransaction',
           arguments: {
             tradeTransInfo: tradeTransInfo
           }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Trading Service] Close trade failed with status: ${response.status}, body: ${errorText}`);
-        throw new Error(`Close trade failed with status: ${response.status}`);
-      }
-
-      const data = await response.json() as XTBTradeResponse;
+        }
+      );
       if (!data.status) {
         throw new Error('Close trade failed: ' + (data.errorDescr || 'Unknown error'));
       }
@@ -334,24 +498,17 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Use our improved API helper with timeout and retry
+      const data = await callXTBApi<XTBCommandResponse>(
+        '/command',
+        'POST',
+        {
           commandName: 'getTrades',
           arguments: {
             openedOnly: true
           }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Trading Service] Status check failed with status: ${response.status}, body: ${errorText}`);
-        throw new Error(`Status check failed with status: ${response.status}`);
-      }
-
-      const data = await response.json() as XTBCommandResponse;
+        }
+      );
       if (!data.status) {
         throw new Error('Status check failed: ' + (data.errorDescr || 'Unknown error'));
       }
