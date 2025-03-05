@@ -128,7 +128,7 @@ export function registerRoutes(app: Express): Server {
       
       // Ensure we're logged in first
       try {
-        const loginResponse = await fetch('http://3.147.6.168:5000/login', {
+        const loginResponse = await fetch('http://3.147.6.168/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ export function registerRoutes(app: Express): Server {
             cmd: tradeDirection === 'buy' ? 0 : 1, // 0 for BUY, 1 for SELL
             symbol: symbol,
             volume: volume,
-            price: 0, // Market price (0 for market execution)
+            price: 1.0, // Market price (0 for market execution)
             offset: 0,
             order: 0, // New order
             type: 0 // Type 0 for open position
@@ -180,7 +180,7 @@ export function registerRoutes(app: Express): Server {
       };
       
       // Send the request to the Flask server's command endpoint
-      const response = await fetch('http://3.147.6.168:5000/command', {
+      const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ export function registerRoutes(app: Express): Server {
       };
       
       // Send the command to the Flask server
-      const response = await fetch('http://3.147.6.168:5000/command', {
+      const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -343,7 +343,7 @@ export function registerRoutes(app: Express): Server {
         const closingOrderNumber = await tradingService.closeTrade(
           symbol,
           hedge.tradeOrderNumber,
-          currentPrice || 0, // Use current market price if available
+          currentPrice || 1.0, // Use current market price if available
           volume,
           isBuy,
           0, // sl
