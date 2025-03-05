@@ -6,6 +6,7 @@ interface FBSRateResponse {
   swap_long: number;
   swap_short: number;
   symbol: string;
+  error?: string;
 }
 
 export function useFBSRate(symbol: string = 'USDBRL') {
