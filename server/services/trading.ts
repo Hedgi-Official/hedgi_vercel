@@ -8,6 +8,8 @@ interface XTBResponse {
   status?: string;
   orderId?: number;
   message?: string;
+  errorDescr?: string; // Added to handle potential error descriptions
+  returnData?: {order:number}
 }
 
 interface TradeTransInfo {
@@ -93,21 +95,40 @@ export class TradingService {
 
   async executeHedge(hedgeParams: any): Promise<any> {
     try {
-      console.log('[Trading Service] Executing hedge with params:', hedgeParams);
+      console.log('[Trading Service] Executing hedge with params:', {
+        symbol: hedgeParams.symbol,
+        volume: hedgeParams.volume,
+        isBuy: hedgeParams.isBuy,
+        originalParams: hedgeParams
+      });
       await this.ensureLoggedIn();
 
       // Format volume according to XTB's standard lots (1 lot = 100,000 units)
       const volume = Math.max(hedgeParams.volume / 100000, 0.01);
 
+      // Validate trade direction
+      const isBuy = Boolean(hedgeParams.isBuy);
+      console.log('[Trading Service] Processed trade parameters:', {
+        symbol: hedgeParams.symbol,
+        adjustedVolume: volume,
+        isBuy: isBuy,
+        type: 0 // OPEN
+      });
+
       const response = await xtbService.placeTrade({
         symbol: hedgeParams.symbol,
         volume: volume,
-        cmd: hedgeParams.isBuy ? 0 : 1,
+        cmd: isBuy ? 0 : 1, // 0 for BUY, 1 for SELL
         type: 0, // OPEN
         customComment: `Hedge ${hedgeParams.symbol}`
       });
 
-      console.log('[Trading Service] Hedge executed successfully:', response);
+      console.log('[Trading Service] Hedge execution response:', response);
+
+      if (!response.status) {
+        throw new Error(response.errorDescr || 'Hedge execution failed');
+      }
+
       return response;
     } catch (error) {
       console.error('[Trading Service] Hedge execution error:', error);

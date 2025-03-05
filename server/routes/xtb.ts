@@ -24,7 +24,23 @@ router.post('/api/xtb/hedge', async (req, res) => {
       await initializeXTB();
     }
 
-    const hedgeResult = await tradingService.executeHedge(req.body);
+    const { symbol, volume, isBuy } = req.body;
+
+    // Validate required parameters
+    if (!symbol || typeof volume !== 'number' || typeof isBuy !== 'boolean') {
+      console.error('[XTB Backend] Invalid trade parameters:', req.body);
+      return res.status(400).json({ 
+        error: 'Invalid trade parameters. Required: symbol (string), volume (number), isBuy (boolean)' 
+      });
+    }
+
+    console.log('[XTB Backend] Opening trade:', { symbol, volume, isBuy });
+    const hedgeResult = await tradingService.executeHedge({
+      symbol: symbol.toUpperCase(), // Ensure proper currency pair format
+      volume: volume,
+      isBuy: isBuy
+    });
+
     res.json(hedgeResult);
   } catch (error) {
     console.error('[XTB Backend] Error executing hedge:', error);
