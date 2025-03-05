@@ -48,7 +48,7 @@ const tradeTransInfoSchema = z.object({
   volume: z.number(),
 });
 
-// New Flask server URL
+// Flask server URL for XTB trading operations
 const XTB_SERVER_URL = 'http://3.147.6.168';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
