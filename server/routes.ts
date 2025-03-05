@@ -125,20 +125,57 @@ export function registerRoutes(app: Express): Server {
     
     try {
       console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
-      // Send the request directly to the Flask server using fetch
-      const response = await fetch('http://3.147.6.168/execute-trade', {
+      
+      // Format the request according to XTB API format
+      const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+      
+      // Calculate volume in lots (1 lot = 100,000 units)
+      const volume = Math.abs(Number(amount)) / 100000;
+      
+      // Format symbol correctly (e.g., EURUSD)
+      const symbol = `${targetCurrency}${baseCurrency}`;
+      
+      // Format the command according to XTB API format
+      const commandData = {
+        commandName: "tradeTransaction",
+        arguments: {
+          tradeTransInfo: {
+            cmd: tradeDirection === 'buy' ? 0 : 1, // 0 for BUY, 1 for SELL
+            symbol: symbol,
+            volume: volume,
+            price: 0, // Market price (0 for market execution)
+            offset: 0,
+            order: 0, // New order
+            type: 0 // Type 0 for open position
+          }
+        }
+      };
+      
+      // Send the request to the Flask server's command endpoint
+      const response = await fetch('http://3.147.6.168:5000/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(commandData),
       });
       
       if (!response.ok) {
         throw new Error(`Flask server responded with status: ${response.status}`);
       }
       
-      const hedgeResult = await response.json();
+      const apiResponse = await response.json();
+      
+      if (!apiResponse.status) {
+        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
+      }
+      
+      // Format response to match what the client expects
+      const hedgeResult = {
+        status: apiResponse.status,
+        tradeOrderNumber: apiResponse.returnData?.order || null
+      };
+      
       return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge via Flask server:', error);
@@ -174,17 +211,50 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const statusResponse = await tradingService.checkTradeStatus(tradeOrderNumber);
-
-      // Log the entire statusResponse for debugging purposes.
-      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, statusResponse);
-
-      // If you want to check specifically if the "status" property is undefined:
-      if (!statusResponse || typeof statusResponse.status === 'undefined') {
-        console.error(`Trade status for order ${tradeOrderNumber} is missing the "status" property:`, statusResponse);
+      // Format the command to get trade status according to XTB API
+      const commandData = {
+        commandName: "getTrades",
+        arguments: { 
+          openedOnly: true
+        }
+      };
+      
+      // Send the command to the Flask server
+      const response = await fetch('http://3.147.6.168:5000/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commandData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Flask server responded with status: ${response.status}`);
       }
-
-      res.json(statusResponse);
+      
+      const apiResponse = await response.json();
+      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, apiResponse);
+      
+      if (!apiResponse.status) {
+        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
+      }
+      
+      // Find the specific trade in the returned array
+      const trade = apiResponse.returnData?.find(t => t.order === tradeOrderNumber);
+      
+      if (!trade) {
+        return res.json({ 
+          status: true, 
+          found: false, 
+          message: `Trade with order number ${tradeOrderNumber} not found` 
+        });
+      }
+      
+      res.json({
+        status: true,
+        found: true,
+        trade: trade
+      });
     } catch (error) {
       console.error('Error checking trade status:', error);
       res.status(500).json({ error: error instanceof Error ? error.message : "Failed to check trade status" });
