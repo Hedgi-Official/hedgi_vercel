@@ -24,11 +24,11 @@ interface TradeTransInfo {
   [key: string]: any;    // To allow for dynamic properties
 }
 
-// External Flask server URL with port 5000 - this is required for connection
-const XTB_SERVER_URL = 'http://3.147.6.168:5000';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-const FETCH_TIMEOUT = 5000; // 5 seconds timeout for fetch requests
+// External Flask server URL without a port as confirmed by successful tests
+const XTB_SERVER_URL = 'http://3.147.6.168';
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 500; // 0.5 seconds
+const FETCH_TIMEOUT = 3000; // 3 seconds timeout for fetch requests (shorter to fail fast)
 
 // Common error messages to maintain consistency in error reporting
 const ERROR_MESSAGES = {
