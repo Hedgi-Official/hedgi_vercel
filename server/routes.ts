@@ -223,73 +223,13 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
     }
-    
-    try {
-      // Get all user hedges from the database
-      const userHedges = await db.query.hedges.findMany({
-        where: eq(hedges.userId, req.user.id),
-        orderBy: desc(hedges.createdAt),
-      });
-      
-      // First check if we need to update any hedge statuses with XTB
-      // by fetching current trade data from XTB API
-      try {
-        // Ensure we're logged in
-        await fetch('http://3.147.6.168/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 17535100, 
-            password: "GuiZarHoh2711!"
-          }),
-          signal: AbortSignal.timeout(10000)
-        });
-        
-        // Get all active trades from XTB
-        const commandData = {
-          commandName: "getTrades",
-          arguments: { openedOnly: true }
-        };
-        
-        const tradesResponse = await fetch('http://3.147.6.168/command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(commandData),
-          signal: AbortSignal.timeout(10000)
-        });
-        
-        if (tradesResponse.ok) {
-          const apiResponse = await tradesResponse.json();
-          if (apiResponse.status && Array.isArray(apiResponse.returnData)) {
-            console.log('[XTB Backend] Current active trades:', apiResponse.returnData.length);
-            
-            // Update userHedges with live XTB trade data
-            for (let hedge of userHedges) {
-              if (hedge.tradeOrderNumber) {
-                const liveTrade = apiResponse.returnData.find(
-                  t => t.order === hedge.tradeOrderNumber
-                );
-                
-                if (liveTrade) {
-                  hedge.tradeStatus = 'open';
-                  console.log(`[XTB Backend] Found live trade for order #${hedge.tradeOrderNumber}`);
-                } else {
-                  console.log(`[XTB Backend] No live trade found for order #${hedge.tradeOrderNumber}`);
-                }
-              }
-            }
-          }
-        }
-      } catch (xtbError) {
-        console.warn('[XTB Backend] Could not update trade statuses from XTB:', xtbError);
-        // Continue with the existing hedge data
-      }
-      
-      res.json(userHedges);
-    } catch (error) {
-      console.error('[XTB Backend] Error fetching hedges:', error);
-      res.status(500).json({ error: 'Failed to fetch hedges' });
-    }
+
+    const userHedges = await db.query.hedges.findMany({
+      where: eq(hedges.userId, req.user.id),
+      orderBy: desc(hedges.createdAt),
+    });
+
+    res.json(userHedges);
   });
 
   // New endpoint to check trade status
@@ -304,33 +244,6 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      // Ensure we're logged in first
-      try {
-        const loginResponse = await fetch('http://3.147.6.168/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: 17535100, 
-            password: "GuiZarHoh2711!"
-          }),
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (!loginResponse.ok) {
-          throw new Error(`Login failed with status ${loginResponse.status}`);
-        }
-
-        const loginData = await loginResponse.json();
-        if (!loginData.status) {
-          throw new Error(loginData.errorDescr || 'Login failed');
-        }
-      } catch (loginError) {
-        console.error('[XTB Backend] Login error in status check:', loginError);
-        // Continue anyway, maybe we're still logged in
-      }
-
       // Format the command to get trade status according to XTB API
       const commandData = {
         commandName: "getTrades",
@@ -346,45 +259,23 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(15000)
+        // Add timeout options
+        signal: AbortSignal.timeout(30000)
       });
 
       if (!response.ok) {
         throw new Error(`Flask server responded with status: ${response.status}`);
       }
 
-      const responseText = await response.text();
-      let apiResponse;
-      try {
-        apiResponse = JSON.parse(responseText);
-        console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, apiResponse);
-      } catch (parseError) {
-        console.error('[Routes] Error parsing trade status response:', parseError, responseText);
-        throw new Error('Failed to parse trade status response');
-      }
+      const apiResponse = await response.json();
+      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, apiResponse);
 
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
 
       // Find the specific trade in the returned array
-      const trade = Array.isArray(apiResponse.returnData) ? 
-        apiResponse.returnData.find(t => t.order === tradeOrderNumber) : null;
-
-      // If the trade is found, update the database with the latest status
-      if (trade) {
-        try {
-          // Update the trade status in the database
-          await db.update(hedges)
-            .set({ tradeStatus: 'open' })
-            .where(eq(hedges.tradeOrderNumber, tradeOrderNumber));
-            
-          console.log(`[Routes] Updated trade ${tradeOrderNumber} status to 'open' in database`);
-        } catch (dbError) {
-          console.error('[Routes] Error updating trade status in database:', dbError);
-          // Continue with the response even if DB update fails
-        }
-      }
+      const trade = apiResponse.returnData?.find(t => t.order === tradeOrderNumber);
 
       if (!trade) {
         return res.json({ 
