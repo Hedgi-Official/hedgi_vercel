@@ -11,8 +11,9 @@ import { tradingService } from "./services/trading";
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Register secondary rate route
+  // Register API routes
   app.use(secondaryRateRouter);
+  app.use(xtbRouter);
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
