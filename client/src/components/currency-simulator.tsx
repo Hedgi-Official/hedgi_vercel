@@ -25,6 +25,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
+  const [isPlacingHedge, setIsPlacingHedge] = useState(false);
+  const [hedgeError, setHedgeError] = useState<string | null>(null);
 
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
@@ -103,6 +105,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
 
 
   const handlePlaceHedge = async () => {
+    setIsPlacingHedge(true);
+    setHedgeError(null);
     if (onPlaceHedge && simulation) {
       const hedgeData = {
         baseCurrency,
@@ -125,16 +129,27 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to place hedge');
+          throw new Error(`Failed to place hedge: ${response.statusText}`);
         }
         const result = await response.json();
         console.log(result.message);
-        // Optionally handle response data
+
+        // Instead of calling onPlaceHedge separately, pass the result data
+        if (onPlaceHedge) {
+          // Only call once with the updated data including order number if available
+          onPlaceHedge({
+            ...hedgeData,
+            tradeOrderNumber: result.tradeOrderNumber || null,
+            tradeStatus: result.status || null
+          });
+        }
       } catch (error) {
         console.error('Error placing hedge:', error);
+        setHedgeError(error.message);
+      } finally {
+        setIsPlacingHedge(false);
       }
-      // Optionally call the original onPlaceHedge after
-      onPlaceHedge(hedgeData);
+      // Removed duplicate onPlaceHedge call
     }
   };
   const getTradeDirectionHelp = () => {
@@ -346,8 +361,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
                   onClick={handlePlaceHedge}
                   className="w-full"
                   variant="outline"
+                  disabled={isPlacingHedge}
                 >
-                  {t('simulator.placeHedge')}
+                  {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                  {hedgeError && (
+                    <span className="ml-2 text-red-500">
+                      {hedgeError}
+                    </span>
+                  )}
                 </Button>
               )}
             </div>
