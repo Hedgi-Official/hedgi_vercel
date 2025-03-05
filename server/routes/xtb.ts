@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import WebSocket from 'ws';
 import { tradingService } from '../services/trading';
 
 const router = Router();
@@ -6,6 +7,7 @@ const router = Router();
 // Initialize XTB connection with backend credentials
 const initializeXTB = async () => {
   try {
+    // Update server URL for demo
     await tradingService.connect();
     console.log('[XTB Backend] Connected successfully');
     return true;
@@ -24,23 +26,7 @@ router.post('/api/xtb/hedge', async (req, res) => {
       await initializeXTB();
     }
 
-    const { symbol, volume, isBuy } = req.body;
-
-    // Validate required parameters
-    if (!symbol || typeof volume !== 'number' || typeof isBuy !== 'boolean') {
-      console.error('[XTB Backend] Invalid trade parameters:', req.body);
-      return res.status(400).json({ 
-        error: 'Invalid trade parameters. Required: symbol (string), volume (number), isBuy (boolean)' 
-      });
-    }
-
-    console.log('[XTB Backend] Opening trade:', { symbol, volume, isBuy });
-    const hedgeResult = await tradingService.executeHedge({
-      symbol: symbol.toUpperCase(), // Ensure proper currency pair format
-      volume: volume,
-      isBuy: isBuy
-    });
-
+    const hedgeResult = await tradingService.executeHedge(req.body);
     res.json(hedgeResult);
   } catch (error) {
     console.error('[XTB Backend] Error executing hedge:', error);
@@ -48,6 +34,7 @@ router.post('/api/xtb/hedge', async (req, res) => {
   }
 });
 
+// Keep existing routes
 router.get('/api/xtb/rates', async (req, res) => {
   try {
     if (!tradingService.isConnected) {
@@ -58,8 +45,7 @@ router.get('/api/xtb/rates', async (req, res) => {
     const rates = [];
 
     for (const symbol of symbols) {
-      // Use executeCommand directly with proper format
-      const symbolResponse = await tradingService.executeCommand('getSymbol', { symbol });
+      const symbolResponse = await tradingService.getSymbolData(symbol);
 
       if (!symbolResponse.status || !symbolResponse.returnData) {
         console.error(`[XTB Backend] Failed to get data for ${symbol}`);
