@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import WebSocket from 'ws';
 import { tradingService } from '../services/trading';
 
 const router = Router();
@@ -7,7 +6,6 @@ const router = Router();
 // Initialize XTB connection with backend credentials
 const initializeXTB = async () => {
   try {
-    // Update server URL for demo
     await tradingService.connect();
     console.log('[XTB Backend] Connected successfully');
     return true;
@@ -45,7 +43,7 @@ router.get('/api/xtb/rates', async (req, res) => {
     const rates = [];
 
     for (const symbol of symbols) {
-      const symbolResponse = await tradingService.getSymbolData(symbol);
+      const symbolResponse = await tradingService.executeCommand('getSymbol', { symbol });
 
       if (!symbolResponse.status || !symbolResponse.returnData) {
         console.error(`[XTB Backend] Failed to get data for ${symbol}`);
