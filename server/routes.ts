@@ -119,10 +119,10 @@ export function registerRoutes(app: Express): Server {
         baseCurrency,
         targetCurrency,
         amount: adjustedAmount,
-        rate: rate.toString(),
+        rate: parseFloat(rate),
         duration,
         status: "active",
-        tradeOrderNumber: String(tradeOrderNumber),
+        tradeOrderNumber: tradeOrderNumber,
         tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
       }).returning();
 
