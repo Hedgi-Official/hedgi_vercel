@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import WebSocket from 'ws';
 import { tradingService } from '../services/trading';
 
 const router = Router();
@@ -50,15 +49,78 @@ initializeXTB();
 
 router.post('/api/xtb/hedge', async (req, res) => {
   try {
-    if (!tradingService.isConnected) {
-      await initializeXTB();
-    }
+    await tradingService.connect();
 
-    const hedgeResult = await tradingService.executeHedge(req.body);
-    res.json(hedgeResult);
+    const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+
+    // Calculate volume in lots (1 lot = 100,000 units)
+    // Handle both positive and negative amounts
+    const volume = Math.abs(Number(amount)) / 100000;
+
+    // Format symbol correctly (e.g., EURUSD)
+    const symbol = `${targetCurrency}${baseCurrency}`;
+
+    // Execute the trade using the exact format from example
+    const tradeResult = await tradingService.openTrade(
+      symbol,
+      volume,
+      tradeDirection === 'buy'
+    );
+
+    res.json({
+      status: true,
+      tradeOrderNumber: tradeResult
+    });
   } catch (error) {
     console.error('[XTB Backend] Error executing hedge:', error);
-    res.status(500).json({ error: 'Failed to execute hedge' });
+    res.status(500).json({ 
+      status: false, 
+      error: error.message || 'Failed to execute hedge' 
+    });
+  }
+});
+
+router.get('/api/xtb/trades/:tradeNumber', async (req, res) => {
+  try {
+    await tradingService.connect();
+
+    const tradeNumber = Number(req.params.tradeNumber);
+    const status = await tradingService.checkTradeStatus(tradeNumber);
+
+    res.json(status);
+  } catch (error) {
+    console.error('[XTB Backend] Error checking trade status:', error);
+    res.status(500).json({ 
+      status: false, 
+      error: error.message || 'Failed to check trade status' 
+    });
+  }
+});
+
+router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
+  try {
+    await tradingService.connect();
+
+    const { symbol, volume, tradeDirection } = req.body;
+    const tradeNumber = Number(req.params.tradeNumber);
+
+    const closingOrder = await tradingService.closeTrade(
+      symbol,
+      tradeNumber,
+      volume,
+      tradeDirection === 'buy'
+    );
+
+    res.json({
+      status: true,
+      closingOrderNumber: closingOrder
+    });
+  } catch (error) {
+    console.error('[XTB Backend] Error closing trade:', error);
+    res.status(500).json({ 
+      status: false, 
+      error: error.message || 'Failed to close trade' 
+    });
   }
 });
 
