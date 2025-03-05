@@ -1,25 +1,24 @@
 import fetch from 'node-fetch';
 
-const BRIDGE_URL = 'https://your-flask-app-434424736588.us-central1.run.app';
+const XTB_SERVER_URL = 'http://3.147.6.168';
 
 class XTBService {
     private sessionId: string | null = null;
 
-    async login(userId: string, password: string) {
+    async login(userId: string, password: string): Promise<{ status: boolean; streamSessionId: string }> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/connect`, {
+            const response = await fetch(`${XTB_SERVER_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, password })
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Login failed');
+                throw new Error('Login failed');
             }
 
-            const data = await response.json();
-            this.sessionId = data.sessionId;
+            const data = await response.json() as { status: boolean; streamSessionId: string };
+            this.sessionId = data.streamSessionId;
             return data;
         } catch (error) {
             console.error('Login error:', error);
@@ -27,46 +26,59 @@ class XTBService {
         }
     }
 
-    async placeTrade(params: {
-        symbol: string;
-        volume: number;
-        command: number; // 0 for BUY, 1 for SELL
-        orderType: number; // 0 for OPEN, 2 for CLOSE
-        order?: number; // Required when closing trades
-    }) {
+    async executeCommand(commandName: string, commandArgs: any): Promise<any> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/trade`, {
+            const response = await fetch(`${XTB_SERVER_URL}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params)
+                body: JSON.stringify({ commandName, arguments: commandArgs })
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Trade failed');
+                throw new Error('Command execution failed');
             }
 
             return response.json();
+        } catch (error) {
+            console.error('Command execution error:', error);
+            throw error;
+        }
+    }
+
+    async placeTrade(params: {
+        symbol: string;
+        volume: number;
+        cmd: number; // 0 for BUY, 1 for SELL
+        type: number; // 0 for OPEN, 2 for CLOSE
+        price?: number;
+        order?: number; // Required when closing trades
+        customComment?: string;
+    }) {
+        try {
+            const tradeTransInfo = {
+                cmd: params.cmd,
+                symbol: params.symbol,
+                volume: params.volume,
+                type: params.type,
+                price: params.price || 0.0,
+                order: params.order,
+                customComment: params.customComment || `Trade ${params.symbol}`,
+                expiration: 0,
+                offset: 0
+            };
+
+            const response = await this.executeCommand('tradeTransaction', { tradeTransInfo });
+            return response;
         } catch (error) {
             console.error('Trade error:', error);
             throw error;
         }
     }
 
-    async checkTradeStatus(orderId: number) {
+    async checkTradeStatus(openedOnly: boolean = true) {
         try {
-            const response = await fetch(`${BRIDGE_URL}/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Status check failed');
-            }
-
-            return response.json();
+            const response = await this.executeCommand('getTrades', { openedOnly });
+            return response;
         } catch (error) {
             console.error('Status check error:', error);
             throw error;
@@ -74,22 +86,7 @@ class XTBService {
     }
 
     async disconnect() {
-        try {
-            const response = await fetch(`${BRIDGE_URL}/disconnect`, {
-                method: 'POST'
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Disconnect failed');
-            }
-
-            this.sessionId = null;
-            return response.json();
-        } catch (error) {
-            console.error('Disconnect error:', error);
-            throw error;
-        }
+        this.sessionId = null;
     }
 }
 
