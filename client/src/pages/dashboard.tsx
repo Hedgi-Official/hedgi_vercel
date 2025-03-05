@@ -21,11 +21,12 @@ export default function Dashboard() {
 
   const { data: hedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
+    refetchInterval: 5000, // Refresh every 5 seconds to keep hedge list updated
   });
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: number) => {
-      const response = await fetch(`/api/hedges/status/${tradeOrderNumber}`, {
+      const response = await fetch(`/api/xtb/trades/status/${tradeOrderNumber}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -116,17 +117,28 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
-      // Return the entire response to handle in onSuccess
       return data;
     },
     onSuccess: (data) => {
+      // Invalidate and refetch hedges immediately
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+
+      // Show success toast with order number
       toast({
         title: t('simulator.notifications.hedgeCreated'),
-        description: t('simulator.notifications.hedgeCreatedDesc'),
+        description: (
+          <div>
+            {t('simulator.notifications.hedgeCreatedDesc')}
+            {data.returnData?.order && (
+              <div className="mt-2 font-medium">
+                {t('simulator.tradeOrderNumber')}: #{data.returnData.order}
+              </div>
+            )}
+          </div>
+        ),
       });
 
-      // Check if we have a valid trade order number in the response
+      // Check trade status
       if (data.returnData?.order) {
         console.log('[Dashboard] Trade created, checking status for order:', data.returnData.order);
         checkTradeStatusMutation.mutate(data.returnData.order);
@@ -231,11 +243,11 @@ export default function Dashboard() {
               <CardTitle>{t('Active Hedges')}</CardTitle>
             </CardHeader>
             <CardContent>
-              {hedges?.length === 0 ? (
+              {!hedges || hedges.length === 0 ? (
                 <p>{t('No active hedges')}</p>
               ) : (
                 <div className="space-y-4">
-                  {hedges?.map((hedge) => {
+                  {hedges.map((hedge) => {
                     const amount = Number(hedge.amount);
                     const rate = Number(hedge.rate);
                     const isBuy = amount > 0;
