@@ -101,7 +101,16 @@ export default function Dashboard() {
   });
 
   const createHedgeMutation = useMutation({
-    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+    mutationFn: async (hedgeData: {
+      baseCurrency: string; 
+      targetCurrency: string;
+      amount: string;
+      rate: string;
+      duration: number;
+      tradeDirection: 'buy' | 'sell';
+      tradeOrderNumber: number | null;
+      tradeStatus: string | null;
+    }) => {
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

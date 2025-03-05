@@ -14,7 +14,16 @@ import type { Hedge } from '@db/schema';
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { tradeDirection: 'buy' | 'sell' }) => void;
+  onPlaceHedge?: (hedgeData: {
+    baseCurrency: string; 
+    targetCurrency: string;
+    amount: string;
+    rate: string;
+    duration: number;
+    tradeDirection: 'buy' | 'sell';
+    tradeOrderNumber: number | null;
+    tradeStatus: string | null;
+  }) => void;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
