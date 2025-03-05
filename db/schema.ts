@@ -14,7 +14,7 @@ export const users = pgTable("users", {
 
 export const hedges = pgTable("hedges", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: serial("user_id").references(() => users.id),
   baseCurrency: text("base_currency").notNull(),
   targetCurrency: text("target_currency").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
