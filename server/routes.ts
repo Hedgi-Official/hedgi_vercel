@@ -124,11 +124,11 @@ export function registerRoutes(app: Express): Server {
     res.header('Content-Type', 'application/json');
     
     try {
-      console.log('[XTB Backend] Forwarding hedge request to Flask server at http://127.0.0.1:5000');
+      console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
       
       // Ensure we're logged in first
       try {
-        const loginResponse = await fetch('http://127.0.0.1:5000/login', {
+        const loginResponse = await fetch('http://3.147.6.168/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ export function registerRoutes(app: Express): Server {
       };
       
       // Send the request to the Flask server's command endpoint
-      const response = await fetch('http://127.0.0.1:5000/command', {
+      const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,7 +248,7 @@ export function registerRoutes(app: Express): Server {
       };
       
       // Send the command to the Flask server
-      const response = await fetch('http://127.0.0.1:5000/command', {
+      const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
