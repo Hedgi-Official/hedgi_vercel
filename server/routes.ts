@@ -126,6 +126,34 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
       
+      // Ensure we're logged in first
+      try {
+        const loginResponse = await fetch('http://3.147.6.168:5000/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: 17535100, 
+            password: "GuiZarHoh2711!"
+          }),
+        });
+        
+        if (!loginResponse.ok) {
+          throw new Error(`Login failed with status ${loginResponse.status}`);
+        }
+        
+        const loginData = await loginResponse.json();
+        console.log('[XTB Backend] Login response:', loginData);
+        
+        if (!loginData.status) {
+          throw new Error(loginData.errorDescr || 'Login failed');
+        }
+      } catch (loginError) {
+        console.error('[XTB Backend] Login error:', loginError);
+        throw loginError;
+      }
+      
       // Format the request according to XTB API format
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
       
