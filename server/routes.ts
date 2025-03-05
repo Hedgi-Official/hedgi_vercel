@@ -114,17 +114,20 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Record the trade in the database
-      const [hedge] = await db.insert(hedges).values({
+      // Create a properly typed hedge record
+      const newHedge = {
         userId: req.user.id,
         baseCurrency,
         targetCurrency,
-        amount: adjustedAmount,
-        rate: parseFloat(rate),
-        duration,
+        amount: adjustedAmount.toString(), // Convert to string as required by schema
+        rate: rate.toString(), // Store as string in database as per schema
+        duration, // Integer is fine
         status: "active",
-        tradeOrderNumber: tradeOrderNumber,
-        tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
-      }).returning();
+        tradeOrderNumber, // Integer is fine for tradeOrderNumber
+        tradeStatus: "ACTIVE", // String is fine
+      };
+      
+      const [hedge] = await db.insert(hedges).values(newHedge).returning();
 
       res.json(hedge);
     } catch (error) {

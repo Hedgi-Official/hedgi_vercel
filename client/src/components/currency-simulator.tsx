@@ -111,9 +111,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge }: Props) {
         rate: simulation.rate.toString(),
         duration,
         tradeDirection,
-        volume: amount, // Include volume for XTB API
-        symbol: `${baseCurrency}${targetCurrency}`,
-        breakEvenRate: simulation.breakEvenRate
+        // Add required fields for Hedge type
+        tradeOrderNumber: null,
+        tradeStatus: null
       };
       
       // Let the parent component handle the API call
