@@ -7,10 +7,18 @@ class XTBService {
 
     async login(userId: string, password: string): Promise<{ status: boolean; streamSessionId: string }> {
         try {
+            console.log('[XTB Service] Attempting login...');
             const response = await fetch(`${XTB_SERVER_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, password })
+                body: JSON.stringify({
+                    command: "login",
+                    arguments: {
+                        userId,
+                        password,
+                        appName: "Hedgi"
+                    }
+                })
             });
 
             if (!response.ok) {
@@ -19,30 +27,41 @@ class XTBService {
 
             const data = await response.json() as { status: boolean; streamSessionId: string };
             this.sessionId = data.streamSessionId;
+            console.log('[XTB Service] Login successful');
             return data;
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('[XTB Service] Login error:', error);
             throw error;
         }
     }
 
-    async executeCommand(commandName: string, commandArgs: any): Promise<any> {
+    async executeCommand(command: string, args: any = {}): Promise<any> {
         try {
+            console.log(`[XTB Service] Executing command: ${command}`, args);
             const response = await fetch(`${XTB_SERVER_URL}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ commandName, arguments: commandArgs })
+                body: JSON.stringify({
+                    command,
+                    arguments: args
+                })
             });
 
             if (!response.ok) {
-                throw new Error('Command execution failed');
+                throw new Error(`Command ${command} execution failed`);
             }
 
-            return response.json();
+            const data = await response.json();
+            console.log(`[XTB Service] Command ${command} response:`, data);
+            return data;
         } catch (error) {
-            console.error('Command execution error:', error);
+            console.error(`[XTB Service] Command ${command} error:`, error);
             throw error;
         }
+    }
+
+    async getSymbol(symbol: string): Promise<any> {
+        return this.executeCommand('getSymbol', { symbol });
     }
 
     async placeTrade(params: {
@@ -53,8 +72,9 @@ class XTBService {
         price?: number;
         order?: number; // Required when closing trades
         customComment?: string;
-    }) {
+    }): Promise<any> {
         try {
+            console.log('[XTB Service] Placing trade:', params);
             const tradeTransInfo = {
                 cmd: params.cmd,
                 symbol: params.symbol,
@@ -68,25 +88,23 @@ class XTBService {
             };
 
             const response = await this.executeCommand('tradeTransaction', { tradeTransInfo });
+            console.log('[XTB Service] Trade response:', response);
             return response;
         } catch (error) {
-            console.error('Trade error:', error);
+            console.error('[XTB Service] Trade error:', error);
             throw error;
         }
     }
 
-    async checkTradeStatus(openedOnly: boolean = true) {
-        try {
-            const response = await this.executeCommand('getTrades', { openedOnly });
-            return response;
-        } catch (error) {
-            console.error('Status check error:', error);
-            throw error;
-        }
+    async checkTradeStatus(orderId: number): Promise<any> {
+        return this.executeCommand('tradeTransactionStatus', { order: orderId });
     }
 
-    async disconnect() {
-        this.sessionId = null;
+    async disconnect(): Promise<void> {
+        if (this.sessionId) {
+            await this.executeCommand('logout');
+            this.sessionId = null;
+        }
     }
 }
 

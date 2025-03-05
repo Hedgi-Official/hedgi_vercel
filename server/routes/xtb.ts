@@ -32,7 +32,6 @@ router.post('/api/xtb/hedge', async (req, res) => {
   }
 });
 
-// Keep existing routes
 router.get('/api/xtb/rates', async (req, res) => {
   try {
     if (!tradingService.isConnected) {
@@ -43,6 +42,7 @@ router.get('/api/xtb/rates', async (req, res) => {
     const rates = [];
 
     for (const symbol of symbols) {
+      // Use executeCommand directly with proper format
       const symbolResponse = await tradingService.executeCommand('getSymbol', { symbol });
 
       if (!symbolResponse.status || !symbolResponse.returnData) {

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import fetch from 'node-fetch';
 import { xtbService } from './xtbService';
 
 // Define interfaces for API interactions
@@ -87,14 +86,22 @@ export class TradingService {
     }
   }
 
+  async executeCommand(command: string, args: any = {}): Promise<any> {
+    await this.ensureLoggedIn();
+    return xtbService.executeCommand(command, args);
+  }
+
   async executeHedge(hedgeParams: any): Promise<any> {
     try {
       console.log('[Trading Service] Executing hedge with params:', hedgeParams);
       await this.ensureLoggedIn();
 
+      // Format volume according to XTB's standard lots (1 lot = 100,000 units)
+      const volume = Math.max(hedgeParams.volume / 100000, 0.01);
+
       const response = await xtbService.placeTrade({
         symbol: hedgeParams.symbol,
-        volume: hedgeParams.volume,
+        volume: volume,
         cmd: hedgeParams.isBuy ? 0 : 1,
         type: 0, // OPEN
         customComment: `Hedge ${hedgeParams.symbol}`
@@ -121,7 +128,7 @@ export class TradingService {
     try {
       await this.ensureLoggedIn();
 
-      // XTB uses standard lots where 1 lot = 100,000 units of base currency
+      // Convert volume to lots (1 lot = 100,000 units)
       const adjustedVolume = volume / 100000;
       const finalVolume = Math.max(adjustedVolume, 0.01);
 
@@ -197,7 +204,7 @@ export class TradingService {
       await this.ensureLoggedIn();
       console.log(`[Trading Service] Checking status for trade ${tradeNumber}`);
 
-      const response = await xtbService.checkTradeStatus(true);
+      const response = await xtbService.checkTradeStatus(tradeNumber);
 
       if (!response.status) {
         throw new Error(response.error || 'Status check failed');
