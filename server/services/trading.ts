@@ -26,9 +26,9 @@ interface TradeTransInfo {
 
 // External Flask server URL without a port as confirmed by successful tests
 const XTB_SERVER_URL = 'http://3.147.6.168';
-const MAX_RETRIES = 2;
-const RETRY_DELAY = 500; // 0.5 seconds
-const FETCH_TIMEOUT = 3000; // 3 seconds timeout for fetch requests (shorter to fail fast)
+const MAX_RETRIES = 1;  // Minimize retries to expose real errors faster
+const RETRY_DELAY = 100; // 0.1 seconds - minimal delay
+const FETCH_TIMEOUT = 30000; // 30 seconds timeout - longer to give more time for response
 
 // Common error messages to maintain consistency in error reporting
 const ERROR_MESSAGES = {
@@ -182,15 +182,14 @@ export class TradingService {
     try {
       console.log('[Trading Service] Executing hedge with params:', hedgeParams);
       
-      // This method is only used by the frontend simulation
-      // It can be kept as is or modified to use the new XTB server
-      // For now, we'll return a mock response
+      // We don't want any simulations - we need to perform a real hedge
+      // This requires multiple trades via the Flask server API
       
-      return {
-        success: true,
-        message: "Hedge simulation completed",
-        data: hedgeParams
-      };
+      await this.ensureLoggedIn();
+      
+      // This should be implemented with real trades, but for now
+      // we'll throw an error to indicate this isn't implemented yet
+      throw new Error('Real hedging functionality requires implementation with the Flask server');
     } catch (error) {
       console.error('[Trading Service] Hedge execution error:', error);
       throw error;

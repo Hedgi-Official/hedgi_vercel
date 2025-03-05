@@ -84,40 +84,10 @@ router.get('/api/xtb/rates', async (req, res) => {
     }
 
     if (rates.length === 0) {
-      console.warn('[XTB Backend] No real rates available, using fallback simulated data');
-      
-      // Provide fallback simulated data so the app can still function
-      const currentTime = Date.now();
-      rates.push(
-        {
-          symbol: 'USDBRL',
-          bid: 5.1234,
-          ask: 5.1334,
-          timestamp: currentTime,
-          swapLong: 0.0045,
-          swapShort: 0.0055,
-        },
-        {
-          symbol: 'EURUSD',
-          bid: 1.0834,
-          ask: 1.0844,
-          timestamp: currentTime,
-          swapLong: 0.0012,
-          swapShort: 0.0018,
-        },
-        {
-          symbol: 'USDMXN',
-          bid: 17.0123,
-          ask: 17.0323,
-          timestamp: currentTime,
-          swapLong: 0.0078,
-          swapShort: 0.0082,
-        }
-      );
-      
-      // Note: We're returning simulated data but not failing the request
-      // This allows the frontend to still function with approximate rates
-      console.log('[XTB Backend] Using simulated rates:', rates);
+      console.error('[XTB Backend] No exchange rates data available');
+      return res.status(503).json({ 
+        error: 'No exchange rates data available from XTB server' 
+      });
     }
 
     res.json(rates);
