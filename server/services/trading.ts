@@ -112,7 +112,8 @@ export class TradingService {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: userId,  // Send as a number, not a string
-            password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
+            password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!',
+            appName: "Hedgi-Web"
           })
         });
   
@@ -295,21 +296,19 @@ export class TradingService {
       if (expiration && expiration !== 0) tradeTransInfo.expiration = expiration;
 
       try {
-        console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/command:`, {
+        console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/execute:`, {
           commandName: "tradeTransaction", 
-          arguments: { tradeTransInfo }
+          arguments: tradeTransInfo
         });
         
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            commandName: "tradeTransaction",
-            arguments: {
-              tradeTransInfo
-            }
+            command: "tradeTransaction",
+            arguments: tradeTransInfo
           })
         });
   
@@ -382,21 +381,19 @@ export class TradingService {
       };
 
       try {
-        console.log(`[Trading Service] Sending close trade request to ${XTB_SERVER_URL}/command:`, {
-          commandName: "tradeTransaction", 
-          arguments: { tradeTransInfo }
+        console.log(`[Trading Service] Sending close trade request to ${XTB_SERVER_URL}/execute:`, {
+          command: "tradeTransaction", 
+          arguments: tradeTransInfo
         });
         
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            commandName: "tradeTransaction",
-            arguments: {
-              tradeTransInfo
-            }
+            command: "tradeTransaction",
+            arguments: tradeTransInfo
           })
         });
   
@@ -435,11 +432,11 @@ export class TradingService {
 
       try {
         // Get active trades to find status from the external server
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            commandName: "getTrades",
+            command: "getTrades",
             arguments: {
               openedOnly: true
             }
