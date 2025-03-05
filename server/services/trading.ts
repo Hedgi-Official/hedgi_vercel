@@ -24,8 +24,8 @@ interface TradeTransInfo {
   [key: string]: any;    // To allow for dynamic properties
 }
 
-// External Flask server URL 
-const XTB_SERVER_URL = 'http://3.147.6.168';
+// External Flask server URL with correct port - make sure we use port 5000 as in the example
+const XTB_SERVER_URL = 'http://3.147.6.168:5000';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -102,23 +102,33 @@ export class TradingService {
       // User will be shown simulated data instead of real trading data
       
       try {
+        // Use the EXACT format from the sample file: userId as a number, not a string
+        const userId = Number(process.env.XTB_USER_ID || '17535100');
+        
+        console.log(`[Trading Service] Attempting login with userId: ${userId} to ${XTB_SERVER_URL}/login`);
+        
         const response = await fetch(`${XTB_SERVER_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: process.env.XTB_USER_ID || '17535100',
+            userId: userId,  // Send as a number, not a string
             password: process.env.XTB_PASSWORD || 'GuiZarHoh2711!'
           })
         });
   
         if (!response.ok) {
-          throw new Error('Login failed');
+          console.error(`[Trading Service] Login response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(`Login failed with status ${response.status}`);
         }
   
         const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Login response:`, data);
+        
         if (!data.status) {
-          throw new Error('Login failed');
+          throw new Error(`Login failed: ${data.errorDescr || 'Unknown error'}`);
         }
+        
+        console.log('[Trading Service] Login successful with external server');
       } catch (loginError) {
         console.warn('[Trading Service] External server unavailable, using simulated mode:', loginError);
         // Continue execution in simulation mode
@@ -267,23 +277,29 @@ export class TradingService {
         price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
-      // Create trade transaction info based on the new API format
-      const tradeTransInfo: TradeTransInfo = {
+      // Create trade transaction info matching EXACTLY the format from the example
+      // Note: we're using the simpler format as per the curl example
+      const tradeTransInfo: any = {
         cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
         symbol: symbol,
         volume: finalVolume,
         price: price || 0,       // Must be a valid price
-        sl: sl || 0,             // Stop loss
-        tp: tp || 0,             // Take profit
-        type: 0,                 // 0 for open
+        offset: 0,               // Required per example
         order: 0                 // Use 0 when opening a new trade
       };
 
-      if (customComment) {
-        tradeTransInfo.customComment = customComment;
-      }
+      // Only add the optional parameters if they are provided
+      if (sl && sl !== 0) tradeTransInfo.sl = sl;
+      if (tp && tp !== 0) tradeTransInfo.tp = tp;
+      if (customComment) tradeTransInfo.customComment = customComment;
+      if (expiration && expiration !== 0) tradeTransInfo.expiration = expiration;
 
       try {
+        console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/command:`, {
+          commandName: "tradeTransaction", 
+          arguments: { tradeTransInfo }
+        });
+        
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
           method: 'POST',
           headers: {
@@ -298,10 +314,13 @@ export class TradingService {
         });
   
         if (!response.ok) {
-          throw new Error('Trade failed');
+          console.error(`[Trading Service] Trade response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(`Trade failed with status ${response.status}`);
         }
   
         const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Trade response:`, data);
+        
         if (!data.status) {
           throw new Error(data.errorDescr || 'Trade failed');
         }
@@ -349,26 +368,25 @@ export class TradingService {
         positionToClose, price, originalVolume: volume, adjustedToLots: adjustedVolume, finalVolume, isBuy, customComment
       });
 
-      // Create trade transaction info for closing a position
-      const tradeTransInfo: TradeTransInfo = {
+      // Create trade transaction info matching EXACTLY the format from the example for closing trades
+      const tradeTransInfo = {
         cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
         symbol: symbol,
         volume: finalVolume,
         price: price || 0,
         offset: 0,
         order: Number(positionToClose) + 1,  // According to curl example, we need to use order + 1
-        type: 2                 // 2 for close
+        type: 2,                // 2 for close
+        customComment: customComment || "Close trade test", // Default comment if none provided
+        expiration: expiration || 0
       };
 
-      if (customComment) {
-        tradeTransInfo.customComment = customComment;
-      }
-
-      if (expiration) {
-        tradeTransInfo.expiration = expiration;
-      }
-
       try {
+        console.log(`[Trading Service] Sending close trade request to ${XTB_SERVER_URL}/command:`, {
+          commandName: "tradeTransaction", 
+          arguments: { tradeTransInfo }
+        });
+        
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
           method: 'POST',
           headers: {
@@ -383,10 +401,13 @@ export class TradingService {
         });
   
         if (!response.ok) {
-          throw new Error('Close trade failed');
+          console.error(`[Trading Service] Close trade response not OK: ${response.status} ${response.statusText}`);
+          throw new Error(`Close trade failed with status ${response.status}`);
         }
   
         const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Close trade response:`, data);
+        
         if (!data.status) {
           throw new Error(data.errorDescr || 'Close trade failed');
         }
