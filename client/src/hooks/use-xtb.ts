@@ -1,32 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
-import axios from 'axios';
+import { xtbService } from '@/lib/xtb-service';
+import { useToast } from '@/hooks/use-toast';
+import type { SymbolRecord } from '@/lib/xtb-types';
 
-// Currency pairs supported by the application
+export interface ExchangeRate {
+  symbol: string;
+  bid: number;
+  ask: number;
+  timestamp: number;
+  swapLong: number;
+  swapShort: number;
+}
+
 const CURRENCY_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
 export function useXTB() {
-  const [isConnected, setIsConnected] = useState(true); // Assume server is connected
+  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if server API is reachable
-    const checkServerConnection = async () => {
+    const connect = async () => {
       try {
-        console.log('[useXTB] Checking connection to server API...');
-        const response = await axios.get('/api/xtb/rates');
-        console.log('[useXTB] Server API is reachable');
+        console.log('[useXTB] Connecting to XTB...');
+        await xtbService.connect({
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
+        });
+        console.log('[useXTB] Connected to XTB successfully');
         setIsConnected(true);
         setError(null);
 
         toast({
-          title: "Connected to Trading API",
+          title: "Connected to XTB",
           description: "Successfully connected to trading platform",
         });
       } catch (err: any) {
-        console.error('[useXTB] Server API error:', err);
+        console.error('[useXTB] Connection error:', err);
         setError(err.message);
         setIsConnected(false);
 
@@ -38,26 +49,73 @@ export function useXTB() {
       }
     };
 
-    checkServerConnection();
+    connect();
 
-    // No cleanup needed since we're not connecting directly to XTB anymore
+    return () => {
+      xtbService.disconnect();
+    };
   }, [toast]);
 
   const { data: exchangeRates, isLoading } = useQuery({
     queryKey: ['xtb-rates'],
     queryFn: async () => {
-      console.log('[useXTB] Fetching exchange rates from server API');
-      const response = await axios.get('/api/xtb/rates');
-      return response.data;
+      if (!isConnected) {
+        throw new Error('Not connected to XTB');
+      }
+
+      const streamStatus = await xtbService.checkStreamConnection();
+      console.log('[useXTB] Stream connection status:', streamStatus);
+
+      const rates: ExchangeRate[] = [];
+
+      try {
+        // Fetch data for all currency pairs
+        for (const symbol of CURRENCY_PAIRS) {
+          console.log('[useXTB] Requesting symbol data for:', symbol);
+          const symbolResponse = await xtbService.getSymbolData(symbol);
+          console.log('[useXTB] Symbol response:', symbolResponse);
+
+          if (!symbolResponse.status || !symbolResponse.returnData) {
+            console.error(`[useXTB] Failed to get symbol data for ${symbol}`);
+            continue;
+          }
+
+          const data = symbolResponse.returnData as SymbolRecord;
+          rates.push({
+            symbol,
+            bid: data.bid,
+            ask: data.ask,
+            timestamp: data.time,
+            swapLong: Math.abs(data.swapLong),
+            swapShort: Math.abs(data.swapShort),
+          });
+
+          // Set up streaming updates for this symbol
+          xtbService.onSymbolUpdate(symbol, (symbolData) => {
+            console.log(`[useXTB] Received streaming update for ${symbol}:`, symbolData);
+          });
+        }
+      } catch (error) {
+        console.error('[useXTB] Error in exchange rates query:', error);
+        throw error;
+      }
+
+      if (rates.length === 0) {
+        throw new Error('No exchange rates available');
+      }
+
+      console.log('[useXTB] Final rates:', rates);
+      return rates;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
-    enabled: isConnected, // Only fetch if connected
+    enabled: isConnected,
+    refetchInterval: 5000, // Refresh every 5 seconds
+    retry: 3,
   });
 
   return {
     isConnected,
+    error,
     exchangeRates,
     isLoading,
-    error,
   };
 }
