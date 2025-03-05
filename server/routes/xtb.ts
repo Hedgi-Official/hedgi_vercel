@@ -34,7 +34,6 @@ const FALLBACK_RATES = [
 // Initialize XTB connection with backend credentials
 const initializeXTB = async () => {
   try {
-    // Update server URL for demo
     await tradingService.connect();
     console.log('[XTB Backend] Connected successfully');
     return true;
@@ -44,11 +43,14 @@ const initializeXTB = async () => {
   }
 };
 
-// Initialize connection when the server starts
-initializeXTB();
-
 router.post('/api/xtb/hedge', async (req, res) => {
   try {
+    console.log('[XTB Backend] Processing hedge request from /api/hedges', {
+      body: req.body,
+      headers: req.headers,
+      url: req.url
+    });
+
     await tradingService.connect();
 
     const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
@@ -60,12 +62,25 @@ router.post('/api/xtb/hedge', async (req, res) => {
     // Format symbol correctly (e.g., EURUSD)
     const symbol = `${targetCurrency}${baseCurrency}`;
 
+    console.log('[XTB Backend] Prepared trade parameters:', {
+      symbol,
+      volume,
+      tradeDirection,
+      originalAmount: amount
+    });
+
     // Execute the trade using the exact format from example
     const tradeResult = await tradingService.openTrade(
       symbol,
       volume,
       tradeDirection === 'buy'
     );
+
+    console.log('[XTB Backend] Trade execution result:', {
+      tradeResult,
+      symbol,
+      volume
+    });
 
     res.json({
       status: true,
@@ -86,6 +101,8 @@ router.get('/api/xtb/trades/:tradeNumber', async (req, res) => {
 
     const tradeNumber = Number(req.params.tradeNumber);
     const status = await tradingService.checkTradeStatus(tradeNumber);
+
+    console.log('[Routes] Trade status response for order', tradeNumber, ':', status);
 
     res.json(status);
   } catch (error) {

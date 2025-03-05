@@ -102,6 +102,8 @@ export default function Dashboard() {
 
   const createHedgeMutation = useMutation({
     mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+      console.log('[Dashboard] Creating hedge with data:', hedgeData);
+
       const response = await fetch('/api/hedges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,6 +125,7 @@ export default function Dashboard() {
       });
       // Check trade status after successful creation
       if (data.tradeOrderNumber) {
+        console.log('[Dashboard] Trade created, checking status for order:', data.tradeOrderNumber);
         checkTradeStatusMutation.mutate(data.tradeOrderNumber);
       }
     },
