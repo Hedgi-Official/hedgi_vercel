@@ -125,12 +125,27 @@ export function registerRoutes(app: Express): Server {
     
     try {
       console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
-      // This service communicates with the Flask server for all trading operations
-      const hedgeResult = await xtbTradingService.executeHedge(req.body);
+      // Send the request directly to the Flask server using fetch
+      const response = await fetch('http://3.147.6.168/execute-trade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(req.body),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Flask server responded with status: ${response.status}`);
+      }
+      
+      const hedgeResult = await response.json();
       return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge via Flask server:', error);
-      return res.status(500).send(JSON.stringify({ error: 'Failed to execute hedge via Flask server' }));
+      return res.status(500).send(JSON.stringify({ 
+        error: 'Failed to execute hedge via Flask server', 
+        details: error instanceof Error ? error.message : String(error)
+      }));
     }
   });
 
