@@ -1,8 +1,5 @@
 import { Router } from 'express';
 import { tradingService } from '../services/trading';
-import { db } from '../db';
-import { hedges } from '@db/schema';
-import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -85,26 +82,9 @@ router.post('/api/xtb/hedge', async (req, res) => {
       volume
     });
 
-    // Store the hedge in the database
-    if (req.user?.id) {
-      await db.insert(hedges).values({
-        userId: req.user.id,
-        baseCurrency,
-        targetCurrency,
-        amount: amount.toString(),
-        rate: req.body.rate,
-        duration: req.body.duration,
-        tradeOrderNumber: tradeResult,
-        status: 'active',
-        createdAt: new Date(),
-      });
-    }
-
     res.json({
       status: true,
-      returnData: {
-        order: tradeResult
-      }
+      tradeOrderNumber: tradeResult
     });
   } catch (error) {
     console.error('[XTB Backend] Error executing hedge:', error);
@@ -150,9 +130,7 @@ router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
 
     res.json({
       status: true,
-      returnData: {
-        order: closingOrder
-      }
+      closingOrderNumber: closingOrder
     });
   } catch (error) {
     console.error('[XTB Backend] Error closing trade:', error);
