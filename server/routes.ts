@@ -302,8 +302,91 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
     
-    // Redirect all trade requests to the Flask server endpoint
-    return res.redirect(307, '/api/xtb/hedge');
+    try {
+      console.log('[XTB Backend] Processing hedge request from /api/hedges');
+      
+      // Forward the request to the Flask server directly instead of redirecting
+      const response = await fetch('http://3.147.6.168/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 17535100, 
+          password: "GuiZarHoh2711!"
+        }),
+        signal: AbortSignal.timeout(30000)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Login failed with status ${response.status}`);
+      }
+      
+      const loginData = await response.json();
+      
+      if (!loginData.status) {
+        throw new Error(loginData.errorDescr || 'Login failed');
+      }
+      
+      // Format the request according to XTB API format
+      const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+      
+      // Calculate volume in lots (1 lot = 100,000 units)
+      const volume = Math.abs(Number(amount)) / 100000;
+      
+      // Format symbol correctly (e.g., EURUSD)
+      const symbol = `${targetCurrency}${baseCurrency}`;
+      
+      // Format the command according to XTB API format
+      const commandData = {
+        commandName: "tradeTransaction",
+        arguments: {
+          tradeTransInfo: {
+            cmd: tradeDirection === 'buy' ? 0 : 1, // 0 for BUY, 1 for SELL
+            symbol: symbol,
+            volume: volume,
+            price: 1.0, // Market price (0 for market execution)
+            offset: 0,
+            order: 0, // New order
+            type: 0 // Type 0 for open position
+          }
+        }
+      };
+      
+      // Send the request to the Flask server
+      const tradeResponse = await fetch('http://3.147.6.168/command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(commandData),
+        signal: AbortSignal.timeout(30000)
+      });
+      
+      if (!tradeResponse.ok) {
+        throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
+      }
+      
+      const apiResponse = await tradeResponse.json();
+      
+      if (!apiResponse.status) {
+        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
+      }
+      
+      // Format response to match what the client expects
+      const hedgeResult = {
+        status: apiResponse.status,
+        tradeOrderNumber: apiResponse.returnData?.order || null
+      };
+      
+      return res.send(JSON.stringify(hedgeResult));
+    } catch (error) {
+      console.error('[XTB Backend] Error executing hedge via Flask server:', error);
+      return res.status(500).send(JSON.stringify({ 
+        error: 'Failed to execute hedge via Flask server', 
+        details: error instanceof Error ? error.message : String(error)
+      }));
+    }
   });
 
   app.delete("/api/hedges/:id", async (req, res) => {
