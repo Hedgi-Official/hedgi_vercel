@@ -24,8 +24,8 @@ interface TradeTransInfo {
   [key: string]: any;    // To allow for dynamic properties
 }
 
-// External Flask server URL with correct port - make sure we use port 5000 as in the example
-const XTB_SERVER_URL = 'http://3.147.6.168:5000';
+// External Flask server URL without port specification
+const XTB_SERVER_URL = 'http://3.147.6.168';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
