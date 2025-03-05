@@ -14,6 +14,7 @@ export function registerRoutes(app: Express): Server {
 
   // Register routes
   app.use(secondaryRateRouter);
+  // app.use(xtbRouter); // Removed - we're using direct routes below
   
   // Fallback data for when XTB API is unavailable
   const FALLBACK_RATES = [
@@ -233,14 +234,14 @@ export function registerRoutes(app: Express): Server {
 
       // Record the trade in the database
       const [hedge] = await db.insert(hedges).values({
-        userId: req.user.id,
+        userId: Number(req.user.id), // Ensure userId is a number
         baseCurrency,
         targetCurrency,
         amount: adjustedAmount,
         rate: rate.toString(),
-        duration,
+        duration: Number(duration), // Ensure duration is a number
         status: "active",
-        tradeOrderNumber: String(tradeOrderNumber),
+        tradeOrderNumber: Number(tradeOrderNumber), // Store as number instead of string
         tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
       }).returning();
 
