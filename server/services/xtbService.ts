@@ -1,25 +1,44 @@
 import fetch from 'node-fetch';
 
-const BRIDGE_URL = 'https://your-flask-app-434424736588.us-central1.run.app';
+// Define interfaces for XTB API responses
+interface XTBResponse {
+  status: boolean;
+  returnData?: any;
+  errorCode?: string;
+  errorDescr?: string;
+  streamSessionId?: string;
+}
+
+interface XTBLoginResponse extends XTBResponse {
+  streamSessionId?: string;
+}
+
+interface XTBTradeResponse extends XTBResponse {
+  returnData?: {
+    order: number;
+  };
+}
+
+const XTB_SERVER_URL = 'http://3.147.6.168';
 
 class XTBService {
     private sessionId: string | null = null;
 
-    async login(userId: string, password: string) {
+    async login(userId: string, password: string): Promise<XTBLoginResponse> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/connect`, {
+            const response = await fetch(`${XTB_SERVER_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, password })
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Login failed');
+                const errorData = await response.json() as any;
+                throw new Error(errorData.detail || 'Login failed');
             }
 
-            const data = await response.json();
-            this.sessionId = data.sessionId;
+            const data = await response.json() as XTBLoginResponse;
+            this.sessionId = data.streamSessionId || null;
             return data;
         } catch (error) {
             console.error('Login error:', error);
@@ -33,59 +52,99 @@ class XTBService {
         command: number; // 0 for BUY, 1 for SELL
         orderType: number; // 0 for OPEN, 2 for CLOSE
         order?: number; // Required when closing trades
-    }) {
+    }): Promise<XTBTradeResponse> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/trade`, {
+            // Convert to the correct format for the XTB API
+            const tradeTransInfo = {
+                cmd: params.command,
+                symbol: params.symbol,
+                volume: params.volume,
+                type: params.orderType,
+                price: 0, // Market order
+                order: params.order || 0
+            };
+
+            const response = await fetch(`${XTB_SERVER_URL}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params)
+                body: JSON.stringify({
+                    commandName: 'tradeTransaction',
+                    arguments: {
+                        tradeTransInfo: tradeTransInfo
+                    }
+                })
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Trade failed');
+                const errorData = await response.json() as any;
+                throw new Error(errorData.detail || 'Trade failed');
             }
 
-            return response.json();
+            return response.json() as Promise<XTBTradeResponse>;
         } catch (error) {
             console.error('Trade error:', error);
             throw error;
         }
     }
 
-    async checkTradeStatus(orderId: number) {
+    async checkTradeStatus(orderId: number): Promise<XTBResponse> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/status`, {
+            const response = await fetch(`${XTB_SERVER_URL}/command`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId })
+                body: JSON.stringify({
+                    commandName: 'getTrades',
+                    arguments: {
+                        openedOnly: true
+                    }
+                })
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Status check failed');
+                const errorData = await response.json() as any;
+                throw new Error(errorData.detail || 'Status check failed');
             }
 
-            return response.json();
+            const data = await response.json() as XTBResponse;
+            
+            // Filter the trades to find the specific order
+            if (data.status && data.returnData) {
+                const trades = data.returnData;
+                const targetTrade = trades.find((t: any) => t.order === orderId || t.position === orderId);
+                
+                if (targetTrade) {
+                    return {
+                        status: true,
+                        returnData: targetTrade
+                    };
+                }
+            }
+            
+            return {
+                status: true,
+                returnData: null
+            };
         } catch (error) {
             console.error('Status check error:', error);
             throw error;
         }
     }
 
-    async disconnect() {
+    async disconnect(): Promise<XTBResponse> {
         try {
-            const response = await fetch(`${BRIDGE_URL}/disconnect`, {
-                method: 'POST'
+            const response = await fetch(`${XTB_SERVER_URL}/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Disconnect failed');
+                const errorData = await response.json() as any;
+                throw new Error(errorData.detail || 'Disconnect failed');
             }
 
             this.sessionId = null;
-            return response.json();
+            return response.json() as Promise<XTBResponse>;
         } catch (error) {
             console.error('Disconnect error:', error);
             throw error;

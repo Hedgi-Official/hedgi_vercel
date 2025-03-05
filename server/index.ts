@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { bridgeProcess } from "./start-services";
 
 const app = express();
 app.use(express.json());
@@ -73,24 +72,38 @@ app.use((req, res, next) => {
   // Bind server to port with better error handling and logging
   const PORT = parseInt(process.env.PORT || '5000', 10);
 
-  const startServer = (port: number) => {
-    log(`Attempting to start server on port ${port}...`);
-    server.listen(port, "0.0.0.0", () => {
-      log(`Server successfully bound and listening on port ${port}`);
-      log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
-    }).on('error', (e: any) => {
-      if (e.code === 'EADDRINUSE') {
-        log(`Port ${port} is busy, trying ${port + 1}...`);
-        startServer(port + 1);
-      } else {
-        log(`Server error: ${e.message}`);
-        throw e;  // Rethrow non-port-related errors
-      }
-    });
-  };
-
   try {
-    startServer(PORT);
+    log(`Attempting to start server on port ${PORT}...`);
+    
+    // Create a promise that resolves when the server starts
+    const serverStart = new Promise<void>((resolve, reject) => {
+      // Set a timeout to catch hanging server starts
+      const timeout = setTimeout(() => {
+        reject(new Error(`Server failed to start within timeout period`));
+      }, 10000); // 10 second timeout
+      
+      server.listen(PORT, "0.0.0.0", () => {
+        clearTimeout(timeout);
+        log(`Server successfully bound and listening on port ${PORT}`);
+        log(`Test endpoint available at http://0.0.0.0:${PORT}/ping`);
+        resolve();
+      }).on('error', (e: any) => {
+        clearTimeout(timeout);
+        if (e.code === 'EADDRINUSE') {
+          log(`Port ${PORT} is already in use. Please use a different port.`);
+          // Alternatively, we could try a different port automatically
+          // For now, we'll exit with an error
+          process.exit(1);
+        } else {
+          log(`Server error: ${e.message}`);
+          reject(e);
+        }
+      });
+    });
+    
+    // Wait for server to start
+    await serverStart;
+    
   } catch (error) {
     log(`Failed to start server: ${error}`);
     process.exit(1);

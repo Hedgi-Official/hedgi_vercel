@@ -5,13 +5,15 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+import xtbRouter from './routes/xtb';
 import { tradingService } from "./services/trading";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Register secondary rate route
+  // Register routes
   app.use(secondaryRateRouter);
+  app.use(xtbRouter);
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -118,11 +120,11 @@ export function registerRoutes(app: Express): Server {
         userId: req.user.id,
         baseCurrency,
         targetCurrency,
-        amount: adjustedAmount,
-        rate: rate.toString(),
+        amount: Number(adjustedAmount), // Convert to number for decimal field
+        rate: Number(rate), // Convert to number for decimal field
         duration,
         status: "active",
-        tradeOrderNumber: String(tradeOrderNumber),
+        tradeOrderNumber, // Already a number
         tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
       }).returning();
 
