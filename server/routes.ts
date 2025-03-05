@@ -3,18 +3,15 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges } from "@db/schema";
-import type { NewHedge } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
-import xtbRouter from './routes/xtb';
 import { tradingService } from "./services/trading";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Register routes
+  // Register secondary rate route
   app.use(secondaryRateRouter);
-  app.use(xtbRouter);
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -116,21 +113,18 @@ export function registerRoutes(app: Express): Server {
         throw new Error(`Failed to open trade for ${symbol}`);
       }
 
-      // Create a properly typed hedge object
-      const newHedge: NewHedge = {
-        userId: Number(req.user.id),
+      // Record the trade in the database
+      const [hedge] = await db.insert(hedges).values({
+        userId: req.user.id,
         baseCurrency,
         targetCurrency,
-        amount: adjustedAmount, // Already converted to string
-        rate: typeof rate === 'string' ? rate : rate.toString(), // Ensure rate is a string
-        duration: Number(duration), // Ensure duration is a number
+        amount: adjustedAmount,
+        rate: rate.toString(),
+        duration,
         status: "active",
-        tradeOrderNumber, // Already a number
+        tradeOrderNumber: String(tradeOrderNumber),
         tradeStatus: "ACTIVE", // Assuming 'ACTIVE' upon successful trade opening.
-      };
-      
-      // Insert with proper types
-      const [hedge] = await db.insert(hedges).values(newHedge).returning();
+      }).returning();
 
       res.json(hedge);
     } catch (error) {
