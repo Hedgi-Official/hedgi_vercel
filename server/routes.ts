@@ -367,40 +367,17 @@ export function registerRoutes(app: Express): Server {
         throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
       }
       
-      // Parse the response carefully
-      const responseText = await tradeResponse.text();
-      let apiResponse;
+      const apiResponse = await tradeResponse.json();
       
-      try {
-        apiResponse = JSON.parse(responseText);
-        console.log('[XTB Backend] Trade API response:', JSON.stringify(apiResponse));
-      } catch (parseError) {
-        console.error('[XTB Backend] Error parsing JSON response:', parseError);
-        console.log('[XTB Backend] Response text was:', responseText);
-        throw new Error('Failed to parse response from XTB API');
+      if (!apiResponse.status) {
+        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
-      
-      // Check if the response has the expected structure
-      if (!apiResponse || typeof apiResponse !== 'object') {
-        throw new Error('Invalid response format from XTB API');
-      }
-      
-      // Check the status with proper fallback
-      const status = apiResponse.status === true;
-      
-      // Extract order number with safe fallbacks
-      const orderNumber = apiResponse.returnData?.order || 
-                         apiResponse.order || 
-                         (Array.isArray(apiResponse.returnData) && apiResponse.returnData.length > 0 ? 
-                          apiResponse.returnData[0].order : null);
       
       // Format response to match what the client expects
       const hedgeResult = {
-        status: status,
-        tradeOrderNumber: orderNumber
+        status: apiResponse.status,
+        tradeOrderNumber: apiResponse.returnData?.order || null
       };
-      
-      console.log('[XTB Backend] Parsed hedge result:', hedgeResult);
       
       return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
