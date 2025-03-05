@@ -174,13 +174,13 @@ export class TradingService {
 
       try {
         // Execute a command to get symbol data from the external server
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        const response = await fetch(`${XTB_SERVER_URL}/execute`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            commandName: "getSymbol",
+            command: "getSymbol",
             arguments: {
               symbol
             }
@@ -297,7 +297,7 @@ export class TradingService {
 
       try {
         console.log(`[Trading Service] Sending open trade request to ${XTB_SERVER_URL}/execute:`, {
-          commandName: "tradeTransaction", 
+          command: "tradeTransaction", 
           arguments: tradeTransInfo
         });
         
