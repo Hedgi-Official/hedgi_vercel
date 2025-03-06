@@ -48,17 +48,19 @@ async function wait(ms: number) {
 // We're using regular fetch from node-fetch instead of a custom fetchWithTimeout
 
 async function checkServerHealth(): Promise<boolean> {
-  const startTime = Date.now();
   try {
     console.log('[Trading Service] Checking XTB server health');
+    // Try to reach the server with a simple GET request to the root path
+    // If the server is reachable but ping doesn't exist, it will return a 404, 
+    // which is still a sign that the server is alive
     const response = await fetch(`${XTB_SERVER_URL}`);
-    const duration = Date.now() - startTime;
 
-    console.log(`[Trading Service] Server health check response: ${response.status} (${duration}ms)`);
+    // Consider any response from the server as a sign it's available
+    // Even if it's a 404, it means the server is running
+    console.log(`[Trading Service] Server health check response: ${response.status}`);
     return true;
   } catch (error) {
-    const duration = Date.now() - startTime;
-    console.error(`[Trading Service] XTB server health check failed after ${duration}ms:`, error);
+    console.error('[Trading Service] XTB server health check failed:', error);
     return false;
   }
 }
@@ -66,20 +68,10 @@ async function checkServerHealth(): Promise<boolean> {
 export class TradingService {
   private isLoggedIn = false;
   private lastLoginTime = 0;
-  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes
+  private readonly sessionTimeout = 20 * 60 * 1000; // 20 minutes in milliseconds
 
   get isConnected(): boolean {
-    const connected = this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
-    console.log(`[Trading Service] Connection status check: ${connected ? 'Connected' : 'Disconnected'}`);
-    if (!connected) {
-      console.log('[Trading Service] Session details:', {
-        isLoggedIn: this.isLoggedIn,
-        lastLoginTime: this.lastLoginTime,
-        timeSinceLogin: Date.now() - this.lastLoginTime,
-        sessionTimeout: this.sessionTimeout
-      });
-    }
-    return connected;
+    return this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
   }
 
   // Helper method to process trade API responses
@@ -105,7 +97,7 @@ export class TradingService {
     }
 
     // Make sure we properly extract and format order information
-    const orderInfo = data.returnData && typeof data.returnData === 'object' ?
+    const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
                     data.returnData : { order: null };
 
     console.log('[Trading Service] Extracted order info:', orderInfo);
@@ -118,17 +110,20 @@ export class TradingService {
   }
 
   private async login(): Promise<boolean> {
-    const startTime = Date.now();
     try {
       console.log('[Trading Service] Attempting login...');
 
+      // CRITICAL: Exactly match the format shown in the example curl command
+      // The userId MUST be a number, not a string
+      // curl -X POST -H "Content-Type: application/json" -d '{"userId": 17535100, "password": "YourPasswordHere"}'
       const requestBody = {
-        userId: 17535100,
+        userId: 17535100,  // Must be a number, not a string
         password: "GuiZarHoh2711!"
       };
 
       console.log('[Trading Service] Login request:', JSON.stringify(requestBody));
 
+      // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -140,15 +135,16 @@ export class TradingService {
       });
 
       clearTimeout(timeoutId);
-      const duration = Date.now() - startTime;
 
       if (!response.ok) {
-        console.error(`[Trading Service] Login failed with HTTP status ${response.status} after ${duration}ms`);
+        console.error(`[Trading Service] Login failed with HTTP status ${response.status}`);
         return false;
       }
 
+      // Parse the response exactly as shown in the example:
+      // {"status": true, "streamSessionId": "005056fffeb9ce40-00060436-04e45802-85fa7c837b6a54da-15996a54"}
       const data = await response.json() as XTBResponse;
-      console.log(`[Trading Service] Login response (${duration}ms):`, data);
+      console.log('[Trading Service] Login response:', data);
 
       if (!data.status) {
         console.error(`[Trading Service] Login failed: ${data.errorDescr || 'Unknown reason'}`);
@@ -159,24 +155,16 @@ export class TradingService {
       this.lastLoginTime = Date.now();
       return true;
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error(`[Trading Service] Login error after ${duration}ms:`, error instanceof Error ? error.message : 'Unknown error');
+      console.error('[Trading Service] Login error:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
 
   async connect(): Promise<boolean> {
     try {
-      const startTime = Date.now();
-      console.log('[Trading Service] Starting connection process');
-
-      const loginSuccess = await this.login();
-      const duration = Date.now() - startTime;
-
-      console.log(`[Trading Service] Connection ${loginSuccess ? 'successful' : 'failed'} in ${duration}ms`);
-      return loginSuccess;
+      return await this.login();
     } catch (error) {
-      console.error('[Trading Service] Connection error:', error);
+      console.error('[Trading Service] Connection error:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
@@ -226,7 +214,7 @@ export class TradingService {
       }
 
       // Add type only if needed (not in the minimal example)
-      if (true) { // Always include type for consistency
+      if (true) { // Always include type for consistency 
         tradeTransInfo.type = 0; // 0 for open
       }
 
@@ -285,41 +273,44 @@ export class TradingService {
     customComment?: string
   ): Promise<XTBResponse> {
     try {
-      // Ensure we're logged in first
+      // Ensure we're logged in
       const loggedIn = await this.ensureLoggedIn();
       if (!loggedIn) {
-        return {
-          status: false,
-          error: "Failed to login before closing trade",
-          message: "Could not authenticate with trading service"
+        return { 
+          status: false, 
+          error: "Failed to login before closing trade", 
+          message: "Could not authenticate with trading service" 
         };
       }
 
-      // Use orderNumber + 1 as shown in the curl example
-      const closeOrderNumber = orderNumber + 1;
-      console.log(`[Trading Service] Closing trade using order number ${closeOrderNumber} (original + 1)`);
+      console.log(`[Trading Service] Closing trade ${orderNumber} (${symbol}, volume: ${volume})`);
 
-      // Exactly match the curl example format
+      // Use orderNumber + 1 as required for closing trades
+      const closeOrderNumber = orderNumber + 1;
+      console.log(`[Trading Service] Using order number ${closeOrderNumber} (original + 1) to close trade`);
+
+      // Create the request body exactly as specified in the curl example
       const requestBody = {
-        "commandName": "tradeTransaction",
+        "commandName": "tradeTransaction", 
         "arguments": {
           "tradeTransInfo": {
-            "cmd": isBuy ? 0 : 1,      // Keep original trade direction
+            "cmd": isBuy ? 0 : 1,      // Same direction as opening trade
             "customComment": customComment || "Close trade test",
             "expiration": 0,
             "offset": 0,
             "order": closeOrderNumber, // Order number + 1 for closing
             "price": 1.0,
             "symbol": symbol,
-            "type": 2,                // 2 for close
-            "volume": volume
+            "type": 2,                 // 2 for close
+            "volume": volume           // Same volume as the trade being closed
           }
         }
       };
 
-      console.log('[Trading Service] Close trade request:', JSON.stringify(requestBody, null, 2));
+      console.log(`[Trading Service] Closing ${isBuy ? 'BUY' : 'SELL'} trade #${closeOrderNumber} for ${symbol} with volume ${volume}`);
+      console.log('[Trading Service] Request body:', JSON.stringify(requestBody, null, 2));
 
-      // Execute the close trade command
+      // Call the XTB API with the exact format required
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
         method: 'POST',
         headers: {
@@ -328,26 +319,7 @@ export class TradingService {
         body: JSON.stringify(requestBody)
       });
 
-      if (!response.ok) {
-        throw new Error(`Close trade failed with status ${response.status}`);
-      }
-
-      const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Close trade response:', data);
-
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || 'Failed to close trade',
-          message: `Failed to close trade #${orderNumber}`
-        };
-      }
-
-      return {
-        status: true,
-        returnData: data.returnData,
-        message: `Successfully closed trade #${orderNumber}`
-      };
+      return this.processTradeResponse(response, isBuy, symbol);
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       return {
