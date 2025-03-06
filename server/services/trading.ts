@@ -84,131 +84,29 @@ export class TradingService {
       };
     }
 
-    // First check if the response has a content-type header that indicates HTML
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-      const htmlText = await response.text();
-      console.log('[Trading Service] Received HTML response instead of JSON:', 
-                 htmlText.length > 300 ? htmlText.substring(0, 300) + '...' : htmlText);
-      
-      // Check if the HTML contains success indicators - more comprehensive check
-      if (htmlText.toLowerCase().includes('success') || 
-          htmlText.toLowerCase().includes('200 ok') || 
-          htmlText.toLowerCase().includes('completed successfully')) {
-        console.log('[Trading Service] HTML response indicates success, extracting order info if available');
-        
-        // Try to extract order info from HTML if possible - improved pattern matching
-        let orderNumber = null;
-        // Look for patterns like "order: 123456" or "order number: 123456" or similar
-        const orderPatterns = [
-          /order[^\d]*(\d+)/i,            // Basic "order 123456"
-          /order\s*number[^\d]*(\d+)/i,    // "order number 123456"
-          /transaction[^\d]*(\d+)/i,       // "transaction 123456"
-          /trade[^\d]*(\d+)/i              // "trade 123456"
-        ];
-        
-        for (const pattern of orderPatterns) {
-          const match = htmlText.match(pattern);
-          if (match && match[1]) {
-            orderNumber = parseInt(match[1]);
-            console.log(`[Trading Service] Extracted order number from HTML: ${orderNumber}`);
-            break;
-          }
-        }
-        
-        return {
-          status: true,
-          returnData: { order: orderNumber || 0, htmlSuccess: true },
-          message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol} (HTML response)`
-        };
-      } else {
-        return {
-          status: false,
-          error: "Received HTML response from server without success indicators",
-          message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol} - Server returned HTML`
-        };
-      }
-    }
+    const data = await response.json() as XTBResponse;
+    console.log('[Trading Service] Trade response:', data);
 
-    // If not HTML, try to parse as JSON
-    try {
-      // First try to get the text to see what we're dealing with
-      const textResponse = await response.text();
-      console.log(`[Trading Service] Raw response for ${symbol}:`, 
-                 textResponse.length > 300 ? textResponse.substring(0, 300) + '...' : textResponse);
-      
-      // If the response is empty or just whitespace or 'null', treat as success for close operations
-      if (!textResponse || textResponse.trim() === '' || textResponse.trim() === 'null') {
-        console.log('[Trading Service] Empty response received, treating as success for', symbol);
-        return {
-          status: true,
-          returnData: { acknowledged: true, emptyResponse: true },
-          message: `Operation appears to have succeeded for ${symbol} (empty response)`
-        };
-      }
-      
-      // Try to parse the text as JSON
-      let data;
-      try {
-        data = JSON.parse(textResponse);
-      } catch (parseError) {
-        // If we get here, it's not HTML (checked earlier) and not valid JSON
-        console.error('[Trading Service] Failed to parse response as JSON:', parseError);
-        
-        // Check if it might contain success indicators despite not being valid JSON
-        if (textResponse.toLowerCase().includes('success') || 
-            textResponse.toLowerCase().includes('200 ok') || 
-            textResponse.toLowerCase().includes('completed')) {
-          return {
-            status: true,
-            returnData: { acknowledged: true, textSuccess: true },
-            message: `Operation likely succeeded for ${symbol} (non-JSON response with success indicators)`
-          };
-        }
-        
-        return {
-          status: false,
-          error: `Failed to parse response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
-          message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol} - Invalid response format`
-        };
-      }
-      
-      // Now we have valid JSON
-      console.log('[Trading Service] Trade response:', data);
-
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || data.error || "Unknown trading error",
-          errorDescr: data.errorDescr || "Trade execution failed",
-          message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
-        };
-      }
-
-      // Make sure we properly extract and format order information
-      const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
-                      data.returnData : { order: null };
-
-      console.log('[Trading Service] Extracted order info:', orderInfo);
-
-      return {
-        status: true,
-        returnData: orderInfo,
-        message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
-      };
-    } catch (error) {
-      console.error('[Trading Service] Error parsing JSON response:', error);
-      
-      // Try to get the raw text to see what went wrong
-      const text = await response.text().catch(() => "Could not get response text");
-      console.error('[Trading Service] Raw response text:', text.substring(0, 200) + '...');
-      
+    if (!data.status) {
       return {
         status: false,
-        error: `Error parsing response: ${error instanceof Error ? error.message : String(error)}`,
-        message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol} - Response parsing error`
+        error: data.errorDescr || "Unknown trading error",
+        errorDescr: data.errorDescr || "Trade execution failed",
+        message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
       };
     }
+
+    // Make sure we properly extract and format order information
+    const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
+                    data.returnData : { order: null };
+
+    console.log('[Trading Service] Extracted order info:', orderInfo);
+
+    return {
+      status: true,
+      returnData: orderInfo,
+      message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+    };
   }
 
   private async login(): Promise<boolean> {
@@ -412,34 +310,16 @@ export class TradingService {
       console.log(`[Trading Service] Closing ${isBuy ? 'BUY' : 'SELL'} trade #${closeOrderNumber} for ${symbol} with volume ${volume}`);
       console.log('[Trading Service] Request body:', JSON.stringify(requestBody, null, 2));
 
-      // Create a fetch request with timeout to avoid hanging indefinitely
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      // Call the XTB API with the exact format required
+      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-      try {
-        // Call the XTB API with the exact format required
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-        return await this.processTradeResponse(response, isBuy, symbol);
-      } catch (error) {
-        clearTimeout(timeoutId);
-        if (error instanceof Error && error.name === 'AbortError') {
-          return {
-            status: false,
-            error: `Close trade request timed out after ${API_TIMEOUT}ms`,
-            message: `Close trade operation timed out. Please try again later.`
-          };
-        }
-        throw error; // Re-throw other errors to be caught by the outer try-catch
-      }
+      return this.processTradeResponse(response, isBuy, symbol);
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       return {
