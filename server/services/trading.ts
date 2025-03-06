@@ -73,7 +73,7 @@ export class TradingService {
   get isConnected(): boolean {
     return this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
   }
-  
+
   // Helper method to process trade API responses
   private async processTradeResponse(response: any, isBuy: boolean, symbol: string): Promise<XTBResponse> {
     if (!response.ok) {
@@ -99,9 +99,9 @@ export class TradingService {
     // Make sure we properly extract and format order information
     const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
                     data.returnData : { order: null };
-                    
+
     console.log('[Trading Service] Extracted order info:', orderInfo);
-    
+
     return {
       status: true,
       returnData: orderInfo,
@@ -120,20 +120,20 @@ export class TradingService {
         userId: 17535100,  // Must be a number, not a string
         password: "GuiZarHoh2711!"
       };
-      
+
       console.log('[Trading Service] Login request:', JSON.stringify(requestBody));
-      
+
       // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
+
       const response = await fetch(`${XTB_SERVER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -197,7 +197,7 @@ export class TradingService {
       // CRITICAL: Exactly match the format from the example curl command:
       // curl -X POST -H "Content-Type: application/json" \
       // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "symbol": "EURUSD", "volume": 0.2, "price": 1.0, "offset": 0, "order": 0}}}' \
-      
+
       // Build trade info exactly as shown in example
       const tradeTransInfo: any = {
         cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
@@ -207,30 +207,30 @@ export class TradingService {
         offset: 0,
         order: 0                // 0 for new trades
       };
-      
+
       // Add customComment only if provided (not in the minimal example)
       if (customComment) {
         tradeTransInfo.customComment = customComment;
       }
-      
+
       // Add type only if needed (not in the minimal example)
       if (true) { // Always include type for consistency 
         tradeTransInfo.type = 0; // 0 for open
       }
-      
+
       const tradeRequest = {
         commandName: "tradeTransaction",
         arguments: {
           tradeTransInfo: tradeTransInfo
         }
       };
-      
+
       console.log(`[Trading Service] Sending trade request:`, JSON.stringify(tradeRequest));
-      
+
       // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
+
       try {
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
           method: 'POST',
@@ -238,7 +238,7 @@ export class TradingService {
           body: JSON.stringify(tradeRequest),
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
         return await this.processTradeResponse(response, isBuy, symbol);
       } catch (error) {
@@ -270,62 +270,66 @@ export class TradingService {
     orderNumber: number,
     volume: number,
     isBuy: boolean,
-    customComment: string = "Closing hedge position"
+    customComment?: string
   ): Promise<XTBResponse> {
     try {
+      // First ensure we're logged in
       const loggedIn = await this.ensureLoggedIn();
       if (!loggedIn) {
-        return {
-          status: false,
-          error: "Not logged in to trading service",
-          message: "Failed to authenticate with trading service"
+        return { 
+          status: false, 
+          error: "Failed to login before closing trade", 
+          message: "Could not authenticate with trading service" 
         };
       }
 
-      console.log(`[Trading Service] Closing trade for order #${orderNumber} (${symbol})`);
-      
-      // CRITICAL: Match closing format exactly from example:
+      console.log(`[Trading Service] Closing trade ${orderNumber} (${symbol}, volume: ${volume})`);
+
+      // Use orderNumber + 1 as required for closing trades
+      const closeOrderNumber = orderNumber + 1;
+      console.log(`[Trading Service] Using order number ${closeOrderNumber} (original + 1) to close trade`);
+
+      // Formatting exactly as in the curl example:
       // curl -X POST -H "Content-Type: application/json" \
       // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "customComment": "Close trade test", "expiration": 0, "offset": 0, "order": 751580917, "price": 1.0, "symbol": "EURUSD", "type": 2, "volume": 0.2}}}' \
-      
+      // "http://3.147.6.168//command"
+
       // Use a dynamic object to avoid TypeScript property errors
       const tradeTransInfo: any = {
         cmd: isBuy ? 0 : 1,      // Same direction as opening trade 
         customComment: customComment || "Close trade test",  // Added per example
         expiration: 0,           // Added per example - must be included
         offset: 0,               // Added per example - must be included
-        order: orderNumber,      // Order number of the trade to close
+        order: closeOrderNumber, // Order number + 1 for closing
         price: 1.0,              // Must be 1.0 per example
         symbol: symbol,
         type: 2,                 // 2 for close
-        volume: volume           // Same volume as opening trade
+        volume: volume           // Must be the same as the original trade
       };
-      
-      // Note: customComment is already set above in the object literal
-      
-      const closeRequest = {
+
+      const tradeRequest = {
         commandName: "tradeTransaction",
         arguments: {
           tradeTransInfo: tradeTransInfo
         }
       };
-      
-      console.log(`[Trading Service] Sending close request:`, JSON.stringify(closeRequest));
-      
+
+      console.log(`[Trading Service] Sending close request:`, JSON.stringify(tradeRequest));
+
       // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
+
       try {
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(closeRequest),
+          body: JSON.stringify(tradeRequest),
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           return {
             status: false,
@@ -333,10 +337,10 @@ export class TradingService {
             message: `Trade closure failed with HTTP status ${response.status}`
           };
         }
-  
+
         const data = await response.json() as XTBResponse;
         console.log('[Trading Service] Close trade response:', data);
-  
+
         if (!data.status) {
           return {
             status: false,
@@ -345,13 +349,13 @@ export class TradingService {
             message: `Failed to close trade #${orderNumber} for ${symbol}`
           };
         }
-  
+
         // Make sure we properly extract and format order information for closing trades too
         const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
                         data.returnData : { order: null };
-                        
+
         console.log('[Trading Service] Extracted close order info:', orderInfo);
-        
+
         return {
           status: true,
           returnData: orderInfo,
@@ -388,13 +392,13 @@ export class TradingService {
           message: "Failed to authenticate with trading service"
         };
       }
-      
+
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
-      
+
       // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
+
       try {
         // Fetch symbol data with proper format
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
@@ -408,9 +412,9 @@ export class TradingService {
           }),
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           return {
             status: false,
@@ -418,10 +422,10 @@ export class TradingService {
             message: `Failed to fetch symbol data with HTTP status ${response.status}`
           };
         }
-        
+
         const data = await response.json() as XTBResponse;
         console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
-        
+
         if (!data.status) {
           return {
             status: false,
@@ -429,7 +433,7 @@ export class TradingService {
             message: `API rejected symbol data request for ${symbol}`
           };
         }
-        
+
         return {
           status: true,
           returnData: data.returnData || null,
@@ -471,7 +475,7 @@ export class TradingService {
       // Create a fetch request with timeout to avoid hanging indefinitely
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-      
+
       try {
         // Follow exact format from example
         const response = await fetch(`${XTB_SERVER_URL}/command`, {
@@ -485,9 +489,9 @@ export class TradingService {
           }),
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
-  
+
         if (!response.ok) {
           return {
             status: false,
@@ -495,10 +499,10 @@ export class TradingService {
             message: `Failed to check trade status with HTTP status ${response.status}`
           };
         }
-  
+
         const data = await response.json() as XTBResponse;
         console.log('[Trading Service] Trade status response:', data);
-  
+
         if (!data.status) {
           return {
             status: false,
@@ -506,10 +510,10 @@ export class TradingService {
             message: `API rejected trade status request for order #${tradeNumber}`
           };
         }
-  
+
         const trades = data.returnData || [];
         const trade = trades.find((t: any) => Number(t.order) === Number(tradeNumber));
-  
+
         return {
           status: true,
           returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
