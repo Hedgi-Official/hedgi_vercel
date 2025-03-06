@@ -273,7 +273,7 @@ export class TradingService {
     customComment?: string
   ): Promise<XTBResponse> {
     try {
-      // First ensure we're logged in
+      // Ensure we're logged in
       const loggedIn = await this.ensureLoggedIn();
       if (!loggedIn) {
         return { 
@@ -289,89 +289,37 @@ export class TradingService {
       const closeOrderNumber = orderNumber + 1;
       console.log(`[Trading Service] Using order number ${closeOrderNumber} (original + 1) to close trade`);
 
-      // Formatting exactly as in the curl example:
-      // curl -X POST -H "Content-Type: application/json" \
-      // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "customComment": "Close trade test", "expiration": 0, "offset": 0, "order": 751580917, "price": 1.0, "symbol": "EURUSD", "type": 2, "volume": 0.2}}}' \
-      // "http://3.147.6.168//command"
-
-      // Use a dynamic object to avoid TypeScript property errors
-      const tradeTransInfo: any = {
-        cmd: isBuy ? 0 : 1,      // Same direction as opening trade 
-        customComment: customComment || "Close trade test",  // Added per example
-        expiration: 0,           // Added per example - must be included
-        offset: 0,               // Added per example - must be included
-        order: closeOrderNumber, // Order number + 1 for closing
-        price: 1.0,              // Must be 1.0 per example
-        symbol: symbol,
-        type: 2,                 // 2 for close
-        volume: volume           // Must be the same as the original trade
-      };
-
-      const tradeRequest = {
-        commandName: "tradeTransaction",
-        arguments: {
-          tradeTransInfo: tradeTransInfo
+      // Create the request body exactly as specified in the curl example
+      const requestBody = {
+        "commandName": "tradeTransaction", 
+        "arguments": {
+          "tradeTransInfo": {
+            "cmd": isBuy ? 0 : 1,      // Same direction as opening trade
+            "customComment": customComment || "Close trade test",
+            "expiration": 0,
+            "offset": 0,
+            "order": closeOrderNumber, // Order number + 1 for closing
+            "price": 1.0,
+            "symbol": symbol,
+            "type": 2,                 // 2 for close
+            "volume": volume           // Same volume as the trade being closed
+          }
         }
       };
 
-      console.log(`[Trading Service] Sending close request:`, JSON.stringify(tradeRequest));
+      console.log(`[Trading Service] Closing ${isBuy ? 'BUY' : 'SELL'} trade #${closeOrderNumber} for ${symbol} with volume ${volume}`);
+      console.log('[Trading Service] Request body:', JSON.stringify(requestBody, null, 2));
 
-      // Create a fetch request with timeout to avoid hanging indefinitely
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      // Call the XTB API with the exact format required
+      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-      try {
-        const response = await fetch(`${XTB_SERVER_URL}/command`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(tradeRequest),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          return {
-            status: false,
-            error: `Close trade failed with status ${response.status}`,
-            message: `Trade closure failed with HTTP status ${response.status}`
-          };
-        }
-
-        const data = await response.json() as XTBResponse;
-        console.log('[Trading Service] Close trade response:', data);
-
-        if (!data.status) {
-          return {
-            status: false,
-            error: data.errorDescr || "Unknown trading error",
-            errorDescr: data.errorDescr || "Trade closure failed",
-            message: `Failed to close trade #${orderNumber} for ${symbol}`
-          };
-        }
-
-        // Make sure we properly extract and format order information for closing trades too
-        const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
-                        data.returnData : { order: null };
-
-        console.log('[Trading Service] Extracted close order info:', orderInfo);
-
-        return {
-          status: true,
-          returnData: orderInfo,
-          message: `Successfully closed trade #${orderNumber} for ${symbol}`
-        };
-      } catch (error) {
-        clearTimeout(timeoutId);
-        if (error instanceof Error && error.name === 'AbortError') {
-          return {
-            status: false,
-            error: `Close trade request timed out after ${API_TIMEOUT}ms`,
-            message: `Trade closure timed out. Please try again later.`
-          };
-        }
-        throw error; // Re-throw other errors to be caught by the outer try-catch
-      }
+      return this.processTradeResponse(response, isBuy, symbol);
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       return {
