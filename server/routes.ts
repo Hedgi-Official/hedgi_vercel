@@ -487,9 +487,13 @@ export function registerRoutes(app: Express): Server {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol}`);
 
           // Close the trade with proper parameters
+          // Increment the order number by 1 as required by XTB API for closing trades
+          const orderNumberToClose = hedge.tradeOrderNumber + 1;
+          console.log(`[Routes] Using adjusted order number ${orderNumberToClose} for closure (original: ${hedge.tradeOrderNumber})`);
+          
           const closeResponse = await tradingService.closeTrade(
             symbol,
-            hedge.tradeOrderNumber,
+            orderNumberToClose,
             volume,
             isBuy,
             `Closing hedge ID ${hedgeId} for ${symbol}`
