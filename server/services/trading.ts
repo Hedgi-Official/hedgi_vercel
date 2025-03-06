@@ -46,16 +46,19 @@ async function wait(ms: number) {
 
 // Utility function to fetch with a timeout
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+  // Avoid using AbortController with node-fetch directly as it causes type conflicts
+  // Instead just use a simple timeout promise
+  const fetchPromise = fetch(url, options);
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    const id = setTimeout(() => {
+      clearTimeout(id);
+      reject(new Error(`Request to ${url} timed out after ${timeout}ms`));
+    }, timeout);
+  });
 
   try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-
-    clearTimeout(id);
+    // Race between the fetch and the timeout
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
     return response;
   } catch (error) {
     clearTimeout(id);
@@ -94,15 +97,20 @@ export class TradingService {
     try {
       console.log('[Trading Service] Attempting login...');
 
-      // Exactly match the format shown in the example:
-      // curl -X POST -H "Content-Type: application/json" -d '{"userId": 17535100, "password": "GuiZarHoh2711!"}'
+      // CRITICAL: Exactly match the format shown in the example curl command
+      // The userId MUST be a number, not a string
+      // curl -X POST -H "Content-Type: application/json" -d '{"userId": 17535100, "password": "YourPasswordHere"}'
+      const requestBody = {
+        userId: 17535100,  // Must be a number, not a string
+        password: "GuiZarHoh2711!"
+      };
+      
+      console.log('[Trading Service] Login request:', JSON.stringify(requestBody));
+      
       const response = await fetch(`${XTB_SERVER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 17535100,  // Use number format as required by API
-          password: "GuiZarHoh2711!"
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -163,17 +171,16 @@ export class TradingService {
 
       console.log(`[Trading Service] Opening ${isBuy ? 'BUY' : 'SELL'} trade for ${symbol}, volume ${volume}`);
 
-      // Exactly match the format from the example:
+      // CRITICAL: Exactly match the format from the example curl command:
       // curl -X POST -H "Content-Type: application/json" \
       // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "symbol": "EURUSD", "volume": 0.2, "price": 1.0, "offset": 0, "order": 0}}}' \
-      // "http://3.147.6.168/command"
       
-      // Use a dynamic object to avoid TypeScript property errors
+      // Build trade info exactly as shown in example
       const tradeTransInfo: any = {
         cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
         symbol: symbol,
         volume: volume,         // Volume is already in lots (0.1 = 10,000 units)
-        price: 0,               // 0 for market price
+        price: 1.0,             // Must be 1.0 as in example, not 0
         offset: 0,
         order: 0                // 0 for new trades
       };
@@ -264,21 +271,24 @@ export class TradingService {
 
       console.log(`[Trading Service] Closing trade for order #${orderNumber} (${symbol})`);
       
-      // Create a close trade request following exact format needed
+      // CRITICAL: Match closing format exactly from example:
+      // curl -X POST -H "Content-Type: application/json" \
+      // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "customComment": "Close trade test", "expiration": 0, "offset": 0, "order": 751580917, "price": 1.0, "symbol": "EURUSD", "type": 2, "volume": 0.2}}}' \
+      
       // Use a dynamic object to avoid TypeScript property errors
       const tradeTransInfo: any = {
         cmd: isBuy ? 0 : 1,      // Same direction as opening trade 
-        symbol: symbol,
+        customComment: customComment || "Close trade test",  // Added per example
+        expiration: 0,           // Added per example - must be included
+        offset: 0,               // Added per example - must be included
         order: orderNumber,      // Order number of the trade to close
-        volume: volume,          // Same volume as opening trade
-        price: 0,                // Market price
-        type: 2                  // 2 for close
+        price: 1.0,              // Must be 1.0 per example
+        symbol: symbol,
+        type: 2,                 // 2 for close
+        volume: volume           // Same volume as opening trade
       };
       
-      // Only add optional fields if they have values
-      if (customComment) {
-        tradeTransInfo.customComment = customComment;
-      }
+      // Note: customComment is already set above in the object literal
       
       const closeRequest = {
         commandName: "tradeTransaction",
