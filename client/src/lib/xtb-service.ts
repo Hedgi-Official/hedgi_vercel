@@ -19,8 +19,8 @@ export class XTBService {
     public serverUrl = 'wss://ws.xtb.com/demo',
     public streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {
-    // Initialize connection immediately
-    this.initializeConnection();
+    // Don't initialize connection immediately
+    console.log('[XTB] Service initialized, connection deferred');
   }
 
   private async initializeConnection() {
@@ -51,6 +51,11 @@ export class XTBService {
   }
 
   get isConnected(): boolean {
+    // Initialize connection if not already attempted
+    if (!this.ws && this.reconnectAttempts === 0) {
+      this.initializeConnection();
+      return false;
+    }
     return this._isConnected && this.ws?.readyState === WebSocket.OPEN;
   }
 

@@ -273,7 +273,7 @@ export class TradingService {
     customComment?: string
   ): Promise<XTBResponse> {
     try {
-      // Ensure we're logged in
+      // Ensure we're logged in first
       const loggedIn = await this.ensureLoggedIn();
       if (!loggedIn) {
         return { 
@@ -283,34 +283,31 @@ export class TradingService {
         };
       }
 
-      console.log(`[Trading Service] Closing trade ${orderNumber} (${symbol}, volume: ${volume})`);
-
-      // Use orderNumber + 1 as required for closing trades
+      // Use orderNumber + 1 as shown in the curl example
       const closeOrderNumber = orderNumber + 1;
-      console.log(`[Trading Service] Using order number ${closeOrderNumber} (original + 1) to close trade`);
+      console.log(`[Trading Service] Closing trade using order number ${closeOrderNumber} (original + 1)`);
 
-      // Create the request body exactly as specified in the curl example
+      // Exactly match the curl example format
       const requestBody = {
-        "commandName": "tradeTransaction", 
+        "commandName": "tradeTransaction",
         "arguments": {
           "tradeTransInfo": {
-            "cmd": isBuy ? 0 : 1,      // Same direction as opening trade
+            "cmd": isBuy ? 0 : 1,      // Keep original trade direction
             "customComment": customComment || "Close trade test",
             "expiration": 0,
             "offset": 0,
             "order": closeOrderNumber, // Order number + 1 for closing
             "price": 1.0,
             "symbol": symbol,
-            "type": 2,                 // 2 for close
-            "volume": volume           // Same volume as the trade being closed
+            "type": 2,                // 2 for close
+            "volume": volume
           }
         }
       };
 
-      console.log(`[Trading Service] Closing ${isBuy ? 'BUY' : 'SELL'} trade #${closeOrderNumber} for ${symbol} with volume ${volume}`);
-      console.log('[Trading Service] Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('[Trading Service] Close trade request:', JSON.stringify(requestBody, null, 2));
 
-      // Call the XTB API with the exact format required
+      // Execute the close trade command
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
         method: 'POST',
         headers: {
@@ -319,7 +316,26 @@ export class TradingService {
         body: JSON.stringify(requestBody)
       });
 
-      return this.processTradeResponse(response, isBuy, symbol);
+      if (!response.ok) {
+        throw new Error(`Close trade failed with status ${response.status}`);
+      }
+
+      const data = await response.json() as XTBResponse;
+      console.log('[Trading Service] Close trade response:', data);
+
+      if (!data.status) {
+        return {
+          status: false,
+          error: data.errorDescr || 'Failed to close trade',
+          message: `Failed to close trade #${orderNumber}`
+        };
+      }
+
+      return {
+        status: true,
+        returnData: data.returnData,
+        message: `Successfully closed trade #${orderNumber}`
+      };
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       return {
