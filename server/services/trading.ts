@@ -39,6 +39,7 @@ interface TradeTransInfo {
 const XTB_SERVER_URL = 'http://3.147.6.168';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const API_TIMEOUT = 15000; // 15 seconds timeout for API calls
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -72,6 +73,41 @@ export class TradingService {
   get isConnected(): boolean {
     return this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
   }
+  
+  // Helper method to process trade API responses
+  private async processTradeResponse(response: any, isBuy: boolean, symbol: string): Promise<XTBResponse> {
+    if (!response.ok) {
+      return {
+        status: false,
+        error: `Trade failed with status ${response.status}`,
+        message: `Trade execution failed with HTTP status ${response.status}`
+      };
+    }
+
+    const data = await response.json() as XTBResponse;
+    console.log('[Trading Service] Trade response:', data);
+
+    if (!data.status) {
+      return {
+        status: false,
+        error: data.errorDescr || "Unknown trading error",
+        errorDescr: data.errorDescr || "Trade execution failed",
+        message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+      };
+    }
+
+    // Make sure we properly extract and format order information
+    const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
+                    data.returnData : { order: null };
+                    
+    console.log('[Trading Service] Extracted order info:', orderInfo);
+    
+    return {
+      status: true,
+      returnData: orderInfo,
+      message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+    };
+  }
 
   private async login(): Promise<boolean> {
     try {
@@ -87,11 +123,18 @@ export class TradingService {
       
       console.log('[Trading Service] Login request:', JSON.stringify(requestBody));
       
+      // Create a fetch request with timeout to avoid hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      
       const response = await fetch(`${XTB_SERVER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         console.error(`[Trading Service] Login failed with HTTP status ${response.status}`);
@@ -184,43 +227,33 @@ export class TradingService {
       
       console.log(`[Trading Service] Sending trade request:`, JSON.stringify(tradeRequest));
       
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeRequest)
-      });
-
-      if (!response.ok) {
-        return {
-          status: false,
-          error: `Trade failed with status ${response.status}`,
-          message: `Trade execution failed with HTTP status ${response.status}`
-        };
-      }
-
-      const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Trade response:', data);
-
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || "Unknown trading error",
-          errorDescr: data.errorDescr || "Trade execution failed",
-          message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
-        };
-      }
-
-      // Make sure we properly extract and format order information
-      const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
-                       data.returnData : { order: null };
-                       
-      console.log('[Trading Service] Extracted order info:', orderInfo);
+      // Create a fetch request with timeout to avoid hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
       
-      return {
-        status: true,
-        returnData: orderInfo,
-        message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
-      };
+      try {
+        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tradeRequest),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        return await this.processTradeResponse(response, isBuy, symbol);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return {
+            status: false,
+            error: `Trade request timed out after ${API_TIMEOUT}ms`,
+            message: `Trade execution timed out. Please try again later.`
+          };
+        }
+        throw error; // Re-throw other errors to be caught by the outer try-catch
+      }
+
+      // This code is now handled in the processTradeResponse method
     } catch (error) {
       console.error('[Trading Service] Trade execution error:', error);
       return {
@@ -279,43 +312,62 @@ export class TradingService {
       
       console.log(`[Trading Service] Sending close request:`, JSON.stringify(closeRequest));
       
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(closeRequest)
-      });
-
-      if (!response.ok) {
-        return {
-          status: false,
-          error: `Close trade failed with status ${response.status}`,
-          message: `Trade closure failed with HTTP status ${response.status}`
-        };
-      }
-
-      const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Close trade response:', data);
-
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || "Unknown trading error",
-          errorDescr: data.errorDescr || "Trade closure failed",
-          message: `Failed to close trade #${orderNumber} for ${symbol}`
-        };
-      }
-
-      // Make sure we properly extract and format order information for closing trades too
-      const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
-                       data.returnData : { order: null };
-                       
-      console.log('[Trading Service] Extracted close order info:', orderInfo);
+      // Create a fetch request with timeout to avoid hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
       
-      return {
-        status: true,
-        returnData: orderInfo,
-        message: `Successfully closed trade #${orderNumber} for ${symbol}`
-      };
+      try {
+        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(closeRequest),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          return {
+            status: false,
+            error: `Close trade failed with status ${response.status}`,
+            message: `Trade closure failed with HTTP status ${response.status}`
+          };
+        }
+  
+        const data = await response.json() as XTBResponse;
+        console.log('[Trading Service] Close trade response:', data);
+  
+        if (!data.status) {
+          return {
+            status: false,
+            error: data.errorDescr || "Unknown trading error",
+            errorDescr: data.errorDescr || "Trade closure failed",
+            message: `Failed to close trade #${orderNumber} for ${symbol}`
+          };
+        }
+  
+        // Make sure we properly extract and format order information for closing trades too
+        const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
+                        data.returnData : { order: null };
+                        
+        console.log('[Trading Service] Extracted close order info:', orderInfo);
+        
+        return {
+          status: true,
+          returnData: orderInfo,
+          message: `Successfully closed trade #${orderNumber} for ${symbol}`
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return {
+            status: false,
+            error: `Close trade request timed out after ${API_TIMEOUT}ms`,
+            message: `Trade closure timed out. Please try again later.`
+          };
+        }
+        throw error; // Re-throw other errors to be caught by the outer try-catch
+      }
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
       return {
@@ -339,42 +391,61 @@ export class TradingService {
       
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
       
-      // Fetch symbol data with proper format
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "getSymbol",
-          arguments: {
-            symbol: symbol
-          }
-        })
-      });
+      // Create a fetch request with timeout to avoid hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
       
-      if (!response.ok) {
+      try {
+        // Fetch symbol data with proper format
+        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            commandName: "getSymbol",
+            arguments: {
+              symbol: symbol
+            }
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          return {
+            status: false,
+            error: `Symbol data request failed with status ${response.status}`,
+            message: `Failed to fetch symbol data with HTTP status ${response.status}`
+          };
+        }
+        
+        const data = await response.json() as XTBResponse;
+        console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
+        
+        if (!data.status) {
+          return {
+            status: false,
+            error: data.errorDescr || `Failed to get symbol data for ${symbol}`,
+            message: `API rejected symbol data request for ${symbol}`
+          };
+        }
+        
         return {
-          status: false,
-          error: `Symbol data request failed with status ${response.status}`,
-          message: `Failed to fetch symbol data with HTTP status ${response.status}`
+          status: true,
+          returnData: data.returnData || null,
+          message: `Symbol data retrieved for ${symbol}`
         };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return {
+            status: false,
+            error: `Symbol data request timed out after ${API_TIMEOUT}ms`,
+            message: `Symbol data request timed out. Please try again later.`
+          };
+        }
+        throw error; // Re-throw other errors to be caught by the outer try-catch
       }
-      
-      const data = await response.json() as XTBResponse;
-      console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
-      
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || `Failed to get symbol data for ${symbol}`,
-          message: `API rejected symbol data request for ${symbol}`
-        };
-      }
-      
-      return {
-        status: true,
-        returnData: data.returnData || null,
-        message: `Symbol data retrieved for ${symbol}`
-      };
     } catch (error) {
       console.error(`[Trading Service] Get symbol data error for ${symbol}:`, error);
       // Return a default error response instead of throwing
@@ -397,45 +468,64 @@ export class TradingService {
         };
       }
 
-      // Follow exact format from example
-      const response = await fetch(`${XTB_SERVER_URL}/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "getTrades",
-          arguments: {
-            openedOnly: true
-          }
-        })
-      });
-
-      if (!response.ok) {
+      // Create a fetch request with timeout to avoid hanging indefinitely
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+      
+      try {
+        // Follow exact format from example
+        const response = await fetch(`${XTB_SERVER_URL}/command`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            commandName: "getTrades",
+            arguments: {
+              openedOnly: true
+            }
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+  
+        if (!response.ok) {
+          return {
+            status: false,
+            error: `Status check failed with HTTP status ${response.status}`,
+            message: `Failed to check trade status with HTTP status ${response.status}`
+          };
+        }
+  
+        const data = await response.json() as XTBResponse;
+        console.log('[Trading Service] Trade status response:', data);
+  
+        if (!data.status) {
+          return {
+            status: false,
+            error: data.errorDescr || 'Status check failed',
+            message: `API rejected trade status request for order #${tradeNumber}`
+          };
+        }
+  
+        const trades = data.returnData || [];
+        const trade = trades.find((t: any) => Number(t.order) === Number(tradeNumber));
+  
         return {
-          status: false,
-          error: `Status check failed with HTTP status ${response.status}`,
-          message: `Failed to check trade status with HTTP status ${response.status}`
+          status: true,
+          returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
+          message: trade ? `Trade #${tradeNumber} found` : `Trade #${tradeNumber} not found or closed`
         };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return {
+            status: false,
+            error: `Trade status check timed out after ${API_TIMEOUT}ms`,
+            message: `Trade status check timed out. Please try again later.`
+          };
+        }
+        throw error; // Re-throw other errors to be caught by the outer try-catch
       }
-
-      const data = await response.json() as XTBResponse;
-      console.log('[Trading Service] Trade status response:', data);
-
-      if (!data.status) {
-        return {
-          status: false,
-          error: data.errorDescr || 'Status check failed',
-          message: `API rejected trade status request for order #${tradeNumber}`
-        };
-      }
-
-      const trades = data.returnData || [];
-      const trade = trades.find((t: any) => Number(t.order) === Number(tradeNumber));
-
-      return {
-        status: true,
-        returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
-        message: trade ? `Trade #${tradeNumber} found` : `Trade #${tradeNumber} not found or closed`
-      };
     } catch (error) {
       console.error('[Trading Service] Status check error:', error);
       return {
