@@ -299,6 +299,7 @@ export default function Dashboard() {
               <CurrencySimulator 
                 showGraph={false}
                 onPlaceHedge={(hedgeData) => createHedgeMutation.mutate(hedgeData)}
+                onOrdersUpdated={() => queryClient.invalidateQueries({ queryKey: ["/api/hedges"] })}
               />
             </CardContent>
           </Card>
