@@ -109,54 +109,6 @@ const enUS = {
 };
 
 // Brazilian Portuguese translations
-  pt: {
-    common: {
-      'Sign In': 'Entrar',
-      'Sign Up': 'Cadastrar',
-      'Sign Out': 'Sair',
-      'Dashboard': 'Painel',
-      'Settings': 'Configurações',
-      'Profile': 'Perfil',
-      'Home': 'Início',
-      'Get Started': 'Começar'
-    },
-    hedging: {
-      'What is Hedging?': 'O que é Hedging?',
-      'hedging_description': 'Hedging é uma estratégia financeira utilizada para reduzir o risco causado por flutuações de preços, taxas de juros, moedas ou outras incertezas de mercado. Simplificando, o hedging funciona como um seguro, protegendo investidores, empresas e indivíduos contra perdas financeiras inesperadas devido à volatilidade do mercado.',
-      'How Do Institutions Use Hedging?': 'Como Empresas e Instituições Utilizam o Hedging?',
-      'institutions_description': 'Empresas e instituições financeiras frequentemente utilizam o hedging para proteger suas operações e lucros.',
-      'Airlines': 'Companhias aéreas',
-      'airline_description': 'Fazem hedging do preço do combustível para se protegerem contra aumentos no preço do petróleo.',
-      'Agricultural': 'Empresas agrícolas',
-      'agricultural_description': 'Fazem hedging dos preços das safras para garantir receitas previsíveis.',
-      'Corporations': 'Corporações multinacionais',
-      'corporations_description': 'Fazem hedging cambial para gerenciar riscos das operações e transações internacionais.',
-      'institutions_disclaimer': 'Historicamente, essas estratégias sofisticadas eram reservadas para grandes empresas e instituições financeiras, que têm acesso a produtos financeiros específicos e equipes especializadas.',
-      'But What About Individuals?': 'Mas e os indivíduos?',
-      'individuals_description': 'Indivíduos também enfrentam riscos semelhantes, especialmente relacionados às oscilações cambiais. Por exemplo:',
-      'education_risk': 'Custos com educação no exterior que flutuam devido ao câmbio.',
-      'property_risk': 'Compra de imóveis no exterior que se tornam inesperadamente caros.',
-      'travel_risk': 'Despesas de viagens internacionais que aumentam abruptamente devido a mudanças cambiais.',
-      'investment_risk': 'Investimentos e economias perdendo valor por causa da volatilidade cambial.',
-      'Disney Trip Example': 'Exemplo: Viagem em família para a Disney',
-      'Without Hedging': 'Sem hedging',
-      'without_hedging_example': 'Uma família brasileira planeja uma viagem à Disney, que hoje custa R$ 50 mil. Se o dólar subir, o custo pode aumentar significativamente até a data da viagem.',
-      'Initial Cost': 'Custo Inicial',
-      'Exchange Rate Changes': 'Mudanças na Taxa de Câmbio',
-      'Final Cost': 'Custo Final',
-      'With Hedging': 'Com hedging',
-      'with_hedging_example': 'A família trava a taxa de câmbio atual, garantindo que o custo da viagem permaneça estável, independentemente das variações do mercado.',
-      'individuals_disclaimer': 'Infelizmente, a maioria das instituições financeiras não oferece soluções de hedging adaptadas às necessidades específicas e à escala dos clientes individuais.',
-      'Try It Yourself: Currency Hedge Simulator': 'Experimente: Simulador de Hedge Cambial',
-      'simulator_description': 'Veja como o hedge cambial pode proteger suas despesas futuras contra a volatilidade das taxas de câmbio.',
-      'Introducing Hedgi': 'Conheça a Hedgi: Soluções de Hedging Feitas para Você',
-      'hedgi_description': 'Na Hedgi, acreditamos que todas as pessoas merecem ter tranquilidade financeira. Por isso, criamos soluções de hedging especialmente desenhadas para indivíduos:',
-      'benefit_secure_rates': 'Fácil de usar: Ferramentas simples e intuitivas.',
-      'benefit_protect': 'Transparente: Sem taxas escondidas ou linguagem complicada.',
-      'benefit_tools': 'Seguro: Soluções confiáveis que protegem seu dinheiro e tranquilidade.',
-      'hedgi_conclusion': 'Assuma o controle do seu futuro financeiro e proteja-se da volatilidade cambial. Hedging não é mais exclusividade de grandes instituições—agora é para você também.',
-      'Discover How Easy Hedging Can Be with Hedgi': 'Descubra como é fácil proteger seu dinheiro com a Hedgi'
-    },
 const ptBR = {
   translation: {
     welcome: 'Bem-vindo ao Hedgi',
