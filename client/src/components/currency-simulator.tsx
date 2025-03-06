@@ -10,6 +10,7 @@ import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/l
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
 import { xtbService } from '@/lib/xtb-service';
+import { useToast } from '@/hooks/use-toast';
 import type { Hedge } from '@db/schema';
 
 interface Props {

@@ -39,7 +39,7 @@ interface TradeTransInfo {
 const XTB_SERVER_URL = 'http://3.147.6.168';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
-const API_TIMEOUT = 15000; // 15 seconds timeout for API calls
+const API_TIMEOUT = 30000; // 30 seconds timeout for API calls (increased for slow server responses)
 
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));

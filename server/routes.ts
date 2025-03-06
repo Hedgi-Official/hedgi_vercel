@@ -135,7 +135,7 @@ export function registerRoutes(app: Express): Server {
             userId: 17535100, 
             password: "GuiZarHoh2711!"
           }),
-          signal: AbortSignal.timeout(10000)
+          signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
         });
 
         if (!loginResponse.ok) {
@@ -195,7 +195,7 @@ export function registerRoutes(app: Express): Server {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
       });
 
       if (!response.ok) {
@@ -264,7 +264,7 @@ export function registerRoutes(app: Express): Server {
           userId: 17535100, 
           password: "GuiZarHoh2711!"
         }),
-        signal: AbortSignal.timeout(5000) // Short timeout for login
+        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
       });
 
       if (!loginResponse.ok) {
@@ -282,7 +282,7 @@ export function registerRoutes(app: Express): Server {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
       });
 
       if (!response.ok) {
