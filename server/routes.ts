@@ -483,23 +483,104 @@ export function registerRoutes(app: Express): Server {
           const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
           const volume = Math.abs(Number(hedge.amount)) / 100000; // Convert to lots
           const isBuy = Number(hedge.amount) > 0;
+          const closeOrderNumber = hedge.tradeOrderNumber + 1;
           
-          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol}`);
+          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol} using direct API call`);
+          console.log(`[Routes] Trade details: Symbol=${symbol}, Volume=${volume}, Direction=${isBuy ? 'BUY' : 'SELL'}, CloseOrderNumber=${closeOrderNumber}`);
 
-          // Close the trade with proper parameters
-          const closeResponse = await tradingService.closeTrade(
-            symbol,
-            hedge.tradeOrderNumber,
-            volume,
-            isBuy,
-            `Closing hedge ID ${hedgeId} for ${symbol}`
-          );
+          // Direct API call method - follows the exact curl format that works
+          try {
+            // First ensure we have a valid login session
+            console.log(`[Routes] Logging in to XTB API before closing trade`);
+            const loginResponse = await fetch('http://3.147.6.168/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: 17535100, 
+                password: "GuiZarHoh2711!"
+              }),
+              signal: AbortSignal.timeout(30000)
+            });
 
-          if (closeResponse.status) {
-            const closingOrderNumber = closeResponse.returnData?.order || 0;
-            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
-          } else {
-            console.log(`[Routes] Trade closure issue: ${closeResponse.message || 'Unknown error'}`);
+            if (!loginResponse.ok) {
+              throw new Error(`Login failed with status ${loginResponse.status}`);
+            }
+
+            const loginData = await loginResponse.json();
+            if (!loginData.status) {
+              throw new Error(loginData.errorDescr || 'Login failed');
+            }
+            
+            console.log(`[Routes] Login successful, proceeding to close trade`);
+            
+            // Now send the close trade command with the exact format
+            const closeRequestBody = {
+              commandName: "tradeTransaction", 
+              arguments: {
+                tradeTransInfo: {
+                  cmd: isBuy ? 0 : 1,
+                  customComment: `Close hedge ID ${hedgeId} for ${symbol}`,
+                  expiration: 0,
+                  offset: 0,
+                  order: closeOrderNumber,
+                  price: 1.0,
+                  symbol: symbol,
+                  type: 2,  // 2 = close
+                  volume: volume
+                }
+              }
+            };
+
+            console.log(`[Routes] Sending direct close request:`, JSON.stringify(closeRequestBody, null, 2));
+
+            const closeResponse = await fetch('http://3.147.6.168/command', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(closeRequestBody),
+              signal: AbortSignal.timeout(30000)
+            });
+
+            if (!closeResponse.ok) {
+              throw new Error(`Close trade request failed with status ${closeResponse.status}`);
+            }
+
+            const responseText = await closeResponse.text();
+            console.log(`[Routes] Raw close response:`, responseText);
+            
+            let data;
+            try {
+              data = JSON.parse(responseText);
+              console.log(`[Routes] Parsed close response:`, data);
+            } catch (parseError) {
+              console.error(`[Routes] Failed to parse response as JSON:`, parseError);
+              throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
+            }
+
+            if (data.status) {
+              const closingOrderNumber = data.returnData?.order || 0;
+              console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
+            } else {
+              throw new Error(data.errorDescr || 'Unknown error with direct close');
+            }
+          } catch (directCloseError) {
+            // If direct close fails, log the detailed error and try the tradingService method as fallback
+            console.error(`[Routes] Direct close failed with error:`, directCloseError);
+            
+            console.log(`[Routes] Attempting fallback close method via tradingService`);
+            const closeResponse = await tradingService.closeTrade(
+              symbol,
+              hedge.tradeOrderNumber,
+              volume,
+              isBuy,
+              `Closing hedge ID ${hedgeId} for ${symbol}`
+            );
+
+            if (closeResponse.status) {
+              const closingOrderNumber = closeResponse.returnData?.order || 0;
+              console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with fallback method, closing order ${closingOrderNumber}`);
+            } else {
+              console.log(`[Routes] Both close methods failed: ${closeResponse.message || 'Unknown error'}`);
+            }
           }
         } catch (tradeError) {
           // Log the error but continue with database deletion
