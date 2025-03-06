@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import "@/i18n";
+import { useTranslation } from "react-i18next";
 
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
@@ -13,9 +14,12 @@ import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
 import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
+import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 
 function Router() {
   const { user, isLoading } = useUser();
+  const { i18n } = useTranslation();
+  const currentLanguage = i18n.language;
 
   if (isLoading) {
     return (
@@ -32,7 +36,9 @@ function Router() {
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
       </Route>
-      <Route path="/what-is-hedge" component={WhatIsHedge} />
+      <Route path="/what-is-hedge">
+        {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
+      </Route>
       <Route path="/using-hedgi" component={UsingHedgi} />
       <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />

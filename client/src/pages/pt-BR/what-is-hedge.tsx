@@ -25,12 +25,12 @@ export default function WhatIsHedge() {
     <>
       <Header showAuthButton />
       
-      {/* Hero Section */}
+      {/* Seção Hero */}
       <section className="bg-gradient-to-b from-background to-muted py-16 px-4">
         <div className="container mx-auto max-w-4xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center">What is Hedging?</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center">O que é Hedging?</h1>
           
-          {/* Currency animation visual */}
+          {/* Animação de moeda */}
           <div className="flex justify-center items-center mb-8 py-6">
             <div className="relative flex items-center space-x-4 p-4 rounded-lg bg-card shadow-md">
               <div className="text-3xl font-bold text-primary flex items-center">
@@ -54,145 +54,144 @@ export default function WhatIsHedge() {
           </div>
           
           <p className="text-lg md:text-xl text-center mb-8">
-            Hedging is a financial strategy designed to minimize risk by protecting against fluctuations in prices, 
-            interest rates, currencies, or other market uncertainties. Simply put, hedging acts like insurance, 
-            shielding investors, companies, and individuals from unexpected financial losses caused by volatile 
-            market movements.
+            Hedging é uma estratégia financeira utilizada para reduzir o risco causado por flutuações de preços, taxas de juros, 
+            moedas ou outras incertezas de mercado. Simplificando, o hedging funciona como um seguro, protegendo investidores, 
+            empresas e indivíduos contra perdas financeiras inesperadas devido à volatilidade do mercado.
           </p>
         </div>
       </section>
       
-      {/* Institutional Hedging Section */}
+      {/* Seção de Hedging Institucional */}
       <section className="py-16 px-4 bg-background">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8 text-center">How Do Institutions Use Hedging?</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">Como Empresas e Instituições Utilizam o Hedging?</h2>
           
           <p className="text-lg mb-8">
-            Businesses and financial institutions regularly use hedging to protect their operations and profits.
+            Empresas e instituições financeiras frequentemente utilizam o hedging para proteger suas operações e lucros.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <Plane className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Airlines</CardTitle>
+                <CardTitle className="text-center">Companhias Aéreas</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Hedge fuel costs to safeguard against rising oil prices.</p>
+                <p>Fazem hedging do preço do combustível para se protegerem contra aumentos no preço do petróleo.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <Wheat className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Agricultural</CardTitle>
+                <CardTitle className="text-center">Empresas Agrícolas</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Hedge crop prices to ensure predictable revenues.</p>
+                <p>Fazem hedging dos preços das safras para garantir receitas previsíveis.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <Building2 className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Corporations</CardTitle>
+                <CardTitle className="text-center">Multinacionais</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Hedge currency risks to manage international operations.</p>
+                <p>Fazem hedging cambial para gerenciar riscos das operações internacionais.</p>
               </CardContent>
             </Card>
           </div>
           
           <p className="text-lg text-center text-muted-foreground">
-            This sophisticated approach has traditionally been reserved for large corporations and financial institutions, 
-            which have access to specialized financial products and teams of financial experts.
+            Historicamente, essas estratégias sofisticadas eram reservadas para grandes empresas e instituições financeiras, 
+            que têm acesso a produtos financeiros específicos e equipes especializadas.
           </p>
         </div>
       </section>
       
-      {/* Individual Hedging Section */}
+      {/* Seção de Hedging para Indivíduos */}
       <section className="py-16 px-4 bg-muted">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8 text-center">But What About Individuals?</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">Mas e os indivíduos?</h2>
           
           <p className="text-lg mb-8">
-            Individuals face similar risks—especially when it comes to currency fluctuations. Consider scenarios such as:
+            Indivíduos também enfrentam riscos semelhantes, especialmente relacionados às oscilações cambiais. Por exemplo:
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <GraduationCap className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Education</CardTitle>
+                <CardTitle className="text-center">Educação</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Overseas education costs that fluctuate due to exchange rates.</p>
+                <p>Custos com educação no exterior que flutuam devido ao câmbio.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <Home className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Property</CardTitle>
+                <CardTitle className="text-center">Imóveis</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Property purchases abroad becoming unexpectedly expensive.</p>
+                <p>Compra de imóveis no exterior que se tornam inesperadamente caros.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <Luggage className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Travel</CardTitle>
+                <CardTitle className="text-center">Viagens</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Travel expenses increasing sharply because of sudden currency changes.</p>
+                <p>Despesas de viagens internacionais que aumentam abruptamente devido a mudanças cambiais.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
                 <DollarSign className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Investments</CardTitle>
+                <CardTitle className="text-center">Investimentos</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Investments and savings losing value simply due to currency volatility.</p>
+                <p>Investimentos e economias perdendo valor por causa da volatilidade cambial.</p>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
       
-      {/* Example Section */}
+      {/* Seção de Exemplo */}
       <section className="py-16 px-4 bg-background">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8 text-center">Example: Hedging a Family Trip to Disney World</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">Exemplo: Viagem em família para a Disney</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <ArrowDown className="mr-2 h-5 w-5 text-destructive" />
-                  Without Hedging
+                  Sem Hedging
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="mb-4">
-                  A Brazilian family plans a trip to Disney World, costing R$30,000 at today's exchange rate. 
-                  If the US dollar appreciates, the same trip might later cost R$35,000 or more.
+                  Uma família brasileira planeja uma viagem à Disney, que hoje custa R$ 50 mil. 
+                  Se o dólar subir, o custo pode aumentar significativamente até a data da viagem.
                 </p>
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex justify-between mb-2">
-                    <span>Initial Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Custo Inicial:</span>
+                    <span className="font-bold">R$ 50.000</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span>Exchange Rate Changes:</span>
-                    <span className="font-bold text-destructive">+ R$5,000</span>
+                    <span>Variação Cambial:</span>
+                    <span className="font-bold text-destructive">+ R$ 10.000</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
-                    <span>Final Cost:</span>
-                    <span className="font-bold text-destructive">R$35,000</span>
+                    <span>Custo Final:</span>
+                    <span className="font-bold text-destructive">R$ 60.000</span>
                   </div>
                 </div>
               </CardContent>
@@ -202,26 +201,26 @@ export default function WhatIsHedge() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Check className="mr-2 h-5 w-5 text-green-500" />
-                  With Hedging
+                  Com Hedging
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="mb-4">
-                  The family locks in today's exchange rate, guaranteeing their trip will cost exactly 
-                  R$30,000 regardless of future currency movements.
+                  A família trava a taxa de câmbio atual, garantindo que o custo da viagem permaneça estável, 
+                  independentemente das variações do mercado.
                 </p>
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex justify-between mb-2">
-                    <span>Initial Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Custo Inicial:</span>
+                    <span className="font-bold">R$ 50.000</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span>Exchange Rate Changes:</span>
-                    <span className="font-bold text-green-500">R$0</span>
+                    <span>Variação Cambial:</span>
+                    <span className="font-bold text-green-500">R$ 0</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
-                    <span>Final Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Custo Final:</span>
+                    <span className="font-bold">R$ 50.000</span>
                   </div>
                 </div>
               </CardContent>
@@ -229,25 +228,25 @@ export default function WhatIsHedge() {
           </div>
           
           <p className="text-lg text-center mb-8 text-muted-foreground">
-            Unfortunately, most financial institutions do not offer hedging solutions tailored to 
-            the unique needs and scale of individual customers.
+            Infelizmente, a maioria das instituições financeiras não oferece soluções de hedging adaptadas 
+            às necessidades específicas e à escala dos clientes individuais.
           </p>
         </div>
       </section>
       
-      {/* Interactive Simulator Section */}
+      {/* Seção do Simulador Interativo */}
       <section className="py-16 px-4 bg-muted">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8 text-center">Try It Yourself: Currency Hedge Simulator</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">Experimente: Simulador de Hedge Cambial</h2>
           <p className="text-lg text-center mb-8">
-            See how currency hedging can protect your future expenses from exchange rate volatility.
+            Veja como o hedging cambial pode proteger suas despesas futuras das flutuações do câmbio.
           </p>
           
           <CurrencySimulator showGraph={true} />
         </div>
       </section>
       
-      {/* Hedgi Introduction Section */}
+      {/* Seção de Apresentação da Hedgi */}
       <section className="py-16 px-4 bg-background">
         <div className="container mx-auto max-w-4xl">
           <div className="flex justify-center mb-6">
@@ -255,13 +254,12 @@ export default function WhatIsHedge() {
           </div>
           
           <h2 className="text-3xl font-bold mb-6 text-center">
-            Introducing Hedgi: Hedging Solutions Designed for You
+            Conheça a Hedgi: Soluções de Hedging Feitas para Você
           </h2>
           
           <p className="text-lg text-center mb-8">
-            At Hedgi, we believe everyone deserves access to financial peace of mind. That's why we've built 
-            hedging solutions specifically tailored to individuals, making it easy, transparent, and affordable 
-            to protect your money against currency risks.
+            Na Hedgi, acreditamos que todas as pessoas merecem ter tranquilidade financeira. Por isso, 
+            criamos soluções de hedging especialmente desenhadas para indivíduos.
           </p>
           
           <div className="space-y-4 max-w-2xl mx-auto mb-10">
@@ -269,33 +267,33 @@ export default function WhatIsHedge() {
               <div className="bg-primary rounded-full p-1 mt-1">
                 <Check className="h-4 w-4 text-primary-foreground" />
               </div>
-              <p>Secure today's favorable exchange rates for future expenses.</p>
+              <p>Fácil de usar: Ferramentas simples e intuitivas.</p>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="bg-primary rounded-full p-1 mt-1">
                 <Check className="h-4 w-4 text-primary-foreground" />
               </div>
-              <p>Protect your finances from unexpected market movements.</p>
+              <p>Transparente: Sem taxas escondidas ou linguagem complicada.</p>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="bg-primary rounded-full p-1 mt-1">
                 <Check className="h-4 w-4 text-primary-foreground" />
               </div>
-              <p>Enjoy the same sophisticated risk management tools that large corporations use—but designed specifically for your individual needs.</p>
+              <p>Seguro: Soluções confiáveis que protegem seu dinheiro e tranquilidade.</p>
             </div>
           </div>
           
           <p className="text-lg text-center mb-8">
-            Take control of your financial future and protect yourself from currency volatility. 
-            Hedging isn't just for large institutions anymore—it's for you.
+            Assuma o controle do seu futuro financeiro e proteja-se da volatilidade cambial. 
+            Hedging não é mais exclusividade de grandes instituições—agora é para você também.
           </p>
           
           <div className="flex justify-center">
             <Link href="/dashboard">
               <Button size="lg" className="text-lg">
-                Discover How Easy Hedging Can Be with Hedgi
+                Descubra como é fácil proteger seu dinheiro com a Hedgi
               </Button>
             </Link>
           </div>
@@ -305,7 +303,7 @@ export default function WhatIsHedge() {
   );
 }
 
-// Arrow right component for the animation
+// Componente da seta para a direita na animação
 function ArrowRight({ className }: { className?: string }) {
   return (
     <svg 
