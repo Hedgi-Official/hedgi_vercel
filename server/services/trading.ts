@@ -44,27 +44,7 @@ async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Utility function to fetch with a timeout
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000) {
-  // Avoid using AbortController with node-fetch directly as it causes type conflicts
-  // Instead just use a simple timeout promise
-  const fetchPromise = fetch(url, options);
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    const id = setTimeout(() => {
-      clearTimeout(id);
-      reject(new Error(`Request to ${url} timed out after ${timeout}ms`));
-    }, timeout);
-  });
-
-  try {
-    // Race between the fetch and the timeout
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    throw error;
-  }
-}
+// We're using regular fetch from node-fetch instead of a custom fetchWithTimeout
 
 async function checkServerHealth(): Promise<boolean> {
   try {

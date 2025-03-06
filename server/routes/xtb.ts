@@ -90,7 +90,7 @@ router.post('/api/xtb/hedge', async (req, res) => {
     console.error('[XTB Backend] Error executing hedge:', error);
     res.status(500).json({ 
       status: false, 
-      error: error.message || 'Failed to execute hedge' 
+      error: error instanceof Error ? error.message : 'Failed to execute hedge' 
     });
   }
 });
@@ -109,7 +109,7 @@ router.get('/api/xtb/trades/:tradeNumber', async (req, res) => {
     console.error('[XTB Backend] Error checking trade status:', error);
     res.status(500).json({ 
       status: false, 
-      error: error.message || 'Failed to check trade status' 
+      error: error instanceof Error ? error.message : 'Failed to check trade status' 
     });
   }
 });
