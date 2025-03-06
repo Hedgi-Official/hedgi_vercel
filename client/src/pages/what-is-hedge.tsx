@@ -243,7 +243,7 @@ export default function WhatIsHedge() {
             See how currency hedging can protect your future expenses from exchange rate volatility.
           </p>
           
-          <CurrencySimulator showGraph={true} />
+          <CurrencySimulator showGraph={false} />
         </div>
       </section>
       
