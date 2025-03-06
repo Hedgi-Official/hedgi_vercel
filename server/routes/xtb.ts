@@ -119,24 +119,44 @@ router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
     await tradingService.connect();
 
     const { symbol, volume, tradeDirection } = req.body;
+    
+    if (!symbol || !volume) {
+      return res.status(400).json({
+        status: false,
+        error: 'Missing required parameters: symbol and volume are required'
+      });
+    }
+    
     const tradeNumber = Number(req.params.tradeNumber);
+    if (isNaN(tradeNumber) || tradeNumber <= 0) {
+      return res.status(400).json({
+        status: false,
+        error: 'Invalid trade number'
+      });
+    }
+    
+    console.log(`[XTB Backend] Closing trade ${tradeNumber} for ${symbol}, volume ${volume}, direction ${tradeDirection}`);
 
     const closingOrder = await tradingService.closeTrade(
       symbol,
       tradeNumber,
       volume,
-      tradeDirection === 'buy'
+      tradeDirection === 'buy',
+      `Closing hedge trade ${tradeNumber} for ${symbol}`
     );
 
+    // Even if closing order is 0, we still return success to allow the hedge to be removed
     res.json({
       status: true,
-      closingOrderNumber: closingOrder
+      returnData: {
+        order: closingOrder
+      }
     });
   } catch (error) {
-    console.error('[XTB Backend] Error closing trade:', error);
+    console.error('[XTB Backend] Error closing trade:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({ 
       status: false, 
-      error: error.message || 'Failed to close trade' 
+      error: error instanceof Error ? error.message : 'Failed to close trade' 
     });
   }
 });

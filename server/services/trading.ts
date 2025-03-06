@@ -141,13 +141,12 @@ export class TradingService {
     symbol: string,
     volume: number,
     isBuy: boolean,
-  ): Promise<number> {
+    customComment: string = ''
+  ): Promise<XTBResponse> {
     try {
       await this.ensureLoggedIn();
 
-      console.log(`[Trading Service] Opening trade for ${symbol}`, {
-        volume, isBuy
-      });
+      console.log(`[Trading Service] Opening ${isBuy ? 'BUY' : 'SELL'} trade for ${symbol}, volume ${volume}`);
 
       // Follow exact format from example
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
@@ -158,31 +157,51 @@ export class TradingService {
           arguments: {
             tradeTransInfo: {
               cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
+              customComment: customComment || `Hedgi ${isBuy ? 'BUY' : 'SELL'} ${symbol}`,
               symbol: symbol,
-              volume: volume,          // Volume is already in lots (0.1 = 10,000 units)
+              volume: volume,         // Volume is already in lots (0.1 = 10,000 units)
               price: 0,               // 0 for market price
               offset: 0,
-              order: 0                // 0 for new trades
+              order: 0,               // 0 for new trades
+              type: 0                 // 0 for open
             }
           }
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Trade failed with status ${response.status}`);
+        return {
+          status: false,
+          error: `Trade failed with status ${response.status}`,
+          message: `Trade execution failed with HTTP status ${response.status}`
+        };
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Trade response:', data);
 
       if (!data.status) {
-        throw new Error(data.errorDescr || 'Trade failed');
+        return {
+          status: false,
+          error: data.errorDescr || "Unknown trading error",
+          errorDescr: data.errorDescr || "Trade execution failed",
+          message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+        };
       }
 
-      return data.returnData?.order || 0;
+      return {
+        status: true,
+        returnData: data.returnData,
+        message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+      };
     } catch (error) {
-      console.error('[Trading Service] Open trade error:', error);
-      throw error;
+      console.error('[Trading Service] Trade execution error:', error);
+      return {
+        status: false,
+        error: error instanceof Error ? error.message : "Unknown trading error",
+        errorDescr: error instanceof Error ? error.message : "Trade execution failed",
+        message: `Failed to execute ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
+      };
     }
   }
 
@@ -191,10 +210,13 @@ export class TradingService {
     orderNumber: number,
     volume: number,
     isBuy: boolean,
+    customComment: string = "Closing hedge position"
   ): Promise<number> {
     try {
       await this.ensureLoggedIn();
 
+      console.log(`[Trading Service] Closing trade for order #${orderNumber} (${symbol})`);
+      
       // Follow exact format from example for closing trades
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
         method: 'POST',
@@ -203,15 +225,15 @@ export class TradingService {
           commandName: "tradeTransaction",
           arguments: {
             tradeTransInfo: {
-              cmd: isBuy ? 0 : 1,
-              customComment: "Close trade test",
+              cmd: isBuy ? 0 : 1,      // Same direction as opening trade
+              customComment: customComment, 
               expiration: 0,
               offset: 0,
-              order: orderNumber + 1,  // According to example, use order + 1
+              order: orderNumber,      // Order number of the trade to close
               price: 0,                // Market price
               symbol: symbol,
               type: 2,                 // 2 for close
-              volume: volume
+              volume: volume           // Same volume as opening trade
             }
           }
         })
@@ -221,7 +243,7 @@ export class TradingService {
         throw new Error(`Close trade failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Close trade response:', data);
 
       if (!data.status) {
@@ -231,7 +253,54 @@ export class TradingService {
       return data.returnData?.order || 0;
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
-      throw error;
+      // Return 0 to indicate failure but avoid throwing 
+      // since the database deletion should still happen
+      return 0;
+    }
+  }
+
+  async getSymbolData(symbol: string): Promise<XTBResponse> {
+    try {
+      await this.ensureLoggedIn();
+      
+      console.log(`[Trading Service] Getting symbol data for ${symbol}`);
+      
+      // Fetch symbol data with proper format
+      const response = await fetch(`${XTB_SERVER_URL}/command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          commandName: "getSymbol",
+          arguments: {
+            symbol: symbol
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Symbol data request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json() as XTBResponse;
+      console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
+      
+      if (!data.status) {
+        throw new Error(data.errorDescr || `Failed to get symbol data for ${symbol}`);
+      }
+      
+      return {
+        status: true,
+        returnData: data.returnData || null,
+        message: `Symbol data retrieved for ${symbol}`
+      };
+    } catch (error) {
+      console.error(`[Trading Service] Get symbol data error for ${symbol}:`, error);
+      // Return a default error response instead of throwing
+      return {
+        status: false,
+        error: error instanceof Error ? error.message : 'Unknown error getting symbol data',
+        message: `Failed to get symbol data for ${symbol}`
+      };
     }
   }
 
@@ -255,7 +324,7 @@ export class TradingService {
         throw new Error('Status check failed');
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Trade status response:', data);
 
       if (!data.status) {
@@ -272,7 +341,11 @@ export class TradingService {
       };
     } catch (error) {
       console.error('[Trading Service] Status check error:', error);
-      throw error;
+      return {
+        status: false,
+        error: error instanceof Error ? error.message : 'Unknown error checking trade status',
+        message: 'Failed to check trade status'
+      };
     }
   }
 }

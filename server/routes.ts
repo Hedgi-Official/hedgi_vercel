@@ -420,18 +420,25 @@ export function registerRoutes(app: Express): Server {
           throw new Error('No valid order number returned from XTB API');
         }
 
-        // Save successful trade to database
-        const newHedge = await db.insert(hedges).values({
-          userId: req.user.id,
+        // Save successful trade to database - need to handle values properly for drizzle
+        const hedgeValues = {
           baseCurrency: baseCurrency,
           targetCurrency: targetCurrency,
-          amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1),
-          rate: 0.0, // Will be updated with real rate from status check
+          amount: String(volume * 100000 * (tradeDirection === 'buy' ? 1 : -1)),
+          rate: "0.0", // Will be updated with real rate from status check
           duration: duration || 30,
           status: 'active',
           tradeOrderNumber: tradeOrderNumber,
           tradeStatus: 'open'
-        }).returning();
+        };
+        
+        // Insert with userId in a way that works with Drizzle
+        const newHedge = await db.insert(hedges)
+          .values({
+            ...hedgeValues,
+            userId: req.user.id
+          })
+          .returning();
 
         console.log(`[XTB Backend][${requestId}] Saved hedge to database: ID=${newHedge[0]?.id}, OrderNumber=${tradeOrderNumber}`);
         
@@ -478,50 +485,51 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Hedge not found");
       }
 
-      // Close the trade via XTB API
+      // Close the trade via XTB API if there's a trade order number
       if (hedge.tradeOrderNumber) {
-        const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
-        const volume = Math.abs(Number(hedge.amount));
-        const isBuy = Number(hedge.amount) > 0;
+        try {
+          const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
+          const volume = Math.abs(Number(hedge.amount)) / 100000; // Convert to lots
+          const isBuy = Number(hedge.amount) > 0;
+          
+          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol}`);
 
-        // Get the current price from XTB API
-        const symbolData = await tradingService.getSymbolData(symbol);
+          // Close the trade with proper parameters
+          const closingOrderNumber = await tradingService.closeTrade(
+            symbol,
+            hedge.tradeOrderNumber,
+            volume,
+            isBuy,
+            `Closing hedge ID ${hedgeId} for ${symbol}`
+          );
 
-        // Log the actual API response for debugging (without mock formatting)
-        console.log(`[Routes] Symbol data for ${symbol} (closing):`, symbolData);
-
-        // Use the appropriate price based on trade direction (ask for buy, bid for sell)
-        const currentPrice = isBuy ? 
-          (symbolData?.status && symbolData?.returnData ? symbolData.returnData.ask : null) : 
-          (symbolData?.status && symbolData?.returnData ? symbolData.returnData.bid : null);
-
-        console.log(`[Routes] Using ${isBuy ? 'ask' : 'bid'} price for closing ${symbol}: ${currentPrice}`);
-
-        // Close the trade and verify its status
-        const closingOrderNumber = await tradingService.closeTrade(
-          symbol,
-          hedge.tradeOrderNumber,
-          currentPrice || 1.0, // Use current market price if available
-          volume,
-          isBuy,
-          0, // sl
-          0, // tp
-          `Closing hedge position for ${symbol}` // comment
-        );
-
-        console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
+          if (closingOrderNumber) {
+            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
+          } else {
+            console.log(`[Routes] Trade ${hedge.tradeOrderNumber} closure was initiated but no confirmation order received`);
+          }
+        } catch (tradeError) {
+          // Log the error but continue with database deletion
+          console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);
+        }
       }
 
-      // Delete the hedge from database
+      // Always delete the hedge from database, even if trade closing fails
       const [deletedHedge] = await db
         .delete(hedges)
         .where(eq(hedges.id, hedgeId))
         .returning();
 
-      res.json({ message: "Hedge deleted successfully" });
+      res.json({ 
+        status: true,
+        message: "Hedge deleted successfully" 
+      });
     } catch (error) {
       console.error('Error deleting hedge:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to delete hedge" });
+      res.status(500).json({ 
+        status: false, 
+        error: error instanceof Error ? error.message : "Failed to delete hedge" 
+      });
     }
   });
 
