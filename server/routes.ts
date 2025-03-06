@@ -358,56 +358,21 @@ export function registerRoutes(app: Express): Server {
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[XTB Backend][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Execute the trade by forwarding to external Flask server
+      // Execute the trade using our trading service
       try {
-        // Login first - essential for authorization
-        const loginResponse = await fetch('http://3.147.6.168/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 17535100, 
-            password: "GuiZarHoh2711!"
-          }),
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (!loginResponse.ok) {
-          throw new Error(`Login failed with status ${loginResponse.status}`);
-        }
-
-        const loginData = await loginResponse.json();
-        if (!loginData.status) {
-          throw new Error(loginData.errorDescr || 'Login failed');
-        }
+        console.log(`[XTB Backend][${requestId}] Connecting to trading service...`);
         
-        // Execute trade with consistent command structure
-        const commandData = {
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo: {
-              cmd: tradeDirection === 'buy' ? 0 : 1,
-              symbol: symbol,
-              volume: volume,
-              price: 0.0, // Market execution
-              type: 0,     // Open position
-              order: 0,    // New order
-              customComment: `Hedgi-${requestId}` // Add request ID to help tracking
-            }
-          }
-        };
-
-        const tradeResponse = await fetch('http://3.147.6.168/command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(commandData),
-          signal: AbortSignal.timeout(15000)
-        });
-
-        if (!tradeResponse.ok) {
-          throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
-        }
-
-        const apiResponse = await tradeResponse.json();
+        // Ensure we're connected to the trading service
+        await tradingService.connect();
+        
+        // Execute the trade using our standardized method
+        const apiResponse = await tradingService.openTrade(
+          symbol,
+          volume,
+          tradeDirection === 'buy',
+          `Hedgi-${requestId}-${baseCurrency}${targetCurrency}-${duration}days`
+        );
+        
         console.log(`[XTB Backend][${requestId}] Trade response:`, apiResponse);
 
         if (!apiResponse.status) {
@@ -495,7 +460,7 @@ export function registerRoutes(app: Express): Server {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol}`);
 
           // Close the trade with proper parameters
-          const closingOrderNumber = await tradingService.closeTrade(
+          const closeResponse = await tradingService.closeTrade(
             symbol,
             hedge.tradeOrderNumber,
             volume,
@@ -503,10 +468,11 @@ export function registerRoutes(app: Express): Server {
             `Closing hedge ID ${hedgeId} for ${symbol}`
           );
 
-          if (closingOrderNumber) {
+          if (closeResponse.status) {
+            const closingOrderNumber = closeResponse.returnData?.order || 0;
             console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
           } else {
-            console.log(`[Routes] Trade ${hedge.tradeOrderNumber} closure was initiated but no confirmation order received`);
+            console.log(`[Routes] Trade closure issue: ${closeResponse.message || 'Unknown error'}`);
           }
         } catch (tradeError) {
           // Log the error but continue with database deletion

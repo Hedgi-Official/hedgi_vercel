@@ -116,11 +116,9 @@ router.get('/api/xtb/trades/:tradeNumber', async (req, res) => {
 
 router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
   try {
-    await tradingService.connect();
-
     const { symbol, volume, tradeDirection } = req.body;
     
-    if (!symbol || !volume) {
+    if (!symbol || volume === undefined) {
       return res.status(400).json({
         status: false,
         error: 'Missing required parameters: symbol and volume are required'
@@ -136,8 +134,16 @@ router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
     }
     
     console.log(`[XTB Backend] Closing trade ${tradeNumber} for ${symbol}, volume ${volume}, direction ${tradeDirection}`);
+    
+    const connected = await tradingService.connect();
+    if (!connected) {
+      return res.status(500).json({
+        status: false,
+        error: 'Failed to connect to trading service'
+      });
+    }
 
-    const closingOrder = await tradingService.closeTrade(
+    const closeResponse = await tradingService.closeTrade(
       symbol,
       tradeNumber,
       volume,
@@ -145,13 +151,8 @@ router.post('/api/xtb/trades/:tradeNumber/close', async (req, res) => {
       `Closing hedge trade ${tradeNumber} for ${symbol}`
     );
 
-    // Even if closing order is 0, we still return success to allow the hedge to be removed
-    res.json({
-      status: true,
-      returnData: {
-        order: closingOrder
-      }
-    });
+    // Return the actual closing response
+    res.json(closeResponse);
   } catch (error) {
     console.error('[XTB Backend] Error closing trade:', error instanceof Error ? error.message : 'Unknown error');
     res.status(500).json({ 

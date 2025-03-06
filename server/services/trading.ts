@@ -90,7 +90,7 @@ export class TradingService {
     return this.isLoggedIn && (Date.now() - this.lastLoginTime < this.sessionTimeout);
   }
 
-  private async login(): Promise<void> {
+  private async login(): Promise<boolean> {
     try {
       console.log('[Trading Service] Attempting login...');
 
@@ -104,37 +104,41 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        throw new Error(`Login failed with status ${response.status}`);
+        console.error(`[Trading Service] Login failed with HTTP status ${response.status}`);
+        return false;
       }
 
-      const data = await response.json();
+      const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Login response:', data);
 
       if (!data.status) {
-        throw new Error(data.errorDescr || 'Login failed');
+        console.error(`[Trading Service] Login failed: ${data.errorDescr || 'Unknown reason'}`);
+        return false;
       }
 
       this.isLoggedIn = true;
       this.lastLoginTime = Date.now();
+      return true;
     } catch (error) {
-      console.error('[Trading Service] Login error:', error);
-      throw error;
+      console.error('[Trading Service] Login error:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
     }
   }
 
-  async connect(): Promise<void> {
+  async connect(): Promise<boolean> {
     try {
-      await this.login();
+      return await this.login();
     } catch (error) {
-      console.error('[Trading Service] Connection error:', error);
-      throw error;
+      console.error('[Trading Service] Connection error:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
     }
   }
 
-  private async ensureLoggedIn(): Promise<void> {
+  private async ensureLoggedIn(): Promise<boolean> {
     if (!this.isLoggedIn || (Date.now() - this.lastLoginTime >= this.sessionTimeout)) {
-      await this.login();
+      return await this.login();
     }
+    return true;
   }
 
   async openTrade(
@@ -144,7 +148,14 @@ export class TradingService {
     customComment: string = ''
   ): Promise<XTBResponse> {
     try {
-      await this.ensureLoggedIn();
+      const loggedIn = await this.ensureLoggedIn();
+      if (!loggedIn) {
+        return {
+          status: false,
+          error: "Not logged in to trading service",
+          message: "Failed to authenticate with trading service"
+        };
+      }
 
       console.log(`[Trading Service] Opening ${isBuy ? 'BUY' : 'SELL'} trade for ${symbol}, volume ${volume}`);
 
@@ -211,9 +222,16 @@ export class TradingService {
     volume: number,
     isBuy: boolean,
     customComment: string = "Closing hedge position"
-  ): Promise<number> {
+  ): Promise<XTBResponse> {
     try {
-      await this.ensureLoggedIn();
+      const loggedIn = await this.ensureLoggedIn();
+      if (!loggedIn) {
+        return {
+          status: false,
+          error: "Not logged in to trading service",
+          message: "Failed to authenticate with trading service"
+        };
+      }
 
       console.log(`[Trading Service] Closing trade for order #${orderNumber} (${symbol})`);
       
@@ -240,28 +258,50 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        throw new Error(`Close trade failed with status ${response.status}`);
+        return {
+          status: false,
+          error: `Close trade failed with status ${response.status}`,
+          message: `Trade closure failed with HTTP status ${response.status}`
+        };
       }
 
       const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Close trade response:', data);
 
       if (!data.status) {
-        throw new Error(data.errorDescr || 'Close trade failed');
+        return {
+          status: false,
+          error: data.errorDescr || "Unknown trading error",
+          errorDescr: data.errorDescr || "Trade closure failed",
+          message: `Failed to close trade #${orderNumber} for ${symbol}`
+        };
       }
 
-      return data.returnData?.order || 0;
+      return {
+        status: true,
+        returnData: data.returnData,
+        message: `Successfully closed trade #${orderNumber} for ${symbol}`
+      };
     } catch (error) {
       console.error('[Trading Service] Close trade error:', error);
-      // Return 0 to indicate failure but avoid throwing 
-      // since the database deletion should still happen
-      return 0;
+      return {
+        status: false,
+        error: error instanceof Error ? error.message : "Unknown error closing trade",
+        message: `Failed to close trade #${orderNumber} for ${symbol}`
+      };
     }
   }
 
   async getSymbolData(symbol: string): Promise<XTBResponse> {
     try {
-      await this.ensureLoggedIn();
+      const loggedIn = await this.ensureLoggedIn();
+      if (!loggedIn) {
+        return {
+          status: false,
+          error: "Not logged in to trading service",
+          message: "Failed to authenticate with trading service"
+        };
+      }
       
       console.log(`[Trading Service] Getting symbol data for ${symbol}`);
       
@@ -278,14 +318,22 @@ export class TradingService {
       });
       
       if (!response.ok) {
-        throw new Error(`Symbol data request failed with status ${response.status}`);
+        return {
+          status: false,
+          error: `Symbol data request failed with status ${response.status}`,
+          message: `Failed to fetch symbol data with HTTP status ${response.status}`
+        };
       }
       
       const data = await response.json() as XTBResponse;
       console.log(`[Trading Service] Symbol data response for ${symbol}:`, data);
       
       if (!data.status) {
-        throw new Error(data.errorDescr || `Failed to get symbol data for ${symbol}`);
+        return {
+          status: false,
+          error: data.errorDescr || `Failed to get symbol data for ${symbol}`,
+          message: `API rejected symbol data request for ${symbol}`
+        };
       }
       
       return {
@@ -306,7 +354,14 @@ export class TradingService {
 
   async checkTradeStatus(tradeNumber: number): Promise<XTBResponse> {
     try {
-      await this.ensureLoggedIn();
+      const loggedIn = await this.ensureLoggedIn();
+      if (!loggedIn) {
+        return {
+          status: false,
+          error: "Not logged in to trading service",
+          message: "Failed to authenticate with trading service"
+        };
+      }
 
       // Follow exact format from example
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
@@ -321,14 +376,22 @@ export class TradingService {
       });
 
       if (!response.ok) {
-        throw new Error('Status check failed');
+        return {
+          status: false,
+          error: `Status check failed with HTTP status ${response.status}`,
+          message: `Failed to check trade status with HTTP status ${response.status}`
+        };
       }
 
       const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Trade status response:', data);
 
       if (!data.status) {
-        throw new Error(data.errorDescr || 'Status check failed');
+        return {
+          status: false,
+          error: data.errorDescr || 'Status check failed',
+          message: `API rejected trade status request for order #${tradeNumber}`
+        };
       }
 
       const trades = data.returnData || [];
@@ -337,14 +400,14 @@ export class TradingService {
       return {
         status: true,
         returnData: trade || { status: 'NOT_FOUND', order: tradeNumber },
-        message: trade ? 'Trade found' : 'Trade not found or closed'
+        message: trade ? `Trade #${tradeNumber} found` : `Trade #${tradeNumber} not found or closed`
       };
     } catch (error) {
       console.error('[Trading Service] Status check error:', error);
       return {
         status: false,
         error: error instanceof Error ? error.message : 'Unknown error checking trade status',
-        message: 'Failed to check trade status'
+        message: `Failed to check status for trade #${tradeNumber}`
       };
     }
   }
