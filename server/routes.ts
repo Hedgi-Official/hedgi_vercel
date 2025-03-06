@@ -119,6 +119,47 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Test endpoint for trade operations
+  app.post("/api/xtb/test-close", async (req, res) => {
+    res.header('Content-Type', 'application/json');
+    
+    try {
+      console.log('[XTB Backend] Processing test close request');
+      
+      // Extract parameters from request body
+      const { orderNumber, symbol, volume } = req.body;
+      console.log(`[XTB Backend] Closing test trade: Order ${orderNumber}, Symbol ${symbol}, Volume ${volume}`);
+      
+      if (!orderNumber || !symbol || !volume) {
+        return res.status(400).json({
+          status: false,
+          error: 'Missing required parameters. Need orderNumber, symbol, and volume.'
+        });
+      }
+      
+      // Try to login and close the trade
+      await tradingService.connect();
+      
+      // Close the trade with extracted parameters
+      const closeResponse = await tradingService.closeTrade(
+        symbol,
+        Number(orderNumber),
+        Number(volume),
+        true, // Force BUY for simplicity in testing
+        `Test close via API for order ${orderNumber}`
+      );
+      
+      // Return the response directly
+      return res.json(closeResponse);
+    } catch (error) {
+      console.error('[XTB Backend] Error in test-close endpoint:', error);
+      return res.status(500).json({
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // XTB API route for hedge execution - ROUTED THROUGH FLASK SERVER at http://3.147.6.168
   app.post("/api/xtb/hedge", async (req, res) => {
     res.header('Content-Type', 'application/json');
