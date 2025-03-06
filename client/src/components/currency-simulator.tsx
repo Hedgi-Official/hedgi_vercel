@@ -128,14 +128,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       };
 
       console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
-
+      
       // Call the parent component's handler and await completion
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
-
+      
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
-
+      
       console.log('[CurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
