@@ -242,7 +242,7 @@ export default function WhatIsHedge() {
             Veja como o hedging cambial pode proteger suas despesas futuras das flutuações do câmbio.
           </p>
           
-          <CurrencySimulator showGraph={true} />
+          <CurrencySimulator showGraph={false} />
         </div>
       </section>
       
