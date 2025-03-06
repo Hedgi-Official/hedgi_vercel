@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ interface Props {
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -31,110 +30,36 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
-  // Connection status state to prevent infinite loop
-  const [connectionAttempted, setConnectionAttempted] = useState(false);
-  
-  // Add effect for successful XTB connection notification
-  useEffect(() => {
-    // Only attempt to connect once 
-    if (connectionAttempted) return;
-    
-    const connectToXTB = async () => {
-      try {
-        setConnectionAttempted(true);
-        
-        if (!xtbService.isConnected) {
-          console.log("[CurrencySimulator] Connecting to trading service...");
-          
-          try {
-            // Connect returns void but updates isConnected internally
-            await xtbService.connect({
-              userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
-              password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
-            });
-            
-            // Small delay to allow connection status to update
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Check the connection status after the operation
-            if (xtbService.isConnected) {
-              console.log("[CurrencySimulator] Successfully connected to trading service");
-              toast({
-                title: "Connection Successful",
-                description: "Successfully connected to trading service",
-                variant: "default"
-              });
-            }
-          } catch (connectError) {
-            console.error('[CurrencySimulator] Connection error:', connectError);
-            // Don't show toast here to avoid double notifications
-          }
-        }
-      } catch (error) {
-        console.error('[CurrencySimulator] Error in connection process:', error);
-        toast({
-          title: "Connection Failed",
-          description: "Failed to connect to trading service. Try again later.",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    connectToXTB();
-  }, [toast, connectionAttempted]);
-
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
     let currentRate;
     let swapValues;
     try {
-      // Only attempt API call if we've already tried to connect
-      if (connectionAttempted && !xtbService.isConnected) {
-        console.log('[CurrencySimulator] Using fallback rates due to connection issue');
-        // Skip XTB connection attempts if already failed
-      } else if (!xtbService.isConnected) {
-        try {
-          // Single connection attempt with timeout
-          console.log('[CurrencySimulator] Attempting to connect for simulation');
-          await Promise.race([
-            xtbService.connect({
-              userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
-              password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
-            }),
-            // 5 second timeout to prevent hanging on connection
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
-          ]);
-        } catch (connErr) {
-          console.warn('[CurrencySimulator] Connection attempt failed, using fallback rates:', connErr);
-        }
+      if (!xtbService.isConnected) {
+        await xtbService.connect({
+          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
+        });
       }
 
-      // Only attempt to get symbol data if connected
-      if (xtbService.isConnected) {
-        const symbolData = await xtbService.getSymbolData(currencyPair);
-        console.log('[CurrencySimulator] XTB symbol data:', symbolData);
+      const symbolData = await xtbService.getSymbolData(currencyPair);
+      console.log('[CurrencySimulator] XTB symbol data:', symbolData);
 
-        if (symbolData.status && symbolData.returnData) {
-          currentRate = {
-            bid: symbolData.returnData.bid,
-            ask: symbolData.returnData.ask
-          };
-          swapValues = {
-            swapLong: symbolData.returnData.swapLong,
-            swapShort: symbolData.returnData.swapShort
-          };
-          console.log('[CurrencySimulator] Using XTB rates:', currentRate);
-          console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
-        }
+      if (symbolData.status && symbolData.returnData) {
+        currentRate = {
+          bid: symbolData.returnData.bid,
+          ask: symbolData.returnData.ask
+        };
+        swapValues = {
+          swapLong: symbolData.returnData.swapLong,
+          swapShort: symbolData.returnData.swapShort
+        };
+        console.log('[CurrencySimulator] Using XTB rates:', currentRate);
+        console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
       }
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
-      toast({
-        title: "Rate Fetch Warning",
-        description: "Could not get live rates. Using estimated rates instead.",
-        variant: "destructive"
-      });
     }
 
     const result = await simulateHedge(
@@ -178,13 +103,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
-    
-    // Show success toast for simulation completion
-    toast({
-      title: "Simulation Complete",
-      description: `Successfully calculated hedge costs for ${amount} ${targetCurrency}`,
-      variant: "default"
-    });
   };
 
   const handlePlaceHedge = async () => {
@@ -198,29 +116,12 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     setHedgeError(null);
 
     try {
-      // Check connection to trading service before placement
-      if (!connectionAttempted) {
-        // Show warning that API connection hasn't been established
-        toast({
-          title: "Connection Status Unknown",
-          description: "Trading service connection not verified",
-          variant: "destructive"
-        });
-      } else if (connectionAttempted && !xtbService.isConnected) {
-        // Show warning but continue with hedge placement
-        toast({
-          title: "Trading Service Warning",
-          description: "Connected to fallback service. Order will be processed.", 
-          variant: "destructive"
-        });
-      }
-      
       // Ensure proper formatting for the server API
       const hedgeData = {
         baseCurrency,
         targetCurrency,
         amount: amount.toString(), // String for consistent DB handling
-        rate: simulation.rate.toString(), 
+        rate: simulation.rate.toString(),
         duration,
         tradeDirection, // 'buy' or 'sell'
         tradeOrderNumber: null,
@@ -237,23 +138,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       onOrdersUpdated();
       
       console.log('[CurrencySimulator] Hedge placement completed successfully');
-      
-      // Show success toast for hedge placement
-      toast({
-        title: "Hedge Placed Successfully",
-        description: `Successfully placed ${tradeDirection} hedge for ${amount} ${targetCurrency}`,
-        variant: "default"
-      });
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
-      
-      // Show error toast
-      toast({
-        title: "Hedge Placement Failed",
-        description: error instanceof Error ? error.message : 'Failed to place hedge',
-        variant: "destructive"
-      });
     } finally {
       setIsPlacingHedge(false);
     }
