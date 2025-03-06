@@ -19,18 +19,24 @@ export class XTBService {
     public serverUrl = 'wss://ws.xtb.com/demo',
     public streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {
-    // Don't initialize connection immediately
-    console.log('[XTB] Service initialized, connection deferred');
+    console.log('[XTB] Service initialized with configuration:', {
+      serverUrl: this.serverUrl,
+      streamUrl: this.streamUrl
+    });
   }
 
   private async initializeConnection() {
     try {
       console.log('[XTB] Initializing connection...');
+      const startTime = Date.now();
+
       // Use demo credentials for display-only functionality
       await this.connect({
         userId: "17535100",
         password: "GuiZarHoh2711!"
       });
+
+      console.log(`[XTB] Connection initialized in ${Date.now() - startTime}ms`);
     } catch (error) {
       console.error('[XTB] Initial connection failed:', error);
       this.scheduleReconnect();
@@ -43,16 +49,19 @@ export class XTBService {
       return;
     }
 
-    console.log(`[XTB] Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${this.reconnectDelay}ms`);
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+    console.log(`[XTB] Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms`);
+
     setTimeout(() => {
       this.reconnectAttempts++;
+      console.log(`[XTB] Starting reconnect attempt ${this.reconnectAttempts}`);
       this.initializeConnection();
-    }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts)); // Exponential backoff
+    }, delay);
   }
 
   get isConnected(): boolean {
-    // Initialize connection if not already attempted
     if (!this.ws && this.reconnectAttempts === 0) {
+      console.log('[XTB] First connection attempt triggered by isConnected check');
       this.initializeConnection();
       return false;
     }
@@ -61,6 +70,7 @@ export class XTBService {
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log('[XTB] Connection not ready, initializing...');
       await this.initializeConnection();
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         throw new Error('Not connected to XTB');
@@ -68,18 +78,21 @@ export class XTBService {
     }
 
     return new Promise((resolve, reject) => {
+      const startTime = Date.now();
       const message = JSON.stringify({
         command: cmd,
         arguments: args
       });
 
-      console.log('[XTB] Sending command:', cmd, 'with args:', args);
+      console.log(`[XTB] Sending command "${cmd}" with args:`, args);
       this.ws!.send(message);
 
       const handleMessage = (event: MessageEvent) => {
         try {
           const response = JSON.parse(event.data) as XTBResponse;
-          console.log('[XTB] Received response for', cmd, ':', response);
+          const duration = Date.now() - startTime;
+          console.log(`[XTB] Received response for "${cmd}" in ${duration}ms:`, response);
+
           this.ws!.removeEventListener('message', handleMessage);
 
           if (!response.status) {
@@ -97,6 +110,7 @@ export class XTBService {
 
       setTimeout(() => {
         this.ws!.removeEventListener('message', handleMessage);
+        console.error(`[XTB] Command "${cmd}" timed out after 10s`);
         reject(new Error(`Command ${cmd} timed out after 10s`));
       }, 10000);
     });
@@ -110,9 +124,12 @@ export class XTBService {
 
     return new Promise((resolve, reject) => {
       console.log('[XTB] Connecting to main socket...');
+      const connectionStartTime = Date.now();
       this.ws = new WebSocket(this.serverUrl);
 
       const connectionTimeout = setTimeout(() => {
+        const connectionDuration = Date.now() - connectionStartTime;
+        console.error(`[XTB] Connection timeout after 10s (${connectionDuration}ms)`);
         reject(new Error('Connection timeout after 10s'));
         this.ws?.close();
       }, 10000);
