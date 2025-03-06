@@ -124,73 +124,51 @@ export function registerRoutes(app: Express): Server {
     res.header('Content-Type', 'application/json');
 
     try {
-      console.log('[XTB Backend] Forwarding hedge request to Flask server at http://3.147.6.168');
+      console.log('[XTB Backend] Processing hedge request');
+      
+      // Login only if necessary - first step
+      const loginResponse = await fetch('http://3.147.6.168/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 17535100, 
+          password: "GuiZarHoh2711!"
+        }),
+        signal: AbortSignal.timeout(10000) // Reduced timeout for faster response
+      });
 
-      // Ensure we're logged in first
-      try {
-        // Set a timeout of 30 seconds for the login request
-        const loginResponse = await fetch('http://3.147.6.168/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: 17535100, 
-            password: "GuiZarHoh2711!"
-          }),
-          // Add timeout options
-          signal: AbortSignal.timeout(30000)
-        });
-
-        if (!loginResponse.ok) {
-          throw new Error(`Login failed with status ${loginResponse.status}`);
-        }
-
-        const loginData = await loginResponse.json();
-        console.log('[XTB Backend] Login response:', loginData);
-
-        if (!loginData.status) {
-          throw new Error(loginData.errorDescr || 'Login failed');
-        }
-      } catch (loginError) {
-        console.error('[XTB Backend] Login error:', loginError);
-        throw loginError;
+      if (!loginResponse.ok) {
+        throw new Error(`Login failed with status ${loginResponse.status}`);
       }
 
-      // Format the request according to XTB API format
+      // Format the trade request with minimal processing
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
-
-      // Calculate volume in lots (1 lot = 100,000 units)
       const volume = Math.abs(Number(amount)) / 100000;
-
-      // Format symbol correctly (e.g., EURUSD)
       const symbol = `${targetCurrency}${baseCurrency}`;
 
-      // Format the command according to XTB API format
+      console.log(`[XTB Backend] Placing trade: ${tradeDirection} ${volume} lots of ${symbol}`);
+
+      // Create a simpler command structure
       const commandData = {
         commandName: "tradeTransaction",
         arguments: {
           tradeTransInfo: {
-            cmd: tradeDirection === 'buy' ? 0 : 1, // 0 for BUY, 1 for SELL
+            cmd: tradeDirection === 'buy' ? 0 : 1,
             symbol: symbol,
             volume: volume,
-            price: 1.0, // Market price (0 for market execution)
-            offset: 0,
-            order: 0, // New order
-            type: 0 // Type 0 for open position
+            price: 0.0, // Use 0.0 for market execution as per XTB documentation
+            type: 0,     // Type 0 for open position
+            order: 0     // New order
           }
         }
       };
 
-      // Send the request to the Flask server's command endpoint
+      // Execute the trade with optimized request
       const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        // Add timeout options
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(15000) // Reduced timeout
       });
 
       if (!response.ok) {
@@ -198,24 +176,23 @@ export function registerRoutes(app: Express): Server {
       }
 
       const apiResponse = await response.json();
+      console.log('[XTB Backend] Trade response:', apiResponse);
 
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
 
-      // Format response to match what the client expects
-      const hedgeResult = {
-        status: apiResponse.status,
+      // Return a simplified response
+      return res.json({
+        status: true,
         tradeOrderNumber: apiResponse.returnData?.order || null
-      };
-
-      return res.send(JSON.stringify(hedgeResult));
+      });
     } catch (error) {
-      console.error('[XTB Backend] Error executing hedge via Flask server:', error);
-      return res.status(500).send(JSON.stringify({ 
+      console.error('[XTB Backend] Error executing hedge:', error);
+      return res.status(500).json({ 
         error: 'Failed to execute hedge via Flask server', 
         details: error instanceof Error ? error.message : String(error)
-      }));
+      });
     }
   });
 
@@ -232,7 +209,7 @@ export function registerRoutes(app: Express): Server {
     res.json(userHedges);
   });
 
-  // New endpoint to check trade status
+  // Optimized endpoint to check trade status
   app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -244,23 +221,33 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      // Format the command to get trade status according to XTB API
+      // Login first to ensure we have a valid session
+      const loginResponse = await fetch('http://3.147.6.168/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 17535100, 
+          password: "GuiZarHoh2711!"
+        }),
+        signal: AbortSignal.timeout(5000) // Short timeout for login
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error(`Login failed with status ${loginResponse.status}`);
+      }
+
+      // Use simplified command for getting trades
       const commandData = {
         commandName: "getTrades",
-        arguments: { 
-          openedOnly: true
-        }
+        arguments: { openedOnly: true }
       };
 
-      // Send the command to the Flask server
+      // Send command with reduced timeout
       const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        // Add timeout options
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!response.ok) {
@@ -268,14 +255,13 @@ export function registerRoutes(app: Express): Server {
       }
 
       const apiResponse = await response.json();
-      console.log(`[Routes] Trade status response for order ${tradeOrderNumber}:`, apiResponse);
-
+      
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
 
       // Find the specific trade in the returned array
-      const trade = apiResponse.returnData?.find(t => t.order === tradeOrderNumber);
+      const trade = apiResponse.returnData?.find(t => parseInt(t.order) === tradeOrderNumber);
 
       if (!trade) {
         return res.json({ 
@@ -285,10 +271,19 @@ export function registerRoutes(app: Express): Server {
         });
       }
 
+      // Return a simplified trade object
       res.json({
         status: true,
         found: true,
-        trade: trade
+        trade: {
+          order: trade.order,
+          symbol: trade.symbol,
+          volume: trade.volume,
+          cmd: trade.cmd,
+          open_price: trade.open_price,
+          open_time: trade.open_time,
+          profit: trade.profit
+        }
       });
     } catch (error) {
       console.error('Error checking trade status:', error);
@@ -304,63 +299,68 @@ export function registerRoutes(app: Express): Server {
 
     try {
       console.log('[XTB Backend] Processing hedge request from /api/hedges');
+      
+      // Use a unique request ID to help debug and prevent duplicates
+      const requestId = Date.now().toString();
+      console.log(`[XTB Backend] Request ID: ${requestId}`);
 
-      // Forward the request to the Flask server directly instead of redirecting
-      const response = await fetch('http://3.147.6.168/login', {
+      // Perform login once per request
+      const loginResponse = await fetch('http://3.147.6.168/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: 17535100, 
           password: "GuiZarHoh2711!"
         }),
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(10000)
       });
 
-      if (!response.ok) {
-        throw new Error(`Login failed with status ${response.status}`);
+      if (!loginResponse.ok) {
+        throw new Error(`Login failed with status ${loginResponse.status}`);
       }
 
-      const loginData = await response.json();
-
+      const loginData = await loginResponse.json();
       if (!loginData.status) {
         throw new Error(loginData.errorDescr || 'Login failed');
       }
-
-      // Format the request according to XTB API format
+      
+      // Parse request data with validation
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
-
-      // Calculate volume in lots (1 lot = 100,000 units)
+      
+      // Validate required fields
+      if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
       const volume = Math.abs(Number(amount)) / 100000;
-
-      // Format symbol correctly (e.g., EURUSD)
+      if (isNaN(volume) || volume <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+      }
+      
       const symbol = `${targetCurrency}${baseCurrency}`;
+      console.log(`[XTB Backend][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Format the command according to XTB API format
+      // Execute trade with optimized command structure
       const commandData = {
         commandName: "tradeTransaction",
         arguments: {
           tradeTransInfo: {
-            cmd: tradeDirection === 'buy' ? 0 : 1, // 0 for BUY, 1 for SELL
+            cmd: tradeDirection === 'buy' ? 0 : 1,
             symbol: symbol,
             volume: volume,
-            price: 1.0, // Market price (0 for market execution)
-            offset: 0,
-            order: 0, // New order
-            type: 0 // Type 0 for open position
+            price: 0.0, // Market execution
+            type: 0,     // Open position
+            order: 0,    // New order
+            customComment: `Hedgi-${requestId}` // Add request ID to help tracking
           }
         }
       };
 
-      // Send the request to the Flask server
       const tradeResponse = await fetch('http://3.147.6.168/command', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!tradeResponse.ok) {
@@ -368,85 +368,74 @@ export function registerRoutes(app: Express): Server {
       }
 
       const apiResponse = await tradeResponse.json();
+      console.log(`[XTB Backend][${requestId}] Trade response:`, apiResponse);
 
       if (!apiResponse.status) {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
 
       const tradeOrderNumber = apiResponse.returnData?.order || null;
-
-      // Save the trade information to the database
+      
+      // Only save to database if we have a valid order number
       if (tradeOrderNumber) {
         try {
-          // Create a new hedge record in the database
           const newHedge = await db.insert(hedges).values({
             userId: req.user.id,
             baseCurrency: baseCurrency,
             targetCurrency: targetCurrency,
-            amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1), // Convert volume back to original amount
-            rate: 1.0, // We can update this with the actual rate if available
-            duration: 30, // Default duration in days
+            amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1),
+            rate: 0.0, // Will be updated with real rate
+            duration: 30,
             status: 'active',
             tradeOrderNumber: tradeOrderNumber,
             tradeStatus: 'open'
           }).returning();
 
-          console.log('[XTB Backend] Saved new hedge to database:', newHedge);
-        } catch (dbError) {
-          console.error('[XTB Backend] Error saving hedge to database:', dbError);
-          // Continue with the response even if DB save fails
-        }
-      }
-
-      // After a successful trade, fetch the current trade list to ensure
-      // we have the latest data with correct trade status
-      try {
-        // Get the trades status from XTB API to ensure we have latest data
-        console.log(`[XTB Backend] Trade successfully placed with order #${tradeOrderNumber}, updating status`);
-        
-        // Small delay to allow XTB API to register the trade
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get all trades to update local database status
-        const statusCmd = {
-          commandName: "getTrades",
-          arguments: { 
-            openedOnly: true
-          }
-        };
-        
-        // We don't need to wait for this to complete - it's just to refresh data in background
-        fetch('http://3.147.6.168/command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(statusCmd),
-          signal: AbortSignal.timeout(5000) // Short timeout since this is background refresh
-        }).then(resp => resp.json())
-          .then(statusResp => {
-            if (statusResp.status && Array.isArray(statusResp.returnData)) {
-              console.log(`[XTB Backend] Successfully refreshed trade data for ${statusResp.returnData.length} active trades`);
+          console.log(`[XTB Backend][${requestId}] Saved hedge to database:`, newHedge[0]?.id);
+          
+          // Trigger a delayed refresh to update trades list
+          setTimeout(() => {
+            try {
+              fetch('http://3.147.6.168/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  commandName: "getTrades",
+                  arguments: { openedOnly: true }
+                }),
+              }).then(resp => resp.json())
+                .then(data => console.log(`[XTB Backend] Background refresh completed`))
+                .catch(err => console.error('[XTB Backend] Background refresh error:', err));
+            } catch (e) {
+              // Ignore errors in background refresh
             }
-          })
-          .catch(err => console.error('[XTB Backend] Background refresh error:', err));
-      } catch (refreshError) {
-        // Just log, don't interfere with the main response
-        console.error('[XTB Backend] Failed to refresh trade statuses:', refreshError);
+          }, 1000);
+          
+          return res.json({
+            status: true,
+            tradeOrderNumber: tradeOrderNumber,
+            hedgeId: newHedge[0]?.id
+          });
+        } catch (dbError) {
+          console.error(`[XTB Backend][${requestId}] Database error:`, dbError);
+          // Still return success even if DB save fails
+          return res.json({
+            status: true,
+            tradeOrderNumber: tradeOrderNumber,
+            warning: "Trade placed but database update failed"
+          });
+        }
+      } else {
+        return res.status(500).json({ 
+          error: 'Trade placed but no order number returned'
+        });
       }
-
-      const hedgeResult = {
-        status: apiResponse.status,
-        tradeOrderNumber: tradeOrderNumber,
-        // Include a refresh flag to tell client to refresh data
-        shouldRefresh: true
-      };
-
-      return res.send(JSON.stringify(hedgeResult));
     } catch (error) {
-      console.error('[XTB Backend] Error executing hedge via Flask server:', error);
-      return res.status(500).send(JSON.stringify({ 
-        error: 'Failed to execute hedge via Flask server', 
+      console.error('[XTB Backend] Error executing hedge:', error);
+      return res.status(500).json({ 
+        error: 'Failed to execute hedge', 
         details: error instanceof Error ? error.message : String(error)
-      }));
+      });
     }
   });
 
