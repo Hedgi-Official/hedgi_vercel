@@ -37,12 +37,22 @@ export default function Dashboard() {
       return response.json();
     },
     onSuccess: (data) => {
-      const statusColor = {
-        Accepted: 'text-green-600',
-        Pending: 'text-yellow-600',
-        Rejected: 'text-red-600',
-        Error: 'text-red-600',
-      }[data.returnData.status] || 'text-muted-foreground';
+      // Get the status string from the response or default to 'Unknown'
+      let tradeStatus = 'Unknown';
+      if (data.returnData && typeof data.returnData === 'object' && 'status' in data.returnData) {
+        tradeStatus = String(data.returnData.status);
+      }
+      
+      // Determine color based on status
+      let statusColor = 'text-muted-foreground';
+      
+      if (tradeStatus === 'Accepted') {
+        statusColor = 'text-green-600';
+      } else if (tradeStatus === 'Pending') {
+        statusColor = 'text-yellow-600';
+      } else if (tradeStatus === 'Rejected' || tradeStatus === 'Error') {
+        statusColor = 'text-red-600';
+      }
 
       toast({
         title: t('Trade Status Details'),

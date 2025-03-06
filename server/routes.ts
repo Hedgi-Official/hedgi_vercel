@@ -148,9 +148,9 @@ export function registerRoutes(app: Express): Server {
         }
         
         console.log('[XTB Backend] Login successful');
-      } catch (loginError) {
-        console.error('[XTB Backend] Login error:', loginError);
-        throw new Error(`XTB Login failed: ${loginError.message}`);
+      } catch (error) {
+        console.error('[XTB Backend] Login error:', error);
+        throw new Error(`XTB Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       // Format the trade request with proper validation
@@ -296,7 +296,7 @@ export function registerRoutes(app: Express): Server {
       }
 
       // Find the specific trade in the returned array
-      const trade = apiResponse.returnData?.find(t => parseInt(t.order) === tradeOrderNumber);
+      const trade = apiResponse.returnData?.find((t: any) => parseInt(t.order) === tradeOrderNumber);
 
       if (!trade) {
         return res.json({ 
