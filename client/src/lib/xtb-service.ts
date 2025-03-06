@@ -14,7 +14,6 @@ export class XTBService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 2000;
-  private notifyCallback: ((title: string, message: string, type?: 'default' | 'destructive') => void) | null = null;
 
   constructor(
     public serverUrl = 'wss://ws.xtb.com/demo',
@@ -22,18 +21,6 @@ export class XTBService {
   ) {
     // Initialize connection immediately
     this.initializeConnection();
-  }
-  
-  // Set a notification callback function for user feedback
-  setNotificationCallback(callback: (title: string, message: string, type?: 'default' | 'destructive') => void) {
-    this.notifyCallback = callback;
-  }
-  
-  // Trigger a notification if callback is set
-  private notify(title: string, message: string, type: 'default' | 'destructive' = 'default') {
-    if (this.notifyCallback) {
-      this.notifyCallback(title, message, type);
-    }
   }
 
   private async initializeConnection() {
@@ -141,36 +128,14 @@ export class XTBService {
             this.streamSessionId = response.streamSessionId;
             this._isConnected = true;
             this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
-            
-            // Send a notification about successful login
-            this.notify(
-              "Login successful", 
-              "Successfully connected to trading service",
-              "default"
-            );
-            
             await this.setupStreamingConnection();
             resolve();
           } else {
-            // Send error notification
-            this.notify(
-              "Login failed", 
-              "Could not establish trading session",
-              "destructive"
-            );
             reject(new Error('No streamSessionId received'));
           }
         } catch (error) {
           console.error('[XTB] Login error:', error);
           clearTimeout(connectionTimeout);
-          
-          // Notify about login error
-          this.notify(
-            "Connection failed",
-            error instanceof Error ? error.message : "Unable to connect to trading server",
-            "destructive"
-          );
-          
           reject(error);
         }
       });

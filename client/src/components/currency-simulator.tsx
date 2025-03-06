@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ interface Props {
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -30,51 +29,17 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
-  
-  // Set up notification callback for the XTB service
-  useEffect(() => {
-    // Configure the XTB service to use our toast notifications
-    xtbService.setNotificationCallback((title, message, type = 'default') => {
-      toast({
-        title,
-        description: message,
-        variant: type,
-        duration: 5000,
-      });
-    });
-    
-    // This effect should only run once on component mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
-    toast({
-      title: "Processing simulation...",
-      description: "Fetching live rates and calculating hedge costs",
-      duration: 3000,
-    });
 
     let currentRate;
     let swapValues;
     try {
       if (!xtbService.isConnected) {
-        toast({
-          title: "Connecting to trading service...",
-          description: "Establishing secure connection",
-          duration: 3000,
-        });
-        
         await xtbService.connect({
           userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
           password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
-        });
-        
-        toast({
-          title: "Connection successful",
-          description: "Successfully connected to trading service",
-          variant: "default",
-          duration: 3000,
         });
       }
 
@@ -95,12 +60,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       }
     } catch (error) {
       console.error('[CurrencySimulator] Error fetching XTB rate:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch current rates. Using estimated values.",
-        variant: "destructive",
-        duration: 5000,
-      });
     }
 
     const result = await simulateHedge(
@@ -144,13 +103,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
-    
-    // Show simulation success notification
-    toast({
-      title: "Simulation complete",
-      description: `Calculated hedge cost: ${hedgeCost.toFixed(2)} ${baseCurrency}`,
-      duration: 4000,
-    });
   };
 
   const handlePlaceHedge = async () => {
@@ -162,13 +114,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     console.log('[CurrencySimulator] Starting hedge placement...');
     setIsPlacingHedge(true);
     setHedgeError(null);
-    
-    // Show execution toast
-    toast({
-      title: "Executing trade...",
-      description: `Placing ${tradeDirection} order for ${amount} ${targetCurrency}`,
-      duration: 5000,
-    });
 
     try {
       // Ensure proper formatting for the server API
@@ -189,14 +134,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
       
-      // Show success notification
-      toast({
-        title: "Trade placed successfully",
-        description: `Order confirmed for ${amount} ${targetCurrency}`,
-        variant: "default",
-        duration: 5000,
-      });
-      
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
       
@@ -204,14 +141,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
-      
-      // Show error notification
-      toast({
-        title: "Trade error",
-        description: error instanceof Error ? error.message : 'Failed to place hedge order',
-        variant: "destructive",
-        duration: 7000,
-      });
     } finally {
       setIsPlacingHedge(false);
     }
