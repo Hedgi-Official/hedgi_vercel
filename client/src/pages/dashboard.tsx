@@ -104,23 +104,46 @@ export default function Dashboard() {
     mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
       console.log('[Dashboard] Creating hedge with data:', hedgeData);
 
-      const response = await fetch('/api/hedges', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(hedgeData),
-        credentials: 'include'
-      });
+      try {
+        // Ensure all data is properly formatted for the server
+        const formattedData = {
+          ...hedgeData,
+          amount: String(hedgeData.amount), // Ensure amount is a string
+          rate: String(hedgeData.rate),    // Ensure rate is a string
+          duration: Number(hedgeData.duration) // Ensure duration is a number
+        };
+        
+        console.log('[Dashboard] Sending formatted hedge data:', formattedData);
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+        const response = await fetch('/api/hedges', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formattedData),
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[Dashboard] Server error response:', errorText);
+          throw new Error(errorText || 'Failed to create hedge');
+        }
+
+        const data = await response.json();
+        console.log('[Dashboard] Server response:', data);
+        
+        // Return the entire response to handle in onSuccess
+        return data;
+      } catch (error) {
+        console.error('[Dashboard] Error in mutation:', error);
+        throw error;
       }
-
-      const data = await response.json();
-      // Return the entire response to handle in onSuccess
-      return data;
     },
     onSuccess: (data) => {
+      console.log('[Dashboard] Hedge created successfully:', data);
+      
+      // Always invalidate the hedges query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      
       toast({
         title: t('simulator.notifications.hedgeCreated'),
         description: t('simulator.notifications.hedgeCreatedDesc'),
@@ -128,15 +151,19 @@ export default function Dashboard() {
 
       // Check if we have a valid trade order number in the response
       if (data.returnData?.order) {
-        console.log('[Dashboard] Trade created, checking status for order:', data.returnData.order);
+        console.log('[Dashboard] Trade created with order number:', data.returnData.order);
         checkTradeStatusMutation.mutate(data.returnData.order);
+      } else {
+        console.warn('[Dashboard] Missing order number in response:', data);
       }
     },
     onError: (error) => {
+      console.error('[Dashboard] Hedge creation error:', error);
+      
       toast({
         variant: "destructive",
         title: t('simulator.notifications.error'),
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to create hedge',
       });
     }
   });

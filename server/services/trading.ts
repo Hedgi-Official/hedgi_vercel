@@ -223,9 +223,15 @@ export class TradingService {
         };
       }
 
+      // Make sure we properly extract and format order information
+      const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
+                       data.returnData : { order: null };
+                       
+      console.log('[Trading Service] Extracted order info:', orderInfo);
+      
       return {
         status: true,
-        returnData: data.returnData,
+        returnData: orderInfo,
         message: `Successfully executed ${isBuy ? 'BUY' : 'SELL'} on ${symbol}`
       };
     } catch (error) {
@@ -309,9 +315,15 @@ export class TradingService {
         };
       }
 
+      // Make sure we properly extract and format order information for closing trades too
+      const orderInfo = data.returnData && typeof data.returnData === 'object' ? 
+                       data.returnData : { order: null };
+                       
+      console.log('[Trading Service] Extracted close order info:', orderInfo);
+      
       return {
         status: true,
-        returnData: data.returnData,
+        returnData: orderInfo,
         message: `Successfully closed trade #${orderNumber} for ${symbol}`
       };
     } catch (error) {

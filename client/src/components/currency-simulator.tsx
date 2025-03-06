@@ -105,28 +105,40 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   };
 
   const handlePlaceHedge = async () => {
-    if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
+    if (!onPlaceHedge || !simulation || !onOrdersUpdated) {
+      console.error('Missing required callbacks or simulation data');
+      return;
+    }
 
+    console.log('[CurrencySimulator] Starting hedge placement...');
     setIsPlacingHedge(true);
     setHedgeError(null);
 
-    const hedgeData = {
-      baseCurrency,
-      targetCurrency,
-      amount: amount.toString(),
-      rate: simulation.rate.toString(),
-      duration,
-      tradeDirection,
-      tradeOrderNumber: null,
-      tradeStatus: null
-    };
-
     try {
-      await onPlaceHedge(hedgeData); // Await the promise here
-      onOrdersUpdated(); // Call the callback to refresh the orders list
+      // Ensure proper formatting for the server API
+      const hedgeData = {
+        baseCurrency,
+        targetCurrency,
+        amount: amount.toString(), // String for consistent DB handling
+        rate: simulation.rate.toString(),
+        duration,
+        tradeDirection, // 'buy' or 'sell'
+        tradeOrderNumber: null,
+        tradeStatus: null
+      };
 
+      console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
+      
+      // Call the parent component's handler and await completion
+      const result = await onPlaceHedge(hedgeData);
+      console.log('[CurrencySimulator] Hedge placement result:', result);
+      
+      // Refresh the orders list in the dashboard
+      onOrdersUpdated();
+      
+      console.log('[CurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
-      console.error('Error placing hedge:', error);
+      console.error('[CurrencySimulator] Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
     } finally {
       setIsPlacingHedge(false);

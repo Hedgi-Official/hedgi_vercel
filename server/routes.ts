@@ -328,19 +328,31 @@ export function registerRoutes(app: Express): Server {
 
 
   app.post("/api/hedges", async (req, res) => {
+    // Enhanced logging throughout the entire process
+    const requestId = Date.now().toString();
+    console.log(`[DEBUG][${requestId}] POST /api/hedges request received:`, {
+      headers: req.headers,
+      body: req.body,
+      auth: req.isAuthenticated()
+    });
+    
     if (!req.isAuthenticated()) {
+      console.log(`[DEBUG][${requestId}] Request rejected: Not authenticated`);
       return res.status(401).send("Not authenticated");
     }
 
     try {
-      // Use a unique request ID for tracking this transaction
-      const requestId = Date.now().toString();
-      console.log(`[XTB Backend] Processing hedge request from /api/hedges with ID: ${requestId}`);
+      console.log(`[XTB Backend][${requestId}] Processing hedge request from /api/hedges`);
       
       // Parse and validate request data
       const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
       
+      console.log(`[DEBUG][${requestId}] Request data:`, { 
+        amount, baseCurrency, targetCurrency, tradeDirection, duration 
+      });
+      
       if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
+        console.log(`[DEBUG][${requestId}] Missing required fields`);
         return res.status(400).json({ 
           status: false,
           error: 'Missing required fields' 
@@ -349,6 +361,7 @@ export function registerRoutes(app: Express): Server {
       
       const volume = Math.abs(Number(amount)) / 100000;
       if (isNaN(volume) || volume <= 0) {
+        console.log(`[DEBUG][${requestId}] Invalid amount: ${amount}, calculated volume: ${volume}`);
         return res.status(400).json({ 
           status: false,
           error: 'Invalid amount' 
@@ -358,14 +371,20 @@ export function registerRoutes(app: Express): Server {
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[XTB Backend][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Execute the trade using our trading service
+      // Enhanced trade execution with detailed logging
       try {
-        console.log(`[XTB Backend][${requestId}] Connecting to trading service...`);
+        // Force a new login each time to ensure a valid session
+        console.log(`[DEBUG][${requestId}] Logging into trading service...`);
+        const loginSuccess = await tradingService.connect();
         
-        // Ensure we're connected to the trading service
-        await tradingService.connect();
+        if (!loginSuccess) {
+          console.log(`[DEBUG][${requestId}] Failed to connect to trading service`);
+          throw new Error('Failed to connect to trading service');
+        }
         
-        // Execute the trade using our standardized method
+        console.log(`[DEBUG][${requestId}] Successfully connected to trading service`);
+        
+        // Execute the trade with explicit parameters
         const apiResponse = await tradingService.openTrade(
           symbol,
           volume,
@@ -373,31 +392,35 @@ export function registerRoutes(app: Express): Server {
           `Hedgi-${requestId}-${baseCurrency}${targetCurrency}-${duration}days`
         );
         
-        console.log(`[XTB Backend][${requestId}] Trade response:`, apiResponse);
+        console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
 
         if (!apiResponse.status) {
           throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
         }
 
-        // Extract the order number from response
+        // Extract the order number from response with validation
         const tradeOrderNumber = apiResponse.returnData?.order;
+        console.log(`[DEBUG][${requestId}] Trade order number:`, tradeOrderNumber);
+        
         if (!tradeOrderNumber) {
           throw new Error('No valid order number returned from XTB API');
         }
 
-        // Save successful trade to database - need to handle values properly for drizzle
+        // Create and log the exact hedge data to be stored
         const hedgeValues = {
           baseCurrency: baseCurrency,
           targetCurrency: targetCurrency,
           amount: String(volume * 100000 * (tradeDirection === 'buy' ? 1 : -1)),
-          rate: "0.0", // Will be updated with real rate from status check
+          rate: apiResponse.returnData?.price?.toString() || "0.0",
           duration: duration || 30,
           status: 'active',
           tradeOrderNumber: tradeOrderNumber,
           tradeStatus: 'open'
         };
         
-        // Insert with userId in a way that works with Drizzle
+        console.log(`[DEBUG][${requestId}] Hedge values to insert:`, hedgeValues);
+        
+        // Insert with userId, ensuring proper type handling
         const newHedge = await db.insert(hedges)
           .values({
             ...hedgeValues,
@@ -405,19 +428,23 @@ export function registerRoutes(app: Express): Server {
           })
           .returning();
 
-        console.log(`[XTB Backend][${requestId}] Saved hedge to database: ID=${newHedge[0]?.id}, OrderNumber=${tradeOrderNumber}`);
+        console.log(`[DEBUG][${requestId}] Database insert result:`, newHedge);
         
-        // Return a successful response in the format expected by the client
-        return res.json({
+        // Return a successful response with all needed data
+        const response = {
           status: true,
           returnData: {
             order: tradeOrderNumber
           },
-          hedgeId: newHedge[0]?.id
-        });
+          hedgeId: newHedge[0]?.id,
+          message: `Successfully placed ${tradeDirection} hedge for ${volume} lots of ${symbol}`
+        };
+        
+        console.log(`[DEBUG][${requestId}] Sending successful response:`, response);
+        return res.json(response);
         
       } catch (tradeError) {
-        console.error(`[XTB Backend][${requestId}] Error executing trade:`, tradeError);
+        console.error(`[DEBUG][${requestId}] Error executing trade:`, tradeError);
         throw tradeError; // Re-throw to be caught by the outer catch
       }
     } catch (error) {
