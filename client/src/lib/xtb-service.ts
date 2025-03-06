@@ -19,21 +19,27 @@ export class XTBService {
     public serverUrl = 'wss://ws.xtb.com/demo',
     public streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {
-    // Initialize connection immediately
-    this.initializeConnection();
+    // Don't initialize connection automatically
+    // This prevents infinite reconnection attempts
   }
 
   private async initializeConnection() {
     try {
       console.log('[XTB] Initializing connection...');
-      // Use demo credentials for display-only functionality
-      await this.connect({
-        userId: "17535100",
-        password: "GuiZarHoh2711!"
-      });
+      // We'll supply credentials from the component instead of hardcoding here
+      if (this.ws) {
+        console.log('[XTB] Existing connection found, closing before reconnect');
+        try {
+          this.ws.close();
+          this.ws = null;
+        } catch (e) {
+          console.warn('[XTB] Error closing existing connection:', e);
+        }
+      }
+      // Connection will be established when explicitly called
     } catch (error) {
-      console.error('[XTB] Initial connection failed:', error);
-      this.scheduleReconnect();
+      console.error('[XTB] Connection initialization failed:', error);
+      // Don't auto-reconnect here
     }
   }
 
@@ -56,10 +62,7 @@ export class XTBService {
 
   private async sendCommand(cmd: string, args: any = {}): Promise<XTBResponse> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      await this.initializeConnection();
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        throw new Error('Not connected to XTB');
-      }
+      throw new Error('Not connected to XTB. Please connect before sending commands.');
     }
 
     return new Promise((resolve, reject) => {
@@ -151,14 +154,14 @@ export class XTBService {
         clearTimeout(connectionTimeout);
         this._isConnected = false;
         this.streamSessionId = null;
-        this.scheduleReconnect();
+        // Don't automatically reconnect - the component will handle reconnection if needed
       });
     });
   }
 
   async getSymbolData(symbol: string): Promise<XTBResponse> {
     if (!this.isConnected) {
-      await this.initializeConnection();
+      throw new Error('Not connected to XTB service. Please connect first.');
     }
 
     try {
@@ -225,8 +228,7 @@ export class XTBService {
       this.streamWs.addEventListener('close', () => {
         console.log('[XTB] Streaming connection closed');
         clearTimeout(connectionTimeout);
-        // Try to reconnect streaming connection
-        setTimeout(() => this.setupStreamingConnection(), 5000);
+        // Don't automatically reconnect - let component handle reconnection
       });
     });
   }
@@ -239,19 +241,41 @@ export class XTBService {
     console.log('[XTB] Disconnecting...');
 
     if (this.streamWs) {
-      this.streamWs.close();
+      try {
+        this.streamWs.close();
+      } catch (e) {
+        console.warn('[XTB] Error closing stream connection:', e);
+      }
       this.streamWs = null;
     }
 
     if (this.ws) {
-      this.sendCommand('logout').catch(console.error);
-      this.ws.close();
+      // Only try to logout if we're connected
+      if (this._isConnected && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          // Don't wait for response, just send the command
+          this.ws.send(JSON.stringify({
+            command: 'logout',
+            arguments: {}
+          }));
+        } catch (e) {
+          console.warn('[XTB] Error sending logout command:', e);
+        }
+      }
+      
+      try {
+        this.ws.close();
+      } catch (e) {
+        console.warn('[XTB] Error closing connection:', e);
+      }
       this.ws = null;
     }
 
     this._isConnected = false;
     this.streamSessionId = null;
     this.streamListeners.clear();
+    
+    console.log('[XTB] Disconnected successfully');
   }
 }
 
