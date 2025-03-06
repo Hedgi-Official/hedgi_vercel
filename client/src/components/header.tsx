@@ -29,7 +29,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
               </Button>
             </Link>
             <Link href="/what-is-hedge">
-              <Button variant="ghost">{t('What is a Hedge?')}</Button>
+              <Button variant="ghost">{t('What is Hedging?')}</Button>
             </Link>
             <Link href="/using-hedgi">
               <Button variant="ghost">{t('Using Hedgi')}</Button>

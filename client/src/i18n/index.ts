@@ -100,6 +100,7 @@ const enUS = {
       'MXNBRL': 'MXN/BRL - Mexican Peso/Brazilian Real'
     },
     'What is a Hedge?': 'What is a Hedge?',
+    'What is Hedging?': 'What is Hedging?',
     'Using Hedgi': 'Using Hedgi',
     'About Us': 'About Us',
     'Page Under Construction': 'Page Under Construction',
@@ -206,6 +207,7 @@ const ptBR = {
       tradeOrderNumber: 'Ordem de Negociação'
     },
     'What is a Hedge?': 'O que é um Hedge?',
+    'What is Hedging?': 'O que é Hedge?',
     'Using Hedgi': 'Usando o Hedgi',
     'About Us': 'Sobre Nós',
     'Page Under Construction': 'Página Em Construção',
