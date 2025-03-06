@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ interface Props {
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -29,6 +30,41 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
+
+  // Add effect for successful XTB connection notification
+  useEffect(() => {
+    const connectToXTB = async () => {
+      try {
+        if (!xtbService.isConnected) {
+          console.log("[CurrencySimulator] Connecting to trading service...");
+          // Connect returns void but updates isConnected internally
+          await xtbService.connect({
+            userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
+            password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
+          });
+          
+          // Check the connection status after the operation
+          if (xtbService.isConnected) {
+            console.log("[CurrencySimulator] Successfully connected to trading service");
+            toast({
+              title: "Connection Successful",
+              description: "Successfully connected to trading service",
+              variant: "default"
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[CurrencySimulator] Error connecting to XTB:', error);
+        toast({
+          title: "Connection Failed",
+          description: "Failed to connect to trading service. Try again later.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    connectToXTB();
+  }, [toast]);
 
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
@@ -103,6 +139,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     });
+    
+    // Show success toast for simulation completion
+    toast({
+      title: "Simulation Complete",
+      description: `Successfully calculated hedge costs for ${amount} ${targetCurrency}`,
+      variant: "default"
+    });
   };
 
   const handlePlaceHedge = async () => {
@@ -138,9 +181,23 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       onOrdersUpdated();
       
       console.log('[CurrencySimulator] Hedge placement completed successfully');
+      
+      // Show success toast for hedge placement
+      toast({
+        title: "Hedge Placed Successfully",
+        description: `Successfully placed ${tradeDirection} hedge for ${amount} ${targetCurrency}`,
+        variant: "default"
+      });
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
+      
+      // Show error toast
+      toast({
+        title: "Hedge Placement Failed",
+        description: error instanceof Error ? error.message : 'Failed to place hedge',
+        variant: "destructive"
+      });
     } finally {
       setIsPlacingHedge(false);
     }
