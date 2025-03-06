@@ -124,31 +124,57 @@ export function registerRoutes(app: Express): Server {
     res.header('Content-Type', 'application/json');
 
     try {
-      console.log('[XTB Backend] Processing hedge request');
+      console.log('[XTB Backend] Processing hedge request with request ID:', Date.now().toString());
       
-      // Login only if necessary - first step
-      const loginResponse = await fetch('http://3.147.6.168/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 17535100, 
-          password: "GuiZarHoh2711!"
-        }),
-        signal: AbortSignal.timeout(10000) // Reduced timeout for faster response
-      });
+      // Login first with more reliable error handling
+      try {
+        const loginResponse = await fetch('http://3.147.6.168/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 17535100, 
+            password: "GuiZarHoh2711!"
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
 
-      if (!loginResponse.ok) {
-        throw new Error(`Login failed with status ${loginResponse.status}`);
+        if (!loginResponse.ok) {
+          throw new Error(`Login failed with status ${loginResponse.status}`);
+        }
+
+        const loginData = await loginResponse.json();
+        if (!loginData.status) {
+          throw new Error(loginData.errorDescr || 'Login failed');
+        }
+        
+        console.log('[XTB Backend] Login successful');
+      } catch (loginError) {
+        console.error('[XTB Backend] Login error:', loginError);
+        throw new Error(`XTB Login failed: ${loginError.message}`);
       }
 
-      // Format the trade request with minimal processing
+      // Format the trade request with proper validation
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+      
+      if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
+        return res.status(400).json({ 
+          status: false,
+          error: 'Missing required fields'
+        });
+      }
+      
       const volume = Math.abs(Number(amount)) / 100000;
+      if (isNaN(volume) || volume <= 0) {
+        return res.status(400).json({ 
+          status: false,
+          error: 'Invalid amount' 
+        });
+      }
+      
       const symbol = `${targetCurrency}${baseCurrency}`;
-
       console.log(`[XTB Backend] Placing trade: ${tradeDirection} ${volume} lots of ${symbol}`);
 
-      // Create a simpler command structure
+      // Create command structure with proper fields
       const commandData = {
         commandName: "tradeTransaction",
         arguments: {
@@ -156,19 +182,20 @@ export function registerRoutes(app: Express): Server {
             cmd: tradeDirection === 'buy' ? 0 : 1,
             symbol: symbol,
             volume: volume,
-            price: 0.0, // Use 0.0 for market execution as per XTB documentation
-            type: 0,     // Type 0 for open position
-            order: 0     // New order
+            price: 0.0,
+            type: 0,
+            order: 0,
+            customComment: `Hedgi-${Date.now()}`
           }
         }
       };
 
-      // Execute the trade with optimized request
+      // Execute the trade with appropriate timeout
       const response = await fetch('http://3.147.6.168/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(15000) // Reduced timeout
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!response.ok) {
@@ -182,16 +209,24 @@ export function registerRoutes(app: Express): Server {
         throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
       }
 
-      // Return a simplified response
+      // Ensure we have a valid order number
+      const tradeOrderNumber = apiResponse.returnData?.order;
+      if (!tradeOrderNumber) {
+        throw new Error('No order number returned from XTB API');
+      }
+
+      // Return the confirmed response with order number
       return res.json({
         status: true,
-        tradeOrderNumber: apiResponse.returnData?.order || null
+        returnData: {
+          order: tradeOrderNumber
+        }
       });
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge:', error);
       return res.status(500).json({ 
-        error: 'Failed to execute hedge via Flask server', 
-        details: error instanceof Error ? error.message : String(error)
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -298,143 +333,126 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      console.log('[XTB Backend] Processing hedge request from /api/hedges');
-      
-      // Use a unique request ID to help debug and prevent duplicates
+      // Use a unique request ID for tracking this transaction
       const requestId = Date.now().toString();
-      console.log(`[XTB Backend] Request ID: ${requestId}`);
-
-      // Perform login once per request
-      const loginResponse = await fetch('http://3.147.6.168/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 17535100, 
-          password: "GuiZarHoh2711!"
-        }),
-        signal: AbortSignal.timeout(10000)
-      });
-
-      if (!loginResponse.ok) {
-        throw new Error(`Login failed with status ${loginResponse.status}`);
-      }
-
-      const loginData = await loginResponse.json();
-      if (!loginData.status) {
-        throw new Error(loginData.errorDescr || 'Login failed');
-      }
+      console.log(`[XTB Backend] Processing hedge request from /api/hedges with ID: ${requestId}`);
       
-      // Parse request data with validation
-      const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+      // Parse and validate request data
+      const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
       
-      // Validate required fields
       if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ 
+          status: false,
+          error: 'Missing required fields' 
+        });
       }
       
       const volume = Math.abs(Number(amount)) / 100000;
       if (isNaN(volume) || volume <= 0) {
-        return res.status(400).json({ error: 'Invalid amount' });
+        return res.status(400).json({ 
+          status: false,
+          error: 'Invalid amount' 
+        });
       }
       
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[XTB Backend][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Execute trade with optimized command structure
-      const commandData = {
-        commandName: "tradeTransaction",
-        arguments: {
-          tradeTransInfo: {
-            cmd: tradeDirection === 'buy' ? 0 : 1,
-            symbol: symbol,
-            volume: volume,
-            price: 0.0, // Market execution
-            type: 0,     // Open position
-            order: 0,    // New order
-            customComment: `Hedgi-${requestId}` // Add request ID to help tracking
-          }
-        }
-      };
-
-      const tradeResponse = await fetch('http://3.147.6.168/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(15000)
-      });
-
-      if (!tradeResponse.ok) {
-        throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
-      }
-
-      const apiResponse = await tradeResponse.json();
-      console.log(`[XTB Backend][${requestId}] Trade response:`, apiResponse);
-
-      if (!apiResponse.status) {
-        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
-      }
-
-      const tradeOrderNumber = apiResponse.returnData?.order || null;
-      
-      // Only save to database if we have a valid order number
-      if (tradeOrderNumber) {
-        try {
-          const newHedge = await db.insert(hedges).values({
-            userId: req.user.id,
-            baseCurrency: baseCurrency,
-            targetCurrency: targetCurrency,
-            amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1),
-            rate: 0.0, // Will be updated with real rate
-            duration: 30,
-            status: 'active',
-            tradeOrderNumber: tradeOrderNumber,
-            tradeStatus: 'open'
-          }).returning();
-
-          console.log(`[XTB Backend][${requestId}] Saved hedge to database:`, newHedge[0]?.id);
-          
-          // Trigger a delayed refresh to update trades list
-          setTimeout(() => {
-            try {
-              fetch('http://3.147.6.168/command', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  commandName: "getTrades",
-                  arguments: { openedOnly: true }
-                }),
-              }).then(resp => resp.json())
-                .then(data => console.log(`[XTB Backend] Background refresh completed`))
-                .catch(err => console.error('[XTB Backend] Background refresh error:', err));
-            } catch (e) {
-              // Ignore errors in background refresh
-            }
-          }, 1000);
-          
-          return res.json({
-            status: true,
-            tradeOrderNumber: tradeOrderNumber,
-            hedgeId: newHedge[0]?.id
-          });
-        } catch (dbError) {
-          console.error(`[XTB Backend][${requestId}] Database error:`, dbError);
-          // Still return success even if DB save fails
-          return res.json({
-            status: true,
-            tradeOrderNumber: tradeOrderNumber,
-            warning: "Trade placed but database update failed"
-          });
-        }
-      } else {
-        return res.status(500).json({ 
-          error: 'Trade placed but no order number returned'
+      // Execute the trade by forwarding to external Flask server
+      try {
+        // Login first - essential for authorization
+        const loginResponse = await fetch('http://3.147.6.168/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 17535100, 
+            password: "GuiZarHoh2711!"
+          }),
+          signal: AbortSignal.timeout(10000)
         });
+
+        if (!loginResponse.ok) {
+          throw new Error(`Login failed with status ${loginResponse.status}`);
+        }
+
+        const loginData = await loginResponse.json();
+        if (!loginData.status) {
+          throw new Error(loginData.errorDescr || 'Login failed');
+        }
+        
+        // Execute trade with consistent command structure
+        const commandData = {
+          commandName: "tradeTransaction",
+          arguments: {
+            tradeTransInfo: {
+              cmd: tradeDirection === 'buy' ? 0 : 1,
+              symbol: symbol,
+              volume: volume,
+              price: 0.0, // Market execution
+              type: 0,     // Open position
+              order: 0,    // New order
+              customComment: `Hedgi-${requestId}` // Add request ID to help tracking
+            }
+          }
+        };
+
+        const tradeResponse = await fetch('http://3.147.6.168/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(commandData),
+          signal: AbortSignal.timeout(15000)
+        });
+
+        if (!tradeResponse.ok) {
+          throw new Error(`Flask server responded with status: ${tradeResponse.status}`);
+        }
+
+        const apiResponse = await tradeResponse.json();
+        console.log(`[XTB Backend][${requestId}] Trade response:`, apiResponse);
+
+        if (!apiResponse.status) {
+          throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
+        }
+
+        // Extract the order number from response
+        const tradeOrderNumber = apiResponse.returnData?.order;
+        if (!tradeOrderNumber) {
+          throw new Error('No valid order number returned from XTB API');
+        }
+
+        // Save successful trade to database
+        const newHedge = await db.insert(hedges).values({
+          userId: req.user.id,
+          baseCurrency: baseCurrency,
+          targetCurrency: targetCurrency,
+          amount: volume * 100000 * (tradeDirection === 'buy' ? 1 : -1),
+          rate: 0.0, // Will be updated with real rate from status check
+          duration: duration || 30,
+          status: 'active',
+          tradeOrderNumber: tradeOrderNumber,
+          tradeStatus: 'open'
+        }).returning();
+
+        console.log(`[XTB Backend][${requestId}] Saved hedge to database: ID=${newHedge[0]?.id}, OrderNumber=${tradeOrderNumber}`);
+        
+        // Return a successful response in the format expected by the client
+        return res.json({
+          status: true,
+          returnData: {
+            order: tradeOrderNumber
+          },
+          hedgeId: newHedge[0]?.id
+        });
+        
+      } catch (tradeError) {
+        console.error(`[XTB Backend][${requestId}] Error executing trade:`, tradeError);
+        throw tradeError; // Re-throw to be caught by the outer catch
       }
     } catch (error) {
       console.error('[XTB Backend] Error executing hedge:', error);
       return res.status(500).json({ 
-        error: 'Failed to execute hedge', 
-        details: error instanceof Error ? error.message : String(error)
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });

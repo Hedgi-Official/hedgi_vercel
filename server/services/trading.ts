@@ -1,12 +1,23 @@
 import fetch from 'node-fetch';
 
-// Define interfaces for API interactions
+// Define consistent types for API interactions
 interface XTBResponse {
-  status?: boolean;
+  status: boolean;
   returnData?: any;
   error?: string;
   errorDescr?: string;
   message?: string;
+}
+
+interface SymbolData {
+  bid: number;
+  ask: number;
+  high: number;
+  low: number;
+  time: number;
+  swapLong: number;
+  swapShort: number;
+  [key: string]: any;
 }
 
 interface TradeTransInfo {
