@@ -94,11 +94,13 @@ export class TradingService {
     try {
       console.log('[Trading Service] Attempting login...');
 
+      // Exactly match the format shown in the example:
+      // curl -X POST -H "Content-Type: application/json" -d '{"userId": 17535100, "password": "GuiZarHoh2711!"}'
       const response = await fetch(`${XTB_SERVER_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: 17535100,  // Use number format as per example
+          userId: 17535100,  // Use number format as required by API
           password: "GuiZarHoh2711!"
         })
       });
@@ -108,6 +110,8 @@ export class TradingService {
         return false;
       }
 
+      // Parse the response exactly as shown in the example:
+      // {"status": true, "streamSessionId": "005056fffeb9ce40-00060436-04e45802-85fa7c837b6a54da-15996a54"}
       const data = await response.json() as XTBResponse;
       console.log('[Trading Service] Login response:', data);
 
@@ -159,25 +163,44 @@ export class TradingService {
 
       console.log(`[Trading Service] Opening ${isBuy ? 'BUY' : 'SELL'} trade for ${symbol}, volume ${volume}`);
 
-      // Follow exact format from example
+      // Exactly match the format from the example:
+      // curl -X POST -H "Content-Type: application/json" \
+      // -d '{"commandName": "tradeTransaction", "arguments": {"tradeTransInfo": {"cmd": 0, "symbol": "EURUSD", "volume": 0.2, "price": 1.0, "offset": 0, "order": 0}}}' \
+      // "http://3.147.6.168/command"
+      
+      // Use a dynamic object to avoid TypeScript property errors
+      const tradeTransInfo: any = {
+        cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
+        symbol: symbol,
+        volume: volume,         // Volume is already in lots (0.1 = 10,000 units)
+        price: 0,               // 0 for market price
+        offset: 0,
+        order: 0                // 0 for new trades
+      };
+      
+      // Add customComment only if provided (not in the minimal example)
+      if (customComment) {
+        tradeTransInfo.customComment = customComment;
+      }
+      
+      // Add type only if needed (not in the minimal example)
+      if (true) { // Always include type for consistency 
+        tradeTransInfo.type = 0; // 0 for open
+      }
+      
+      const tradeRequest = {
+        commandName: "tradeTransaction",
+        arguments: {
+          tradeTransInfo: tradeTransInfo
+        }
+      };
+      
+      console.log(`[Trading Service] Sending trade request:`, JSON.stringify(tradeRequest));
+      
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo: {
-              cmd: isBuy ? 0 : 1,     // 0 for BUY, 1 for SELL
-              customComment: customComment || `Hedgi ${isBuy ? 'BUY' : 'SELL'} ${symbol}`,
-              symbol: symbol,
-              volume: volume,         // Volume is already in lots (0.1 = 10,000 units)
-              price: 0,               // 0 for market price
-              offset: 0,
-              order: 0,               // 0 for new trades
-              type: 0                 // 0 for open
-            }
-          }
-        })
+        body: JSON.stringify(tradeRequest)
       });
 
       if (!response.ok) {
@@ -235,26 +258,35 @@ export class TradingService {
 
       console.log(`[Trading Service] Closing trade for order #${orderNumber} (${symbol})`);
       
-      // Follow exact format from example for closing trades
+      // Create a close trade request following exact format needed
+      // Use a dynamic object to avoid TypeScript property errors
+      const tradeTransInfo: any = {
+        cmd: isBuy ? 0 : 1,      // Same direction as opening trade 
+        symbol: symbol,
+        order: orderNumber,      // Order number of the trade to close
+        volume: volume,          // Same volume as opening trade
+        price: 0,                // Market price
+        type: 2                  // 2 for close
+      };
+      
+      // Only add optional fields if they have values
+      if (customComment) {
+        tradeTransInfo.customComment = customComment;
+      }
+      
+      const closeRequest = {
+        commandName: "tradeTransaction",
+        arguments: {
+          tradeTransInfo: tradeTransInfo
+        }
+      };
+      
+      console.log(`[Trading Service] Sending close request:`, JSON.stringify(closeRequest));
+      
       const response = await fetch(`${XTB_SERVER_URL}/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commandName: "tradeTransaction",
-          arguments: {
-            tradeTransInfo: {
-              cmd: isBuy ? 0 : 1,      // Same direction as opening trade
-              customComment: customComment, 
-              expiration: 0,
-              offset: 0,
-              order: orderNumber,      // Order number of the trade to close
-              price: 0,                // Market price
-              symbol: symbol,
-              type: 2,                 // 2 for close
-              volume: volume           // Same volume as opening trade
-            }
-          }
-        })
+        body: JSON.stringify(closeRequest)
       });
 
       if (!response.ok) {
