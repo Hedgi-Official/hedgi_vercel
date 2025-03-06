@@ -15,8 +15,8 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const { t } = useTranslation();
   const [selectedPair, setSelectedPair] = useState("USDBRL");
-  const { exchangeRates, isLoading, error } = useXTB();
-  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
+  const { exchangeRates, isLoading, error, refetch } = useXTB();
+  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError, refetch: refetchFBS } = useFBSRate(selectedPair);
 
   const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
 
@@ -43,6 +43,14 @@ export function ExchangeRatesWidget() {
       </div>
     );
   };
+
+  // Refresh rates every 20 seconds
+  useInterval(() => {
+    if (!isLoading) {
+      refetch();
+      refetchFBS();
+    }
+  }, 20000);
 
   return (
     <Card className="bg-background shadow-lg">
