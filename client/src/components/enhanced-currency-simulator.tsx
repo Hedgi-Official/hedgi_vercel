@@ -383,18 +383,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </div>
 
-              {showGraph && (
-                <div className="pt-4">
-                  <CurrencyChart
-                    data={{
-                      historicalRates: simulation.historicalRates,
-                      breakEvenRate: simulation.breakEvenRate,
-                      currentRate: simulation.rate,
-                      tradeDirection: tradeDirection
-                    }}
-                  />
-                </div>
-              )}
+              
 
               {onPlaceHedge && (
                 <Button

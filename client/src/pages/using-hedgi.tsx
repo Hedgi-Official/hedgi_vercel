@@ -107,23 +107,7 @@ export default function UsingHedgi() {
             </div>
           </div>
           
-          <div className="mt-16 mb-12 text-center max-w-2xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-4">Why Use Hedgi's Tools?</h2>
-            <ul className="space-y-4 text-left">
-              <li className="flex items-start">
-                <ChevronRight className="h-5 w-5 text-primary mt-1 mr-2 flex-shrink-0" />
-                <p><span className="font-medium">Simple Interface:</span> Our currency simulator offers intuitive controls with helpful tooltips explaining each option.</p>
-              </li>
-              <li className="flex items-start">
-                <ChevronRight className="h-5 w-5 text-primary mt-1 mr-2 flex-shrink-0" />
-                <p><span className="font-medium">AI Guidance:</span> For those who prefer conversation, our AI assistant can walk you through setting up your hedge in natural language.</p>
-              </li>
-              <li className="flex items-start">
-                <ChevronRight className="h-5 w-5 text-primary mt-1 mr-2 flex-shrink-0" />
-                <p><span className="font-medium">Real-time Analysis:</span> Whether using the simulator or AI, get immediate feedback on hedging costs and break-even points.</p>
-              </li>
-            </ul>
-          </div>
+          
         </main>
       </div>
     </TooltipProvider>
