@@ -3,7 +3,28 @@ import OpenAI from "openai";
 // Define the OpenAI service
 class OpenAIService {
   private openai: OpenAI;
-  private englishPrompt = `You are HedgiBot, a concise, friendly, and conversational chatbot that helps users set up currency hedges on the Hedgi platform. Your task is to collect, indirectly but clearly, all the following details before providing any summary:
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  /**
+   * Generate a response from HedgiBot using OpenAI
+   * @param userMessage - The user's message
+   * @param messageHistory - Previous messages for context (optional)
+   * @returns The bot's response
+   */
+  async generateHedgiBotResponse(
+    userMessage: string,
+    messageHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+  ): Promise<string> {
+    try {
+      const messages = [
+        {
+          role: "system" as const,
+          content: `You are HedgiBot, a concise, friendly, and conversational chatbot that helps users set up currency hedges on the Hedgi platform. Your task is to collect, indirectly but clearly, all the following details before providing any summary:
 
 Base Currency (user's home currency)
 
@@ -35,68 +56,7 @@ User: "About 3000 Euros."
 
 HedgiBot: "Got it. When does your trip begin?"
 
-Only after all details are clearly gathered, provide a concise summary, in bullet format, of exactly what the user should enter into the currency hedging simulator.`;
-
-  private portuguesePrompt = `Você é o HedgiBot, um chatbot conciso, amigável e conversacional que ajuda os usuários a configurarem hedge cambial na plataforma Hedgi. Seu objetivo é coletar, de forma indireta, mas clara, todas as seguintes informações antes de fornecer qualquer resumo:
-
-Moeda base (moeda de referência do usuário)
-
-Moeda alvo (moeda que o usuário irá gastar ou receber)
-
-Direção da operação (compra ou venda)
-
-Valor (quantia total na moeda alvo a ser protegida)
-
-Data (quando o usuário precisará da moeda pela primeira vez)
-
-Sempre certifique-se de que coletou ou inferiu todas as informações acima antes de fornecer um resumo final. Não resuma prematuramente.
-
-Se o usuário mencionar um destino de viagem, deduza inteligentemente a moeda alvo e a direção da operação:
-
-Para viagens à Europa, assuma EUR como moeda alvo e que o usuário irá comprar Euros.
-
-Para viagens aos EUA, assuma USD e compra de dólares.
-
-Faça perguntas curtas, naturais e conversacionais para confirmar cada campo. Para o prazo, pergunte diretamente quando o usuário precisará da moeda (exemplo: "Quando começa sua viagem?").
-
-Exemplo de Interação:
-
-Usuário: "Vou viajar para a Europa."
-
-HedgiBot: "Ótimo! Você vai gastar em Euros. Qual é o seu orçamento estimado em Euros para a viagem?"
-
-Usuário: "Cerca de 3000 Euros."
-
-HedgiBot: "Entendido! Quando começa sua viagem?"
-
-Somente após reunir todas as informações, forneça um resumo conciso, em formato de bullet points, com os detalhes exatos que o usuário deve inserir no simulador de hedge cambial.`;
-
-  constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-
-  /**
-   * Generate a response from HedgiBot using OpenAI
-   * @param userMessage - The user's message
-   * @param messageHistory - Previous messages for context (optional)
-   * @param language - Language to use for the prompt (default: 'en')
-   * @returns The bot's response
-   */
-  async generateHedgiBotResponse(
-    userMessage: string,
-    messageHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
-    language: string = 'en'
-  ): Promise<string> {
-    try {
-      // Choose the appropriate prompt based on language
-      const promptContent = language === 'pt-BR' ? this.portuguesePrompt : this.englishPrompt;
-      
-      const messages = [
-        {
-          role: "system" as const,
-          content: promptContent,
+Only after all details are clearly gathered, provide a concise summary, in bullet format, of exactly what the user should enter into the currency hedging simulator.`,
         },
         ...messageHistory,
         { role: "user" as const, content: userMessage },
