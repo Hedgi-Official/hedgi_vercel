@@ -129,14 +129,14 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       };
 
       console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
-      
+
       // Call the parent component's handler and await completion
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
-      
+
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
-      
+
       console.log('[CurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
@@ -186,7 +186,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
                 <p>{t('simulator.buyHelp')}</p>
               </TooltipContent>
             </Tooltip>
@@ -216,7 +216,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
                 <p>{t('simulator.sellHelp')}</p>
               </TooltipContent>
             </Tooltip>
@@ -242,7 +242,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
               <p>{tradeDirection === 'buy' ?
                 `${t('simulator.buyHelp')} ${targetCurrency}` :
                 `${t('simulator.sellHelp')} ${baseCurrency}`} {t('simulator.inFuture')}
@@ -264,7 +264,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
               <p>{t('simulator.amountHelp')}</p>
             </TooltipContent>
           </Tooltip>
@@ -283,7 +283,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
               <p>{t('simulator.durationHelp')}</p>
             </TooltipContent>
           </Tooltip>

@@ -321,7 +321,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-4 max-w-sm bg-primary/10 border border-primary/20">
+            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
               <div className="flex flex-col items-center text-center">
                 <Clock className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Hedge Duration</h3>
