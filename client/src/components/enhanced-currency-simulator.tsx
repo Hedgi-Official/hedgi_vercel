@@ -242,9 +242,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="space-y-2">
+              <div className="space-y-2 cursor-pointer">
                 <label className="text-sm font-medium flex items-center">
-                  <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+                  <ArrowUpDown className="mr-2 h-5 w-5 text-primary" />
                   {t('simulator.tradeDirection')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -263,7 +263,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right" className="p-4 max-w-sm bg-background border border-primary/20">
+            <TooltipContent side="right" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
               <div className="flex flex-col items-center text-center">
                 <ArrowUpDown className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Trade Direction</h3>
@@ -278,9 +278,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="space-y-2">
+              <div className="space-y-2 cursor-pointer">
                 <label className="text-sm font-medium flex items-center">
-                  <DollarSign className="mr-2 h-4 w-4 text-primary" />
+                  <DollarSign className="mr-2 h-5 w-5 text-primary" />
                   {t('simulator.amount')} {targetCurrency}
                 </label>
                 <Input
@@ -293,7 +293,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="left" className="p-4 max-w-sm bg-background border border-primary/20">
+            <TooltipContent side="left" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
               <div className="flex flex-col items-center text-center">
                 <DollarSign className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Amount to Hedge</h3>
