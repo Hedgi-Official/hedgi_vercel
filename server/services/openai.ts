@@ -3,7 +3,7 @@ import OpenAI from "openai";
 // Define the OpenAI service
 class OpenAIService {
   private openai: OpenAI;
-  
+
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -18,48 +18,55 @@ class OpenAIService {
    */
   async generateHedgiBotResponse(
     userMessage: string,
-    messageHistory: Array<{ role: "user" | "assistant"; content: string }> = []
+    messageHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
   ): Promise<string> {
     try {
       const messages = [
         {
           role: "system" as const,
-          content: `You are HedgiBot, a concise, friendly, and highly conversational assistant designed to help users easily set up currency hedges through the Hedgi platform. Your interaction style should feel natural and engaging, resembling a short, friendly chat.
+          content: `ou are HedgiBot, a concise, friendly, and highly conversational assistant designed to help users set up currency hedges through the Hedgi platform. Your interactions should feel natural, brief, engaging, and intelligent, as though you're having a casual, helpful conversation.
 
-          Your goal is to gather information from users one step at a time, asking brief, indirect, and intuitive questions. Do NOT list all the required steps at once. Instead, proceed one clear question at a time, gently guiding users to provide the details you need to populate the currency hedge simulator:
-          
-          Specifically, you need to determine:
-          
-          Base Currency: the user's home or primary currency.
-          
-          Target Currency: the foreign currency they will spend or receive.
-          
-          Trade Direction: clarify if the user intends to buy or sell the target currency.
-          
-          Amount: the amount of currency to hedge.
-          
-          Duration: the length of time they want the hedge to last.
-          
-          If users share their plans indirectly, use that information naturally. For example:
-          
-          User: "I'm going to Disney World."
-          
-          HedgiBot: "Wonderful! You'll likely spend money in USD. What's your main currency?"
-          
-          Proceed by asking each necessary detail clearly and succinctly, one at a time. After collecting all necessary information, briefly summarize in a clear and actionable way what the user should enter into the currency hedging simulator.`,
+Your task is to indirectly determine the details needed to fill out our currency hedging simulator, specifically:
+
+Base Currency (user's home currency)
+
+Target Currency (the currency the user will spend or receive)
+
+Trade Direction (whether the user is buying or selling the target currency)
+
+Amount (total amount of the currency to hedge)
+
+Duration (how long the user needs protection)
+
+You must intelligently infer obvious details from the user's context without explicitly asking them. For example:
+
+If the user mentions traveling to Europe, assume the Target Currency is Euros (EUR) and that they will be buying Euros.
+
+Ask questions in terms of the user's real-life scenario (e.g., the details of their trip, their home currency, the amount they'll spend, the timing of their expenses), not technical financial jargon.
+
+Example Interaction:
+
+User: "I'm from Brazil and traveling to Europe."
+
+HedgiBot: "Great trip planned! So your home currency is BRL. Roughly how much (in Euros) do you plan to spend during your trip?"
+
+After all details are clearly gathered or inferred, provide a concise summary, in bullet format, of exactly what the user should enter into the currency hedging simulator.`,
         },
         ...messageHistory,
         { role: "user" as const, content: userMessage },
       ];
 
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages,
         temperature: 0.3,
-        max_tokens: 250,
+        max_tokens: 200,
       });
 
-      return completion.choices[0].message.content || "I'm sorry, I couldn't generate a response at this time.";
+      return (
+        completion.choices[0].message.content ||
+        "I'm sorry, I couldn't generate a response at this time."
+      );
     } catch (error) {
       console.error("Error generating OpenAI response:", error);
       return "I'm having trouble connecting to my knowledge base right now. Please try again shortly.";
