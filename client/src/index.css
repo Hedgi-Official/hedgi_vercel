@@ -11,3 +11,25 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Markdown content styling */
+.markdown-content strong {
+  font-weight: bold;
+}
+
+.markdown-content {
+  white-space: pre-line;
+}
+
+.markdown-content ul, 
+.markdown-content ol {
+  padding-left: 1.5rem;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}

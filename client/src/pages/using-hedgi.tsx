@@ -143,7 +143,19 @@ export default function UsingHedgi() {
                                 : 'bg-muted'
                             }`}
                           >
-                            {msg.content}
+                            {msg.type === 'bot' ? (
+                              <div className="markdown-content whitespace-pre-line">
+                                {msg.content.split('**').map((part, i) => 
+                                  i % 2 === 0 ? (
+                                    <span key={i}>{part}</span>
+                                  ) : (
+                                    <strong key={i}>{part}</strong>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              msg.content
+                            )}
                           </div>
                         </div>
                       ))}
