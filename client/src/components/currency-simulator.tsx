@@ -163,179 +163,177 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Globe className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.targetCurrency')}
-              </label>
-              <Select
-                value={targetCurrency}
-                onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <SelectItem
-                      key={currency}
-                      value={currency}
-                      disabled={currency === baseCurrency}
-                    >
-                      {currency}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Globe className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.targetCurrency')}
+            </label>
+            <Select
+              value={targetCurrency}
+              onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <SelectItem
+                    key={currency}
+                    value={currency}
+                    disabled={currency === baseCurrency}
+                  >
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Briefcase className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.baseCurrency')}
+            </label>
+            <Select
+              value={baseCurrency}
+              onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <SelectItem
+                    key={currency}
+                    value={currency}
+                    disabled={currency === targetCurrency}
+                  >
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center">
+            <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+            {t('simulator.tradeDirection')}
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+              onClick={() => setTradeDirection('buy')}
+            >
+              {t('simulator.buy')} {targetCurrency}
+            </Button>
+            <Button
+              variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+              onClick={() => setTradeDirection('sell')}
+            >
+              {t('simulator.sell')} {targetCurrency}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center">
+            <DollarSign className="mr-2 h-4 w-4 text-primary" />
+            {t('simulator.amount')} {targetCurrency}
+          </label>
+          <Input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            min={1000}
+            max={1000000}
+            placeholder={t('simulator.amountField')}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center">
+            <Clock className="mr-2 h-4 w-4 text-primary" />
+            {t('simulator.durationLabel').replace('{days}', duration.toString())}
+          </label>
+          <Slider
+            value={[duration]}
+            onValueChange={([value]) => setDuration(value)}
+            max={30}
+            step={1}
+          />
+        </div>
+
+        <Button onClick={handleSimulate} className="w-full">
+          {t('simulator.calculateCost')}
+        </Button>
+
+        {simulation && (
+          <div className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                <p className="text-2xl font-bold">
+                  {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {tradeDirection === 'buy' ?
+                    `Buy ${targetCurrency} with ${baseCurrency}` :
+                    `Sell ${targetCurrency} for ${baseCurrency}`}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                <p className="text-2xl font-bold">
+                  {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {(() => {
+                    const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                    const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                    return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                  })()}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.baseCurrency')}
-              </label>
-              <Select
-                value={baseCurrency}
-                onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <SelectItem
-                      key={currency}
-                      value={currency}
-                      disabled={currency === targetCurrency}
-                    >
-                      {currency}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.tradeDirection')}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                onClick={() => setTradeDirection('buy')}
-              >
-                {t('simulator.buy')} {targetCurrency}
-              </Button>
-              <Button
-                variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                onClick={() => setTradeDirection('sell')}
-              >
-                {t('simulator.sell')} {targetCurrency}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <DollarSign className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.amount')} {targetCurrency}
-            </label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              min={1000}
-              max={1000000}
-              placeholder={t('simulator.amountField')}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <Clock className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.durationLabel').replace('{days}', duration.toString())}
-            </label>
-            <Slider
-              value={[duration]}
-              onValueChange={([value]) => setDuration(value)}
-              max={30}
-              step={1}
-            />
-          </div>
-
-          <Button onClick={handleSimulate} className="w-full">
-            {t('simulator.calculateCost')}
-          </Button>
-
-          {simulation && (
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tradeDirection === 'buy' ?
-                      `Buy ${targetCurrency} with ${baseCurrency}` :
-                      `Sell ${targetCurrency} for ${baseCurrency}`}
-                  </p>
+              <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                <div className="flex justify-between font-medium">
+                  <span>{t('simulator.totalCost')}</span>
+                  <span>
+                    {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
+                  </span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
-                  </p>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>{t('simulator.businessDays')}</span>
+                  <span>{simulation.businessDays} {t('simulator.days')}</span>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between font-medium">
-                    <span>{t('simulator.totalCost')}</span>
-                    <span>
-                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{t('simulator.businessDays')}</span>
-                    <span>{simulation.businessDays} {t('simulator.days')}</span>
-                  </div>
-                </div>
-              </div>
-
-              
-
-              {onPlaceHedge && (
-                <Button
-                  onClick={handlePlaceHedge}
-                  className="w-full"
-                  variant="outline"
-                  disabled={isPlacingHedge}
-                >
-                  {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                  {hedgeError && (
-                    <span className="ml-2 text-red-500">
-                      {hedgeError}
-                    </span>
-                  )}
-                </Button>
-              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {onPlaceHedge && (
+              <Button
+                onClick={handlePlaceHedge}
+                className="w-full"
+                variant="outline"
+                disabled={isPlacingHedge}
+              >
+                {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                {hedgeError && (
+                  <span className="ml-2 text-red-500">
+                    {hedgeError}
+                  </span>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
