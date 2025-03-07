@@ -207,8 +207,8 @@ const ptBR = {
       tradeOrderNumber: 'Ordem de Negociação'
     },
     'What is a Hedge?': 'O que é um Hedge?',
-    'What is Hedging?': 'O que é Hedge?',
-    'Using Hedgi': 'Usando o Hedgi',
+    'What is Hedging?': 'O que é Hedging?',
+    'Using Hedgi': 'Usando a Hedgi',
     'About Us': 'Sobre Nós',
     'Page Under Construction': 'Página Em Construção',
     'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.'
