@@ -15,6 +15,7 @@ import WhatIsHedge from "@/pages/what-is-hedge";
 import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
+import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -39,7 +40,9 @@ function Router() {
       <Route path="/what-is-hedge">
         {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
       </Route>
-      <Route path="/using-hedgi" component={UsingHedgi} />
+      <Route path="/using-hedgi">
+        {currentLanguage === "pt-BR" ? <UsingHedgiPTBR /> : <UsingHedgi />}
+      </Route>
       <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>

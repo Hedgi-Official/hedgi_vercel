@@ -10,7 +10,7 @@ const sessionMessages: Record<string, Array<{ role: "user" | "assistant"; conten
 // Endpoint to get a chat response from HedgiBot
 router.post("/api/chat", async (req: Request, res: Response) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, language = 'en' } = req.body;
     
     if (!message) {
       return res.status(400).json({ 
@@ -22,8 +22,8 @@ router.post("/api/chat", async (req: Request, res: Response) => {
     // Get or initialize session message history
     const messageHistory = sessionMessages[sessionId] || [];
     
-    // Generate a response from OpenAI
-    const botResponse = await openaiService.generateHedgiBotResponse(message, messageHistory);
+    // Generate a response from OpenAI with language preference
+    const botResponse = await openaiService.generateHedgiBotResponse(message, messageHistory, language);
     
     // Update session message history
     if (!sessionMessages[sessionId]) {
