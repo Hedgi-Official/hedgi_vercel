@@ -9,13 +9,6 @@ import secondaryRateRouter from './routes/secondary-rate';
 import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
 
-import OpenAI from 'openai';
-
-// Initialize OpenAI with API key from environment
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
