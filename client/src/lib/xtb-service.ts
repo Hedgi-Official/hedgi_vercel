@@ -14,16 +14,13 @@ export class XTBService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 2000;
-  private isReconnecting = false;
 
   constructor(
-    // Use REST API fallback instead of direct WebSocket connection for better compatibility
-    public useRestApiFallback = true,
     public serverUrl = 'wss://ws.xtb.com/demo',
     public streamUrl = 'wss://ws.xtb.com/demoStream'
   ) {
-    // Initialize connection with a delay to prevent connection issues during page load
-    setTimeout(() => this.initializeConnection(), 1000);
+    // Initialize connection immediately
+    this.initializeConnection();
   }
 
   private async initializeConnection() {
@@ -160,50 +157,12 @@ export class XTBService {
   }
 
   async getSymbolData(symbol: string): Promise<XTBResponse> {
-    // First try to get data from our backend API if direct WebSocket connection fails
-    if (this.useRestApiFallback || !this.isConnected) {
-      try {
-        console.log('[XTB] Fetching symbol data from backend API for:', symbol);
-        const response = await fetch('/api/xtb/rates');
-        
-        if (response.ok) {
-          const rates = await response.json();
-          const symbolData = rates.find((rate: any) => rate.symbol === symbol);
-          
-          if (symbolData) {
-            console.log('[XTB] Symbol data from API for', symbol, ':', symbolData);
-            return {
-              status: true,
-              returnData: {
-                symbol: symbolData.symbol,
-                bid: symbolData.bid,
-                ask: symbolData.ask,
-                time: symbolData.timestamp,
-                swapLong: Math.abs(symbolData.swapLong || 0),
-                swapShort: Math.abs(symbolData.swapShort || 0)
-              }
-            };
-          }
-        }
-      } catch (error) {
-        console.error('[XTB] Error fetching symbol data from API:', error);
-        // Continue to try direct connection if API fails
-      }
-    }
-
-    // Fallback to direct WebSocket connection if API fails or useRestApiFallback is false
     if (!this.isConnected) {
-      try {
-        await this.initializeConnection();
-      } catch (error) {
-        console.error('[XTB] Failed to initialize connection:', error);
-        // Return a simulated response with fallback data
-        return this.getFallbackData(symbol);
-      }
+      await this.initializeConnection();
     }
 
     try {
-      console.log('[XTB] Fetching symbol data via WebSocket for:', symbol);
+      console.log('[XTB] Fetching symbol data for:', symbol);
       const response = await this.sendCommand('getSymbol', { symbol });
 
       if (!response.status) {
@@ -218,36 +177,9 @@ export class XTBService {
       console.log('[XTB] Symbol data response for', symbol, ':', response);
       return response;
     } catch (error) {
-      console.error('[XTB] Error fetching symbol data via WebSocket:', error);
-      // Return fallback data if WebSocket fails
-      return this.getFallbackData(symbol);
+      console.error('[XTB] Error fetching symbol data for', symbol, ':', error);
+      throw error;
     }
-  }
-  
-  // Helper method to generate fallback data when all methods fail
-  private getFallbackData(symbol: string): XTBResponse {
-    console.log('[XTB] Using fallback data for', symbol);
-    
-    // Default fallback rates
-    const fallbackRates: Record<string, any> = {
-      'USDBRL': { bid: 5.67, ask: 5.69, swapLong: 0.0002, swapShort: 0.0001 },
-      'EURUSD': { bid: 1.08, ask: 1.09, swapLong: 0.0001, swapShort: 0.0002 },
-      'USDMXN': { bid: 16.75, ask: 16.78, swapLong: 0.0001, swapShort: 0.0001 }
-    };
-    
-    const rate = fallbackRates[symbol] || { bid: 1.0, ask: 1.01, swapLong: 0.0001, swapShort: 0.0001 };
-    
-    return {
-      status: true,
-      returnData: {
-        symbol,
-        bid: rate.bid,
-        ask: rate.ask,
-        time: Date.now(),
-        swapLong: rate.swapLong,
-        swapShort: rate.swapShort
-      }
-    };
   }
 
   async checkStreamConnection(): Promise<boolean> {
