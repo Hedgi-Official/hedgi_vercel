@@ -12,6 +12,7 @@ import { calculateBusinessDays } from '@/lib/utils';
 import { xtbService } from '@/lib/xtb-service';
 import { useToast } from '@/hooks/use-toast';
 import type { Hedge } from '@db/schema';
+import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 
 interface Props {
   showGraph?: boolean;
@@ -157,14 +158,20 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     <TooltipProvider>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
-          <CardTitle>{t('simulator.title')}</CardTitle>
+          <CardTitle className="flex items-center">
+            <BarChart2 className="mr-2 h-5 w-5" />
+            {t('simulator.title')}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('simulator.targetCurrency')}</label>
+                  <label className="text-sm font-medium flex items-center">
+                    <Globe className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.targetCurrency')}
+                  </label>
                   <Select
                     value={targetCurrency}
                     onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
@@ -194,7 +201,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('simulator.baseCurrency')}</label>
+                  <label className="text-sm font-medium flex items-center">
+                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.baseCurrency')}
+                  </label>
                   <Select
                     value={baseCurrency}
                     onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
@@ -225,7 +235,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.tradeDirection')}</label>
+                <label className="text-sm font-medium flex items-center">
+                  <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+                  {t('simulator.tradeDirection')}
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={tradeDirection === 'buy' ? 'default' : 'outline'}
@@ -253,7 +266,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('simulator.amount')} {targetCurrency}</label>
+                <label className="text-sm font-medium flex items-center">
+                  <DollarSign className="mr-2 h-4 w-4 text-primary" />
+                  {t('simulator.amount')} {targetCurrency}
+                </label>
                 <Input
                   type="number"
                   value={amount}
@@ -272,7 +288,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label className="text-sm font-medium flex items-center">
+                  <Clock className="mr-2 h-4 w-4 text-primary" />
                   {t('simulator.durationLabel').replace('{days}', duration.toString())}
                 </label>
                 <Slider
