@@ -5,6 +5,7 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+import chatRouter from './routes/chat';
 // Import XTB needs but don't import the router - we'll define routes directly
 import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
