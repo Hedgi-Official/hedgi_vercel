@@ -155,155 +155,116 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   };
 
   return (
-    <TooltipProvider>
-      <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BarChart2 className="mr-2 h-5 w-5" />
-            {t('simulator.title')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <BarChart2 className="mr-2 h-5 w-5" />
+          {t('simulator.title')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center">
-                    <Globe className="mr-2 h-4 w-4 text-primary" />
-                    {t('simulator.targetCurrency')}
-                  </label>
-                  <Select
-                    value={targetCurrency}
-                    onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem
-                          key={currency}
-                          value={currency}
-                          disabled={currency === baseCurrency}
-                        >
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
-                <p>{t('simulator.buyHelp')}</p>
-              </TooltipContent>
-            </Tooltip>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Globe className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.targetCurrency')}
+              </label>
+              <Select
+                value={targetCurrency}
+                onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <SelectItem
+                      key={currency}
+                      value={currency}
+                      disabled={currency === baseCurrency}
+                    >
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                    {t('simulator.baseCurrency')}
-                  </label>
-                  <Select
-                    value={baseCurrency}
-                    onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem
-                          key={currency}
-                          value={currency}
-                          disabled={currency === targetCurrency}
-                        >
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
-                <p>{t('simulator.sellHelp')}</p>
-              </TooltipContent>
-            </Tooltip>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.baseCurrency')}
+              </label>
+              <Select
+                value={baseCurrency}
+                onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <SelectItem
+                      key={currency}
+                      value={currency}
+                      disabled={currency === targetCurrency}
+                    >
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
-                  {t('simulator.tradeDirection')}
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('buy')}
-                  >
-                    {t('simulator.buy')} {targetCurrency}
-                  </Button>
-                  <Button
-                    variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('sell')}
-                  >
-                    {t('simulator.sell')} {targetCurrency}
-                  </Button>
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
-              <p>{tradeDirection === 'buy' ?
-                `${t('simulator.buyHelp')} ${targetCurrency}` :
-                `${t('simulator.sellHelp')} ${baseCurrency}`} {t('simulator.inFuture')}
-              </p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.tradeDirection')}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                onClick={() => setTradeDirection('buy')}
+              >
+                {t('simulator.buy')} {targetCurrency}
+              </Button>
+              <Button
+                variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                onClick={() => setTradeDirection('sell')}
+              >
+                {t('simulator.sell')} {targetCurrency}
+              </Button>
+            </div>
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <DollarSign className="mr-2 h-4 w-4 text-primary" />
-                  {t('simulator.amount')} {targetCurrency}
-                </label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                  min={1000}
-                  max={1000000}
-                  placeholder={t('simulator.amountField')}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
-              <p>{t('simulator.amountHelp')}</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.amount')} {targetCurrency}
+            </label>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              min={1000}
+              max={1000000}
+              placeholder={t('simulator.amountField')}
+            />
+          </div>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-primary" />
-                  {t('simulator.durationLabel').replace('{days}', duration.toString())}
-                </label>
-                <Slider
-                  value={[duration]}
-                  onValueChange={([value]) => setDuration(value)}
-                  max={30}
-                  step={1}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
-              <p>{t('simulator.durationHelp')}</p>
-            </TooltipContent>
-          </Tooltip>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.durationLabel').replace('{days}', duration.toString())}
+            </label>
+            <Slider
+              value={[duration]}
+              onValueChange={([value]) => setDuration(value)}
+              max={30}
+              step={1}
+            />
+          </div>
 
           <Button onClick={handleSimulate} className="w-full">
             {t('simulator.calculateCost')}
@@ -375,7 +336,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
           )}
         </CardContent>
       </Card>
-    </TooltipProvider>
   );
 }
 
