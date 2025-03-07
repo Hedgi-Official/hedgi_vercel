@@ -100,8 +100,8 @@ const enUS = {
       'MXNBRL': 'MXN/BRL - Mexican Peso/Brazilian Real'
     },
     'What is a Hedge?': 'What is a Hedge?',
-    'What is Hedging?': 'What is Hedging?',
-    'Using Hedgi': 'Using Hedgi',
+    'What is Hedging?': 'O que é Hedging?',
+    'Using Hedgi': 'Usando a Hedgi',
     'About Us': 'About Us',
     'Page Under Construction': 'Page Under Construction',
     'Coming Soon': 'This page is under construction. Please check back later.'
