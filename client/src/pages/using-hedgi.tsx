@@ -36,15 +36,15 @@ export default function UsingHedgi() {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
+
     // Add user message
     setChatMessages(prev => [...prev, {type: 'user', content: message}]);
-    
+
     // Store current message and clear input
     const currentMessage = message;
     setMessage("");
     setIsLoading(true);
-    
+
     try {
       // Call the API
       const response = await fetch('/api/chat', {
@@ -57,13 +57,13 @@ export default function UsingHedgi() {
           sessionId: sessionId
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || 'Failed to get a response from HedgiBot');
       }
-      
+
       // Add bot response
       setChatMessages(prev => [
         ...prev, 
@@ -74,14 +74,14 @@ export default function UsingHedgi() {
       ]);
     } catch (error) {
       console.error('Error calling chat API:', error);
-      
+
       // Show error toast
       toast({
         title: "Chat Error",
         description: "Sorry, I couldn't connect to my knowledge base. Please try again.",
         variant: "destructive",
       });
-      
+
       // Add error message to chat
       setChatMessages(prev => [
         ...prev, 
@@ -95,19 +95,29 @@ export default function UsingHedgi() {
     }
   };
 
+  // Initial bot greeting
+  useEffect(() => {
+    if (chatMessages.length === 0) {
+      setChatMessages([{
+        type: 'bot',
+        content: "Hi there! I'm HedgiBot. How can I help you set up currency protection today?"
+      }]);
+    }
+  }, [chatMessages]);
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen flex flex-col bg-background">
         <Header showAuthButton />
-        
+
         <main className="flex-1 container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6 text-center">Using Hedgi</h1>
-          
+
           <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
             Hedgi offers two intuitive tools to help you effortlessly manage currency risks. 
             Use our simulator for direct interaction or chat with our AI assistant for guided help.
           </p>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             {/* Hedgi AI Chatbot */}
             <div className="order-2 lg:order-1">
@@ -147,7 +157,7 @@ export default function UsingHedgi() {
                       )}
                     </div>
                   </ScrollArea>
-                  
+
                   <div className="flex items-center mt-auto">
                     <Input
                       placeholder="Ask about currency hedging..."
@@ -173,7 +183,7 @@ export default function UsingHedgi() {
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Enhanced Currency Simulator with better tooltips */}
             <div className="order-1 lg:order-2">
               <div className="enhanced-tooltips">
@@ -181,8 +191,8 @@ export default function UsingHedgi() {
               </div>
             </div>
           </div>
-          
-          
+
+
         </main>
       </div>
     </TooltipProvider>
