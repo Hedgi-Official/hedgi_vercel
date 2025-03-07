@@ -155,7 +155,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   };
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={150}>
       <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -167,9 +167,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
           <div className="grid grid-cols-2 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="space-y-2">
+                <div className="space-y-2 cursor-pointer">
                   <label className="text-sm font-medium flex items-center">
-                    <Globe className="mr-2 h-4 w-4 text-primary" />
+                    <Globe className="mr-2 h-5 w-5 text-primary" />
                     {t('simulator.targetCurrency')}
                   </label>
                   <Select
@@ -193,7 +193,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="p-4 max-w-sm bg-background border border-primary/20">
+              <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
                 <div className="flex flex-col items-center text-center">
                   <Globe className="h-10 w-10 text-primary mb-2" />
                   <h3 className="font-bold text-lg mb-1">Target Currency</h3>
@@ -204,9 +204,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="space-y-2">
+                <div className="space-y-2 cursor-pointer">
                   <label className="text-sm font-medium flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                    <Briefcase className="mr-2 h-5 w-5 text-primary" />
                     {t('simulator.baseCurrency')}
                   </label>
                   <Select
@@ -230,7 +230,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="p-4 max-w-sm bg-background border border-primary/20">
+              <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
                 <div className="flex flex-col items-center text-center">
                   <Briefcase className="h-10 w-10 text-primary mb-2" />
                   <h3 className="font-bold text-lg mb-1">Base Currency</h3>
@@ -308,9 +308,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="space-y-2">
+              <div className="space-y-2 cursor-pointer pb-2">
                 <label className="text-sm font-medium flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-primary" />
+                  <Clock className="mr-2 h-5 w-5 text-primary" />
                   {t('simulator.durationLabel').replace('{days}', duration.toString())}
                 </label>
                 <Slider
@@ -321,7 +321,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="p-4 max-w-sm bg-background border border-primary/20">
+            <TooltipContent side="bottom" align="center" sideOffset={8} alignOffset={0} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
               <div className="flex flex-col items-center text-center">
                 <Clock className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Hedge Duration</h3>
