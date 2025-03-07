@@ -11,3 +11,41 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Enhanced simulator container with positioning */
+  .enhanced-simulator-container {
+    @apply relative;
+    height: 620px; /* Adjust based on the actual height of your CurrencySimulator */
+  }
+
+  /* Make the simulator controls transparent to clicks */
+  .enhanced-simulator-container > div:not(.absolute) {
+    @apply pointer-events-none;
+  }
+
+  /* But keep tooltips and hover elements responsive to mouse */
+  .enhanced-simulator-container .group:hover .hidden.group-hover\:block {
+    @apply pointer-events-auto;
+  }
+
+  /* Set proper z-index for the actual simulator */
+  .enhanced-simulator-container .absolute.inset-0 {
+    z-index: 5;
+  }
+  
+  /* Make sure the actual simulator inputs receive clicks */
+  .enhanced-simulator-container .absolute.inset-0 * {
+    @apply pointer-events-auto;
+  }
+  
+  /* Make sure the tooltip container has a higher z-index */
+  .enhanced-simulator-container .group:hover .hidden.group-hover\:block {
+    z-index: 30;
+  }
+
+  /* Ensure the chat messages display correctly */
+  .whitespace-pre-wrap {
+    word-break: break-word;
+  }
+}

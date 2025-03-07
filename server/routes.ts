@@ -5,6 +5,7 @@ import { db } from "@db";
 import { hedges } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
+import openaiRouter from './routes/openai';
 // Import XTB needs but don't import the router - we'll define routes directly
 import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
@@ -14,6 +15,7 @@ export function registerRoutes(app: Express): Server {
 
   // Register routes
   app.use(secondaryRateRouter);
+  app.use('/api/openai', openaiRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // Fallback data for when XTB API is unavailable
