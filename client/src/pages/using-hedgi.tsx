@@ -46,7 +46,7 @@ export default function UsingHedgi() {
     setIsLoading(true);
 
     try {
-      // Call the API
+      // Call the API with English language parameter
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -54,7 +54,8 @@ export default function UsingHedgi() {
         },
         body: JSON.stringify({
           message: currentMessage,
-          sessionId: sessionId
+          sessionId: sessionId,
+          language: 'en-US'
         }),
       });
 
