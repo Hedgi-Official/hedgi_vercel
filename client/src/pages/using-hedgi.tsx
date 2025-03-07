@@ -1,37 +1,98 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
 import { EnhancedCurrencySimulator } from "@/components/enhanced-currency-simulator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronRight, DollarSign, Send, Clock, TrendingUp, BarChart2, MessageCircle } from "lucide-react";
+import { ChevronRight, DollarSign, Send, Clock, TrendingUp, BarChart2, MessageCircle, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+
+// Generate a unique session ID for this chat session
+const generateSessionId = () => {
+  return `hedgi-chat-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+};
 
 export default function UsingHedgi() {
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(generateSessionId());
+  const { toast } = useToast();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
-    {type: 'bot', content: 'Hello! I\'m Hedgi AI Assistant. I can help you understand how to set up and manage currency hedges. What would you like to know about?'}
+    {type: 'bot', content: 'Hello! I\'m HedgiBot. I can help you understand how to set up and manage currency hedges. What would you like to know about?'}
   ]);
 
-  const handleSendMessage = () => {
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [chatMessages]);
+
+  const handleSendMessage = async () => {
     if (!message.trim()) return;
     
     // Add user message
     setChatMessages(prev => [...prev, {type: 'user', content: message}]);
     
-    // Simulate AI response
-    setTimeout(() => {
+    // Store current message and clear input
+    const currentMessage = message;
+    setMessage("");
+    setIsLoading(true);
+    
+    try {
+      // Call the API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentMessage,
+          sessionId: sessionId
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to get a response from HedgiBot');
+      }
+      
+      // Add bot response
       setChatMessages(prev => [
         ...prev, 
         {
           type: 'bot', 
-          content: 'This is a UI demonstration only. The actual AI integration will be implemented later. How else can I help you understand hedging?'
+          content: data.message
         }
       ]);
-    }, 1000);
-    
-    setMessage("");
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      
+      // Show error toast
+      toast({
+        title: "Chat Error",
+        description: "Sorry, I couldn't connect to my knowledge base. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Add error message to chat
+      setChatMessages(prev => [
+        ...prev, 
+        {
+          type: 'bot', 
+          content: "I'm having trouble connecting to my knowledge base right now. Please try again shortly."
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,7 +119,7 @@ export default function UsingHedgi() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[600px] flex flex-col">
-                  <ScrollArea className="flex-1 pr-4 mb-4">
+                  <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
                     <div className="space-y-4">
                       {chatMessages.map((msg, i) => (
                         <div 
@@ -76,6 +137,14 @@ export default function UsingHedgi() {
                           </div>
                         </div>
                       ))}
+                      {isLoading && (
+                        <div className="flex justify-start">
+                          <div className="rounded-lg px-4 py-2 bg-muted flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Thinking...</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
                   
@@ -86,13 +155,19 @@ export default function UsingHedgi() {
                       onChange={(e) => setMessage(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                       className="flex-1"
+                      disabled={isLoading}
                     />
                     <Button 
                       onClick={handleSendMessage} 
                       className="ml-2"
                       size="icon"
+                      disabled={isLoading || !message.trim()}
                     >
-                      <Send className="h-4 w-4" />
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </CardContent>

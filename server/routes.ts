@@ -15,6 +15,7 @@ export function registerRoutes(app: Express): Server {
 
   // Register routes
   app.use(secondaryRateRouter);
+  app.use(chatRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // Fallback data for when XTB API is unavailable
