@@ -130,14 +130,14 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       };
 
       console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
-      
+
       // Call the parent component's handler and await completion
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
-      
+
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
-      
+
       console.log('[CurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
       console.error('[CurrencySimulator] Error placing hedge:', error);
@@ -193,7 +193,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="p-4 max-w-sm bg-primary/10 border border-primary/20">
+              <TooltipContent side="top" className="p-4 max-w-sm bg-background border border-primary/20">
                 <div className="flex flex-col items-center text-center">
                   <Globe className="h-10 w-10 text-primary mb-2" />
                   <h3 className="font-bold text-lg mb-1">Target Currency</h3>
@@ -230,7 +230,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </Select>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="p-4 max-w-sm bg-primary/10 border border-primary/20">
+              <TooltipContent side="top" className="p-4 max-w-sm bg-background border border-primary/20">
                 <div className="flex flex-col items-center text-center">
                   <Briefcase className="h-10 w-10 text-primary mb-2" />
                   <h3 className="font-bold text-lg mb-1">Base Currency</h3>
@@ -263,7 +263,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="right" className="p-4 max-w-sm bg-primary/10 border border-primary/20">
+            <TooltipContent side="right" className="p-4 max-w-sm bg-background border border-primary/20">
               <div className="flex flex-col items-center text-center">
                 <ArrowUpDown className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Trade Direction</h3>
@@ -293,7 +293,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="left" className="p-4 max-w-sm bg-primary/10 border border-primary/20">
+            <TooltipContent side="left" className="p-4 max-w-sm bg-background border border-primary/20">
               <div className="flex flex-col items-center text-center">
                 <DollarSign className="h-10 w-10 text-primary mb-2" />
                 <h3 className="font-bold text-lg mb-1">Amount to Hedge</h3>
