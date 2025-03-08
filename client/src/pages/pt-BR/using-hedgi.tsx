@@ -126,7 +126,7 @@ export default function UsingHedgi() {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <MessageCircle className="mr-2 h-5 w-5" />
-                    Assistente de IA do Hedgi
+                    Assistente de IA da Hedgi
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[600px] flex flex-col">
