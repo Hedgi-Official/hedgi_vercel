@@ -244,9 +244,19 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             {t('simulator.amount')} {targetCurrency}
           </label>
           <Input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            type="text"
+            value={amount ? amount.toLocaleString('en-US', {
+              maximumFractionDigits: 0,
+              useGrouping: true
+            }) : ''}
+            onChange={(e) => {
+              // Remove all non-numeric characters
+              const numericValue = e.target.value.replace(/[^\d]/g, '');
+              // Convert to number or empty if no input
+              const numValue = numericValue ? parseInt(numericValue, 10) : '';
+              // Update state
+              setAmount(numValue);
+            }}
             min={1000}
             max={1000000}
             placeholder={t('simulator.amountField')}
