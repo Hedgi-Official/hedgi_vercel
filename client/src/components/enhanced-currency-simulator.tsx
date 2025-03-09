@@ -284,16 +284,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   {t('simulator.amount')} {targetCurrency}
                 </label>
                 <Input
-                  type="text"
-                  placeholder="1,000"
-                  value={typeof amount === 'number' ? amount.toLocaleString('en-US') : amount}
-                  onChange={(e) => {
-                    const rawValue = e.target.value.replace(/[^\d.]/g, '');
-                    const numValue = rawValue === '' ? '' : Number(rawValue);
-                    setAmount(numValue);
-                  }}
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
                   min={1000}
                   max={1000000}
+                  placeholder={t('simulator.amountField')}
                 />
               </div>
             </TooltipTrigger>
@@ -387,7 +383,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </div>
 
-
+              
 
               {onPlaceHedge && (
                 <Button
