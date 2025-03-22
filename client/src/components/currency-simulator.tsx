@@ -79,12 +79,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
 
     const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
-    // Calculate break-even rate - when buying, the rate needs to drop by costPercentage to break even
-    // When selling, the rate needs to rise by costPercentage to break even
-    const breakEvenRate = tradeDirection === 'sell' ?
-      currentRate ? currentRate.bid * (1 + costPercentage / 100) : 
+    const breakEvenRate = tradeDirection === 'buy' ?
+      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
       result.rate * (1 + costPercentage / 100) :
-      currentRate ? currentRate.ask * (1 - costPercentage / 100) :
+      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
       result.rate * (1 - costPercentage / 100);
 
     setSimulation({
@@ -294,10 +292,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {(() => {
-                    // For display purposes, use the actual simulation rate
-                    const currentRate = simulation.rate;
-                    // When buying, breakEvenRate < currentRate, so this should be negative (price needs to drop)
-                    // When selling, breakEvenRate > currentRate, so this should be positive (price needs to rise)
+                    const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
                     const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
                     return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
                   })()}
