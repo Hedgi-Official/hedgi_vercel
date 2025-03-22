@@ -69,12 +69,24 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       const { bid, ask } = currentRate;
       const { swapLong, swapShort } = swapValues;
       const spreadCost = (ask - bid) * amount;
-
+      
+      // Volume in lots (standard lot is 100,000 units)
+      const volumeInLots = amount / 100000;
+      
+      // Using the formula: Cost = abs(Volume × swap_rate × Days)
       if (tradeDirection === 'buy') {
-        hedgeCost = (businessDays * (Math.abs(swapLong) / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = Math.abs(volumeInLots * swapLong * businessDays) + spreadCost;
       } else {
-        hedgeCost = (businessDays * (Math.abs(swapShort) / bid) * (amount / 10)) * ask + spreadCost;
+        hedgeCost = Math.abs(volumeInLots * swapShort * businessDays) + spreadCost;
       }
+      
+      console.log('[CurrencySimulator] Calculated hedge cost:', {
+        volumeInLots,
+        businessDays,
+        swapRate: tradeDirection === 'buy' ? swapLong : swapShort,
+        spreadCost,
+        totalCost: hedgeCost
+      });
     }
 
     const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
