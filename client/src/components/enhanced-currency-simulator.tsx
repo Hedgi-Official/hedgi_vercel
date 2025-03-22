@@ -31,36 +31,27 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
+  // Get rates from ActivTrades API
+  const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
+
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
     let currentRate;
     let swapValues;
-    try {
-      if (!xtbService.isConnected) {
-        await xtbService.connect({
-          userId: import.meta.env.VITE_XTB_USER_ID || '17474971',
-          password: import.meta.env.VITE_XTB_PASSWORD || 'xoh74681',
-        });
-      }
-
-      const symbolData = await xtbService.getSymbolData(currencyPair);
-      console.log('[CurrencySimulator] XTB symbol data:', symbolData);
-
-      if (symbolData.status && symbolData.returnData) {
-        currentRate = {
-          bid: symbolData.returnData.bid,
-          ask: symbolData.returnData.ask
-        };
-        swapValues = {
-          swapLong: symbolData.returnData.swapLong,
-          swapShort: symbolData.returnData.swapShort
-        };
-        console.log('[CurrencySimulator] Using XTB rates:', currentRate);
-        console.log('[CurrencySimulator] Using XTB swap values:', swapValues);
-      }
-    } catch (error) {
-      console.error('[CurrencySimulator] Error fetching XTB rate:', error);
+    
+    // Use the rates from ActivTrades API
+    if (activTradesRate) {
+      currentRate = {
+        bid: activTradesRate.bid,
+        ask: activTradesRate.ask
+      };
+      swapValues = {
+        swapLong: activTradesRate.swap_long,
+        swapShort: activTradesRate.swap_short
+      };
+      console.log('[EnhancedCurrencySimulator] Using ActivTrades rates:', currentRate);
+      console.log('[EnhancedCurrencySimulator] Using ActivTrades swap values:', swapValues);
     }
 
     const result = await simulateHedge(
@@ -292,8 +283,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     onChange={(e) => {
                       // Remove all non-numeric characters
                       const numericValue = e.target.value.replace(/[^\d]/g, '');
-                      // Convert to number or empty if no input
-                      const numValue = numericValue ? parseInt(numericValue, 10) : '';
+                      // Convert to number or default to 0 if no input
+                      const numValue = numericValue ? parseInt(numericValue, 10) : 0;
                       // Update state
                       setAmount(numValue);
                     }}
