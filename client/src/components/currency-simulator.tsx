@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
-import { useActiveTradesRate } from '@/hooks/use-secondary-rate';
+import { xtbService } from '@/lib/xtb-service';
 import { useToast } from '@/hooks/use-toast';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
