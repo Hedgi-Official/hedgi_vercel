@@ -7,7 +7,7 @@ const router = Router();
 
 const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
-router.get('/api/fbs-rate', async (req, res) => {
+router.get('/api/activtrades-rate', async (req, res) => {
   try {
     const symbol = req.query.symbol as string;
 
@@ -16,14 +16,14 @@ router.get('/api/fbs-rate', async (req, res) => {
       return;
     }
 
-    console.log(`Executing curl command for FBS rate for ${symbol}...`);
+    console.log(`Executing curl command for ActiveTrades rate for ${symbol}...`);
     const { stdout, stderr } = await execAsync(
-      `curl -s -H "skip_zrok_interstitial: true" "https://zosb7c04fcu6.share.zrok.io/symbol_info?symbol=${symbol}"`
+      `curl -s "http://3.145.164.47/symbol_info?broker=activtrades&symbol=${symbol}"`
     );
 
     if (stderr) {
       console.error('Curl command error:', stderr);
-      res.status(500).json({ error: 'Failed to fetch FBS rate' });
+      res.status(500).json({ error: 'Failed to fetch ActiveTrades rate' });
       return;
     }
 
@@ -34,22 +34,22 @@ router.get('/api/fbs-rate', async (req, res) => {
         bid: 0,
         ask: 0,
         price: 0,
-        error: 'FBS rate API unavailable due to invalid API key or service issue'
+        error: 'ActiveTrades rate API unavailable'
       });
       return;
     }
 
     try {
       const data = JSON.parse(stdout);
-      console.log('FBS rate data:', data);
+      console.log('ActiveTrades rate data:', data);
       res.json(data);
     } catch (parseError) {
       console.error('JSON parse error:', parseError, 'Raw output:', stdout);
-      res.status(500).json({ error: 'Invalid response format from FBS rate service' });
+      res.status(500).json({ error: 'Invalid response format from ActiveTrades rate service' });
     }
   } catch (error) {
-    console.error('Error fetching FBS rate:', error);
-    res.status(500).json({ error: 'Failed to fetch FBS rate' });
+    console.error('Error fetching ActiveTrades rate:', error);
+    res.status(500).json({ error: 'Failed to fetch ActiveTrades rate' });
   }
 });
 
