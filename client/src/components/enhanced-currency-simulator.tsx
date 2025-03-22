@@ -66,20 +66,18 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
     let hedgeCost = 0;
     if (currentRate && swapValues) {
+      const { bid, ask } = currentRate;
       const { swapLong, swapShort } = swapValues;
-      // Convert amount to lots (standard lot is 100,000)
-      const volumeInLots = amount / 100000;
+      const spreadCost = (ask - bid) * amount;
 
       if (tradeDirection === 'buy') {
-        // Long trade cost formula
-        hedgeCost = Math.abs(volumeInLots * swapLong * businessDays);
+        hedgeCost = (businessDays * (Math.abs(swapLong) / bid) * (amount / 10)) * ask + spreadCost;
       } else {
-        // Short trade cost formula
-        hedgeCost = volumeInLots * swapShort * businessDays;
+        hedgeCost = (businessDays * (Math.abs(swapShort) / bid) * (amount / 10)) * ask + spreadCost;
       }
     }
 
-    const costPercentage = currentRate ? (hedgeCost / amount) * 100 : 0;
+    const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
 
     const breakEvenRate = tradeDirection === 'buy' ?
       currentRate ? currentRate.ask * (1 + costPercentage / 100) :
