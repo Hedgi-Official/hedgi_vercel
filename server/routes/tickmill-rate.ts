@@ -20,7 +20,6 @@ router.get('/api/tickmill-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      // Using the same API endpoint but with tickmill broker parameter
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
         signal: controller.signal
       });
