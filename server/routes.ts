@@ -7,6 +7,7 @@ import { eq, desc } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
+import tickmillRouter from './routes/tickmill-rate';
 // Import XTB needs but don't import the router - we'll define routes directly
 import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
