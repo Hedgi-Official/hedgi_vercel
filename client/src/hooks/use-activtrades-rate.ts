@@ -16,6 +16,7 @@ export function useActivTradesRate(symbol: string = 'USDBRL') {
       try {
         console.log('[useActivTradesRate] Fetching rate for', symbol);
 
+        // Use the server-side proxy
         const response = await fetch(`/api/activtrades-rate?symbol=${symbol}`);
 
         if (!response.ok) {

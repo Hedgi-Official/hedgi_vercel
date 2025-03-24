@@ -16,6 +16,7 @@ export function useTickmillRate(symbol: string = 'USDBRL') {
       try {
         console.log('[useTickmillRate] Fetching rate for', symbol);
 
+        // Use the server-side proxy
         const response = await fetch(`/api/tickmill-rate?symbol=${symbol}`);
 
         if (!response.ok) {
