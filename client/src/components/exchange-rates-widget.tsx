@@ -1,12 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useXTB } from "@/hooks/use-xtb";
-import { useFBSRate } from "@/hooks/use-secondary-rate";
 import { useActivTradesRate } from "@/hooks/use-activtrades-rate";
 import { useTickmillRate } from "@/hooks/use-tickmill-rate";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ExchangeRate } from "@/types/exchange-rate";
 
 const CURRENCY_PAIRS = [
   { value: "USDBRL", label: "USDBRL" },
@@ -17,78 +16,31 @@ const CURRENCY_PAIRS = [
 export function ExchangeRatesWidget() {
   const { t } = useTranslation();
   const [selectedPair, setSelectedPair] = useState("USDBRL");
-  const { exchangeRates, isLoading, error } = useXTB();
-  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
   const { data: activtradesRate, isLoading: isLoadingActivTrades, error: activtradesError } = useActivTradesRate(selectedPair);
   const { data: tickmillRate, isLoading: isLoadingTickmill, error: tickmillError } = useTickmillRate(selectedPair);
 
-  const selectedRate = exchangeRates?.find(rate => rate.symbol === selectedPair);
-
-  const renderFBSRate = () => {
-    if (fbsError) {
-      return <div className="text-destructive">Error loading FBS rate: {fbsError.message}</div>;
+  // Helper function to render a rate card
+  const renderRateCard = (
+    title: string, 
+    rate: { bid: number; ask: number } | undefined, 
+    error: Error | null
+  ) => {
+    if (error) {
+      return <div className="text-destructive">Error loading {title}: {error.message}</div>;
     }
 
     return (
       <div className="space-y-2 p-4 rounded-lg border">
-        <div className="text-sm text-muted-foreground">FBS Rate</div>
+        <div className="text-sm text-muted-foreground">{title}</div>
         <div className="space-y-2">
           <div className="text-2xl font-bold">
-            {fbsRate ? fbsRate.bid.toFixed(4) : 'Loading...'}
+            {rate ? rate.bid.toFixed(4) : 'Loading...'}
           </div>
           <div className="text-sm text-muted-foreground">{t('Bid Price')}</div>
         </div>
         <div className="space-y-2">
           <div className="text-2xl font-bold">
-            {fbsRate ? fbsRate.ask.toFixed(4) : 'Loading...'}
-          </div>
-          <div className="text-sm text-muted-foreground">{t('Ask Price')}</div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderActivTradesRate = () => {
-    if (activtradesError) {
-      return <div className="text-destructive">Error loading ActivTrades rate: {activtradesError.message}</div>;
-    }
-
-    return (
-      <div className="space-y-2 p-4 rounded-lg border">
-        <div className="text-sm text-muted-foreground">ActivTrades Rate</div>
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">
-            {activtradesRate ? activtradesRate.bid.toFixed(4) : 'Loading...'}
-          </div>
-          <div className="text-sm text-muted-foreground">{t('Bid Price')}</div>
-        </div>
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">
-            {activtradesRate ? activtradesRate.ask.toFixed(4) : 'Loading...'}
-          </div>
-          <div className="text-sm text-muted-foreground">{t('Ask Price')}</div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderTickmillRate = () => {
-    if (tickmillError) {
-      return <div className="text-destructive">Error loading Tickmill rate: {tickmillError.message}</div>;
-    }
-
-    return (
-      <div className="space-y-2 p-4 rounded-lg border">
-        <div className="text-sm text-muted-foreground">Tickmill Rate</div>
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">
-            {tickmillRate ? tickmillRate.bid.toFixed(4) : 'Loading...'}
-          </div>
-          <div className="text-sm text-muted-foreground">{t('Bid Price')}</div>
-        </div>
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">
-            {tickmillRate ? tickmillRate.ask.toFixed(4) : 'Loading...'}
+            {rate ? rate.ask.toFixed(4) : 'Loading...'}
           </div>
           <div className="text-sm text-muted-foreground">{t('Ask Price')}</div>
         </div>
@@ -102,7 +54,7 @@ export function ExchangeRatesWidget() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {t('Live Exchange Rates')}
-            {(isLoading || isLoadingFBS || isLoadingActivTrades || isLoadingTickmill) && 
+            {(isLoadingActivTrades || isLoadingTickmill) && 
               <Loader2 className="h-4 w-4 animate-spin" />
             }
           </div>
@@ -121,24 +73,16 @@ export function ExchangeRatesWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {error ? (
-          <div className="text-destructive">
-            Error loading rates: {error.message}
-          </div>
-        ) : isLoading ? (
+        {(isLoadingActivTrades && isLoadingTickmill) ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : (isLoadingActivTrades || isLoadingTickmill || activtradesRate || tickmillRate) ? (
+        ) : (
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
-              {renderActivTradesRate()}
-              {renderTickmillRate()}
+              {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
+              {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
             </div>
-          </div>
-        ) : (
-          <div className="text-muted-foreground text-center py-4">
-            No exchange rates available for {selectedPair}
           </div>
         )}
       </CardContent>
