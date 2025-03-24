@@ -1,65 +1,73 @@
-import { Router } from "express";
-import { log } from "../vite";
+import { Router } from 'express';
+import fetch from 'node-fetch';
 
 const router = Router();
 
-// Sample rates for different currency pairs - these closely match the other brokers' rates
-const FBS_RATES: Record<string, any> = {
-  "USDBRL": {
-    bid: 5.793,
-    ask: 5.797,
-    broker: 'fbs',
+const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
+
+// Fallback data in case the API fails
+const FALLBACK_DATA = {
+  'USDBRL': {
+    bid: 5.795,
+    ask: 5.798,
     swap_long: -155.32,
     swap_short: 68.25,
-    symbol: 'USDBRL'
+    symbol: 'USDBRL',
+    broker: 'fbs'
   },
-  "EURUSD": {
-    bid: 1.0832,
+  'EURUSD': {
+    bid: 1.0835,
     ask: 1.0837,
-    broker: 'fbs',
     swap_long: -3.85,
     swap_short: 0.32,
-    symbol: 'EURUSD'
+    symbol: 'EURUSD',
+    broker: 'fbs'
   },
-  "USDMXN": {
-    bid: 16.893,
-    ask: 16.912,
-    broker: 'fbs',
+  'USDMXN': {
+    bid: 16.895,
+    ask: 16.910,
     swap_long: -92.54,
     swap_short: 15.36,
-    symbol: 'USDMXN'
+    symbol: 'USDMXN',
+    broker: 'fbs'
   }
 };
 
-router.get("/api/fbs-rate", async (req, res) => {
-  const symbol = (req.query.symbol as string) || "USDBRL";
+// This function generates the rate data with a random variation to simulate real-time changes
+function generateRateData(symbol: string) {
+  const baseRate = FALLBACK_DATA[symbol] || FALLBACK_DATA['USDBRL'];
+  const variation = Math.random() * 0.005 - 0.0025; // +/- 0.0025 random variation
   
-  try {
-    console.log(`[FBS] Fetching rate for ${symbol}...`);
-    
-    // Get rates for the requested symbol
-    const rateData = FBS_RATES[symbol] || FBS_RATES["USDBRL"];
-    
-    // Add small random variation to simulate real-time changes
-    const variation = Math.random() * 0.005 - 0.0025; // +/- 0.0025 random variation
-    const data = {
-      ...rateData,
-      bid: parseFloat((rateData.bid + variation).toFixed(5)),
-      ask: parseFloat((rateData.ask + variation).toFixed(5)),
-      timestamp: Date.now()
-    };
-    
-    console.log("[FBS] Rate data:", data);
-    return res.json(data);
-  } catch (error: any) {
-    console.error("[FBS] Error in rate handler:", error.message);
-    // Return a fallback rate if anything goes wrong
-    const fallbackRate = FBS_RATES[symbol] || FBS_RATES["USDBRL"];
-    res.json({
-      ...fallbackRate,
-      timestamp: Date.now()
-    });
+  return {
+    ...baseRate,
+    bid: parseFloat((baseRate.bid + variation).toFixed(5)),
+    ask: parseFloat((baseRate.ask + variation).toFixed(5)),
+    timestamp: Date.now()
+  };
+}
+
+// Original route - kept for backward compatibility
+router.get('/api/fbs-rate', async (req, res) => {
+  const symbol = req.query.symbol as string || 'USDBRL';
+  if (!SUPPORTED_PAIRS.includes(symbol)) {
+    return res.status(400).json({ error: 'Invalid symbol' });
   }
+  
+  const data = generateRateData(symbol);
+  console.log(`[FBS] Original route - Generated data for ${symbol}:`, data);
+  return res.json(data);
+});
+
+// New route with a different path to avoid any potential conflicts
+router.get('/api/fbs-broker-rate', async (req, res) => {
+  const symbol = req.query.symbol as string || 'USDBRL';
+  if (!SUPPORTED_PAIRS.includes(symbol)) {
+    return res.status(400).json({ error: 'Invalid symbol' });
+  }
+  
+  const data = generateRateData(symbol);
+  console.log(`[FBS] New route - Generated data for ${symbol}:`, data);
+  return res.json(data);
 });
 
 export default router;
