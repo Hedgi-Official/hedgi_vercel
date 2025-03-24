@@ -19,6 +19,7 @@ export function registerRoutes(app: Express): Server {
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(activtradesRouter);
+  app.use(tickmillRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // Fallback data for when XTB API is unavailable
