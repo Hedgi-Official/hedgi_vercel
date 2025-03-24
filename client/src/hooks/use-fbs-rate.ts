@@ -16,18 +16,25 @@ export interface FBSRateResponse {
  */
 export function useFBSRate(symbol: string = 'USDBRL') {
   return useQuery<FBSRateResponse, Error>({
-    queryKey: ['fbsRate', symbol],
+    queryKey: ['fbs-rate', symbol],
     queryFn: async () => {
-      const response = await fetch(`/api/fbs-rate?symbol=${symbol}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch FBS rate');
+      try {
+        console.log('[useFBSRate] Fetching rate for', symbol);
+
+        const response = await fetch(`/api/fbs-rate?symbol=${symbol}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json() as FBSRateResponse;
+        console.log('[useFBSRate] Rate data:', data);
+        return data;
+      } catch (error) {
+        console.error('[useFBSRate] Rate fetch error:', error);
+        throw error;
       }
-      
-      return response.json();
     },
     refetchInterval: 5000, // Refresh every 5 seconds
-    staleTime: 4000,
   });
 }
