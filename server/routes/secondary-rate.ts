@@ -5,53 +5,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const router = Router();
 
-const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
-
-router.get('/api/fbs-rate', async (req, res) => {
-  try {
-    const symbol = req.query.symbol as string;
-
-    if (!symbol || !SUPPORTED_PAIRS.includes(symbol)) {
-      res.status(400).json({ error: 'Invalid or missing symbol parameter' });
-      return;
-    }
-
-    console.log(`Executing curl command for FBS rate for ${symbol}...`);
-    const { stdout, stderr } = await execAsync(
-      `curl -s -H "skip_zrok_interstitial: true" "https://zosb7c04fcu6.share.zrok.io/symbol_info?symbol=${symbol}"`
-    );
-
-    if (stderr) {
-      console.error('Curl command error:', stderr);
-      res.status(500).json({ error: 'Failed to fetch FBS rate' });
-      return;
-    }
-
-    // Check if the response is HTML (which would indicate an error, e.g. due to an expired API key)
-    if (stdout.trim().startsWith('<!DOCTYPE')) {
-      console.warn('Received HTML instead of JSON. Returning fallback response.');
-      res.json({
-        bid: 0,
-        ask: 0,
-        price: 0,
-        error: 'FBS rate API unavailable due to invalid API key or service issue'
-      });
-      return;
-    }
-
-    try {
-      const data = JSON.parse(stdout);
-      console.log('FBS rate data:', data);
-      res.json(data);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Raw output:', stdout);
-      res.status(500).json({ error: 'Invalid response format from FBS rate service' });
-    }
-  } catch (error) {
-    console.error('Error fetching FBS rate:', error);
-    res.status(500).json({ error: 'Failed to fetch FBS rate' });
-  }
-});
-
+// This router is kept as a placeholder, but the FBS rate implementation has been moved
+// to server/routes/fbs-rate.ts to follow the consistent pattern used by ActivTrades and Tickmill
 
 export default router;
