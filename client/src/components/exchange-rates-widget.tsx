@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useActivTradesRate } from "@/hooks/use-activtrades-rate";
 import { useTickmillRate } from "@/hooks/use-tickmill-rate";
+import { useFBSRate } from "@/hooks/use-fbs-rate";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";

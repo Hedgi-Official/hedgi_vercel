@@ -1,0 +1,33 @@
+Task:
+Implement the live exchange rates functionality in the user's logged-in dashboard.
+
+Requirements:
+
+1. Data Source & API Calls:
+   - Use the same API call format and implementation as the currently working activtrades functionality.
+   - For activtrades, the implementation uses:
+       const response = await fetch(`http://3.145.164.47/symbol_info?broker=activtrades&symbol=${symbol}`);
+       and the corresponding curl command for testing is:
+       curl "http://localhost:5000/api/activtrades-rate?symbol=USDBRL"
+   - For tickmill, replicate the same implementation pattern by substituting the broker parameter to "tickmill" in the API call.
+   - For FBS, remove any previously implemented data fetching code that uses a different approach and implement it using the exact same format as activtrades and tickmill. Use:
+       const response = await fetch(`http://3.145.164.47/symbol_info?broker=fbs&symbol=${symbol}`);
+       (and update the corresponding curl command accordingly, e.g., curl "http://localhost:5000/api/fbs-rate?symbol=USDBRL")
+   - Ensure that the API call targets the correct currency pair based on the provided symbol.
+
+2. Displayed Data:
+   - The live exchange rate section must display both the bid and ask values.
+   - Process and display the data consistently for all three brokers: activtrades, tickmill, and fbs.
+
+3. Scope & Limitations:
+   - Do not modify the existing logic or implementation for the currency hedge simulation.
+   - Do not implement or integrate rates from the XTB API (it has been disabled).
+   - Be aware that many past implementations of these features have been unsuccessful; review previous pitfalls and adhere to the established, working pattern.
+   - For FBS, ensure that any prior, differently implemented data fetching methods are completely removed and replaced with the uniform approach used for activtrades and tickmill.
+
+4. Implementation Details:
+   - Ensure the new functionality follows the same format, structure, and error handling as used in the currency simulator screens.
+   - Parameterize the API calls to easily adapt for different currency pairs if needed in the future.
+
+Outcome:
+Once implemented, users should see the current bid and ask values for all three brokers (activtrades, tickmill, and fbs) on their dashboard, with the data fetching and processing matching the established format used for activtrades and tickmill, without affecting other parts of the system.
