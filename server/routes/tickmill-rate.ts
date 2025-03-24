@@ -6,7 +6,16 @@ const router = Router();
 const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
 // Fallback data when the external API is unavailable
-const FALLBACK_RATES = {
+type RateData = {
+  ask: number;
+  bid: number;
+  broker: string;
+  swap_long: number;
+  swap_short: number;
+  symbol: string;
+};
+
+const FALLBACK_RATES: Record<string, RateData> = {
   'USDBRL': {
     ask: 5.7699,
     bid: 5.7599,
@@ -49,7 +58,10 @@ router.get('/api/tickmill-rate', async (req, res) => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
       });
       
       clearTimeout(timeoutId);
