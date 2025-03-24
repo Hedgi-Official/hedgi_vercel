@@ -8,7 +8,6 @@ import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
-import fbsRouter from './routes/fbs-rate';
 // Import XTB needs but don't import the router - we'll define routes directly
 import { tradingService as xtbTradingService } from "./services/trading";
 import { tradingService } from "./services/trading";
@@ -21,7 +20,6 @@ export function registerRoutes(app: Express): Server {
   app.use(chatRouter);
   app.use(activtradesRouter);
   app.use(tickmillRouter);
-  app.use(fbsRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // Fallback data for when XTB API is unavailable
