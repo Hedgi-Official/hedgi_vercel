@@ -19,15 +19,26 @@ export function ExchangeRatesWidget() {
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const { data: activtradesRate, isLoading: isLoadingActivTrades, error: activtradesError } = useActivTradesRate(selectedPair);
   const { data: tickmillRate, isLoading: isLoadingTickmill, error: tickmillError } = useTickmillRate(selectedPair);
+  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
 
   // Helper function to render a rate card
   const renderRateCard = (
     title: string, 
-    rate: { bid: number; ask: number } | undefined, 
+    rate: { bid: number; ask: number; error?: string } | undefined, 
     error: Error | null
   ) => {
     if (error) {
       return <div className="text-destructive">Error loading {title}: {error.message}</div>;
+    }
+    
+    // Check if we have a rate with an error message (from server-side error handling)
+    if (rate && rate.error) {
+      return (
+        <div className="space-y-2 p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">{title}</div>
+          <div className="text-destructive text-sm">{rate.error}</div>
+        </div>
+      );
     }
 
     return (
@@ -55,7 +66,7 @@ export function ExchangeRatesWidget() {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {t('Live Exchange Rates')}
-            {(isLoadingActivTrades || isLoadingTickmill) && 
+            {(isLoadingActivTrades || isLoadingTickmill || isLoadingFBS) && 
               <Loader2 className="h-4 w-4 animate-spin" />
             }
           </div>
@@ -74,15 +85,16 @@ export function ExchangeRatesWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {(isLoadingActivTrades && isLoadingTickmill) ? (
+        {(isLoadingActivTrades && isLoadingTickmill && isLoadingFBS) ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
               {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
+              {renderRateCard("FBS Rate", fbsRate, fbsError)}
             </div>
           </div>
         )}
