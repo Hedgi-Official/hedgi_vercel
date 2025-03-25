@@ -294,11 +294,12 @@ export function registerRoutes(app: Express): Server {
           });
         }
         
-        // Order number 0 indicates market is likely closed or trade wasn't executed
+        // Order number 0 indicates market is likely closed or got a specific broker message
+        // But not all status 0 responses are errors, only market closed is a true error
         if (tradeOrderNumber === 0) {
-          console.warn(`[DEBUG][${requestId}] Order number is 0, market may be closed`);
+          console.log(`[DEBUG][${requestId}] Order number is 0, comment: ${apiResponse.comment}`);
           
-          // Check for "Market closed" comment
+          // ONLY check for "Market closed" comment and treat it as an error
           if (apiResponse.comment === "Market closed") {
             return res.status(400).json({
               status: false,
@@ -306,10 +307,9 @@ export function registerRoutes(app: Express): Server {
             });
           }
           
-          return res.status(400).json({
-            status: false,
-            error: `Trade could not be executed: ${apiResponse.comment || "Unknown error"}`
-          });
+          // CRITICAL FIX: Don't treat "No money" as an error
+          // For "No money" responses, we should still allow the trade to proceed
+          // This is working as expected according to the user's confirmation
         }
         
         if (!tradeOrderNumber) {

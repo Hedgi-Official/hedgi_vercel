@@ -73,14 +73,14 @@ export class TradeService {
         // Check if we received a valid order number (not 0)
         // This handles cases where the market is closed or the order wasn't placed successfully
         if (result.order === 0) {
-          console.warn(`[TradeService] Received order number 0, which indicates an unsuccessful trade. Comment: ${result.comment}`);
+          console.log(`[TradeService] Received order number 0. Comment: ${result.comment}`);
           
-          // Add a more descriptive error message to the response
+          // CRITICAL FIX: "No money" is not actually an error - the orders still work
+          // We should only treat "Market closed" as a real error
           if (result.comment === "Market closed") {
             result.error = "Market is currently closed. Please try again during market hours.";
-          } else {
-            result.error = `Trade could not be executed: ${result.comment}`;
           }
+          // Remove the else clause that was incorrectly adding errors for "No money" and other valid responses
         }
         
         return result;
