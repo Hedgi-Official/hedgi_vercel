@@ -277,9 +277,36 @@ export function registerRoutes(app: Express): Server {
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
 
         // Extract the order number from response with validation
-        // If trade API call succeeded but didn't return a proper order number, 
-        // generate a unique identifier to use as an order reference
+        // If trade API call succeeded but returned market closed or other error,
+        // handle this properly
         let tradeOrderNumber = apiResponse.order;
+        
+        // Check for errors in the API response
+        if (apiResponse.error) {
+          console.error(`[DEBUG][${requestId}] Error from trade API: ${apiResponse.error}`);
+          return res.status(400).json({
+            status: false,
+            error: apiResponse.error
+          });
+        }
+        
+        // Order number 0 indicates market is likely closed or trade wasn't executed
+        if (tradeOrderNumber === 0) {
+          console.warn(`[DEBUG][${requestId}] Order number is 0, market may be closed`);
+          
+          // Check for "Market closed" comment
+          if (apiResponse.comment === "Market closed") {
+            return res.status(400).json({
+              status: false,
+              error: "Market is currently closed. Please try again during market hours."
+            });
+          }
+          
+          return res.status(400).json({
+            status: false,
+            error: `Trade could not be executed: ${apiResponse.comment || "Unknown error"}`
+          });
+        }
         
         if (!tradeOrderNumber) {
           console.warn(`[DEBUG][${requestId}] No order number in API response, using request ID as fallback`);
