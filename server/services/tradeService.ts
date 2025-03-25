@@ -121,13 +121,32 @@ export class TradeService {
       throw new Error('Missing position number');
     }
     
-    // The API expects position as a raw value (string or number) without any formatting
-    // Never convert or modify the position value as it must match exactly what the API expects
+    // CRITICAL FIX: The API expects position as a NUMBER, not a string
+    // Convert to a native JavaScript number without any quotes in the JSON
+    let parsedPosition: number;
+    
+    if (typeof position === 'string') {
+      parsedPosition = parseInt(position, 10);
+    } else {
+      parsedPosition = position;
+    }
+    
+    // Check if parsing resulted in a valid number
+    if (isNaN(parsedPosition)) {
+      console.error(`[TradeService] Invalid position number: ${position}`);
+      throw new Error(`Invalid position number: ${position}`);
+    }
+    
+    // Create the object with position as a native JS number
     const closeData = {
       broker,
-      position
+      position: parsedPosition
     };
     
+    // Log the exact type to verify it's a number
+    console.log(`[TradeService] Position type: ${typeof closeData.position}, Value: ${closeData.position}`);
+    
+    // Use JSON.stringify with no replacer or spaces to get clean JSON
     const requestBody = JSON.stringify(closeData);
     console.log(`[TradeService] Sending close request:`, requestBody);
     
