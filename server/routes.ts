@@ -279,7 +279,11 @@ export function registerRoutes(app: Express): Server {
         // Extract the order number from response with validation
         // If trade API call succeeded but returned market closed or other error,
         // handle this properly
-        let tradeOrderNumber = apiResponse.order;
+        
+        // CRITICAL FIX: For Tickmill, we need to use the deal number, not the order number
+        // for closing trades. When a trade is opened, it returns both order and deal numbers.
+        // The broker API expects the deal number when closing a position.
+        let tradeOrderNumber = apiResponse.deal || apiResponse.order;
         
         // Check for errors in the API response
         if (apiResponse.error) {
@@ -323,9 +327,16 @@ export function registerRoutes(app: Express): Server {
           rate: apiResponse.price?.toString() || apiResponse.ask?.toString() || apiResponse.bid?.toString() || "0.0",
           duration: duration || 30,
           status: 'active',
-          tradeOrderNumber: tradeOrderNumber,
+          tradeOrderNumber: tradeOrderNumber, // This now contains either the deal or order number
           tradeStatus: 'open'
         };
+        
+        // Log all available identifiers for debugging
+        console.log(`[DEBUG][${requestId}] All trade identifiers:`, {
+          deal: apiResponse.deal,
+          order: apiResponse.order,
+          tradeOrderNumber: tradeOrderNumber
+        });
         
         console.log(`[DEBUG][${requestId}] Hedge values to insert:`, hedgeValues);
         
@@ -394,6 +405,8 @@ export function registerRoutes(app: Express): Server {
         error: 'Missing required fields: broker and position' 
       });
     }
+    
+    console.log(`[API][${requestId}] Closing position: ${position} with broker: ${broker}`);
 
     try {
       console.log(`[Trade API][${requestId}] Closing trade ${position} with broker ${broker}`);
@@ -572,8 +585,9 @@ export function registerRoutes(app: Express): Server {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // Use the new trade service with tickmill as the broker
-          // Note: tradeOrderNumber is already a string in the database now
+          // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
+          // could be either a deal or order number. We need to make sure we're using
+          // the right identifier when closing the position.
           const closeResponse = await tradeService.closeTrade(
             'tickmill', // Default broker as specified in requirements
             hedge.tradeOrderNumber
@@ -636,16 +650,19 @@ export function registerRoutes(app: Express): Server {
       
       // If autoClose flag is set, immediately close the trade for testing
       let closeResult = null;
-      if (autoClose && result && result.order) {
+      if (autoClose && result && (result.deal || result.order)) {
         try {
-          console.log(`[Test Trade API][${requestId}] Auto-closing trade order ${result.order}`);
+          // CRITICAL FIX: For Tickmill, we need to use the deal number, not the order number
+          // to close positions
+          const positionId = result.deal || result.order;
+          console.log(`[Test Trade API][${requestId}] Auto-closing trade position ${positionId} (deal: ${result.deal}, order: ${result.order})`);
           
           // Wait a bit to ensure the order is registered in the broker system
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           closeResult = await tradeService.closeTrade(
             broker,
-            String(result.order) // Convert to string to avoid integer overflow issues
+            String(positionId) // Convert to string to avoid integer overflow issues
           );
           console.log(`[Test Trade API][${requestId}] Close response:`, closeResult);
         } catch (closeError) {
