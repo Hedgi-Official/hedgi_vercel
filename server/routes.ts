@@ -347,7 +347,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Add explicit close trade endpoint to support dashboard.tsx
-  // Add the new API endpoint for trade closure
+  // Add the new API endpoint for trade closure with enhanced error handling
   app.post("/api/trades/close", async (req, res) => {
     res.header('Content-Type', 'application/json');
     const requestId = Date.now().toString();
@@ -379,6 +379,23 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
       
+      // Check if we got an error about position not found
+      if (closeResponse.error && closeResponse.error.includes('not found')) {
+        console.warn(`[Trade API][${requestId}] Position ${position} not found at broker ${broker}`);
+        
+        // Return a special response for "position not found" case
+        return res.json({
+          status: true, // Still return success status so client continues with DB deletion
+          returnData: {
+            position: position,
+            price: 0,
+            error: closeResponse.error
+          },
+          message: `Position ${position} not found at broker ${broker}, but hedge will be removed from database`
+        });
+      }
+      
+      // Standard success response
       return res.json({
         status: true,
         returnData: {
@@ -389,9 +406,20 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error(`[Trade API][${requestId}] Error closing trade:`, error);
+      
+      // Special handling for HTML responses (which could happen if the API endpoint is down)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('<!DOCTYPE html>') || errorMessage.includes('<html>')) {
+        return res.status(502).json({
+          status: false,
+          error: 'Trading API server returned HTML instead of JSON. The service may be down.',
+          message: 'Trading API server is currently unavailable'
+        });
+      }
+      
       return res.status(500).json({ 
         status: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMessage
       });
     }
   });

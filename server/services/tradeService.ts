@@ -98,7 +98,14 @@ export class TradeService {
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
     
-    // Format exactly like the working curl example - accept position as string to avoid integer overflow issues
+    // Enhanced error handling for position validation
+    if (!position) {
+      console.error('[TradeService] Cannot close trade: Missing position number');
+      throw new Error('Missing position number');
+    }
+    
+    // The API expects position as a raw value (string or number) without any formatting
+    // Never convert or modify the position value as it must match exactly what the API expects
     const closeData = {
       broker,
       position
@@ -119,13 +126,36 @@ export class TradeService {
       const responseText = await response.text();
       console.log(`[TradeService] Close API raw response:`, responseText);
       
-      // Parse the response JSON
+      // Parse the response JSON - with improved error handling
       try {
+        // If the response doesn't parse as JSON, it may be HTML or another format
         const result = JSON.parse(responseText) as TradeResponse;
+        
+        // Handle "Position not found" as a special case to provide better error information
+        if (result.error && result.error.includes('not found')) {
+          console.warn(`[TradeService] Position ${position} not found at broker ${broker}`);
+          // Return a structured error response instead of throwing
+          return {
+            ask: 0,
+            bid: 0,
+            comment: `Position ${position} not found at broker ${broker}`,
+            deal: 0,
+            order: 0,
+            price: 0,
+            request: { position, broker },
+            request_id: Date.now(),
+            retcode: 404, // Use a code to indicate not found
+            retcode_external: 0,
+            volume: 0,
+            error: `Position ${position} not found at broker ${broker}`
+          };
+        }
+        
         return result;
       } catch (parseError) {
         console.error(`[TradeService] JSON parse error:`, parseError);
-        throw new Error(`Failed to parse close response: ${responseText}`);
+        // If we can't parse the response, it might be an HTML error page or other non-JSON response
+        throw new Error(`Failed to parse close response. The server may be down or returned HTML: ${responseText.substring(0, 200)}...`);
       }
     } catch (err) {
       const error = err as Error;

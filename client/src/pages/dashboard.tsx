@@ -146,25 +146,54 @@ export default function Dashboard() {
             credentials: 'include'
           });
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('[Dashboard] Error closing trade:', errorText);
-            throw new Error(errorText || 'Failed to close trade');
-          }
-
-          const data = await response.json();
-          console.log('[Dashboard] Trade close response:', data);
-
-          // Check for successful close response
-          if (!data.status) {
-            throw new Error(data.error || 'Failed to close trade');
+          // Enhanced error handling - handle both HTTP and API errors
+          const responseText = await response.text();
+          let data;
+          
+          try {
+            // Attempt to parse as JSON
+            data = JSON.parse(responseText);
+            console.log('[Dashboard] Trade close response:', data);
+          } catch (parseError) {
+            console.error('[Dashboard] Failed to parse response as JSON:', responseText);
+            // Try to determine if this is an HTML response (typically an error page)
+            if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
+              console.error('[Dashboard] Received HTML error page instead of JSON');
+              throw new Error('Received HTML response instead of JSON. The server may be down or experiencing issues.');
+            } else {
+              throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
+            }
           }
           
-          console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+          // HTTP status wasn't OK
+          if (!response.ok) {
+            console.error('[Dashboard] Error closing trade:', data);
+            throw new Error(data.error || data.message || 'Failed to close trade');
+          }
+
+          // API status wasn't successful
+          if (data && data.status === false) {
+            console.error('[Dashboard] API error closing trade:', data);
+            throw new Error(data.error || data.message || 'Failed to close trade');
+          }
+          
+          // Position not found is a special case we handle gracefully
+          if (data && data.returnData && data.returnData.error && 
+              data.returnData.error.includes('not found')) {
+            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+            // Not throwing an error here since we'll still delete from the database
+          } else {
+            console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+          }
         } catch (closeError) {
           console.error(`[Dashboard] Error closing trade:`, closeError);
           // Even if trade close fails, we still want to try to delete the hedge from database
           console.log(`[Dashboard] Will continue with database deletion despite close error`);
+          toast({
+            variant: "destructive",
+            title: t('Trade Closure Warning'),
+            description: 'Could not close trade at broker, but will remove from database. The trade may still be active at the broker.',
+          });
         }
       }
 
