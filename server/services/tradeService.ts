@@ -24,7 +24,7 @@ export class TradeService {
   /**
    * Open a new trade with the specified broker
    * 
-   * @param broker The broker to use (e.g., "activtrades", "fbs")
+   * @param broker The broker to use (e.g., "tickmill", "fbs") - note: "activtrades" often times out
    * @param symbol The currency pair symbol (e.g., "EURUSD", "USDBRL")
    * @param direction Trade direction ("buy" or "sell")
    * @param volume Trade volume in lots (e.g., 0.1)
@@ -32,7 +32,7 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'activtrades', // Using activtrades as the default broker
+    broker: string = 'activtrades', // Using activtrades as the default broker as requested
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number,
@@ -118,7 +118,7 @@ export class TradeService {
    * @returns The API response with closure details
    */
   async closeTrade(
-    broker: string = 'activtrades', // Using activtrades as the default broker
+    broker: string = 'activtrades', // Using activtrades as the default broker as requested
     position: number
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
