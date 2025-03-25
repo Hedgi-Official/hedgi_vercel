@@ -124,13 +124,12 @@ export function registerRoutes(app: Express): Server {
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Use our new trade service with the broker "activtrades" and exact format as working curl
+      // Use the trade service with the exact format as working curl
       const apiResponse = await tradeService.openTrade(
-        'activtrades', // Default broker as specified in requirements
+        'activtrades',
         symbol,
         tradeDirection as 'buy' | 'sell',
-        volume,
-        "Hedgi test trade"
+        volume
       );
       
       console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
@@ -266,13 +265,12 @@ export function registerRoutes(app: Express): Server {
 
       // Enhanced trade execution with detailed logging
       try {
-        // Use the new trade service with the broker "activtrades" and exact format as working curl
+        // Use the trade service with the exact same format as working curl command
         const apiResponse = await tradeService.openTrade(
-          'activtrades', // Default broker as specified in requirements
+          'activtrades',
           symbol,
           tradeDirection as 'buy' | 'sell',
-          volume,
-          "Hedgi test trade"
+          volume
         );
         
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
@@ -453,24 +451,46 @@ export function registerRoutes(app: Express): Server {
     console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
     
     try {
-      const { broker = 'activtrades', symbol = 'USDBRL', direction = 'buy', volume = 0.1 } = req.body;
+      const { broker = 'activtrades', symbol = 'USDBRL', direction = 'buy', volume = 0.1, autoClose = false } = req.body;
       
       console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
       
-      // Use exact same format as working curl command - keeping the comment fixed at "Hedgi test trade"
+      // Use exact same format as working curl command
       const result = await tradeService.openTrade(
         broker,
         symbol,
         direction as 'buy' | 'sell',
-        Number(volume),
-        "Hedgi test trade"
+        Number(volume)
       );
       
       console.log(`[Test Trade API][${requestId}] Trade response:`, result);
+      
+      // If autoClose flag is set, immediately close the trade for testing
+      let closeResult = null;
+      if (autoClose && result && result.order) {
+        try {
+          console.log(`[Test Trade API][${requestId}] Auto-closing trade order ${result.order}`);
+          
+          // Wait a bit to ensure the order is registered in the broker system
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          closeResult = await tradeService.closeTrade(
+            broker,
+            String(result.order) // Convert to string to avoid integer overflow issues
+          );
+          console.log(`[Test Trade API][${requestId}] Close response:`, closeResult);
+        } catch (closeError) {
+          console.error(`[Test Trade API][${requestId}] Error closing trade:`, closeError);
+          closeResult = { error: closeError instanceof Error ? closeError.message : String(closeError) };
+          // Continue with response even if close fails
+        }
+      }
+      
       res.json({
         status: true,
         result,
-        message: `Successfully executed test trade: ${direction} ${volume} lots of ${symbol} via ${broker}`
+        closeResult,
+        message: `Successfully executed test trade: ${direction} ${volume} lots of ${symbol} via ${broker}${autoClose ? ' and attempted to close it' : ''}`
       });
     } catch (error) {
       console.error(`[Test Trade API][${requestId}] Error:`, error);
@@ -478,6 +498,46 @@ export function registerRoutes(app: Express): Server {
         status: false,
         error: error instanceof Error ? error.message : String(error),
         message: 'Failed to execute test trade'
+      });
+    }
+  });
+  
+  // Test endpoint for closing trades - doesn't require authentication
+  app.post("/api/test-close-trade", async (req, res) => {
+    const requestId = Date.now().toString();
+    console.log(`[Test Close API][${requestId}] Request received:`, req.body);
+    
+    try {
+      const { broker = 'activtrades', position } = req.body;
+      
+      if (!position) {
+        return res.status(400).json({
+          status: false,
+          error: 'Missing required position number',
+          message: 'Position/order number is required'
+        });
+      }
+      
+      console.log(`[Test Close API][${requestId}] Closing position ${position} via ${broker}`);
+      
+      // Use exact same format as working curl command - pass position as-is without converting to Number
+      const result = await tradeService.closeTrade(
+        broker,
+        position
+      );
+      
+      console.log(`[Test Close API][${requestId}] Close response:`, result);
+      res.json({
+        status: true,
+        result,
+        message: `Successfully closed position ${position} via ${broker}`
+      });
+    } catch (error) {
+      console.error(`[Test Close API][${requestId}] Error:`, error);
+      res.status(500).json({ 
+        status: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: 'Failed to close trade'
       });
     }
   });

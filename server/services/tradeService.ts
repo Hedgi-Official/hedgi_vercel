@@ -30,19 +30,17 @@ export class TradeService {
    * @param symbol The currency pair symbol (e.g., "EURUSD", "USDBRL")
    * @param direction Trade direction ("buy" or "sell")
    * @param volume Trade volume in lots (e.g., 0.1)
-   * @param comment Optional comment for the trade
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'activtrades', // Using activtrades as the default broker as requested
+    broker: string = 'activtrades',
     symbol: string,
     direction: 'buy' | 'sell',
-    volume: number,
-    comment: string = 'Hedgi test trade'
+    volume: number
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
     
-    // Use exactly the same payload format as the working curl command
+    // Use EXACTLY the same payload format as the working curl command
     const tradeData = {
       broker,
       symbol,
@@ -50,14 +48,14 @@ export class TradeService {
       volume,
       deviation: 5,
       magic: 123456,
-      comment
+      comment: "Hedgi test trade"
     };
     
     const requestBody = JSON.stringify(tradeData);
     console.log(`[TradeService] Sending trade request:`, requestBody);
     
     try {
-      // Use the same fetch call as the working curl command
+      // Use exactly the same fetch call as the working curl command
       const response = await fetch(`${this.TRADE_API_URL}/trade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,19 +84,21 @@ export class TradeService {
   /**
    * Close an existing trade
    * 
-   * This implementation uses the same format as the working open trade curl command
+   * This implementation matches the working curl command format exactly:
+   * curl -X POST "http://3.145.164.47/close_trade" -H "Content-Type: application/json" 
+   * -d "{\"broker\":\"fbs\",\"position\":769221201}"
    * 
    * @param broker The broker used for the trade (e.g., "activtrades", "fbs")
    * @param position The position/order number to close
    * @returns The API response with closure details
    */
   async closeTrade(
-    broker: string = 'activtrades', // Using activtrades as the default broker as requested
-    position: number
+    broker: string = 'activtrades',
+    position: number | string
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
     
-    // Format exactly like the working curl example
+    // Format exactly like the working curl example - accept position as string to avoid integer overflow issues
     const closeData = {
       broker,
       position
