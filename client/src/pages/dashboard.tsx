@@ -24,7 +24,7 @@ export default function Dashboard() {
   });
 
   const checkTradeStatusMutation = useMutation({
-    mutationFn: async (tradeOrderNumber: number) => {
+    mutationFn: async (tradeOrderNumber: string) => {
       const response = await fetch(`/api/hedges/status/${tradeOrderNumber}`, {
         method: 'GET',
         credentials: 'include'
@@ -36,68 +36,15 @@ export default function Dashboard() {
 
       return response.json();
     },
-    onSuccess: (data) => {
-      // Get the status string from the response or default to 'Unknown'
-      let tradeStatus = 'Unknown';
-      if (data.returnData && typeof data.returnData === 'object' && 'status' in data.returnData) {
-        tradeStatus = String(data.returnData.status);
-      }
+    onSuccess: (data, tradeOrderNumber) => {
+      // For the new API implementation, we have a different response format
+      // The hedge status endpoint simply returns if the order exists in our database
       
-      // Determine color based on status
-      let statusColor = 'text-muted-foreground';
-      
-      if (tradeStatus === 'Accepted') {
-        statusColor = 'text-green-600';
-      } else if (tradeStatus === 'Pending') {
-        statusColor = 'text-yellow-600';
-      } else if (tradeStatus === 'Rejected' || tradeStatus === 'Error') {
-        statusColor = 'text-red-600';
-      }
-
       toast({
-        title: t('Trade Status Details'),
-        description: (
-          <div className="mt-2 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{t('Order')}:</span>
-              <span>#{data.returnData.order}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{t('Status')}:</span>
-              <span className={statusColor}>{data.returnData.status}</span>
-            </div>
-            {data.returnData.requestStatus !== undefined && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Request Status:</span>
-                <span>{getRequestStatusName(data.returnData.requestStatus)}</span>
-              </div>
-            )}
-            {(data.returnData.price !== undefined && data.returnData.price !== null) && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium">{t('Price')}:</span>
-                <span>{data.returnData.price.toFixed(4)}</span>
-              </div>
-            )}
-            {data.returnData.customComment && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium">{t('Comment')}:</span>
-                <span>{data.returnData.customComment}</span>
-              </div>
-            )}
-            {data.returnData.message && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium">{t('Message')}:</span>
-                <span>{data.returnData.message}</span>
-              </div>
-            )}
-            {data.returnData.errorDescr && (
-              <div className="flex justify-between items-center text-red-600">
-                <span className="font-medium">{t('Error')}:</span>
-                <span>{data.returnData.errorDescr}</span>
-              </div>
-            )}
-          </div>
-        ),
+        title: t('Trade Status'),
+        description: data.message || (data.found 
+          ? `Trade #${tradeOrderNumber} exists in system` 
+          : `Trade #${tradeOrderNumber} not found`),
         duration: 10000,
       });
     },
@@ -162,7 +109,8 @@ export default function Dashboard() {
       // Check if we have a valid trade order number in the response
       if (data.returnData?.order) {
         console.log('[Dashboard] Trade created with order number:', data.returnData.order);
-        checkTradeStatusMutation.mutate(data.returnData.order);
+        // Convert to string to ensure compatibility with our updated mutate function
+        checkTradeStatusMutation.mutate(String(data.returnData.order));
       } else {
         console.warn('[Dashboard] Missing order number in response:', data);
       }
@@ -184,26 +132,39 @@ export default function Dashboard() {
 
       // First close the trade if it exists
       if (hedge.tradeOrderNumber) {
-        const response = await fetch(`/api/xtb/trades/${hedge.tradeOrderNumber}/close`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            symbol: `${hedge.targetCurrency}${hedge.baseCurrency}`,
-            volume: Math.abs(Number(hedge.amount)) / 100000, // Convert to lots
-            tradeDirection: Number(hedge.amount) > 0 ? 'buy' : 'sell'
-          }),
-          credentials: 'include'
-        });
+        try {
+          // Use the new broker-based API endpoint for closing trades
+          console.log(`[Dashboard] Closing trade with order number ${hedge.tradeOrderNumber}`);
+          
+          const response = await fetch(`/api/trades/close`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              broker: 'tickmill', // Use tickmill as the default broker
+              position: hedge.tradeOrderNumber // Send the position number as is (already a string in DB)
+            }),
+            credentials: 'include'
+          });
 
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[Dashboard] Error closing trade:', errorText);
+            throw new Error(errorText || 'Failed to close trade');
+          }
 
-        const data = await response.json();
-        console.log('[Dashboard] Trade close response:', data);
+          const data = await response.json();
+          console.log('[Dashboard] Trade close response:', data);
 
-        if (!data.status || !data.returnData?.order) {
-          throw new Error('Failed to close trade');
+          // Check for successful close response
+          if (!data.status) {
+            throw new Error(data.error || 'Failed to close trade');
+          }
+          
+          console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+        } catch (closeError) {
+          console.error(`[Dashboard] Error closing trade:`, closeError);
+          // Even if trade close fails, we still want to try to delete the hedge from database
+          console.log(`[Dashboard] Will continue with database deletion despite close error`);
         }
       }
 
@@ -306,7 +267,7 @@ export default function Dashboard() {
                               variant="outline"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => checkTradeStatusMutation.mutate(hedge.tradeOrderNumber!)}
+                              onClick={() => checkTradeStatusMutation.mutate(hedge.tradeOrderNumber!.toString())}
                             >
                               <AlertCircle className="h-4 w-4" />
                             </Button>

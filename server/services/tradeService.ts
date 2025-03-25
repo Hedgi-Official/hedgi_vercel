@@ -33,7 +33,7 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'activtrades',
+    broker: string = 'tickmill',
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number
@@ -93,7 +93,7 @@ export class TradeService {
    * @returns The API response with closure details
    */
   async closeTrade(
-    broker: string = 'activtrades',
+    broker: string = 'tickmill',
     position: number | string
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);

@@ -126,7 +126,7 @@ export function registerRoutes(app: Express): Server {
 
       // Use the trade service with the exact format as working curl
       const apiResponse = await tradeService.openTrade(
-        'activtrades',
+        'tickmill',
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume
@@ -176,8 +176,9 @@ export function registerRoutes(app: Express): Server {
       return res.status(401).send("Not authenticated");
     }
 
-    const tradeOrderNumber = parseInt(req.params.tradeOrderNumber);
-    if (isNaN(tradeOrderNumber)) {
+    // No need to parse as integer since we've changed to storing as string
+    const tradeOrderNumber = req.params.tradeOrderNumber;
+    if (!tradeOrderNumber) {
       return res.status(400).send("Invalid trade order number");
     }
 
@@ -267,7 +268,7 @@ export function registerRoutes(app: Express): Server {
       try {
         // Use the trade service with the exact same format as working curl command
         const apiResponse = await tradeService.openTrade(
-          'activtrades',
+          'tickmill',
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume
@@ -304,7 +305,14 @@ export function registerRoutes(app: Express): Server {
         // Insert with userId, ensuring proper type handling
         const newHedge = await db.insert(hedges)
           .values({
-            ...hedgeValues,
+            baseCurrency: hedgeValues.baseCurrency,
+            targetCurrency: hedgeValues.targetCurrency,
+            amount: hedgeValues.amount,
+            rate: hedgeValues.rate,
+            duration: hedgeValues.duration,
+            status: hedgeValues.status,
+            tradeOrderNumber: String(hedgeValues.tradeOrderNumber), // Ensure it's a string
+            tradeStatus: hedgeValues.tradeStatus,
             userId: req.user.id
           })
           .returning();
@@ -339,6 +347,56 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Add explicit close trade endpoint to support dashboard.tsx
+  // Add the new API endpoint for trade closure
+  app.post("/api/trades/close", async (req, res) => {
+    res.header('Content-Type', 'application/json');
+    const requestId = Date.now().toString();
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+
+    // Extract broker and position from the request body (needed for new API format)
+    const { broker, position } = req.body;
+    if (!broker || !position) {
+      return res.status(400).json({ 
+        status: false,
+        error: 'Missing required fields: broker and position' 
+      });
+    }
+
+    try {
+      console.log(`[Trade API][${requestId}] Closing trade ${position} with broker ${broker}`);
+      
+      // Use the trade service to close the trade
+      const closeResponse = await tradeService.closeTrade(
+        broker,  // Use the broker from the request 
+        position // Use position from the request (already a string)
+      );
+      
+      console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
+      
+      return res.json({
+        status: true,
+        returnData: {
+          position: position,
+          price: closeResponse.price || closeResponse.ask || closeResponse.bid || 0
+        },
+        message: `Successfully closed trade ${position}`
+      });
+    } catch (error) {
+      console.error(`[Trade API][${requestId}] Error closing trade:`, error);
+      return res.status(500).json({ 
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Keep the old endpoint for backward compatibility during transition
   app.post("/api/xtb/trades/:tradeOrderNumber/close", async (req, res) => {
     res.header('Content-Type', 'application/json');
     const requestId = Date.now().toString();
@@ -350,8 +408,9 @@ export function registerRoutes(app: Express): Server {
       });
     }
 
-    const tradeOrderNumber = parseInt(req.params.tradeOrderNumber);
-    if (isNaN(tradeOrderNumber)) {
+    // We're now storing trade order numbers as strings to handle large values from the broker API
+    const tradeOrderNumber = req.params.tradeOrderNumber;
+    if (!tradeOrderNumber) {
       return res.status(400).json({ 
         status: false,
         error: 'Invalid trade order number' 
@@ -359,11 +418,11 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber}`);
+      console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber} via legacy endpoint`);
       
-      // Use the new trade service to close the trade with broker "activtrades"
+      // Use the new trade service to close the trade with broker "tickmill"
       const closeResponse = await tradeService.closeTrade(
-        'activtrades', // Default broker as specified in requirements
+        'tickmill', // Default broker as specified in requirements
         tradeOrderNumber
       );
       
@@ -412,9 +471,10 @@ export function registerRoutes(app: Express): Server {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // Use the new trade service with activtrades as the broker
+          // Use the new trade service with tickmill as the broker
+          // Note: tradeOrderNumber is already a string in the database now
           const closeResponse = await tradeService.closeTrade(
-            'activtrades', // Default broker as specified in requirements
+            'tickmill', // Default broker as specified in requirements
             hedge.tradeOrderNumber
           );
 
@@ -451,7 +511,7 @@ export function registerRoutes(app: Express): Server {
     console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
     
     try {
-      const { broker = 'activtrades', symbol = 'USDBRL', direction = 'buy', volume = 0.1, autoClose = false } = req.body;
+      const { broker = 'tickmill', symbol = 'USDBRL', direction = 'buy', volume = 0.1, autoClose = false } = req.body;
       
       console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
       
@@ -508,7 +568,7 @@ export function registerRoutes(app: Express): Server {
     console.log(`[Test Close API][${requestId}] Request received:`, req.body);
     
     try {
-      const { broker = 'activtrades', position } = req.body;
+      const { broker = 'tickmill', position } = req.body;
       
       if (!position) {
         return res.status(400).json({
