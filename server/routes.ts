@@ -446,6 +446,40 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
+  
+  // Test endpoint for trade API integration
+  app.post("/api/test-trade", async (req, res) => {
+    const requestId = Date.now().toString();
+    console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
+    
+    try {
+      const { broker = 'activtrades', symbol = 'USDBRL', direction = 'buy', volume = 0.1 } = req.body;
+      
+      console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
+      
+      const result = await tradeService.openTrade(
+        broker,
+        symbol,
+        direction as 'buy' | 'sell',
+        Number(volume),
+        `Hedgi test trade ${requestId}`
+      );
+      
+      console.log(`[Test Trade API][${requestId}] Trade response:`, result);
+      res.json({
+        status: true,
+        result,
+        message: `Successfully executed test trade: ${direction} ${volume} lots of ${symbol} via ${broker}`
+      });
+    } catch (error) {
+      console.error(`[Test Trade API][${requestId}] Error:`, error);
+      res.status(500).json({ 
+        status: false,
+        error: error instanceof Error ? error.message : String(error),
+        message: 'Failed to execute test trade'
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

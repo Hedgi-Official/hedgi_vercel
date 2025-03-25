@@ -13,14 +13,29 @@ export interface TradeResponse {
   retcode: number;
   retcode_external: number;
   volume: number;
+  
+  // Error information fields that can be returned by the broker API
+  error?: string;
+  errorDescr?: string;
+  message?: string;
 }
 
-// Set a longer timeout for API calls to accommodate potential delays
-const API_TIMEOUT = 60000; // 60 seconds
+// Set a longer timeout for API calls to accommodate potential delays with the broker
+const API_TIMEOUT = 120000; // 120 seconds (2 minutes) for broker API calls that may take longer
 
 export class TradeService {
   private readonly TRADE_API_URL = 'http://3.145.164.47';
+  private readonly MAX_RETRIES = 3; // Maximum number of retry attempts
+  private readonly RETRY_DELAY = 5000; // 5 seconds between retries
   
+  /**
+   * Helper function to delay execution
+   * @param ms Milliseconds to wait
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   /**
    * Open a new trade with the specified broker
    * 
@@ -53,61 +68,91 @@ export class TradeService {
     
     console.log(`[TradeService] Trade request data:`, JSON.stringify(tradeData));
     
-    try {
-      
-      console.log(`[TradeService] Sending POST request to ${this.TRADE_API_URL}/trade with data:`, JSON.stringify(tradeData));
-      
-      const response = await fetch(`${this.TRADE_API_URL}/trade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeData),
-        signal: AbortSignal.timeout(API_TIMEOUT)
-      });
-      
-      // Attempt to get the raw response data first
-      const rawResponseText = await response.text();
-      console.log(`[TradeService] Raw API response:`, rawResponseText);
-      
-      // Try to parse the response as JSON
-      let result: TradeResponse;
+    // Implement retry logic for resilience
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
-        result = JSON.parse(rawResponseText) as TradeResponse;
-      } catch (parseError) {
-        console.error(`[TradeService] Error parsing response JSON:`, parseError);
+        console.log(`[TradeService] Attempt ${attempt}/${this.MAX_RETRIES}: Sending POST request to ${this.TRADE_API_URL}/trade`);
         
-        // If we can't parse the JSON but the request was successful, create a minimal success response
-        if (response.ok) {
-          result = {
-            ask: 0,
-            bid: 0,
-            comment: comment || `Hedgi trade ${Date.now()}`,
-            deal: 123456, // Placeholder deal ID
-            order: 123456, // Placeholder order ID
-            price: 0,
-            request: tradeData,
-            request_id: Date.now(),
-            retcode: 0, // Success code
-            retcode_external: 0,
-            volume: volume
-          };
+        const response = await fetch(`${this.TRADE_API_URL}/trade`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tradeData),
+          signal: AbortSignal.timeout(API_TIMEOUT)
+        });
+        
+        // Attempt to get the raw response data first
+        const rawResponseText = await response.text();
+        console.log(`[TradeService] Raw API response:`, rawResponseText);
+        
+        // Try to parse the response as JSON
+        let result: TradeResponse;
+        try {
+          result = JSON.parse(rawResponseText) as TradeResponse;
+        } catch (parseError) {
+          console.error(`[TradeService] Error parsing response JSON:`, parseError);
+          
+          // If we can't parse the JSON but the request was successful, create a minimal success response
+          if (response.ok) {
+            result = {
+              ask: 0,
+              bid: 0,
+              comment: comment || `Hedgi trade ${Date.now()}`,
+              deal: 123456, // Placeholder deal ID
+              order: 123456, // Placeholder order ID
+              price: 0,
+              request: tradeData,
+              request_id: Date.now(),
+              retcode: 0, // Success code
+              retcode_external: 0,
+              volume: volume
+            };
+          } else {
+            // If the request failed and JSON parsing failed, throw an error with the raw response
+            throw new Error(`Trade API error: ${response.status} - ${rawResponseText}`);
+          }
+        }
+        
+        // Check for timeout or other broker-specific error that we might want to retry
+        if (result.error && 
+            (result.error.includes('timeout') || 
+             result.error.includes('No response') || 
+             result.error.includes('connection'))) {
+          
+          console.warn(`[TradeService] Broker timeout detected on attempt ${attempt}, will retry after delay`);
+          lastError = result;
+          
+          // If this is not the last attempt, wait and then continue to the next loop iteration
+          if (attempt < this.MAX_RETRIES) {
+            await this.delay(this.RETRY_DELAY);
+            continue;
+          }
+        }
+        
+        // If we received a proper response (with or without trading errors), return it
+        if (!response.ok || (result.retcode !== 0 && result.retcode !== undefined)) {
+          console.error(`[TradeService] Trade API returned error:`, result);
         } else {
-          // If the request failed and JSON parsing failed, throw an error with the raw response
-          throw new Error(`Trade API error: ${response.status} - ${rawResponseText}`);
+          console.log(`[TradeService] Trade response:`, result);
+        }
+        
+        return result;
+      } catch (error) {
+        console.error(`[TradeService] Error on attempt ${attempt}:`, error);
+        lastError = error;
+        
+        // If this is not the last attempt, wait and then retry
+        if (attempt < this.MAX_RETRIES) {
+          console.log(`[TradeService] Retrying after delay...`);
+          await this.delay(this.RETRY_DELAY);
         }
       }
-      
-      // If the response contains an error field, log it but don't throw
-      if (!response.ok || (result.retcode !== 0 && result.retcode !== undefined)) {
-        console.error(`[TradeService] Trade API returned error:`, result);
-      } else {
-        console.log(`[TradeService] Trade response:`, result);
-      }
-      
-      return result;
-    } catch (error) {
-      console.error(`[TradeService] Error placing trade:`, error);
-      throw error;
     }
+    
+    // If we've exhausted all retries, throw the last error
+    console.error(`[TradeService] All ${this.MAX_RETRIES} attempts failed`);
+    throw lastError || new Error('Failed to execute trade after maximum retries');
   }
   
   /**
