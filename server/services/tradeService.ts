@@ -16,16 +16,15 @@ export interface TradeResponse {
   error?: string; // For error responses
 }
 
-// Simple timeout for API calls - longer timeout for broker reliability
-const API_TIMEOUT = 15000; // 15 seconds
-
 export class TradeService {
   private readonly TRADE_API_URL = 'http://3.145.164.47';
 
   /**
-   * Execute a trade using the broker API - curl passthrough implementation
+   * Open a new trade with the specified broker
    * 
-   * This implementation exactly matches the working curl format that successfully completes with the broker API
+   * This implementation exactly matches the working curl command:
+   * curl -X POST http://3.145.164.47/trade -H "Content-Type: application/json" 
+   * -d '{"broker": "activtrades", "symbol": "USDBRL", "direction": "buy", "volume": 0.1, "deviation": 5, "magic": 123456, "comment": "Hedgi test trade"}'
    * 
    * @param broker The broker to use (e.g., "activtrades", "tickmill", "fbs")
    * @param symbol The currency pair symbol (e.g., "EURUSD", "USDBRL")
@@ -39,11 +38,11 @@ export class TradeService {
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number,
-    comment: string = ''
+    comment: string = 'Hedgi test trade'
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
     
-    // Use the exact payload from the working curl command
+    // Use exactly the same payload format as the working curl command
     const tradeData = {
       broker,
       symbol,
@@ -51,80 +50,43 @@ export class TradeService {
       volume,
       deviation: 5,
       magic: 123456,
-      comment: comment || `Hedgi trade ${Date.now()}`
+      comment
     };
     
-    const tradeRequest = JSON.stringify(tradeData);
-    console.log(`[TradeService] Sending trade request:`, tradeRequest);
+    const requestBody = JSON.stringify(tradeData);
+    console.log(`[TradeService] Sending trade request:`, requestBody);
     
     try {
-      // Use the same path and headers as the working curl command
+      // Use the same fetch call as the working curl command
       const response = await fetch(`${this.TRADE_API_URL}/trade`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': '*/*'
-        },
-        body: tradeRequest,
-        signal: AbortSignal.timeout(API_TIMEOUT)
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
       });
       
-      // Get the text response first for debugging
+      // Get the text response for logging
       const responseText = await response.text();
-      console.log(`[TradeService] Raw API response:`, responseText);
+      console.log(`[TradeService] Trade API raw response:`, responseText);
       
-      // Then parse it as JSON
-      let result: TradeResponse;
+      // Parse the response JSON
       try {
-        result = JSON.parse(responseText);
+        const result = JSON.parse(responseText) as TradeResponse;
+        return result;
       } catch (parseError) {
         console.error(`[TradeService] JSON parse error:`, parseError);
-        // Create a minimal error response if JSON parsing fails
-        return {
-          ask: 0,
-          bid: 0,
-          comment: "Error: Unable to parse response",
-          deal: 0, 
-          order: 0,
-          price: 0,
-          request: tradeData,
-          request_id: 0,
-          retcode: 0,
-          retcode_external: 0,
-          volume: volume,
-          error: `Failed to parse response: ${responseText}`
-        };
+        throw new Error(`Failed to parse trade response: ${responseText}`);
       }
-      
-      // Return the parsed result
-      return result;
-      
     } catch (err) {
       const error = err as Error;
       console.error(`[TradeService] Error executing trade:`, error);
-      
-      // Create a standardized error response
-      return {
-        ask: 0,
-        bid: 0,
-        comment: "Error: API request failed",
-        deal: 0, 
-        order: 0,
-        price: 0,
-        request: tradeData,
-        request_id: 0,
-        retcode: 0,
-        retcode_external: 0,
-        volume: volume,
-        error: `Request failed: ${error.message || String(error)}`
-      };
+      throw error;
     }
   }
   
   /**
    * Close an existing trade
    * 
-   * This implementation exactly matches the working curl format that successfully completes with the broker API
+   * This implementation uses the same format as the working open trade curl command
    * 
    * @param broker The broker used for the trade (e.g., "activtrades", "fbs")
    * @param position The position/order number to close
@@ -136,76 +98,39 @@ export class TradeService {
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
     
-    // Use the exact payload format from the working curl command
+    // Format exactly like the working curl example
     const closeData = {
       broker,
       position
     };
     
-    const closeRequest = JSON.stringify(closeData);
-    console.log(`[TradeService] Sending close request:`, closeRequest);
+    const requestBody = JSON.stringify(closeData);
+    console.log(`[TradeService] Sending close request:`, requestBody);
     
     try {
-      // Use the same path and headers as the working curl command
+      // Use same format as the working curl command
       const response = await fetch(`${this.TRADE_API_URL}/close_trade`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': '*/*'
-        },
-        body: closeRequest,
-        signal: AbortSignal.timeout(API_TIMEOUT)
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
       });
       
-      // Get the text response first for debugging
+      // Get the text response for logging
       const responseText = await response.text();
-      console.log(`[TradeService] Raw close API response:`, responseText);
+      console.log(`[TradeService] Close API raw response:`, responseText);
       
-      // Then parse it as JSON
-      let result: TradeResponse;
+      // Parse the response JSON
       try {
-        result = JSON.parse(responseText);
+        const result = JSON.parse(responseText) as TradeResponse;
+        return result;
       } catch (parseError) {
-        console.error(`[TradeService] JSON parse error for close:`, parseError);
-        // Create a minimal error response if JSON parsing fails
-        return {
-          ask: 0,
-          bid: 0,
-          comment: "Error: Unable to parse close response",
-          deal: 0, 
-          order: 0,
-          price: 0,
-          request: closeData,
-          request_id: 0,
-          retcode: 0,
-          retcode_external: 0,
-          volume: 0,
-          error: `Failed to parse close response: ${responseText}`
-        };
+        console.error(`[TradeService] JSON parse error:`, parseError);
+        throw new Error(`Failed to parse close response: ${responseText}`);
       }
-      
-      // Return the parsed result
-      return result;
-      
     } catch (err) {
       const error = err as Error;
       console.error(`[TradeService] Error closing trade:`, error);
-      
-      // Create a standardized error response
-      return {
-        ask: 0,
-        bid: 0,
-        comment: "Error: Close API request failed",
-        deal: 0, 
-        order: 0,
-        price: 0,
-        request: closeData,
-        request_id: 0,
-        retcode: 0,
-        retcode_external: 0,
-        volume: 0,
-        error: `Close request failed: ${error.message || String(error)}`
-      };
+      throw error;
     }
   }
 }
