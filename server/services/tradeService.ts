@@ -15,8 +15,8 @@ export interface TradeResponse {
   volume: number;
 }
 
-// Set a reasonable timeout for API calls
-const API_TIMEOUT = 30000; // 30 seconds
+// Set a longer timeout for API calls to accommodate potential delays
+const API_TIMEOUT = 60000; // 60 seconds
 
 export class TradeService {
   private readonly TRADE_API_URL = 'http://3.145.164.47';
@@ -24,7 +24,7 @@ export class TradeService {
   /**
    * Open a new trade with the specified broker
    * 
-   * @param broker The broker to use (e.g., "tickmill", "fbs") - note: "activtrades" often times out
+   * @param broker The broker to use (e.g., "activtrades", "tickmill", "fbs")
    * @param symbol The currency pair symbol (e.g., "EURUSD", "USDBRL")
    * @param direction Trade direction ("buy" or "sell")
    * @param volume Trade volume in lots (e.g., 0.1)
