@@ -629,6 +629,45 @@ export function registerRoutes(app: Express): Server {
   });
   
   // Test endpoint for trade API integration
+  // Test endpoint to close a trade without authentication
+  app.post("/api/test-close-trade", async (req, res) => {
+    const requestId = Date.now().toString();
+    console.log(`[Test Close Trade API][${requestId}] Request received:`, req.body);
+    
+    try {
+      const { broker = 'tickmill', position, useDeal = false } = req.body;
+      
+      if (!position) {
+        return res.status(400).json({
+          status: false,
+          error: 'Missing required field: position'
+        });
+      }
+      
+      // Use the trade service to close the trade
+      console.log(`[Test Close Trade API][${requestId}] Closing position ${position} with broker ${broker}`);
+      
+      const closeResult = await tradeService.closeTrade(
+        broker,
+        String(position) // Convert to string to avoid integer overflow issues
+      );
+      
+      console.log(`[Test Close Trade API][${requestId}] Close response:`, closeResult);
+      
+      res.json({
+        status: true,
+        result: closeResult,
+        message: `Attempted to close trade: position ${position} via ${broker}`
+      });
+    } catch (error) {
+      console.error(`[Test Close Trade API][${requestId}] Error:`, error);
+      res.status(500).json({
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   app.post("/api/test-trade", async (req, res) => {
     const requestId = Date.now().toString();
     console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
