@@ -10,7 +10,7 @@ import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/l
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useTickmillRate } from '@/hooks/use-tickmill-rate';
+import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 
@@ -31,8 +31,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
-  // Get rates from Tickmill API
-  const { data: tickmillRate, isLoading: isLoadingRate } = useTickmillRate(`${targetCurrency}${baseCurrency}`);
+  // Get rates from ActivTrades API
+  const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
     const currencyPair = `${targetCurrency}${baseCurrency}`;
@@ -40,18 +40,18 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     let currentRate;
     let swapValues;
     
-    // Use the rates from Tickmill API
-    if (tickmillRate) {
+    // Use the rates from ActivTrades API
+    if (activTradesRate) {
       currentRate = {
-        bid: tickmillRate.bid,
-        ask: tickmillRate.ask
+        bid: activTradesRate.bid,
+        ask: activTradesRate.ask
       };
       swapValues = {
-        swapLong: tickmillRate.swap_long,
-        swapShort: tickmillRate.swap_short
+        swapLong: activTradesRate.swap_long,
+        swapShort: activTradesRate.swap_short
       };
-      console.log('[CurrencySimulator] Using Tickmill rates:', currentRate);
-      console.log('[CurrencySimulator] Using Tickmill swap values:', swapValues);
+      console.log('[CurrencySimulator] Using ActivTrades rates:', currentRate);
+      console.log('[CurrencySimulator] Using ActivTrades swap values:', swapValues);
     }
 
     const result = await simulateHedge(
