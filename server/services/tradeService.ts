@@ -40,7 +40,7 @@ export class TradeService {
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
     
-    // Exactly match the format from the working example
+    // Exactly match the format from the specified example
     const tradeData = {
       broker,
       symbol,
@@ -54,19 +54,13 @@ export class TradeService {
     console.log(`[TradeService] Trade request data:`, tradeData);
     
     try {
-      // Using query parameters instead of JSON body, similar to the working activtrades-rate endpoint
-      const queryParams = new URLSearchParams({
-        broker,
-        symbol,
-        direction,
-        volume: volume.toString(),
-        deviation: '5',
-        magic: '123456',
-        comment: comment || `Hedgi trade ${Date.now()}`
-      });
       
-      const response = await fetch(`${this.TRADE_API_URL}/trade?${queryParams.toString()}`, {
-        method: 'GET',
+      console.log(`[TradeService] Sending POST request to ${this.TRADE_API_URL}/trade with data:`, JSON.stringify(tradeData));
+      
+      const response = await fetch(`${this.TRADE_API_URL}/trade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tradeData),
         signal: AbortSignal.timeout(API_TIMEOUT)
       });
       
@@ -105,14 +99,13 @@ export class TradeService {
     };
     
     try {
-      // Using query parameters instead of JSON body, similar to the working activtrades-rate endpoint
-      const queryParams = new URLSearchParams({
-        broker,
-        position: position.toString()
-      });
+      // Using POST with JSON body exactly as specified in the example
+      console.log(`[TradeService] Sending POST request to ${this.TRADE_API_URL}/close_trade with data:`, JSON.stringify(closeData));
       
-      const response = await fetch(`${this.TRADE_API_URL}/close_trade?${queryParams.toString()}`, {
-        method: 'GET',
+      const response = await fetch(`${this.TRADE_API_URL}/close_trade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(closeData),
         signal: AbortSignal.timeout(API_TIMEOUT)
       });
       
