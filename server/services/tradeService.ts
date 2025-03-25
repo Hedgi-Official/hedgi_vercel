@@ -165,6 +165,25 @@ export class TradeService {
           };
         }
         
+        // Handle market closed responses
+        if (result.comment === "Market closed") {
+          console.warn(`[TradeService] Market is closed, can't close position ${position}`);
+          return {
+            ask: 0,
+            bid: 0,
+            comment: "Market closed",
+            deal: 0,
+            order: 0,
+            price: 0,
+            request: { position, broker },
+            request_id: Date.now(),
+            retcode: 10018, // Market closed retcode
+            retcode_external: 0,
+            volume: 0,
+            error: "Market is currently closed. Please try again during market hours."
+          };
+        }
+        
         return result;
       } catch (parseError) {
         console.error(`[TradeService] JSON parse error:`, parseError);

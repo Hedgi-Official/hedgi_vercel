@@ -534,7 +534,15 @@ export function registerRoutes(app: Express): Server {
           );
 
           console.log(`[Routes] Trade close response:`, closeResponse);
-          console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
+          
+          // Handle different response scenarios
+          if (closeResponse.error && closeResponse.error.includes('not found')) {
+            console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Continuing with database deletion.`);
+          } else if (closeResponse.comment === "Market closed") {
+            console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Continuing with database deletion.`);
+          } else {
+            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
+          }
         } catch (tradeError) {
           // Log the error but continue with database deletion
           console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);

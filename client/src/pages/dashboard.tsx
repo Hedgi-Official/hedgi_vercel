@@ -182,8 +182,25 @@ export default function Dashboard() {
               data.returnData.error.includes('not found')) {
             console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
             // Not throwing an error here since we'll still delete from the database
+            toast({
+              title: "Trade Position Not Found",
+              description: "The trade couldn't be found at the broker, but we'll remove it from your dashboard.",
+              variant: "default"
+            });
+          } else if (data && data.message === "Market closed") {
+            console.warn(`[Dashboard] Market is closed, can't close trade ${hedge.tradeOrderNumber}`);
+            toast({
+              title: "Market Currently Closed",
+              description: "The market is currently closed. The hedge will be deleted from your dashboard.",
+              variant: "default"
+            });
           } else {
             console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+            toast({
+              title: "Trade Closed",
+              description: "Your hedge position has been successfully closed.",
+              variant: "default"
+            });
           }
         } catch (closeError) {
           console.error(`[Dashboard] Error closing trade:`, closeError);

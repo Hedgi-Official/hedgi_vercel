@@ -1,7 +1,7 @@
 // This test script simulates a client-side request to our server's API
 // Run with: node test-client-trade.js
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function testClientTradeApis() {
   console.log('Testing client-side trade APIs...');
