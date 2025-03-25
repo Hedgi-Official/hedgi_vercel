@@ -124,13 +124,13 @@ export function registerRoutes(app: Express): Server {
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Use our new trade service with the broker "activtrades"
+      // Use our new trade service with the broker "activtrades" and exact format as working curl
       const apiResponse = await tradeService.openTrade(
         'activtrades', // Default broker as specified in requirements
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume,
-        `Hedgi-${requestId}-${baseCurrency}${targetCurrency}`
+        "Hedgi test trade"
       );
       
       console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
@@ -266,13 +266,13 @@ export function registerRoutes(app: Express): Server {
 
       // Enhanced trade execution with detailed logging
       try {
-        // Use the new trade service with the broker "activtrades"
+        // Use the new trade service with the broker "activtrades" and exact format as working curl
         const apiResponse = await tradeService.openTrade(
           'activtrades', // Default broker as specified in requirements
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume,
-          `Hedgi-${requestId}-${baseCurrency}${targetCurrency}-${duration}days`
+          "Hedgi test trade"
         );
         
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
@@ -457,12 +457,13 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
       
+      // Use exact same format as working curl command - keeping the comment fixed at "Hedgi test trade"
       const result = await tradeService.openTrade(
         broker,
         symbol,
         direction as 'buy' | 'sell',
         Number(volume),
-        `Hedgi test trade ${requestId}`
+        "Hedgi test trade"
       );
       
       console.log(`[Test Trade API][${requestId}] Trade response:`, result);
