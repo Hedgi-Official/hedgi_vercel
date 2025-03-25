@@ -32,7 +32,7 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'activtrades',
+    broker: string = 'fbs', // Changed default to fbs as it was used in the working example
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number,
@@ -40,13 +40,14 @@ export class TradeService {
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
     
+    // Exactly match the format from the working example
     const tradeData = {
       broker,
       symbol,
       direction,
       volume,
-      deviation: 5, // Standard deviation value
-      magic: 123456, // Identifier for our app
+      deviation: 5,
+      magic: 123456,
       comment: comment || `Hedgi trade ${Date.now()}`
     };
     
@@ -83,11 +84,12 @@ export class TradeService {
    * @returns The API response with closure details
    */
   async closeTrade(
-    broker: string = 'activtrades',
+    broker: string = 'fbs', // Changed default to fbs as it was used in the working example
     position: number
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
     
+    // Exactly match the format from the working example
     const closeData = {
       broker,
       position

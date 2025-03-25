@@ -124,9 +124,9 @@ export function registerRoutes(app: Express): Server {
       const symbol = `${targetCurrency}${baseCurrency}`;
       console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Use our new trade service with the default broker "activtrades"
+      // Use our new trade service with the broker "fbs" which is known to work
       const apiResponse = await tradeService.openTrade(
-        'activtrades', // Default broker as specified in requirements
+        'fbs', // Default broker that works with the API
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume,
@@ -266,9 +266,9 @@ export function registerRoutes(app: Express): Server {
 
       // Enhanced trade execution with detailed logging
       try {
-        // Use the new trade service with the broker "activtrades" as default
+        // Use the new trade service with the broker "fbs" which is known to work
         const apiResponse = await tradeService.openTrade(
-          'activtrades', // Default broker as specified in requirements
+          'fbs', // Default broker that works with the API
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume,
@@ -359,9 +359,9 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber}`);
       
-      // Use the new trade service to close the trade
+      // Use the new trade service to close the trade with broker "fbs"
       const closeResponse = await tradeService.closeTrade(
-        'activtrades', // Default broker as specified in requirements
+        'fbs', // Default broker that works with the API
         tradeOrderNumber
       );
       
@@ -410,9 +410,9 @@ export function registerRoutes(app: Express): Server {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // Use the new trade service with activtrades as the broker
+          // Use the new trade service with fbs as the broker
           const closeResponse = await tradeService.closeTrade(
-            'activtrades', // Default broker as specified in requirements
+            'fbs', // Default broker that works with the API
             hedge.tradeOrderNumber
           );
 
