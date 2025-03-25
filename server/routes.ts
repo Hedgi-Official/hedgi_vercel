@@ -280,10 +280,10 @@ export function registerRoutes(app: Express): Server {
         // If trade API call succeeded but returned market closed or other error,
         // handle this properly
         
-        // CRITICAL FIX: For Tickmill, we need to use the deal number, not the order number
+        // CRITICAL FIX: For Tickmill, we need to use the ORDER number, not the deal number
         // for closing trades. When a trade is opened, it returns both order and deal numbers.
-        // The broker API expects the deal number when closing a position.
-        let tradeOrderNumber = apiResponse.deal || apiResponse.order;
+        // The broker API expects the ORDER number when closing a position as confirmed by direct testing.
+        let tradeOrderNumber = apiResponse.order;
         
         // Check for errors in the API response
         if (apiResponse.error) {
@@ -691,9 +691,10 @@ export function registerRoutes(app: Express): Server {
       let closeResult = null;
       if (autoClose && result && (result.deal || result.order)) {
         try {
-          // CRITICAL FIX: For Tickmill, we need to use the deal number, not the order number
-          // to close positions
-          const positionId = result.deal || result.order;
+          // CRITICAL FIX: For Tickmill, we need to use the ORDER number, not the deal number
+          // to close positions as confirmed by direct testing
+          // CRITICAL FIX: Always use ORDER number, not deal number for closing positions
+          const positionId = result.order;
           console.log(`[Test Trade API][${requestId}] Auto-closing trade position ${positionId} (deal: ${result.deal}, order: ${result.order})`);
           
           // Wait a bit to ensure the order is registered in the broker system

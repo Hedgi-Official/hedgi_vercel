@@ -70,6 +70,9 @@ export class TradeService {
       try {
         const result = JSON.parse(responseText) as TradeResponse;
         
+        // Detailed logging of response properties for debugging
+        console.log(`[TradeService] Trade response details - order: ${result.order}, deal: ${result.deal}, comment: ${result.comment}`);
+        
         // Check if we received a valid order number (not 0)
         // This handles cases where the market is closed or the order wasn't placed successfully
         if (result.order === 0) {
@@ -80,7 +83,7 @@ export class TradeService {
           if (result.comment === "Market closed") {
             result.error = "Market is currently closed. Please try again during market hours.";
           }
-          // Remove the else clause that was incorrectly adding errors for "No money" and other valid responses
+          // Do not treat "No money" warnings as errors
         }
         
         return result;
