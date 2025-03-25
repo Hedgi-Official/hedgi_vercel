@@ -54,10 +54,19 @@ export class TradeService {
     console.log(`[TradeService] Trade request data:`, tradeData);
     
     try {
-      const response = await fetch(`${this.TRADE_API_URL}/trade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeData),
+      // Using query parameters instead of JSON body, similar to the working activtrades-rate endpoint
+      const queryParams = new URLSearchParams({
+        broker,
+        symbol,
+        direction,
+        volume: volume.toString(),
+        deviation: '5',
+        magic: '123456',
+        comment: comment || `Hedgi trade ${Date.now()}`
+      });
+      
+      const response = await fetch(`${this.TRADE_API_URL}/trade?${queryParams.toString()}`, {
+        method: 'GET',
         signal: AbortSignal.timeout(API_TIMEOUT)
       });
       
@@ -96,10 +105,14 @@ export class TradeService {
     };
     
     try {
-      const response = await fetch(`${this.TRADE_API_URL}/close_trade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(closeData),
+      // Using query parameters instead of JSON body, similar to the working activtrades-rate endpoint
+      const queryParams = new URLSearchParams({
+        broker,
+        position: position.toString()
+      });
+      
+      const response = await fetch(`${this.TRADE_API_URL}/close_trade?${queryParams.toString()}`, {
+        method: 'GET',
         signal: AbortSignal.timeout(API_TIMEOUT)
       });
       
