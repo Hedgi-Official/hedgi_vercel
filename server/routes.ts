@@ -422,6 +422,21 @@ export function registerRoutes(app: Express): Server {
         });
       }
       
+      // Handle market closed scenario similarly
+      if (closeResponse.comment === "Market closed") {
+        console.warn(`[Trade API][${requestId}] Market is closed, cannot close position ${position}`);
+        
+        return res.json({
+          status: true, // Still return success status so client continues with DB deletion
+          returnData: {
+            position: position,
+            price: 0
+          },
+          message: "Market closed",
+          error: "Market is currently closed. The hedge will be removed from your dashboard."
+        });
+      }
+      
       // Standard success response
       return res.json({
         status: true,
@@ -483,6 +498,37 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
       
+      // Check for position not found
+      if (closeResponse.error && closeResponse.error.includes('not found')) {
+        console.warn(`[Trade API][${requestId}] Position ${tradeOrderNumber} not found at broker`);
+        
+        return res.json({
+          status: true, // Still return success status so client continues with DB deletion
+          returnData: {
+            order: tradeOrderNumber,
+            price: 0,
+            error: closeResponse.error
+          },
+          message: `Position ${tradeOrderNumber} not found at broker, but hedge will be removed from database`
+        });
+      }
+      
+      // Handle market closed scenario similarly
+      if (closeResponse.comment === "Market closed") {
+        console.warn(`[Trade API][${requestId}] Market is closed, cannot close position ${tradeOrderNumber}`);
+        
+        return res.json({
+          status: true, // Still return success status so client continues with DB deletion
+          returnData: {
+            order: tradeOrderNumber,
+            price: 0
+          },
+          message: "Market closed",
+          error: "Market is currently closed. The hedge will be removed from your dashboard."
+        });
+      }
+      
+      // Standard success response
       return res.json({
         status: true,
         returnData: {
@@ -650,6 +696,25 @@ export function registerRoutes(app: Express): Server {
       );
       
       console.log(`[Test Close API][${requestId}] Close response:`, result);
+      
+      // Handle market closed scenario
+      if (result.comment === "Market closed") {
+        return res.json({
+          status: false,  // For test endpoint, return false status to indicate issue
+          result,
+          message: "Market closed - cannot close position at this time"
+        });
+      }
+      
+      // Handle position not found
+      if (result.error && result.error.includes('not found')) {
+        return res.json({
+          status: false,  // For test endpoint, return false status to indicate issue
+          result,
+          message: `Position ${position} not found at broker ${broker}`
+        });
+      }
+      
       res.json({
         status: true,
         result,
