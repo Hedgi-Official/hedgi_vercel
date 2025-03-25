@@ -9,9 +9,8 @@ import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
-// Import XTB needs but don't import the router - we'll define routes directly
-import { tradingService as xtbTradingService } from "./services/trading";
-import { tradingService } from "./services/trading";
+// Import our modern trade service for the curl-based API implementation
+import { tradeService } from "./services/tradeService";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -24,143 +23,86 @@ export function registerRoutes(app: Express): Server {
   app.use(fbsRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
-  // Fallback data for when XTB API is unavailable
-  const FALLBACK_RATES = [
-    {
-      symbol: 'USDBRL',
-      bid: 5.67,
-      ask: 5.69,
-      timestamp: Date.now(),
-      swapLong: 0.0002,
-      swapShort: 0.0001,
-    },
-    {
-      symbol: 'EURUSD',
-      bid: 1.08,
-      ask: 1.09,
-      timestamp: Date.now(),
-      swapLong: 0.0001,
-      swapShort: 0.0002,
-    },
-    {
-      symbol: 'USDMXN',
-      bid: 16.75,
-      ask: 16.78,
-      timestamp: Date.now(),
-      swapLong: 0.0001,
-      swapShort: 0.0001,
-    }
-  ];
+  // List of supported symbols for exchange rates
+  const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
-  // XTB API routes defined directly in main routes file
+  // Exchange rates endpoint that uses our new infrastructure
   app.get("/api/xtb/rates", async (req, res) => {
     res.header('Content-Type', 'application/json');
+    console.log('[Exchange Rates DEBUG] Request received for /api/xtb/rates');
 
     try {
-      // If trading service is not connected, use fallback data
-      if (!xtbTradingService.isConnected) {
-        console.log('[XTB Backend] Using fallback rates as XTB service is not connected');
-        return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
-          ...rate,
-          timestamp: Date.now() // Update timestamp to current time
-        }))));
-      }
-
-      // If connected, get real data for each symbol
-      const symbols = ['USDBRL', 'EURUSD', 'USDMXN'];
+      // Get real data for each symbol using our activtrades endpoint
+      const symbols = SUPPORTED_SYMBOLS;
       const rates = [];
+      
+      console.log('[Exchange Rates DEBUG] Fetching rates for all symbols:', symbols);
 
       for (const symbol of symbols) {
         try {
-          const symbolResponse = await xtbTradingService.getSymbolData(symbol);
+          console.log(`[Exchange Rates] Fetching rate for ${symbol}`);
+          // Use fetch with a timeout for safety
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          
+          // Fetch from the activtrades endpoint which returns real data
+          const response = await fetch(`http://localhost:${req.socket.localPort}/api/activtrades-rate?symbol=${symbol}`, {
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
 
-          if (!symbolResponse.status || !symbolResponse.returnData) {
-            console.log(`[XTB Backend] Failed to get data for ${symbol}, using fallback`);
-            const fallback = FALLBACK_RATES.find(r => r.symbol === symbol);
-            if (fallback) {
-              rates.push({
-                ...fallback,
-                timestamp: Date.now()
-              });
-            }
-            continue;
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
 
+          const data = await response.json();
+          console.log(`[Exchange Rates] Got data for ${symbol}:`, data);
+          
           rates.push({
             symbol,
-            bid: symbolResponse.returnData.bid,
-            ask: symbolResponse.returnData.ask,
-            timestamp: symbolResponse.returnData.time || Date.now(),
-            swapLong: Math.abs(symbolResponse.returnData.swapLong || 0),
-            swapShort: Math.abs(symbolResponse.returnData.swapShort || 0),
+            bid: data.bid,
+            ask: data.ask,
+            timestamp: Date.now(),
+            swapLong: Math.abs(data.swap_long / 10000 || 0), // Convert to decimal
+            swapShort: Math.abs(data.swap_short / 10000 || 0), // Convert to decimal
           });
         } catch (error) {
-          console.error(`[XTB Backend] Error processing ${symbol}:`, error);
-          const fallback = FALLBACK_RATES.find(r => r.symbol === symbol);
-          if (fallback) {
-            rates.push({
-              ...fallback,
-              timestamp: Date.now()
-            });
-          }
+          console.error(`[Exchange Rates] Error fetching ${symbol}:`, error);
+          
+          // If a specific symbol fails, let's still return the others
+          // rather than failing the whole request
+          continue;
         }
       }
 
-      // If we have no rates, use all fallbacks
+      // If we have no rates, something went wrong with the service
       if (rates.length === 0) {
-        console.log('[XTB Backend] No rates available, using all fallbacks');
-        return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
-          ...rate,
-          timestamp: Date.now()
-        }))));
+        console.error('[Exchange Rates] Failed to get any rates');
+        return res.status(503).json({ 
+          error: 'Exchange rate service temporarily unavailable' 
+        });
       }
 
       // Send the rates as a direct JSON string
+      console.log('[Exchange Rates] Returning rates:', rates);
       return res.send(JSON.stringify(rates));
     } catch (error) {
-      console.error('[XTB Backend] Error in rates endpoint:', error);
-      // Return fallback data instead of an error
-      return res.send(JSON.stringify(FALLBACK_RATES.map(rate => ({
-        ...rate,
-        timestamp: Date.now()
-      }))));
+      console.error('[Exchange Rates] Error in rates endpoint:', error);
+      return res.status(500).json({ 
+        error: 'Failed to retrieve exchange rates'
+      });
     }
   });
 
-  // XTB API route for hedge execution - ROUTED THROUGH FLASK SERVER at http://3.147.6.168
+  // Broker API route for hedge execution - Now using our new Trade API
   app.post("/api/xtb/hedge", async (req, res) => {
     res.header('Content-Type', 'application/json');
+    const requestId = Date.now().toString();
 
     try {
-      console.log('[XTB Backend] Processing hedge request with request ID:', Date.now().toString());
+      console.log(`[Trade API][${requestId}] Processing hedge request`);
       
-      // Login first with more reliable error handling
-      try {
-        const loginResponse = await fetch('http://3.147.6.168/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 17535100, 
-            password: "GuiZarHoh2711!"
-          }),
-          signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
-        });
-
-        if (!loginResponse.ok) {
-          throw new Error(`Login failed with status ${loginResponse.status}`);
-        }
-
-        const loginData = await loginResponse.json();
-        if (!loginData.status) {
-          throw new Error(loginData.errorDescr || 'Login failed');
-        }
-        
-        console.log('[XTB Backend] Login successful');
-      } catch (error) {
-        console.error('[XTB Backend] Login error:', error);
-        throw new Error(`XTB Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-
       // Format the trade request with proper validation
       const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
       
@@ -180,58 +122,35 @@ export function registerRoutes(app: Express): Server {
       }
       
       const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[XTB Backend] Placing trade: ${tradeDirection} ${volume} lots of ${symbol}`);
+      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
-      // Create command structure with proper fields
-      const commandData = {
-        commandName: "tradeTransaction",
-        arguments: {
-          tradeTransInfo: {
-            cmd: tradeDirection === 'buy' ? 0 : 1,
-            symbol: symbol,
-            volume: volume,
-            price: 0.0,
-            type: 0,
-            order: 0,
-            customComment: `Hedgi-${Date.now()}`
-          }
-        }
-      };
-
-      // Execute the trade with appropriate timeout
-      const response = await fetch('http://3.147.6.168/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
-      });
-
-      if (!response.ok) {
-        throw new Error(`Flask server responded with status: ${response.status}`);
-      }
-
-      const apiResponse = await response.json();
-      console.log('[XTB Backend] Trade response:', apiResponse);
-
-      if (!apiResponse.status) {
-        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
-      }
+      // Use our new trade service with the default broker "activtrades"
+      const apiResponse = await tradeService.openTrade(
+        'activtrades', // Default broker as specified in requirements
+        symbol,
+        tradeDirection as 'buy' | 'sell',
+        volume,
+        `Hedgi-${requestId}-${baseCurrency}${targetCurrency}`
+      );
+      
+      console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
 
       // Ensure we have a valid order number
-      const tradeOrderNumber = apiResponse.returnData?.order;
+      const tradeOrderNumber = apiResponse.order;
       if (!tradeOrderNumber) {
-        throw new Error('No order number returned from XTB API');
+        throw new Error('No valid order number returned from Trade API');
       }
 
       // Return the confirmed response with order number
       return res.json({
         status: true,
         returnData: {
-          order: tradeOrderNumber
+          order: tradeOrderNumber,
+          price: apiResponse.price
         }
       });
     } catch (error) {
-      console.error('[XTB Backend] Error executing hedge:', error);
+      console.error(`[Trade API][${requestId}] Error executing hedge:`, error);
       return res.status(500).json({ 
         status: false,
         error: error instanceof Error ? error.message : String(error)
@@ -252,7 +171,7 @@ export function registerRoutes(app: Express): Server {
     res.json(userHedges);
   });
 
-  // Optimized endpoint to check trade status
+  // Optimized endpoint to check trade status (simplified for now as our new API doesn't have a specific status check)
   app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");
@@ -264,68 +183,34 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      // Login first to ensure we have a valid session
-      const loginResponse = await fetch('http://3.147.6.168/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 17535100, 
-          password: "GuiZarHoh2711!"
-        }),
-        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
-      });
-
-      if (!loginResponse.ok) {
-        throw new Error(`Login failed with status ${loginResponse.status}`);
-      }
-
-      // Use simplified command for getting trades
-      const commandData = {
-        commandName: "getTrades",
-        arguments: { openedOnly: true }
-      };
-
-      // Send command with reduced timeout
-      const response = await fetch('http://3.147.6.168/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(commandData),
-        signal: AbortSignal.timeout(30000) // Increased timeout for slow server responses
-      });
-
-      if (!response.ok) {
-        throw new Error(`Flask server responded with status: ${response.status}`);
-      }
-
-      const apiResponse = await response.json();
+      // With the new API, we don't have a direct way to check trade status
+      // So we'll just return a success response that the trade order exists in our database
+      // In a real implementation, you might want to add a status check endpoint to your API
       
-      if (!apiResponse.status) {
-        throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
-      }
-
-      // Find the specific trade in the returned array
-      const trade = apiResponse.returnData?.find((t: any) => parseInt(t.order) === tradeOrderNumber);
-
-      if (!trade) {
+      // Find the hedge in our database with this trade order number
+      const hedge = await db.query.hedges.findFirst({
+        where: eq(hedges.tradeOrderNumber, tradeOrderNumber)
+      });
+      
+      if (!hedge) {
         return res.json({ 
           status: true, 
           found: false, 
-          message: `Trade with order number ${tradeOrderNumber} not found` 
+          message: `Trade with order number ${tradeOrderNumber} not found in database` 
         });
       }
 
-      // Return a simplified trade object
+      // Return a simplified trade object based on our database record
       res.json({
         status: true,
         found: true,
         trade: {
-          order: trade.order,
-          symbol: trade.symbol,
-          volume: trade.volume,
-          cmd: trade.cmd,
-          open_price: trade.open_price,
-          open_time: trade.open_time,
-          profit: trade.profit
+          order: hedge.tradeOrderNumber,
+          symbol: `${hedge.targetCurrency}${hedge.baseCurrency}`,
+          amount: hedge.amount,
+          type: Number(hedge.amount) > 0 ? 'buy' : 'sell',
+          price: Number(hedge.rate),
+          status: hedge.status
         }
       });
     } catch (error) {
@@ -350,7 +235,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      console.log(`[XTB Backend][${requestId}] Processing hedge request from /api/hedges`);
+      console.log(`[Trade API][${requestId}] Processing hedge request from /api/hedges`);
       
       // Parse and validate request data
       const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
@@ -377,41 +262,27 @@ export function registerRoutes(app: Express): Server {
       }
       
       const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[XTB Backend][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
+      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
 
       // Enhanced trade execution with detailed logging
       try {
-        // Force a new login each time to ensure a valid session
-        console.log(`[DEBUG][${requestId}] Logging into trading service...`);
-        const loginSuccess = await tradingService.connect();
-        
-        if (!loginSuccess) {
-          console.log(`[DEBUG][${requestId}] Failed to connect to trading service`);
-          throw new Error('Failed to connect to trading service');
-        }
-        
-        console.log(`[DEBUG][${requestId}] Successfully connected to trading service`);
-        
-        // Execute the trade with explicit parameters
-        const apiResponse = await tradingService.openTrade(
+        // Use the new trade service with the broker "activtrades" as default
+        const apiResponse = await tradeService.openTrade(
+          'activtrades', // Default broker as specified in requirements
           symbol,
+          tradeDirection as 'buy' | 'sell',
           volume,
-          tradeDirection === 'buy',
           `Hedgi-${requestId}-${baseCurrency}${targetCurrency}-${duration}days`
         );
         
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
 
-        if (!apiResponse.status) {
-          throw new Error(`XTB API error: ${apiResponse.errorDescr || 'Unknown error'}`);
-        }
-
         // Extract the order number from response with validation
-        const tradeOrderNumber = apiResponse.returnData?.order;
+        const tradeOrderNumber = apiResponse.order;
         console.log(`[DEBUG][${requestId}] Trade order number:`, tradeOrderNumber);
         
         if (!tradeOrderNumber) {
-          throw new Error('No valid order number returned from XTB API');
+          throw new Error('No valid order number returned from Trade API');
         }
 
         // Create and log the exact hedge data to be stored
@@ -419,7 +290,7 @@ export function registerRoutes(app: Express): Server {
           baseCurrency: baseCurrency,
           targetCurrency: targetCurrency,
           amount: String(volume * 100000 * (tradeDirection === 'buy' ? 1 : -1)),
-          rate: apiResponse.returnData?.price?.toString() || "0.0",
+          rate: apiResponse.price?.toString() || "0.0",
           duration: duration || 30,
           status: 'active',
           tradeOrderNumber: tradeOrderNumber,
@@ -442,7 +313,8 @@ export function registerRoutes(app: Express): Server {
         const response = {
           status: true,
           returnData: {
-            order: tradeOrderNumber
+            order: tradeOrderNumber,
+            price: apiResponse.price
           },
           hedgeId: newHedge[0]?.id,
           message: `Successfully placed ${tradeDirection} hedge for ${volume} lots of ${symbol}`
@@ -456,7 +328,55 @@ export function registerRoutes(app: Express): Server {
         throw tradeError; // Re-throw to be caught by the outer catch
       }
     } catch (error) {
-      console.error('[XTB Backend] Error executing hedge:', error);
+      console.error('[Trade API] Error executing hedge:', error);
+      return res.status(500).json({ 
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Add explicit close trade endpoint to support dashboard.tsx
+  app.post("/api/xtb/trades/:tradeOrderNumber/close", async (req, res) => {
+    res.header('Content-Type', 'application/json');
+    const requestId = Date.now().toString();
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+
+    const tradeOrderNumber = parseInt(req.params.tradeOrderNumber);
+    if (isNaN(tradeOrderNumber)) {
+      return res.status(400).json({ 
+        status: false,
+        error: 'Invalid trade order number' 
+      });
+    }
+
+    try {
+      console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber}`);
+      
+      // Use the new trade service to close the trade
+      const closeResponse = await tradeService.closeTrade(
+        'activtrades', // Default broker as specified in requirements
+        tradeOrderNumber
+      );
+      
+      console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
+      
+      return res.json({
+        status: true,
+        returnData: {
+          order: tradeOrderNumber,
+          price: closeResponse.price
+        },
+        message: `Successfully closed trade ${tradeOrderNumber}`
+      });
+    } catch (error) {
+      console.error(`[Trade API][${requestId}] Error closing trade:`, error);
       return res.status(500).json({ 
         status: false,
         error: error instanceof Error ? error.message : String(error)
@@ -485,34 +405,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Hedge not found");
       }
 
-      // Close the trade via XTB API if there's a trade order number
+      // Close the trade via new Trade API if there's a trade order number
       if (hedge.tradeOrderNumber) {
         try {
-          const symbol = `${hedge.targetCurrency}${hedge.baseCurrency}`;
-          const volume = Math.abs(Number(hedge.amount)) / 100000; // Convert to lots
-          const isBuy = Number(hedge.amount) > 0;
+          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} for ${symbol}`);
-
-          // Close the trade with proper parameters
-          // Increment the order number by 1 as required by XTB API for closing trades
-          const orderNumberToClose = hedge.tradeOrderNumber + 1;
-          console.log(`[Routes] Using adjusted order number ${orderNumberToClose} for closure (original: ${hedge.tradeOrderNumber})`);
-          
-          const closeResponse = await tradingService.closeTrade(
-            symbol,
-            orderNumberToClose,
-            volume,
-            isBuy,
-            `Closing hedge ID ${hedgeId} for ${symbol}`
+          // Use the new trade service with activtrades as the broker
+          const closeResponse = await tradeService.closeTrade(
+            'activtrades', // Default broker as specified in requirements
+            hedge.tradeOrderNumber
           );
 
-          if (closeResponse.status) {
-            const closingOrderNumber = closeResponse.returnData?.order || 0;
-            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with closing order ${closingOrderNumber}`);
-          } else {
-            console.log(`[Routes] Trade closure issue: ${closeResponse.message || 'Unknown error'}`);
-          }
+          console.log(`[Routes] Trade close response:`, closeResponse);
+          console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
         } catch (tradeError) {
           // Log the error but continue with database deletion
           console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);
