@@ -32,7 +32,7 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'fbs', // Changed default to fbs as it was used in the working example
+    broker: string = 'activtrades', // Using activtrades as the default broker
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number,
@@ -84,7 +84,7 @@ export class TradeService {
    * @returns The API response with closure details
    */
   async closeTrade(
-    broker: string = 'fbs', // Changed default to fbs as it was used in the working example
+    broker: string = 'activtrades', // Using activtrades as the default broker
     position: number
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Closing position ${position} with broker ${broker}`);
