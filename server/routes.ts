@@ -645,11 +645,12 @@ export function registerRoutes(app: Express): Server {
       }
       
       // Use the trade service to close the trade
-      console.log(`[Test Close Trade API][${requestId}] Closing position ${position} with broker ${broker}`);
+      console.log(`[Test Close Trade API][${requestId}] Closing position ${position} with broker ${broker} (position type: ${typeof position})`);
       
+      // CRITICAL FIX: Do NOT convert position to string - the API expects a number
       const closeResult = await tradeService.closeTrade(
         broker,
-        String(position) // Convert to string to avoid integer overflow issues
+        position // Pass position as-is to our updated tradeService
       );
       
       console.log(`[Test Close Trade API][${requestId}] Close response:`, closeResult);
@@ -700,9 +701,10 @@ export function registerRoutes(app: Express): Server {
           // Wait a bit to ensure the order is registered in the broker system
           await new Promise(resolve => setTimeout(resolve, 1000));
           
+          // CRITICAL FIX: Do NOT convert position to string - the API expects a number
           closeResult = await tradeService.closeTrade(
             broker,
-            String(positionId) // Convert to string to avoid integer overflow issues
+            positionId // Pass position number as-is
           );
           console.log(`[Test Trade API][${requestId}] Close response:`, closeResult);
         } catch (closeError) {

@@ -141,7 +141,7 @@ export default function Dashboard() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               broker: 'tickmill', // Use tickmill as the default broker
-              position: hedge.tradeOrderNumber // Send the position number as is (already a string in DB)
+              position: Number(hedge.tradeOrderNumber) // CRITICAL FIX: Convert string to number for API
             }),
             credentials: 'include'
           });

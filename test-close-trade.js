@@ -48,10 +48,8 @@ async function testTradeClosing() {
     const closeResponse1 = await fetch('http://localhost:5000/api/test-close-trade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        broker: 'tickmill',
-        position: orderNumber
-      })
+      // Critical: Use raw JSON with position as a number, not a string
+      body: `{"broker":"tickmill","position":${Number(orderNumber)}}`
     });
 
     const closeData1 = await closeResponse1.json();
@@ -63,10 +61,8 @@ async function testTradeClosing() {
       const closeResponse2 = await fetch('http://localhost:5000/api/test-close-trade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          broker: 'tickmill',
-          position: dealNumber
-        })
+        // Critical: Use raw JSON with position as a number, not a string
+        body: `{"broker":"tickmill","position":${Number(dealNumber)}}`
       });
 
       const closeData2 = await closeResponse2.json();
