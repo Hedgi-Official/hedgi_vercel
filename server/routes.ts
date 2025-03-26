@@ -412,9 +412,11 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Trade API][${requestId}] Closing trade ${position} with broker ${broker}`);
       
       // Use the trade service to close the trade
+      // CRITICAL FIX: Ensure we pass the position as a number for broker API
+      // Position needs to be a number without quotes in the request body
       const closeResponse = await tradeService.closeTrade(
-        broker,  // Use the broker from the request 
-        position // Use position from the request (already a string)
+        broker,  // Use the broker from the request
+        Number(position) // Ensure position is a number by explicitly converting
       );
       
       console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
@@ -504,9 +506,10 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber} via legacy endpoint`);
       
       // Use the new trade service to close the trade with broker "tickmill"
+      // CRITICAL FIX: Convert tradeOrderNumber to a number for the broker API
       const closeResponse = await tradeService.closeTrade(
         'tickmill', // Default broker as specified in requirements
-        tradeOrderNumber
+        Number(tradeOrderNumber) // Ensure position is a number
       );
       
       console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
@@ -588,9 +591,10 @@ export function registerRoutes(app: Express): Server {
           // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
           // could be either a deal or order number. We need to make sure we're using
           // the right identifier when closing the position.
+          // CRITICAL FIX: Convert position to a number for broker API
           const closeResponse = await tradeService.closeTrade(
             'tickmill', // Default broker as specified in requirements
-            hedge.tradeOrderNumber
+            Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
           );
 
           console.log(`[Routes] Trade close response:`, closeResponse);
