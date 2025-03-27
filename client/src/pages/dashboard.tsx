@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,16 @@ import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
 import { X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -18,6 +29,10 @@ export default function Dashboard() {
   const { user, logout } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // State for confirmation dialog
+  const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
+  const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
   const { data: hedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
@@ -126,95 +141,123 @@ export default function Dashboard() {
     }
   });
 
-  const deleteHedgeMutation = useMutation({
-    mutationFn: async (hedge: Hedge) => {
-      console.log('[Dashboard] Attempting to close hedge:', hedge);
+  // Handle initiating the hedge close process
+  const initiateHedgeClose = async (hedge: Hedge) => {
+    console.log('[Dashboard] Initiating hedge close process for:', hedge);
+    
+    // If there's no trade order number, just delete the hedge directly
+    if (!hedge.tradeOrderNumber) {
+      deleteHedgeMutation.mutate(hedge);
+      return;
+    }
+    
+    try {
+      // Use the new broker-based API endpoint for closing trades
+      console.log(`[Dashboard] Closing trade with order number ${hedge.tradeOrderNumber}`);
+      
+      const response = await fetch(`/api/trades/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broker: 'tickmill', // Use tickmill as the default broker
+          position: Number(hedge.tradeOrderNumber) // CRITICAL FIX: Convert string to number for API
+        }),
+        credentials: 'include'
+      });
 
-      // First close the trade if it exists
-      if (hedge.tradeOrderNumber) {
-        try {
-          // Use the new broker-based API endpoint for closing trades
-          console.log(`[Dashboard] Closing trade with order number ${hedge.tradeOrderNumber}`);
-          
-          const response = await fetch(`/api/trades/close`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              broker: 'tickmill', // Use tickmill as the default broker
-              position: Number(hedge.tradeOrderNumber) // CRITICAL FIX: Convert string to number for API
-            }),
-            credentials: 'include'
-          });
-
-          // Enhanced error handling - handle both HTTP and API errors
-          const responseText = await response.text();
-          let data;
-          
-          try {
-            // Attempt to parse as JSON
-            data = JSON.parse(responseText);
-            console.log('[Dashboard] Trade close response:', data);
-          } catch (parseError) {
-            console.error('[Dashboard] Failed to parse response as JSON:', responseText);
-            // Try to determine if this is an HTML response (typically an error page)
-            if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
-              console.error('[Dashboard] Received HTML error page instead of JSON');
-              throw new Error('Received HTML response instead of JSON. The server may be down or experiencing issues.');
-            } else {
-              throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
-            }
-          }
-          
-          // HTTP status wasn't OK
-          if (!response.ok) {
-            console.error('[Dashboard] Error closing trade:', data);
-            throw new Error(data.error || data.message || 'Failed to close trade');
-          }
-
-          // API status wasn't successful
-          if (data && data.status === false) {
-            console.error('[Dashboard] API error closing trade:', data);
-            throw new Error(data.error || data.message || 'Failed to close trade');
-          }
-          
-          // Position not found is a special case we handle gracefully
-          if (data && data.returnData && data.returnData.error && 
-              data.returnData.error.includes('not found')) {
-            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
-            // Not throwing an error here since we'll still delete from the database
-            toast({
-              title: "Trade Position Not Found",
-              description: "The trade couldn't be found at the broker, but we'll remove it from your dashboard.",
-              variant: "default"
-            });
-          } else if (data && data.message === "Market closed") {
-            console.warn(`[Dashboard] Market is closed, can't close trade ${hedge.tradeOrderNumber}`);
-            toast({
-              title: "Market Currently Closed",
-              description: "The market is currently closed. The hedge will be deleted from your dashboard.",
-              variant: "default"
-            });
-          } else {
-            console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
-            toast({
-              title: "Trade Closed",
-              description: "Your hedge position has been successfully closed.",
-              variant: "default"
-            });
-          }
-        } catch (closeError) {
-          console.error(`[Dashboard] Error closing trade:`, closeError);
-          // Even if trade close fails, we still want to try to delete the hedge from database
-          console.log(`[Dashboard] Will continue with database deletion despite close error`);
-          toast({
-            variant: "destructive",
-            title: t('Trade Closure Warning'),
-            description: 'Could not close trade at broker, but will remove from database. The trade may still be active at the broker.',
-          });
+      // Enhanced error handling - handle both HTTP and API errors
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        // Attempt to parse as JSON
+        data = JSON.parse(responseText);
+        console.log('[Dashboard] Trade close response:', data);
+      } catch (parseError) {
+        console.error('[Dashboard] Failed to parse response as JSON:', responseText);
+        // Try to determine if this is an HTML response (typically an error page)
+        if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html>')) {
+          console.error('[Dashboard] Received HTML error page instead of JSON');
+          throw new Error('Received HTML response instead of JSON. The server may be down or experiencing issues.');
+        } else {
+          throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
         }
       }
+      
+      // HTTP status wasn't OK
+      if (!response.ok) {
+        console.error('[Dashboard] Error closing trade:', data);
+        throw new Error(data.error || data.message || 'Failed to close trade');
+      }
 
-      // Then delete the hedge from our database
+      // API status wasn't successful
+      if (data && data.status === false) {
+        console.error('[Dashboard] API error closing trade:', data);
+        throw new Error(data.error || data.message || 'Failed to close trade');
+      }
+      
+      // Position not found is a special case that requires confirmation
+      if (data && data.returnData && data.returnData.error && 
+          data.returnData.error.includes('not found')) {
+        console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+        
+        // Show confirmation dialog instead of auto-deleting
+        setHedgeToDelete(hedge);
+        setConfirmDialogOpen(true);
+        return; // Stop here and wait for user confirmation
+      } else if (data && data.message === "Market closed") {
+        console.warn(`[Dashboard] Market is closed, can't close trade ${hedge.tradeOrderNumber}`);
+        toast({
+          title: "Market Currently Closed",
+          description: "The market is currently closed. The hedge will be deleted from your dashboard.",
+          variant: "default"
+        });
+        // Continue with database deletion
+        deleteHedgeMutation.mutate(hedge);
+      } else {
+        console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+        toast({
+          title: "Trade Closed",
+          description: "Your hedge position has been successfully closed.",
+          variant: "default"
+        });
+        // Continue with database deletion
+        deleteHedgeMutation.mutate(hedge);
+      }
+    } catch (closeError) {
+      console.error(`[Dashboard] Error closing trade:`, closeError);
+      // Even if trade close fails, we still want to try to delete the hedge from database
+      console.log(`[Dashboard] Will continue with database deletion despite close error`);
+      toast({
+        variant: "destructive",
+        title: t('Trade Closure Warning'),
+        description: 'Could not close trade at broker, but will remove from database. The trade may still be active at the broker.',
+      });
+      // Continue with database deletion
+      deleteHedgeMutation.mutate(hedge);
+    }
+  };
+  
+  // Confirm deletion of a hedge that wasn't found on the broker
+  const confirmHedgeDeletion = () => {
+    if (hedgeToDelete) {
+      deleteHedgeMutation.mutate(hedgeToDelete);
+      setHedgeToDelete(null);
+    }
+    setConfirmDialogOpen(false);
+  };
+  
+  // Cancel deletion of a hedge
+  const cancelHedgeDeletion = () => {
+    setHedgeToDelete(null);
+    setConfirmDialogOpen(false);
+  };
+
+  const deleteHedgeMutation = useMutation({
+    mutationFn: async (hedge: Hedge) => {
+      console.log('[Dashboard] Deleting hedge from database:', hedge);
+
+      // Delete the hedge from our database
       const response = await fetch(`/api/hedges/${hedge.id}`, {
         method: 'DELETE',
         credentials: 'include'
@@ -322,7 +365,7 @@ export default function Dashboard() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive/90"
-                            onClick={() => deleteHedgeMutation.mutate(hedge)}
+                            onClick={() => initiateHedgeClose(hedge)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -349,6 +392,26 @@ export default function Dashboard() {
           </Card>
         </div>
       </main>
+
+      {/* Confirmation Dialog for Position Not Found */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Position Not Found</AlertDialogTitle>
+            <AlertDialogDescription>
+              The trade position couldn't be found at the broker.
+              This could be because it was closed elsewhere or never existed.
+              Would you like to remove it from your dashboard?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelHedgeDeletion}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmHedgeDeletion}>
+              Yes, remove it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
