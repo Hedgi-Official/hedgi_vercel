@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
@@ -126,7 +126,7 @@ export function registerRoutes(app: Express): Server {
 
       // Use the trade service with the exact format as working curl
       const apiResponse = await tradeService.openTrade(
-        'tickmill',
+        'activtrades', // Changed to activtrades based on direct testing
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume
@@ -327,7 +327,7 @@ export function registerRoutes(app: Express): Server {
       try {
         // Use the trade service with the exact same format as working curl command
         const apiResponse = await tradeService.openTrade(
-          'tickmill',
+          'activtrades', // Changed from 'tickmill' to 'activtrades' based on direct testing
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume
@@ -566,10 +566,10 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber} via legacy endpoint`);
       
-      // Use the new trade service to close the trade with broker "tickmill"
+      // Use the new trade service to close the trade with broker "activtrades"
       // CRITICAL FIX: Convert tradeOrderNumber to a number for the broker API
       const closeResponse = await tradeService.closeTrade(
-        'tickmill', // Default broker as specified in requirements
+        'activtrades', // Changed from 'tickmill' to 'activtrades' based on direct testing
         Number(tradeOrderNumber) // Ensure position is a number
       );
       
@@ -649,12 +649,12 @@ export function registerRoutes(app: Express): Server {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
+          // CRITICAL FIX: For broker integration, the tradeOrderNumber stored in our database
           // could be either a deal or order number. We need to make sure we're using
           // the right identifier when closing the position.
           // CRITICAL FIX: Convert position to a number for broker API
           const closeResponse = await tradeService.closeTrade(
-            'tickmill', // Default broker as specified in requirements
+            'activtrades', // Changed from 'tickmill' to 'activtrades' based on direct testing
             Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
           );
 

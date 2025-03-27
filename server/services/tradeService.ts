@@ -33,7 +33,7 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'tickmill',
+    broker: string = 'activtrades', // Changed default from 'tickmill' to 'activtrades' based on direct testing
     symbol: string,
     direction: 'buy' | 'sell',
     volume: number
