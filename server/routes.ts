@@ -313,8 +313,11 @@ export function registerRoutes(app: Express): Server {
         }
         
         if (!tradeOrderNumber) {
-          console.warn(`[DEBUG][${requestId}] No order number in API response, using request ID as fallback`);
-          tradeOrderNumber = Date.now(); // Use timestamp as fallback ID
+          console.warn(`[DEBUG][${requestId}] No valid order number returned from broker API`);
+          return res.status(400).json({
+            status: false,
+            error: "Failed to obtain a valid order number from the broker"
+          });
         }
         
         console.log(`[DEBUG][${requestId}] Trade order number:`, tradeOrderNumber);
