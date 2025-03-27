@@ -172,25 +172,37 @@ export function registerRoutes(app: Express): Server {
 
   // Optimized endpoint to check trade status (simplified for now as our new API doesn't have a specific status check)
   app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
+    const requestId = Date.now().toString();
+    console.log(`[DEBUG][${requestId}] Status check request for trade order: ${req.params.tradeOrderNumber}`);
+    
     if (!req.isAuthenticated()) {
+      console.log(`[DEBUG][${requestId}] Status check rejected: Not authenticated`);
       return res.status(401).send("Not authenticated");
     }
 
     // No need to parse as integer since we've changed to storing as string
     const tradeOrderNumber = req.params.tradeOrderNumber;
     if (!tradeOrderNumber) {
+      console.log(`[DEBUG][${requestId}] Status check rejected: Invalid trade order number`);
       return res.status(400).send("Invalid trade order number");
     }
+    
+    console.log(`[DEBUG][${requestId}] Checking status for trade order: ${tradeOrderNumber}`);
 
     try {
       // With the new API, we don't have a direct way to check trade status
       // So we'll just return a success response that the trade order exists in our database
       // In a real implementation, you might want to add a status check endpoint to your API
       
+      // IMPORTANT: Always retrieve the order number as a string
+      console.log(`[DEBUG][${requestId}] Looking up trade order in database as: "${tradeOrderNumber}"`);
+      
       // Find the hedge in our database with this trade order number
       const hedge = await db.query.hedges.findFirst({
-        where: eq(hedges.tradeOrderNumber, tradeOrderNumber)
+        where: eq(hedges.tradeOrderNumber, String(tradeOrderNumber))
       });
+      
+      console.log(`[DEBUG][${requestId}] Database lookup result:`, hedge);
       
       if (!hedge) {
         return res.json({ 
@@ -261,8 +273,55 @@ export function registerRoutes(app: Express): Server {
         });
       }
       
+      // CRITICAL FIX: Create a unique client order ID for this request
+      // This ensures that even if the request is duplicated, we maintain uniqueness
+      const clientOrderId = `hedgi-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      console.log(`[Trade API][${requestId}] Generated client order ID: ${clientOrderId}`);
+      
       const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
+      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}, client ID: ${clientOrderId}`);
+      
+      // CRITICAL FIX: Check if the system has any pending trades with the same 
+      // broker+symbol combination or if another operation is in progress
+      console.log(`[Trade API][${requestId}] Checking for existing active trades...`);
+      
+      // We'll implement additional safety checks to avoid duplicate trades
+      try {
+        const userId = req.user.id;
+        const existingHedges = await db
+          .select()
+          .from(hedges)
+          .where(and(
+            eq(hedges.userId, userId),
+            eq(hedges.status, 'active'),
+            eq(hedges.baseCurrency, baseCurrency),
+            eq(hedges.targetCurrency, targetCurrency),
+            eq(hedges.tradeStatus, 'open') // Only consider open trades as a potential conflict
+          ));
+        
+        // Log for debugging
+        console.log(`[Trade API][${requestId}] Found ${existingHedges.length} active trades for this user with the same currency pair`);
+        
+        // If any active trade was placed in the last 5 seconds, it might be a duplicate request
+        // This adds protection against rapid repeated clicks
+        const fiveSecondsAgo = new Date(Date.now() - 5000);
+        const recentTrades = existingHedges.filter(hedge => 
+          hedge.createdAt && new Date(hedge.createdAt) > fiveSecondsAgo
+        );
+        
+        if (recentTrades.length > 0) {
+          console.warn(`[Trade API][${requestId}] Found recently created trades (last 5 seconds) - potential duplicate request`);
+          console.warn(`[Trade API][${requestId}] Recent trades:`, recentTrades);
+          
+          return res.status(409).json({
+            status: false,
+            error: "You have a trade that was just placed. Please wait a few seconds before placing another trade."
+          });
+        }
+      } catch (dbError) {
+        console.error(`[Trade API][${requestId}] Error checking for existing trades:`, dbError);
+        // Continue processing even if this check fails - it's just a safety measure
+      }
 
       // Enhanced trade execution with detailed logging
       try {
@@ -320,6 +379,8 @@ export function registerRoutes(app: Express): Server {
         console.log(`[DEBUG][${requestId}] Trade order number:`, tradeOrderNumber);
 
         // Create and log the exact hedge data to be stored
+        // CRITICAL FIX: Always store the tradeOrderNumber as a string
+        // This ensures consistent handling when retrieving for API calls
         const hedgeValues = {
           baseCurrency: baseCurrency,
           targetCurrency: targetCurrency,
@@ -327,7 +388,7 @@ export function registerRoutes(app: Express): Server {
           rate: apiResponse.price?.toString() || apiResponse.ask?.toString() || apiResponse.bid?.toString() || "0.0",
           duration: duration || 30,
           status: 'active',
-          tradeOrderNumber: tradeOrderNumber, // This now contains either the deal or order number
+          tradeOrderNumber: String(tradeOrderNumber), // Explicitly convert to string
           tradeStatus: 'open'
         };
         
@@ -632,166 +693,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Test endpoint for trade API integration
-  // Test endpoint to close a trade without authentication
-  app.post("/api/test-close-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Close Trade API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker = 'tickmill', position, useDeal = false } = req.body;
-      
-      if (!position) {
-        return res.status(400).json({
-          status: false,
-          error: 'Missing required field: position'
-        });
-      }
-      
-      // Use the trade service to close the trade
-      console.log(`[Test Close Trade API][${requestId}] Closing position ${position} with broker ${broker} (position type: ${typeof position})`);
-      
-      // CRITICAL FIX: Do NOT convert position to string - the API expects a number
-      const closeResult = await tradeService.closeTrade(
-        broker,
-        position // Pass position as-is to our updated tradeService
-      );
-      
-      console.log(`[Test Close Trade API][${requestId}] Close response:`, closeResult);
-      
-      res.json({
-        status: true,
-        result: closeResult,
-        message: `Attempted to close trade: position ${position} via ${broker}`
-      });
-    } catch (error) {
-      console.error(`[Test Close Trade API][${requestId}] Error:`, error);
-      res.status(500).json({
-        status: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.post("/api/test-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker = 'tickmill', symbol = 'USDBRL', direction = 'buy', volume = 0.1, autoClose = false } = req.body;
-      
-      console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
-      
-      // Use exact same format as working curl command
-      const result = await tradeService.openTrade(
-        broker,
-        symbol,
-        direction as 'buy' | 'sell',
-        Number(volume)
-      );
-      
-      console.log(`[Test Trade API][${requestId}] Trade response:`, result);
-      
-      // If autoClose flag is set, immediately close the trade for testing
-      let closeResult = null;
-      if (autoClose && result && (result.deal || result.order)) {
-        try {
-          // CRITICAL FIX: For Tickmill, we need to use the ORDER number, not the deal number
-          // to close positions as confirmed by direct testing
-          // CRITICAL FIX: Always use ORDER number, not deal number for closing positions
-          const positionId = result.order;
-          console.log(`[Test Trade API][${requestId}] Auto-closing trade position ${positionId} (deal: ${result.deal}, order: ${result.order})`);
-          
-          // Wait a bit to ensure the order is registered in the broker system
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // CRITICAL FIX: Do NOT convert position to string - the API expects a number
-          closeResult = await tradeService.closeTrade(
-            broker,
-            positionId // Pass position number as-is
-          );
-          console.log(`[Test Trade API][${requestId}] Close response:`, closeResult);
-        } catch (closeError) {
-          console.error(`[Test Trade API][${requestId}] Error closing trade:`, closeError);
-          closeResult = { error: closeError instanceof Error ? closeError.message : String(closeError) };
-          // Continue with response even if close fails
-        }
-      }
-      
-      res.json({
-        status: true,
-        result,
-        closeResult,
-        message: `Successfully executed test trade: ${direction} ${volume} lots of ${symbol} via ${broker}${autoClose ? ' and attempted to close it' : ''}`
-      });
-    } catch (error) {
-      console.error(`[Test Trade API][${requestId}] Error:`, error);
-      res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error),
-        message: 'Failed to execute test trade'
-      });
-    }
-  });
-  
-  // Test endpoint for closing trades - doesn't require authentication
-  app.post("/api/test-close-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Close API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker = 'tickmill', position } = req.body;
-      
-      if (!position) {
-        return res.status(400).json({
-          status: false,
-          error: 'Missing required position number',
-          message: 'Position/order number is required'
-        });
-      }
-      
-      console.log(`[Test Close API][${requestId}] Closing position ${position} via ${broker}`);
-      
-      // Use exact same format as working curl command - pass position as-is without converting to Number
-      const result = await tradeService.closeTrade(
-        broker,
-        position
-      );
-      
-      console.log(`[Test Close API][${requestId}] Close response:`, result);
-      
-      // Handle market closed scenario
-      if (result.comment === "Market closed") {
-        return res.json({
-          status: false,  // For test endpoint, return false status to indicate issue
-          result,
-          message: "Market closed - cannot close position at this time"
-        });
-      }
-      
-      // Handle position not found
-      if (result.error && result.error.includes('not found')) {
-        return res.json({
-          status: false,  // For test endpoint, return false status to indicate issue
-          result,
-          message: `Position ${position} not found at broker ${broker}`
-        });
-      }
-      
-      res.json({
-        status: true,
-        result,
-        message: `Successfully closed position ${position} via ${broker}`
-      });
-    } catch (error) {
-      console.error(`[Test Close API][${requestId}] Error:`, error);
-      res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error),
-        message: 'Failed to close trade'
-      });
-    }
-  });
+  // Test endpoints have been removed to prevent unintended trade interactions
 
   const httpServer = createServer(app);
   return httpServer;
