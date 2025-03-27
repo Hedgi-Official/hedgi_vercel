@@ -196,51 +196,52 @@ export default function Dashboard() {
             }
           }
           
-          // Log the response details for debugging
-          console.log('[Dashboard] Full broker response details:', {
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText,
-            data: data,
-            errorType: data?.errorType
-          });
-          
-          // Handle both HTTP and API errors with errorType
-          if (data?.errorType || !response.ok) {
-            console.warn('[Dashboard] Error or special condition identified:', data);
-
-            // Common confirmation dialog handling for all error types
-            const showConfirmationDialog = () => {
-              const message = data.message || `Failed to close the position with the broker. Delete it from your dashboard anyway?`;
-              
-              if (window.confirm(message)) {
-                return forceDeleteHedge(hedge).then(() => true);
+          // HTTP status wasn't OK
+          if (!response.ok) {
+            console.error('[Dashboard] Error closing trade:', data);
+            
+            // Special handling for BROKER_CLOSE_FAILED error type
+            if (data?.errorType === 'BROKER_CLOSE_FAILED') {
+              // Ask user for confirmation to delete anyway
+              if (window.confirm(data.message || 'Failed to close the trade with the broker. Delete it from your dashboard anyway?')) {
+                // User confirmed they want to force delete
+                await forceDeleteHedge(hedge);
+                return true; // Return early as we've handled this case
               } else {
+                // User canceled deletion
                 throw new Error('Deletion canceled by user');
               }
-            };
-            
-            // Handle specific error types
-            if (data?.errorType === 'POSITION_NOT_FOUND') {
-              console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
-              return await showConfirmationDialog();
-            } 
-            else if (data?.errorType === 'MARKET_CLOSED') {
-              console.warn(`[Dashboard] Market is closed, can't close position ${hedge.tradeOrderNumber}`);
-              return await showConfirmationDialog();
-            }
-            else if (data?.errorType === 'BROKER_CLOSE_FAILED') {
-              console.warn(`[Dashboard] Broker failed to close position ${hedge.tradeOrderNumber}`);
-              return await showConfirmationDialog();
-            }
-            else if (!response.ok) {
-              console.error('[Dashboard] HTTP error closing trade:', data);
-              // For HTTP errors without a specific errorType, show generic confirmation
-              return await showConfirmationDialog();
             }
             
-            // If we get here, it's an unhandled error type or condition
             throw new Error(data.error || data.message || 'Failed to close trade');
+          }
+
+          // Handle special errorType cases
+          if (data && data.errorType === 'POSITION_NOT_FOUND') {
+            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+            // Show confirmation dialog
+            if (window.confirm(`Position ${hedge.tradeOrderNumber} not found at the broker. Remove it from your dashboard anyway?`)) {
+              // User confirmed - force delete
+              await forceDeleteHedge(hedge);
+              return true;
+            } else {
+              // User canceled
+              throw new Error('Deletion canceled by user');
+            }
+          }
+          
+          // Handle market closed case
+          if (data && data.errorType === 'MARKET_CLOSED') {
+            console.warn(`[Dashboard] Market is closed, can't close position ${hedge.tradeOrderNumber}`);
+            // Show confirmation dialog
+            if (window.confirm(`Market is currently closed so the position cannot be closed. Remove it from your dashboard anyway?`)) {
+              // User confirmed - force delete
+              await forceDeleteHedge(hedge);
+              return true;
+            } else {
+              // User canceled
+              throw new Error('Deletion canceled by user');
+            }
           }
           
           // API status wasn't successful - handle other error types

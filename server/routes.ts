@@ -433,34 +433,19 @@ export function registerRoutes(app: Express): Server {
       if (closeResponse.error || (closeResponse.retcode !== undefined && closeResponse.retcode !== 0) || closeResponse.comment === "Market closed") {
         console.warn(`[Trade API][${requestId}] Issue with broker: ${closeResponse.error || closeResponse.comment || 'Unknown error'}`);
         
-        // Determine the specific error message and type
+        // Determine the specific error message
         let errorMessage = "Failed to close the position with the broker.";
-        let errorType = 'BROKER_CLOSE_FAILED';
         
-        // Use the errorType from the trade service if available
-        if (closeResponse.errorType === 'POSITION_NOT_FOUND') {
+        if (closeResponse.error && closeResponse.error.includes('not found')) {
           errorMessage = `Position ${position} not found at the broker.`;
-          errorType = 'POSITION_NOT_FOUND';
-        } else if (closeResponse.errorType === 'MARKET_CLOSED' || closeResponse.comment === "Market closed") {
+        } else if (closeResponse.comment === "Market closed") {
           errorMessage = "Market is currently closed so the position cannot be closed.";
-          errorType = 'MARKET_CLOSED';
-        } else if (closeResponse.error && closeResponse.error.includes('not found')) {
-          // Fallback detection of position not found errors
-          errorMessage = `Position ${position} not found at the broker.`;
-          errorType = 'POSITION_NOT_FOUND';
         }
         
-        // Log the actual error response and the error type we're sending
-        console.log(`[Trade API][${requestId}] Sending error response:`, {
-          errorType, 
-          errorMessage,
-          originalError: closeResponse.error || closeResponse.comment
-        });
-        
         // Return a special response that client will handle with confirmation dialog
-        return res.json({
+        return res.status(400).json({
           status: false,
-          errorType: errorType,
+          errorType: 'BROKER_CLOSE_FAILED',
           error: closeResponse.error || closeResponse.comment || "Unknown broker error",
           message: `${errorMessage} Do you want to remove it from your dashboard anyway?`
         });
