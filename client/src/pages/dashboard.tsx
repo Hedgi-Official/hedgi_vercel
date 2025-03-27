@@ -25,12 +25,7 @@ export default function Dashboard() {
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: string) => {
-      // CRITICAL FIX: Always ensure the tradeOrderNumber is a string
-      // This avoids type conversion issues when fetching from the API
-      const orderNumberStr = String(tradeOrderNumber);
-      console.log(`[Dashboard] Checking status of trade order number: ${orderNumberStr}`);
-      
-      const response = await fetch(`/api/hedges/status/${orderNumberStr}`, {
+      const response = await fetch(`/api/hedges/status/${tradeOrderNumber}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -44,16 +39,12 @@ export default function Dashboard() {
     onSuccess: (data, tradeOrderNumber) => {
       // For the new API implementation, we have a different response format
       // The hedge status endpoint simply returns if the order exists in our database
-      console.log(`[Dashboard] Trade status check result:`, data);
-      
-      // CRITICAL FIX: Make sure we're displaying tradeOrderNumber consistently
-      const displayNumber = String(tradeOrderNumber);
       
       toast({
         title: t('Trade Status'),
         description: data.message || (data.found 
-          ? `Trade #${displayNumber} exists in system` 
-          : `Trade #${displayNumber} not found`),
+          ? `Trade #${tradeOrderNumber} exists in system` 
+          : `Trade #${tradeOrderNumber} not found`),
         duration: 10000,
       });
     },
@@ -145,23 +136,12 @@ export default function Dashboard() {
           // Use the new broker-based API endpoint for closing trades
           console.log(`[Dashboard] Closing trade with order number ${hedge.tradeOrderNumber}`);
           
-          // CRITICAL FIX: Ensure hedge.tradeOrderNumber is valid before trying to convert
-          // This avoids issues with null/undefined values trying to be parsed as numbers
-          const tradeOrderNumber = hedge.tradeOrderNumber ? Number(hedge.tradeOrderNumber) : null;
-          
-          if (!tradeOrderNumber) {
-            console.error('[Dashboard] Invalid trade order number:', hedge.tradeOrderNumber);
-            throw new Error('Invalid trade order number');
-          }
-          
-          console.log(`[Dashboard] Parsed trade order number as: ${tradeOrderNumber}`);
-          
           const response = await fetch(`/api/trades/close`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               broker: 'tickmill', // Use tickmill as the default broker
-              position: tradeOrderNumber // Already converted to number above
+              position: Number(hedge.tradeOrderNumber) // CRITICAL FIX: Convert string to number for API
             }),
             credentials: 'include'
           });
