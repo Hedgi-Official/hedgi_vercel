@@ -6,7 +6,7 @@ export interface TradeResponse {
   bid: number;
   comment: string;
   deal: number;
-  order: number;
+  order: number | string; // Allow string order numbers for "No money" conditions
   price: number;
   request: any;
   request_id: number;
