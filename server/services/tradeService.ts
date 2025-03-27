@@ -14,6 +14,7 @@ export interface TradeResponse {
   retcode_external: number;
   volume: number;
   error?: string; // For error responses
+  errorType?: string; // For specific error types (e.g., 'POSITION_NOT_FOUND')
 }
 
 export class TradeService {
@@ -163,10 +164,10 @@ export class TradeService {
         // If the response doesn't parse as JSON, it may be HTML or another format
         const result = JSON.parse(responseText) as TradeResponse;
         
-        // Handle "Position not found" as a special case to provide better error information
+        // Handle "Position not found" as a special case that needs a confirmation dialog
         if (result.error && result.error.includes('not found')) {
           console.warn(`[TradeService] Position ${position} not found at broker ${broker}`);
-          // Return a structured error response instead of throwing
+          // Return a structured error response with a specific error flag that indicates confirmation is needed
           return {
             ask: 0,
             bid: 0,
@@ -179,7 +180,8 @@ export class TradeService {
             retcode: 404, // Use a code to indicate not found
             retcode_external: 0,
             volume: 0,
-            error: `Position ${position} not found at broker ${broker}`
+            error: `Position ${position} not found at broker ${broker}`,
+            errorType: 'POSITION_NOT_FOUND' // Add a specific error type flag
           };
         }
         
@@ -198,7 +200,8 @@ export class TradeService {
             retcode: 10018, // Market closed retcode
             retcode_external: 0,
             volume: 0,
-            error: "Market is currently closed. Please try again during market hours."
+            error: "Market is currently closed. Please try again during market hours.",
+            errorType: 'MARKET_CLOSED' // Add specific error type
           };
         }
         

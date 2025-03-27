@@ -600,10 +600,14 @@ export function registerRoutes(app: Express): Server {
             if (closeResponse.error || (closeResponse.retcode !== undefined && closeResponse.retcode !== 0)) {
               // Determine the type of error for appropriate messaging
               let errorMessage = "Failed to close the position with the broker.";
+              let errorType = 'BROKER_CLOSE_FAILED';
               
-              if (closeResponse.error && closeResponse.error.includes('not found')) {
+              // Check for position not found errors - use the specific errorType if available
+              if ((closeResponse as any).errorType === 'POSITION_NOT_FOUND' || 
+                  (closeResponse.error && closeResponse.error.includes('not found'))) {
                 console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker.`);
                 errorMessage = `Position ${hedge.tradeOrderNumber} not found at the broker.`;
+                errorType = 'POSITION_NOT_FOUND'; // Use consistent error type
               } else if (closeResponse.comment === "Market closed") {
                 console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}.`);
                 errorMessage = "Market is currently closed so the position cannot be closed.";
@@ -617,7 +621,7 @@ export function registerRoutes(app: Express): Server {
               // This will trigger a confirmation popup on the frontend
               return res.status(400).json({
                 status: false,
-                errorType: 'BROKER_CLOSE_FAILED',
+                errorType: errorType,
                 error: closeResponse.error || `Broker returned error code: ${closeResponse.retcode}`,
                 message: `${errorMessage} Do you want to remove it from your dashboard anyway?`
               });

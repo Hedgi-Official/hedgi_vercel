@@ -216,13 +216,41 @@ export default function Dashboard() {
             throw new Error(data.error || data.message || 'Failed to close trade');
           }
 
-          // API status wasn't successful
+          // Handle special errorType cases
+          if (data && data.errorType === 'POSITION_NOT_FOUND') {
+            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+            // Show confirmation dialog
+            if (window.confirm(`Position ${hedge.tradeOrderNumber} not found at the broker. Remove it from your dashboard anyway?`)) {
+              // User confirmed - force delete
+              await forceDeleteHedge(hedge);
+              return true;
+            } else {
+              // User canceled
+              throw new Error('Deletion canceled by user');
+            }
+          }
+          
+          // Handle market closed case
+          if (data && data.errorType === 'MARKET_CLOSED') {
+            console.warn(`[Dashboard] Market is closed, can't close position ${hedge.tradeOrderNumber}`);
+            // Show confirmation dialog
+            if (window.confirm(`Market is currently closed so the position cannot be closed. Remove it from your dashboard anyway?`)) {
+              // User confirmed - force delete
+              await forceDeleteHedge(hedge);
+              return true;
+            } else {
+              // User canceled
+              throw new Error('Deletion canceled by user');
+            }
+          }
+          
+          // API status wasn't successful - handle other error types
           if (data && data.status === false) {
             console.error('[Dashboard] API error closing trade:', data);
             throw new Error(data.error || data.message || 'Failed to close trade');
           }
           
-          // We now handle success responses only - all error cases are handled by the special error handler above
+          // We now handle success responses only
           console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
           toast({
             title: "Trade Closed",
