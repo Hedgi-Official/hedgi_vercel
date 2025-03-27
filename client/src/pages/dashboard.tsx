@@ -160,7 +160,7 @@ export default function Dashboard() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              broker: 'activtrades', // Changed from 'tickmill' to 'activtrades' based on direct testing
+              broker: 'tickmill', // Use tickmill as the default broker
               position: tradeOrderNumber // Already converted to number above
             }),
             credentials: 'include'
