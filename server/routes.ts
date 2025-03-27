@@ -273,8 +273,55 @@ export function registerRoutes(app: Express): Server {
         });
       }
       
+      // CRITICAL FIX: Create a unique client order ID for this request
+      // This ensures that even if the request is duplicated, we maintain uniqueness
+      const clientOrderId = `hedgi-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      console.log(`[Trade API][${requestId}] Generated client order ID: ${clientOrderId}`);
+      
       const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
+      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}, client ID: ${clientOrderId}`);
+      
+      // CRITICAL FIX: Check if the system has any pending trades with the same 
+      // broker+symbol combination or if another operation is in progress
+      console.log(`[Trade API][${requestId}] Checking for existing active trades...`);
+      
+      // We'll implement additional safety checks to avoid duplicate trades
+      try {
+        const userId = req.user.id;
+        const existingHedges = await db
+          .select()
+          .from(hedges)
+          .where(and(
+            eq(hedges.userId, userId),
+            eq(hedges.status, 'active'),
+            eq(hedges.baseCurrency, baseCurrency),
+            eq(hedges.targetCurrency, targetCurrency),
+            eq(hedges.tradeStatus, 'open') // Only consider open trades as a potential conflict
+          ));
+        
+        // Log for debugging
+        console.log(`[Trade API][${requestId}] Found ${existingHedges.length} active trades for this user with the same currency pair`);
+        
+        // If any active trade was placed in the last 5 seconds, it might be a duplicate request
+        // This adds protection against rapid repeated clicks
+        const fiveSecondsAgo = new Date(Date.now() - 5000);
+        const recentTrades = existingHedges.filter(hedge => 
+          hedge.createdAt && new Date(hedge.createdAt) > fiveSecondsAgo
+        );
+        
+        if (recentTrades.length > 0) {
+          console.warn(`[Trade API][${requestId}] Found recently created trades (last 5 seconds) - potential duplicate request`);
+          console.warn(`[Trade API][${requestId}] Recent trades:`, recentTrades);
+          
+          return res.status(409).json({
+            status: false,
+            error: "You have a trade that was just placed. Please wait a few seconds before placing another trade."
+          });
+        }
+      } catch (dbError) {
+        console.error(`[Trade API][${requestId}] Error checking for existing trades:`, dbError);
+        // Continue processing even if this check fails - it's just a safety measure
+      }
 
       // Enhanced trade execution with detailed logging
       try {

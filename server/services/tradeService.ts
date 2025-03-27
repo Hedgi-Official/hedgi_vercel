@@ -40,15 +40,23 @@ export class TradeService {
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
     
-    // Use EXACTLY the same payload format as the working curl command
+    // CRITICAL FIX: Generate a unique magic number for each trade
+    // This prevents duplicate trades from having the same identifier
+    const uniqueMagic = Math.floor(100000 + Math.random() * 900000); // 6-digit unique number
+    const timestamp = Date.now();
+    const uniqueComment = `Hedgi trade ${timestamp}`;
+    
+    console.log(`[TradeService] Using unique identifiers - magic: ${uniqueMagic}, comment: ${uniqueComment}`);
+    
+    // Use the same payload format but with unique identifiers
     const tradeData = {
       broker,
       symbol,
       direction,
       volume,
       deviation: 5,
-      magic: 123456,
-      comment: "Hedgi test trade"
+      magic: uniqueMagic,
+      comment: uniqueComment
     };
     
     const requestBody = JSON.stringify(tradeData);
