@@ -126,37 +126,6 @@ export default function Dashboard() {
     }
   });
 
-  // Function to handle force deletion with confirmation
-  const forceDeleteHedge = async (hedge: Hedge) => {
-    try {
-      console.log('[Dashboard] Force deleting hedge after confirmation:', hedge);
-      
-      // Add forceDelete=true query parameter to skip broker close attempts
-      const response = await fetch(`/api/hedges/${hedge.id}?forceDelete=true`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      
-      // Handle success
-      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
-      toast({
-        title: t('simulator.notifications.hedgeDeleted'),
-        description: t('simulator.notifications.hedgeDeletedDesc'),
-      });
-    } catch (error) {
-      console.error('[Dashboard] Error force deleting hedge:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete hedge",
-      });
-    }
-  };
-
   const deleteHedgeMutation = useMutation({
     mutationFn: async (hedge: Hedge) => {
       console.log('[Dashboard] Attempting to close hedge:', hedge);
@@ -199,79 +168,49 @@ export default function Dashboard() {
           // HTTP status wasn't OK
           if (!response.ok) {
             console.error('[Dashboard] Error closing trade:', data);
-            
-            // Special handling for BROKER_CLOSE_FAILED error type
-            if (data?.errorType === 'BROKER_CLOSE_FAILED') {
-              // Ask user for confirmation to delete anyway
-              if (window.confirm(data.message || 'Failed to close the trade with the broker. Delete it from your dashboard anyway?')) {
-                // User confirmed they want to force delete
-                await forceDeleteHedge(hedge);
-                return true; // Return early as we've handled this case
-              } else {
-                // User canceled deletion
-                throw new Error('Deletion canceled by user');
-              }
-            }
-            
             throw new Error(data.error || data.message || 'Failed to close trade');
           }
 
-          // Handle special errorType cases
-          if (data && data.errorType === 'POSITION_NOT_FOUND') {
-            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
-            // Show confirmation dialog
-            if (window.confirm(`Position ${hedge.tradeOrderNumber} not found at the broker. Remove it from your dashboard anyway?`)) {
-              // User confirmed - force delete
-              await forceDeleteHedge(hedge);
-              return true;
-            } else {
-              // User canceled
-              throw new Error('Deletion canceled by user');
-            }
-          }
-          
-          // Handle market closed case
-          if (data && data.errorType === 'MARKET_CLOSED') {
-            console.warn(`[Dashboard] Market is closed, can't close position ${hedge.tradeOrderNumber}`);
-            // Show confirmation dialog
-            if (window.confirm(`Market is currently closed so the position cannot be closed. Remove it from your dashboard anyway?`)) {
-              // User confirmed - force delete
-              await forceDeleteHedge(hedge);
-              return true;
-            } else {
-              // User canceled
-              throw new Error('Deletion canceled by user');
-            }
-          }
-          
-          // API status wasn't successful - handle other error types
+          // API status wasn't successful
           if (data && data.status === false) {
             console.error('[Dashboard] API error closing trade:', data);
             throw new Error(data.error || data.message || 'Failed to close trade');
           }
           
-          // We now handle success responses only
-          console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
-          toast({
-            title: "Trade Closed",
-            description: "Your hedge position has been successfully closed.",
-            variant: "default"
-          });
+          // Position not found is a special case we handle gracefully
+          if (data && data.returnData && data.returnData.error && 
+              data.returnData.error.includes('not found')) {
+            console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+            // Not throwing an error here since we'll still delete from the database
+            toast({
+              title: "Trade Position Not Found",
+              description: "The trade couldn't be found at the broker, but we'll remove it from your dashboard.",
+              variant: "default"
+            });
+          } else if (data && data.message === "Market closed") {
+            console.warn(`[Dashboard] Market is closed, can't close trade ${hedge.tradeOrderNumber}`);
+            toast({
+              title: "Market Currently Closed",
+              description: "The market is currently closed. The hedge will be deleted from your dashboard.",
+              variant: "default"
+            });
+          } else {
+            console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+            toast({
+              title: "Trade Closed",
+              description: "Your hedge position has been successfully closed.",
+              variant: "default"
+            });
+          }
         } catch (closeError) {
           console.error(`[Dashboard] Error closing trade:`, closeError);
-          
-          // If user already handled via confirm dialog, return to avoid double processing
-          if (closeError instanceof Error && closeError.message === 'Deletion canceled by user') {
-            return false;
-          }
-          
-          // Ask user if they want to delete from database despite the error
-          if (window.confirm('Could not close trade at broker. Delete it from your dashboard anyway? (Note: The trade may still be active at the broker)')) {
-            await forceDeleteHedge(hedge);
-            return true; // Return early as we've handled this case
-          } else {
-            throw new Error('Deletion canceled by user');
-          }
+          // Even if trade close fails, we still want to try to delete the hedge from database
+          console.log(`[Dashboard] Will continue with database deletion despite close error`);
+          toast({
+            variant: "destructive",
+            title: t('Trade Closure Warning'),
+            description: 'Could not close trade at broker, but will remove from database. The trade may still be active at the broker.',
+          });
         }
       }
 
@@ -282,26 +221,7 @@ export default function Dashboard() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        try {
-          // Check if it's a JSON error with the special BROKER_CLOSE_FAILED type
-          const errorData = JSON.parse(errorText);
-          if (errorData?.errorType === 'BROKER_CLOSE_FAILED') {
-            // Ask user for confirmation to delete anyway
-            if (window.confirm(errorData.message || 'Failed to close the trade with the broker. Delete it from your dashboard anyway?')) {
-              // User confirmed they want to force delete
-              await forceDeleteHedge(hedge);
-              return true; // Return early as we've handled this case
-            } else {
-              // User canceled deletion
-              throw new Error('Deletion canceled by user');
-            }
-          }
-        } catch (e) {
-          // If not JSON or doesn't have the expected format, continue with original error
-        }
-        
-        throw new Error(errorText);
+        throw new Error(await response.text());
       }
     },
     onSuccess: () => {
@@ -312,11 +232,6 @@ export default function Dashboard() {
       });
     },
     onError: (error) => {
-      // Skip error toast if user canceled the deletion
-      if (error instanceof Error && error.message === 'Deletion canceled by user') {
-        return;
-      }
-      
       toast({
         variant: "destructive",
         title: "Error",
