@@ -127,11 +127,28 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   // Handler functions
   const onReady = () => {
     console.log('[MercadoPayoSDKModal] Payment brick ready');
+    setLoading(false); // Ensure loading is set to false when ready
   };
   
   const onError = (error: any) => {
     console.error('[MercadoPayoSDKModal] Payment error:', error);
-    setError(`Payment error: ${error}`);
+    // Format the error message properly
+    let errorMessage = 'An unexpected error occurred';
+    
+    if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      // Try to extract meaningful information from the error object
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.error) {
+        errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+      } else {
+        errorMessage = JSON.stringify(error);
+      }
+    }
+    
+    setError(`Payment error: ${errorMessage}`);
   };
   
   const onSubmit = async (formData: any) => {
@@ -205,17 +222,32 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
           <>
             {paymentEnabled && preferenceId && publicKey ? (
               <div className="min-h-[300px]">
+                {/* Showing debug information */}
+                <div className="bg-muted p-3 rounded-md text-xs mb-3">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Public Key: {publicKey || 'Not available'}</p>
+                  <p>Preference ID: {preferenceId || 'Not available'}</p>
+                  <p>Payment Amount: {paymentAmount}</p>
+                  <p>Currency: {currency}</p>
+                </div>
+                
                 <Payment 
                   initialization={{
                     amount: paymentAmount,
                     preferenceId: preferenceId || '',
                   }}
                   customization={{
-                    paymentMethods: {
-                      maxInstallments: 1
-                    },
                     visual: {
                       hideFormTitle: true,
+                    },
+                    paymentMethods: {
+                      creditCard: 'all',
+                      debitCard: 'all',
+                      mercadoPago: 'all',
+                      bankTransfer: 'all',
+                      atm: 'all',
+                      ticket: 'all',
+                      prepaidCard: 'all'
                     }
                   }}
                   onReady={onReady}
