@@ -28,6 +28,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
+  const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
@@ -97,7 +98,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       currentRate ? currentRate.bid * (1 - costPercentage / 100) :
       result.rate * (1 - costPercentage / 100);
 
-    setSimulation({
+    const simulationResult = {
       ...result,
       businessDays,
       costDetails: {
@@ -106,7 +107,13 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       },
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
-    });
+    };
+    
+    // Set default margin as 2x the hedge cost
+    const defaultMargin = Math.round(hedgeCost * 2);
+    setMargin(defaultMargin);
+    
+    setSimulation(simulationResult);
   };
 
   const handlePlaceHedge = async () => {
@@ -127,6 +134,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         amount: amount.toString(), // String for consistent DB handling
         rate: simulation.rate.toString(),
         duration,
+        margin: margin ? margin.toString() : null, // Include margin field
         tradeDirection, // 'buy' or 'sell'
         tradeOrderNumber: null,
         tradeStatus: null
@@ -395,7 +403,46 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </div>
               </div>
-
+              
+              {onPlaceHedge && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-2 cursor-pointer">
+                      <label className="text-sm font-medium flex items-center">
+                        <TrendingUp className="mr-2 h-5 w-5 text-primary" />
+                        Margin ({baseCurrency})
+                      </label>
+                      <Input
+                        type="text"
+                        value={margin ? margin.toLocaleString('en-US', {
+                          maximumFractionDigits: 0,
+                          useGrouping: true
+                        }) : ''}
+                        onChange={(e) => {
+                          // Remove all non-numeric characters
+                          const numericValue = e.target.value.replace(/[^\d]/g, '');
+                          // Convert to number or default to 0 if no input
+                          const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                          // Update state
+                          setMargin(numValue);
+                        }}
+                        min={0}
+                        placeholder="Enter margin amount"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
+                    <div className="flex flex-col items-center text-center">
+                      <TrendingUp className="h-10 w-10 text-primary mb-2" />
+                      <h3 className="font-bold text-lg mb-1">Margin</h3>
+                      <p>
+                        The margin is the amount of collateral required to secure your hedge position. 
+                        The default is set to 2x the hedge cost. You can adjust this value as needed.
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
 
               {onPlaceHedge && (

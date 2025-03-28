@@ -28,6 +28,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
+  const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
@@ -97,7 +98,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       currentRate ? currentRate.bid * (1 - costPercentage / 100) :
       result.rate * (1 - costPercentage / 100);
 
-    setSimulation({
+    const simulationResult = {
       ...result,
       businessDays,
       costDetails: {
@@ -106,7 +107,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       },
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
-    });
+    };
+    
+    // Set default margin as 2x the hedge cost
+    const defaultMargin = Math.round(hedgeCost * 2);
+    setMargin(defaultMargin);
+    
+    setSimulation(simulationResult);
   };
 
   const handlePlaceHedge = async () => {
@@ -127,6 +134,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
         amount: amount.toString(), // String for consistent DB handling
         rate: simulation.rate.toString(),
         duration,
+        margin: margin ? margin.toString() : null, // Include margin field
         tradeDirection, // 'buy' or 'sell'
         tradeOrderNumber: null,
         tradeStatus: null
@@ -327,6 +335,35 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                 </div>
               </div>
             </div>
+            
+            {onPlaceHedge && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                  Margin ({baseCurrency})
+                </label>
+                <Input
+                  type="text"
+                  value={margin ? margin.toLocaleString('en-US', {
+                    maximumFractionDigits: 0,
+                    useGrouping: true
+                  }) : ''}
+                  onChange={(e) => {
+                    // Remove all non-numeric characters
+                    const numericValue = e.target.value.replace(/[^\d]/g, '');
+                    // Convert to number or default to 0 if no input
+                    const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                    // Update state
+                    setMargin(numValue);
+                  }}
+                  min={0}
+                  placeholder="Enter margin amount"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Default margin is set to 2x the hedge cost. You can adjust this value as needed.
+                </p>
+              </div>
+            )}
 
             {onPlaceHedge && (
               <Button

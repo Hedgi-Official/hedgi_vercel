@@ -20,6 +20,7 @@ export const hedges = pgTable("hedges", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   rate: decimal("rate", { precision: 10, scale: 6 }).notNull(),
   duration: integer("duration").notNull(), // in days
+  margin: decimal("margin", { precision: 10, scale: 2 }), // Margin amount for the hedge
   status: text("status").notNull(), // active, completed, cancelled
   tradeOrderNumber: text("trade_order_number"), // Trade order number (stored as text to handle large values)
   tradeStatus: text("trade_status"), // Trade status (open, closed, etc)
