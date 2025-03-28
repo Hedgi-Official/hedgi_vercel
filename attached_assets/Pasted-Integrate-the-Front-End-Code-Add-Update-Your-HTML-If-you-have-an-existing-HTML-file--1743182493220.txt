@@ -1,0 +1,85 @@
+Integrate the Front-End Code
+
+    Add/Update Your HTML:
+
+        If you have an existing HTML file (or a front-end framework view), insert the Mercado Pago brick checkout code into it.
+
+        Alternatively, if you want to keep things modular, create a new HTML file (e.g., mercado_pago.html) and add the code there.
+
+    Replace Placeholders:
+
+        Update "YOUR_PUBLIC_KEY" and "<PREFERENCE_ID>" with your actual Mercado Pago public key and preference ID.
+
+    Static Assets:
+
+        If your project serves static files (for example, via Express’ express.static()), ensure the new HTML file is placed in the correct public directory.
+
+2. Update Your Back-End Server
+
+    Install Dependencies (if not already installed):
+
+        Ensure your project has the mercadopago package installed. You can add it via your package manager or update your package.json.
+
+        If you’re using Express, confirm it’s properly set up for handling JSON requests.
+
+    Add a Payment Processing Route:
+
+        In your existing server file (for example, server.js), add a new route to handle the POST request from the Mercado Pago brick. For example:
+
+    // Import necessary modules (if not already done)
+    import express from 'express';
+    import mercadopago from 'mercadopago';
+
+    // Configure your Express app
+    const app = express();
+    app.use(express.json());
+
+    // Serve static files if applicable
+    app.use(express.static('public'));
+
+    // Set your access token using an environment variable (stored in Replit Secrets)
+    mercadopago.configurations.setAccessToken(process.env.MP_ACCESS_TOKEN);
+
+    // Payment processing endpoint
+    app.post('/process_payment', async (req, res) => {
+      try {
+        const paymentResponse = await mercadopago.payment.create({ body: req.body });
+        console.log(paymentResponse);
+        res.json(paymentResponse);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Payment failed' });
+      }
+    });
+
+    // Other routes or middleware for your existing project...
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+    Integrate with Your Existing Code:
+
+        If your project already has a defined router or additional middleware, simply merge the new /process_payment route into your current routing structure.
+
+3. Manage Environment Variables
+
+    Replit Secrets:
+
+        Since you’re already on Replit, use the Secrets (Environment Variables) feature to securely store your Mercado Pago access token as MP_ACCESS_TOKEN.
+
+        This ensures your credentials are not hard-coded and remain secure.
+
+4. Test and Debug
+
+    Run Your Project:
+
+        With the new front-end and back-end integrated, run your Replit project as usual.
+
+    Test the Checkout:
+
+        Navigate to the page where the Mercado Pago brick is integrated.
+
+        Complete a test transaction and check your server logs for the payment processing response.
+
+    Iterate as Needed:
+
+        Use the console and debugging tools to address any issues or integrate additional logic (like error handling or success callbacks).
