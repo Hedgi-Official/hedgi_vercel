@@ -112,25 +112,38 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
           throw new Error('No preference ID returned');
         }
 
-        // We'll now follow exactly what the Mercado Pago example does
-        console.log('[MercadoPaymentModal] Loading Mercado Pago SDK...');
-        if (!window.MercadoPago) {
-          const script = document.createElement('script');
-          script.src = 'https://sdk.mercadopago.com/js/v2';
-          script.onload = () => {
-            console.log('[MercadoPaymentModal] SDK loaded, initializing...');
-            initializeMercadoPago(data.public_key, data.id, paymentAmount);
-          };
-          script.onerror = (e) => {
-            console.error('[MercadoPaymentModal] Error loading SDK:', e);
-            setError('Failed to load payment processor');
-            setLoading(false);
-          };
-          document.head.appendChild(script);
-        } else {
-          console.log('[MercadoPaymentModal] SDK already loaded, initializing...');
-          initializeMercadoPago(data.public_key, data.id, paymentAmount);
-        }
+        // Wait for the container to be available in the DOM before initializing
+        // This is essential to prevent the "node not found" error
+        const waitForContainer = () => {
+          if (document.getElementById('payment_brick_container')) {
+            // We'll now follow exactly what the Mercado Pago example does
+            console.log('[MercadoPaymentModal] Container found, loading Mercado Pago SDK...');
+            if (!window.MercadoPago) {
+              const script = document.createElement('script');
+              script.src = 'https://sdk.mercadopago.com/js/v2';
+              script.onload = () => {
+                console.log('[MercadoPaymentModal] SDK loaded, initializing...');
+                initializeMercadoPago(data.public_key, data.id, paymentAmount);
+              };
+              script.onerror = (e) => {
+                console.error('[MercadoPaymentModal] Error loading SDK:', e);
+                setError('Failed to load payment processor');
+                setLoading(false);
+              };
+              document.head.appendChild(script);
+            } else {
+              console.log('[MercadoPaymentModal] SDK already loaded, initializing...');
+              initializeMercadoPago(data.public_key, data.id, paymentAmount);
+            }
+          } else {
+            console.log('[MercadoPaymentModal] Waiting for container to be available...');
+            // Try again in 100ms
+            setTimeout(waitForContainer, 100);
+          }
+        };
+
+        // Start looking for the container
+        waitForContainer();
       } catch (error) {
         console.error('[MercadoPaymentModal] Error:', error);
         setError('Failed to initialize payment');
