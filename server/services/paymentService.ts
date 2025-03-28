@@ -39,15 +39,17 @@ class PaymentService {
     // Initialize with public and access tokens for both regions
     this.mpBR = {
       publicKey: PAYMENT_CONFIG.BR_PUBLIC_KEY,
-      accessToken: PAYMENT_CONFIG.BR_ACCESS_TOKEN,
+      accessToken: process.env.MP_BR_ACCESS_TOKEN || '', // Use from environment directly
     };
     
     this.mpMX = {
       publicKey: PAYMENT_CONFIG.MX_PUBLIC_KEY,
-      accessToken: PAYMENT_CONFIG.MX_ACCESS_TOKEN,
+      accessToken: process.env.MP_MX_ACCESS_TOKEN || '', // Use from environment directly
     };
     
     console.log(`Payment service initialized. Payments enabled: ${this.enablePayments}`);
+    console.log(`BR Access Token: ${this.mpBR.accessToken ? 'Available (Key length: ' + this.mpBR.accessToken.length + ')' : 'Not available'}`);
+    console.log(`MX Access Token: ${this.mpMX.accessToken ? 'Available (Key length: ' + this.mpMX.accessToken.length + ')' : 'Not available'}`);
   }
 
   /**
@@ -149,12 +151,20 @@ class PaymentService {
       // Call Mercado Pago API to create preference
       const response = await preference.create({ body: preferenceData });
       
+      // Log the full response for debugging
+      console.log(`[PaymentService] Preference created:`, {
+        id: response.id,
+        initPoint: response.init_point,
+        sandboxInitPoint: response.sandbox_init_point
+      });
+      
       // Return the preference ID and checkout URL to the client
       return res.status(200).json({
         id: response.id,
         init_point: response.init_point,
         sandbox_init_point: response.sandbox_init_point,
-        public_key: this.getPublicKey(currency)
+        public_key: this.getPublicKey(currency),
+        enabled: true
       });
     } catch (error) {
       console.error('Error creating payment preference:', error);

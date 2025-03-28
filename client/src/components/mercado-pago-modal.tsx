@@ -114,7 +114,19 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
 
         // Wait for the container to be available in the DOM before initializing
         // This is essential to prevent the "node not found" error
+        let attempts = 0;
+        const maxAttempts = 20;
+        
         const waitForContainer = () => {
+          if (attempts >= maxAttempts) {
+            console.error('[MercadoPaymentModal] Container not found after maximum attempts');
+            setError('Payment interface could not be initialized');
+            setLoading(false);
+            return;
+          }
+          
+          attempts++;
+          
           if (document.getElementById('payment_brick_container')) {
             // We'll now follow exactly what the Mercado Pago example does
             console.log('[MercadoPaymentModal] Container found, loading Mercado Pago SDK...');
@@ -136,9 +148,9 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
               initializeMercadoPago(data.public_key, data.id, paymentAmount);
             }
           } else {
-            console.log('[MercadoPaymentModal] Waiting for container to be available...');
+            console.log(`[MercadoPaymentModal] Waiting for container to be available... (Attempt ${attempts}/${maxAttempts})`);
             // Try again in 100ms
-            setTimeout(waitForContainer, 100);
+            setTimeout(waitForContainer, 300);
           }
         };
 
@@ -170,12 +182,17 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
           initialization: {
             amount: amount,
             preferenceId: preferenceId,
+            // Add payer information
+            payer: {
+              email: 'customer@example.com',
+            }
           },
           customization: {
             visual: {
               style: {
                 theme: 'default'
-              }
+              },
+              hideFormTitle: true
             },
             paymentMethods: {
               creditCard: 'all',
@@ -308,8 +325,13 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
                 <div 
                   id="payment_brick_container" 
                   ref={containerRef} 
-                  className="min-h-[300px]"
-                />
+                  className="min-h-[300px] border border-gray-200 rounded-md p-4"
+                >
+                  <div className="flex flex-col items-center justify-center h-full py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mb-4" />
+                    <p className="text-sm text-muted-foreground">Loading payment interface...</p>
+                  </div>
+                </div>
                 <Button 
                   variant="outline" 
                   className="mt-4 w-full" 
