@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
-import { PaymentModal } from './payment-modal-fixed';
+import { MercadoPaymentModal } from './mercado-pago-modal';
 
 interface Props {
   showGraph?: boolean;
@@ -478,7 +478,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       </TooltipProvider>
       
       {/* Payment Modal */}
-      <PaymentModal
+      <MercadoPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSuccess={handlePaymentSuccess}
