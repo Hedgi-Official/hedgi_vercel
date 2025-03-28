@@ -77,6 +77,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
             description: `Hedge for ${hedgeAmount} ${hedgeData.targetCurrency}${hedgeData.baseCurrency}`,
             payer: {
               email: 'customer@example.com',
+              name: 'Test Customer',
+              identification: {
+                type: 'CPF',
+                number: '219585466'
+              }
             },
           }),
         });

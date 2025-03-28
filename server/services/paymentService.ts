@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 // Import MercadoPago SDK - we're using v2.3.0
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+// Import application configuration
+import { PAYMENT_CONFIG } from '../config';
 
 /**
  * Payment request interface
@@ -12,6 +14,10 @@ export interface PaymentRequest {
   payer: {
     email: string;
     name?: string;
+    identification?: {
+      type: string;
+      number: string;
+    };
   };
 }
 
@@ -27,18 +33,18 @@ class PaymentService {
    * Initialize payment service with environment variables
    */
   constructor() {
-    // Check if payments are enabled via environment variable
-    this.enablePayments = process.env.ENABLE_PAYMENTS === 'true';
+    // Use the configuration from config.ts instead of environment variables directly
+    this.enablePayments = PAYMENT_CONFIG.ENABLED;
     
     // Initialize with public and access tokens for both regions
     this.mpBR = {
-      publicKey: process.env.MP_BR_PUBLIC_KEY || '',
-      accessToken: process.env.MP_BR_ACCESS_TOKEN || '',
+      publicKey: PAYMENT_CONFIG.BR_PUBLIC_KEY,
+      accessToken: PAYMENT_CONFIG.BR_ACCESS_TOKEN,
     };
     
     this.mpMX = {
-      publicKey: process.env.MP_MX_PUBLIC_KEY || '',
-      accessToken: process.env.MP_MX_ACCESS_TOKEN || '',
+      publicKey: PAYMENT_CONFIG.MX_PUBLIC_KEY,
+      accessToken: PAYMENT_CONFIG.MX_ACCESS_TOKEN,
     };
     
     console.log(`Payment service initialized. Payments enabled: ${this.enablePayments}`);
@@ -126,6 +132,11 @@ class PaymentService {
             currency_id: currency
           }
         ],
+        payer: {
+          email: payer.email,
+          name: payer.name,
+          identification: payer.identification
+        },
         back_urls: {
           success: `${req.protocol}://${req.get('host')}/payment/success`,
           failure: `${req.protocol}://${req.get('host')}/payment/failure`,
