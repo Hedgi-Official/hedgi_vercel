@@ -55,7 +55,7 @@ class PaymentService {
    * @returns Boolean indicating if payments are enabled
    */
   isPaymentEnabled(): boolean {
-    return this.enablePayments || PAYMENT_CONFIG.SIMULATE_PAYMENTS;
+    return this.enablePayments;
   }
 
   /**
@@ -79,17 +79,7 @@ class PaymentService {
    * @param res Express response
    */
   async createPreference(req: Request, res: Response): Promise<Response> {
-    // Check if we should use the payment simulation flow
-    if (PAYMENT_CONFIG.SIMULATE_PAYMENTS) {
-      console.log('Using payment simulation flow');
-      return res.status(200).json({
-        message: 'Using payment simulation',
-        enabled: false,
-        simulate: true
-      });
-    }
-
-    // If regular payments are disabled and simulation is not enabled
+    // If payments are disabled, return a clear message
     if (!this.enablePayments) {
       return res.status(200).json({
         message: 'Payments are disabled in this environment',
@@ -181,14 +171,11 @@ class PaymentService {
    * @param res Express response
    */
   async processPayment(req: Request, res: Response): Promise<Response> {
-    // Check if payment simulation is enabled
-    if (PAYMENT_CONFIG.SIMULATE_PAYMENTS || !this.enablePayments) {
-      console.log('Using payment simulation flow for processing');
-      // If payments are disabled or in simulation mode, return a successful payment
-      return res.status(200).json({
-        status: 'approved',
-        message: 'Payment simulation successful',
-        transactionId: `sim_${Date.now()}`
+    // If payments are disabled, return an error
+    if (!this.enablePayments) {
+      return res.status(400).json({
+        error: 'Payments are currently disabled',
+        status: 'rejected'
       });
     }
 
@@ -241,15 +228,24 @@ class PaymentService {
       
       // Otherwise use the preference ID to find associated payments
       if (preferenceId) {
-        // For MercadoPago v2.3.0, we need a different approach
-        // In a real implementation, we would use IPN notifications
-        // For this demo, we'll return a simulated approved payment
-        
-        return res.status(200).json({
-          status: 'approved',
-          statusDetail: 'accredited',
-          transactionId: `sim_pref_${Date.now()}`
-        });
+        try {
+          // Get payments associated with preference
+          // This is a placeholder for real MercadoPago API integration
+          // In a production environment, we would check for webhook notifications
+          // or query the Mercado Pago API for payment status
+          
+          // For now, we'll have to reject since we need a valid access token
+          return res.status(403).json({
+            error: 'Valid access token required for Mercado Pago API',
+            status: 'rejected'
+          });
+        } catch (error) {
+          console.error('Error checking payment status by preference:', error);
+          return res.status(500).json({
+            error: 'Failed to check payment status',
+            details: error instanceof Error ? error.message : String(error)
+          });
+        }
       }
       
       return res.status(400).json({

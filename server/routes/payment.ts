@@ -25,10 +25,9 @@ router.post('/api/payment/process', async (req: Request, res: Response) => {
  * This endpoint is used by the client to determine whether to initiate payment processing
  */
 router.get('/api/payment/status', (_req: Request, res: Response) => {
-  // Always return true if either regular payments or simulation is enabled
-  // This ensures the payment modal always appears
+  // Return the actual payment status from the service
   res.json({
-    enabled: true
+    enabled: paymentService.isPaymentEnabled()
   });
 });
 

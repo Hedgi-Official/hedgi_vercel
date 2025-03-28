@@ -39,9 +39,10 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         setPaymentEnabled(data.enabled);
         
         if (!data.enabled) {
-          // If payments are disabled, simulate a successful payment
-          console.log('[PaymentModal] Payments disabled, using simulation');
-          simulatePaymentProcess();
+          // If payments are disabled, inform the user that payments are off
+          console.log('[PaymentModal] Payments are disabled');
+          setError('Payments are currently disabled. The hedge cannot be placed at this time.');
+          setLoading(false);
         } else {
           console.log('[PaymentModal] Payments enabled, proceeding to create preference');
         }
@@ -94,10 +95,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         
         const data = await response.json();
         
-        if (data.enabled === false || data.simulate === true) {
-          // If payments are disabled or in simulation mode, simulate payment
-          console.log('Payment simulation triggered');
-          simulatePaymentProcess();
+        if (data.enabled === false) {
+          // If payments are disabled, show error
+          console.log('[PaymentModal] Payments disabled response received');
+          setError('Payments are currently disabled. The hedge cannot be placed at this time.');
+          setLoading(false);
           return;
         }
         
@@ -234,47 +236,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
     }
   };
 
-  // Simulate payment process when payments are disabled
-  const simulatePaymentProcess = async () => {
-    // Short delay to make it feel like processing
-    setTimeout(async () => {
-      try {
-        // Call our backend to simulate a payment
-        const response = await fetch('/api/payment/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            simulatedPayment: true,
-            currency: currency
-          }),
-        });
-        
-        const result = await response.json();
-        
-        if (result.status === 'approved') {
-          // If simulated payment is approved, proceed with the hedge
-          if (hedgeData) {
-            onSuccess(hedgeData);
-          }
-          toast({
-            title: 'Payment simulation successful',
-            description: 'Your hedge order has been placed.',
-            variant: 'default',
-          });
-          onClose();
-        } else {
-          setError('Simulated payment failed. Please try again.');
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error in payment simulation:', error);
-        setError('Error processing payment. Please try again.');
-        setLoading(false);
-      }
-    }, 1500);
-  };
+  // No simulation function needed anymore, as we're using real Mercado Pago or no payments at all
 
   // Clean up when the component unmounts
   useEffect(() => {
