@@ -32,22 +32,28 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
   useEffect(() => {
     async function checkPaymentStatus() {
       try {
+        console.log('[PaymentModal] Checking payment status...');
         const response = await fetch('/api/payment/status');
         const data = await response.json();
+        console.log('[PaymentModal] Payment status response:', data);
         setPaymentEnabled(data.enabled);
         
         if (!data.enabled) {
           // If payments are disabled, simulate a successful payment
+          console.log('[PaymentModal] Payments disabled, using simulation');
           simulatePaymentProcess();
+        } else {
+          console.log('[PaymentModal] Payments enabled, proceeding to create preference');
         }
       } catch (error) {
-        console.error('Error checking payment status:', error);
+        console.error('[PaymentModal] Error checking payment status:', error);
         setError('Failed to check payment status');
         setLoading(false);
       }
     }
 
     if (isOpen && hedgeData) {
+      console.log('[PaymentModal] Modal opened with hedge data:', hedgeData);
       checkPaymentStatus();
     }
   }, [isOpen, hedgeData]);
