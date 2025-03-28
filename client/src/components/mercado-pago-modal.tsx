@@ -67,6 +67,26 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
   }, []);
 
   // Create a payment preference when dialog opens and payments are enabled
+  // Add a script loading useEffect
+  useEffect(() => {
+    if (!isOpen || !paymentEnabled) return;
+    
+    // Load the Mercado Pago SDK early
+    if (!window.MercadoPago) {
+      console.log('[MercadoPaymentModal] Pre-loading Mercado Pago SDK...');
+      const script = document.createElement('script');
+      script.src = 'https://sdk.mercadopago.com/js/v2';
+      script.async = true;
+      script.onload = () => {
+        console.log('[MercadoPaymentModal] SDK loaded successfully');
+      };
+      script.onerror = (e) => {
+        console.error('[MercadoPaymentModal] Error pre-loading SDK:', e);
+      };
+      document.head.appendChild(script);
+    }
+  }, [isOpen, paymentEnabled]);
+
   useEffect(() => {
     async function initializePayment() {
       if (!hedgeData || !paymentEnabled || !isOpen) return;
@@ -102,6 +122,7 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
         });
         
         const data = await response.json();
+        console.log('[MercadoPaymentModal] Preference data:', data);
         
         if (data.enabled === false) {
           setLoading(false);
@@ -112,25 +133,25 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
           throw new Error('No preference ID returned');
         }
 
-        // Wait for the container to be available in the DOM before initializing
-        // This is essential to prevent the "node not found" error
-        let attempts = 0;
-        const maxAttempts = 20;
-        
-        const waitForContainer = () => {
-          if (attempts >= maxAttempts) {
-            console.error('[MercadoPaymentModal] Container not found after maximum attempts');
-            setError('Payment interface could not be initialized');
-            setLoading(false);
+        // Guarantee the container exists before proceeding
+        setTimeout(() => {
+          // Double check that the dialog is still open before initializing
+          if (!isOpen) {
+            console.log('[MercadoPaymentModal] Dialog closed before initialization');
             return;
           }
+
+          const containerElement = document.getElementById('payment_brick_container');
           
-          attempts++;
-          
-          if (document.getElementById('payment_brick_container')) {
-            // We'll now follow exactly what the Mercado Pago example does
-            console.log('[MercadoPaymentModal] Container found, loading Mercado Pago SDK...');
-            if (!window.MercadoPago) {
+          if (containerElement) {
+            console.log('[MercadoPaymentModal] Container found, initializing payment...');
+            
+            // Ensure SDK is loaded
+            if (window.MercadoPago) {
+              console.log('[MercadoPaymentModal] SDK found, proceeding with initialization');
+              initializeMercadoPago(data.public_key, data.id, paymentAmount);
+            } else {
+              console.log('[MercadoPaymentModal] SDK not found, loading it first');
               const script = document.createElement('script');
               script.src = 'https://sdk.mercadopago.com/js/v2';
               script.onload = () => {
@@ -143,19 +164,13 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
                 setLoading(false);
               };
               document.head.appendChild(script);
-            } else {
-              console.log('[MercadoPaymentModal] SDK already loaded, initializing...');
-              initializeMercadoPago(data.public_key, data.id, paymentAmount);
             }
           } else {
-            console.log(`[MercadoPaymentModal] Waiting for container to be available... (Attempt ${attempts}/${maxAttempts})`);
-            // Try again in 100ms
-            setTimeout(waitForContainer, 300);
+            console.error('[MercadoPaymentModal] Container not found');
+            setError('Payment interface could not be initialized - container not found');
+            setLoading(false);
           }
-        };
-
-        // Start looking for the container
-        waitForContainer();
+        }, 500); // Give the DOM time to render
       } catch (error) {
         console.error('[MercadoPaymentModal] Error:', error);
         setError('Failed to initialize payment');
