@@ -13,11 +13,28 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
+import { PaymentModal } from './payment-modal';
 
 interface Props {
   showGraph?: boolean;
   onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
   onOrdersUpdated?: () => void; // Added callback for refreshing orders list
+}
+
+interface SimulationResult {
+  rate: number;
+  breakEvenRate: number;
+  totalCost: number;
+  hedgedAmount: number;
+  costDetails: {
+    costPercentage: number;
+    hedgeCost: number;
+  };
+  businessDays: number;
+  historicalRates: Array<{
+    date: string;
+    rate: number;
+  }>;
 }
 
 export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
@@ -31,6 +48,10 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
+  
+  // Payment modal state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
   // Get rates from ActivTrades API
   const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
@@ -116,33 +137,47 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     setSimulation(simulationResult);
   };
 
-  const handlePlaceHedge = async () => {
+  // Handle the initial place hedge button click to open payment modal
+  const handlePlaceHedge = () => {
     if (!onPlaceHedge || !simulation || !onOrdersUpdated) {
       console.error('Missing required callbacks or simulation data');
       return;
     }
 
-    console.log('[CurrencySimulator] Starting hedge placement...');
-    setIsPlacingHedge(true);
     setHedgeError(null);
 
+    // Prepare the hedge data
+    const hedgeData = {
+      baseCurrency,
+      targetCurrency,
+      amount: amount.toString(), // String for consistent DB handling
+      rate: simulation.rate.toString(),
+      duration,
+      margin: margin ? margin.toString() : null, // Include margin field
+      tradeDirection, // 'buy' or 'sell'
+      tradeOrderNumber: null,
+      tradeStatus: null
+    };
+
+    console.log('[CurrencySimulator] Opening payment modal with hedge data:', hedgeData);
+    
+    // Store the hedge data and open the payment modal
+    setPendingHedgeData(hedgeData);
+    setIsPaymentModalOpen(true);
+  };
+  
+  // This function is called after successful payment
+  const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+    if (!onPlaceHedge || !onOrdersUpdated) {
+      console.error('Missing required callbacks');
+      return;
+    }
+
+    console.log('[CurrencySimulator] Payment successful, placing hedge...');
+    setIsPlacingHedge(true);
+    
     try {
-      // Ensure proper formatting for the server API
-      const hedgeData = {
-        baseCurrency,
-        targetCurrency,
-        amount: amount.toString(), // String for consistent DB handling
-        rate: simulation.rate.toString(),
-        duration,
-        margin: margin ? margin.toString() : null, // Include margin field
-        tradeDirection, // 'buy' or 'sell'
-        tradeOrderNumber: null,
-        tradeStatus: null
-      };
-
-      console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
-
-      // Call the parent component's handler and await completion
+      // Call the parent component's handler to place the hedge after payment
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
 
@@ -166,239 +201,234 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <BarChart2 className="mr-2 h-5 w-5" />
-          {t('simulator.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <Globe className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.targetCurrency')}
-            </label>
-            <Select
-              value={targetCurrency}
-              onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <SelectItem
-                    key={currency}
-                    value={currency}
-                    disabled={currency === baseCurrency}
-                  >
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <Briefcase className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.baseCurrency')}
-            </label>
-            <Select
-              value={baseCurrency}
-              onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <SelectItem
-                    key={currency}
-                    value={currency}
-                    disabled={currency === targetCurrency}
-                  >
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center">
-            <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
-            {t('simulator.tradeDirection')}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-              onClick={() => setTradeDirection('buy')}
-            >
-              {t('simulator.buy')} {targetCurrency}
-            </Button>
-            <Button
-              variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-              onClick={() => setTradeDirection('sell')}
-            >
-              {t('simulator.sell')} {targetCurrency}
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center">
-            <DollarSign className="mr-2 h-4 w-4 text-primary" />
-            {t('simulator.amount')} {targetCurrency}
-          </label>
-          <Input
-            type="text"
-            value={amount ? amount.toLocaleString('en-US', {
-              maximumFractionDigits: 0,
-              useGrouping: true
-            }) : ''}
-            onChange={(e) => {
-              // Remove all non-numeric characters
-              const numericValue = e.target.value.replace(/[^\d]/g, '');
-              // Convert to number or default to 0 if no input
-              const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-              // Update state
-              setAmount(numValue);
-            }}
-            min={1000}
-            max={1000000}
-            placeholder={t('simulator.amountField')}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center">
-            <Clock className="mr-2 h-4 w-4 text-primary" />
-            {t('simulator.durationLabel').replace('{days}', duration.toString())}
-          </label>
-          <Slider
-            value={[duration]}
-            onValueChange={([value]) => setDuration(value)}
-            max={30}
-            step={1}
-          />
-        </div>
-
-        <Button onClick={handleSimulate} className="w-full">
-          {t('simulator.calculateCost')}
-        </Button>
-
-        {simulation && (
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                <p className="text-2xl font-bold">
-                  {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {tradeDirection === 'buy' ?
-                    `Buy ${targetCurrency} with ${baseCurrency}` :
-                    `Sell ${targetCurrency} for ${baseCurrency}`}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                <p className="text-2xl font-bold">
-                  {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {(() => {
-                    const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                    const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                    return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                  })()}
-                </p>
-              </div>
+    <>
+      <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart2 className="mr-2 h-5 w-5" />
+            {t('simulator.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Globe className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.targetCurrency')}
+              </label>
+              <Select
+                value={targetCurrency}
+                onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <SelectItem
+                      key={currency}
+                      value={currency}
+                      disabled={currency === baseCurrency}
+                    >
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <div className="flex justify-between font-medium">
-                  <span>{t('simulator.totalCost')}</span>
-                  <span>
-                    {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{t('simulator.businessDays')}</span>
-                  <span>{simulation.businessDays} {t('simulator.days')}</span>
-                </div>
-              </div>
-            </div>
-            
-            {onPlaceHedge && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <TrendingUp className="mr-2 h-4 w-4 text-primary" />
-                  Margin ({baseCurrency})
-                </label>
-                <Input
-                  type="text"
-                  value={margin ? margin.toLocaleString('en-US', {
-                    maximumFractionDigits: 0,
-                    useGrouping: true
-                  }) : ''}
-                  onChange={(e) => {
-                    // Remove all non-numeric characters
-                    const numericValue = e.target.value.replace(/[^\d]/g, '');
-                    // Convert to number or default to 0 if no input
-                    const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-                    // Update state
-                    setMargin(numValue);
-                  }}
-                  min={0}
-                  placeholder="Enter margin amount"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Default margin is set to 2x the hedge cost. You can adjust this value as needed.
-                </p>
-              </div>
-            )}
-
-            {onPlaceHedge && (
-              <Button
-                onClick={handlePlaceHedge}
-                className="w-full"
-                variant="outline"
-                disabled={isPlacingHedge}
+              <label className="text-sm font-medium flex items-center">
+                <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.baseCurrency')}
+              </label>
+              <Select
+                value={baseCurrency}
+                onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
               >
-                {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                {hedgeError && (
-                  <span className="ml-2 text-red-500">
-                    {hedgeError}
-                  </span>
-                )}
-              </Button>
-            )}
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <SelectItem
+                      key={currency}
+                      value={currency}
+                      disabled={currency === targetCurrency}
+                    >
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
-interface SimulationResult {
-  rate: number;
-  breakEvenRate: number;
-  totalCost: number;
-  hedgedAmount: number;
-  costDetails: {
-    costPercentage: number;
-    hedgeCost: number;
-  };
-  businessDays: number;
-  historicalRates: Array<{
-    date: string;
-    rate: number;
-  }>;
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.tradeDirection')}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                onClick={() => setTradeDirection('buy')}
+              >
+                {t('simulator.buy')} {targetCurrency}
+              </Button>
+              <Button
+                variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                onClick={() => setTradeDirection('sell')}
+              >
+                {t('simulator.sell')} {targetCurrency}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.amount')} {targetCurrency}
+            </label>
+            <Input
+              type="text"
+              value={amount ? amount.toLocaleString('en-US', {
+                maximumFractionDigits: 0,
+                useGrouping: true
+              }) : ''}
+              onChange={(e) => {
+                // Remove all non-numeric characters
+                const numericValue = e.target.value.replace(/[^\d]/g, '');
+                // Convert to number or default to 0 if no input
+                const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                // Update state
+                setAmount(numValue);
+              }}
+              min={1000}
+              max={1000000}
+              placeholder={t('simulator.amountField')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.durationLabel').replace('{days}', duration.toString())}
+            </label>
+            <Slider
+              value={[duration]}
+              onValueChange={([value]) => setDuration(value)}
+              max={30}
+              step={1}
+            />
+          </div>
+
+          <Button onClick={handleSimulate} className="w-full">
+            {t('simulator.calculateCost')}
+          </Button>
+
+          {simulation && (
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tradeDirection === 'buy' ?
+                      `Buy ${targetCurrency} with ${baseCurrency}` :
+                      `Sell ${targetCurrency} for ${baseCurrency}`}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {(() => {
+                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
+                <div className="bg-muted p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between font-medium">
+                    <span>{t('simulator.totalCost')}</span>
+                    <span>
+                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{t('simulator.businessDays')}</span>
+                    <span>{simulation.businessDays} {t('simulator.days')}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {onPlaceHedge && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center">
+                    <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                    Margin ({baseCurrency})
+                  </label>
+                  <Input
+                    type="text"
+                    value={margin ? margin.toLocaleString('en-US', {
+                      maximumFractionDigits: 0,
+                      useGrouping: true
+                    }) : ''}
+                    onChange={(e) => {
+                      // Remove all non-numeric characters
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      // Convert to number or default to 0 if no input
+                      const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                      // Update state
+                      setMargin(numValue);
+                    }}
+                    min={0}
+                    placeholder="Enter margin amount"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Default margin is set to 2x the hedge cost. You can adjust this value as needed.
+                  </p>
+                </div>
+              )}
+
+              {onPlaceHedge && (
+                <Button
+                  onClick={handlePlaceHedge}
+                  className="w-full"
+                  variant="outline"
+                  disabled={isPlacingHedge}
+                >
+                  {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                  {hedgeError && (
+                    <span className="ml-2 text-red-500">
+                      {hedgeError}
+                    </span>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+        hedgeData={pendingHedgeData}
+        currency={baseCurrency}
+      />
+    </>
+  );
 }

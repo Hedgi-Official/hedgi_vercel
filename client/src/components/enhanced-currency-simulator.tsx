@@ -13,11 +13,28 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
+import { PaymentModal } from './payment-modal';
 
 interface Props {
   showGraph?: boolean;
   onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
   onOrdersUpdated?: () => void;
+}
+
+interface SimulationResult {
+  rate: number;
+  breakEvenRate: number;
+  totalCost: number;
+  hedgedAmount: number;
+  costDetails: {
+    costPercentage: number;
+    hedgeCost: number;
+  };
+  businessDays: number;
+  historicalRates: Array<{
+    date: string;
+    rate: number;
+  }>;
 }
 
 export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
@@ -31,6 +48,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
+  
+  // Payment modal state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
   // Get rates from ActivTrades API
   const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
@@ -116,42 +137,56 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     setSimulation(simulationResult);
   };
 
-  const handlePlaceHedge = async () => {
+  // Handle the initial place hedge button click to open payment modal
+  const handlePlaceHedge = () => {
     if (!onPlaceHedge || !simulation || !onOrdersUpdated) {
       console.error('Missing required callbacks or simulation data');
       return;
     }
 
-    console.log('[CurrencySimulator] Starting hedge placement...');
-    setIsPlacingHedge(true);
     setHedgeError(null);
 
+    // Prepare the hedge data
+    const hedgeData = {
+      baseCurrency,
+      targetCurrency,
+      amount: amount.toString(), // String for consistent DB handling
+      rate: simulation.rate.toString(),
+      duration,
+      margin: margin ? margin.toString() : null, // Include margin field
+      tradeDirection, // 'buy' or 'sell'
+      tradeOrderNumber: null,
+      tradeStatus: null
+    };
+
+    console.log('[EnhancedCurrencySimulator] Opening payment modal with hedge data:', hedgeData);
+    
+    // Store the hedge data and open the payment modal
+    setPendingHedgeData(hedgeData);
+    setIsPaymentModalOpen(true);
+  };
+  
+  // This function is called after successful payment
+  const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+    if (!onPlaceHedge || !onOrdersUpdated) {
+      console.error('Missing required callbacks');
+      return;
+    }
+
+    console.log('[EnhancedCurrencySimulator] Payment successful, placing hedge...');
+    setIsPlacingHedge(true);
+    
     try {
-      // Ensure proper formatting for the server API
-      const hedgeData = {
-        baseCurrency,
-        targetCurrency,
-        amount: amount.toString(), // String for consistent DB handling
-        rate: simulation.rate.toString(),
-        duration,
-        margin: margin ? margin.toString() : null, // Include margin field
-        tradeDirection, // 'buy' or 'sell'
-        tradeOrderNumber: null,
-        tradeStatus: null
-      };
-
-      console.log('[CurrencySimulator] Sending hedge data:', hedgeData);
-
-      // Call the parent component's handler and await completion
+      // Call the parent component's handler to place the hedge after payment
       const result = await onPlaceHedge(hedgeData);
-      console.log('[CurrencySimulator] Hedge placement result:', result);
+      console.log('[EnhancedCurrencySimulator] Hedge placement result:', result);
 
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
 
-      console.log('[CurrencySimulator] Hedge placement completed successfully');
+      console.log('[EnhancedCurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
-      console.error('[CurrencySimulator] Error placing hedge:', error);
+      console.error('[EnhancedCurrencySimulator] Error placing hedge:', error);
       setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
     } finally {
       setIsPlacingHedge(false);
@@ -166,135 +201,126 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   };
 
   return (
-    <TooltipProvider delayDuration={150}>
-      <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BarChart2 className="mr-2 h-5 w-5" />
-            {t('simulator.title')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="space-y-2 cursor-pointer">
-                  <label className="text-sm font-medium flex items-center">
-                    <Globe className="mr-2 h-5 w-5 text-primary" />
-                    {t('simulator.targetCurrency')}
-                  </label>
-                  <Select
-                    value={targetCurrency}
-                    onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem
-                          key={currency}
-                          value={currency}
-                          disabled={currency === baseCurrency}
-                        >
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-                <div className="flex flex-col items-center text-center">
-                  <Globe className="h-10 w-10 text-primary mb-2" />
-                  <h3 className="font-bold text-lg mb-1">Target Currency</h3>
-                  <p>This is the currency you want to hedge. For example, if you're worried about USD getting more expensive, select USD here.</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
+    <>
+      <TooltipProvider delayDuration={150}>
+        <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <BarChart2 className="mr-2 h-5 w-5" />
+              {t('simulator.title')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center">
+                      <Globe className="mr-2 h-4 w-4 text-primary" />
+                      {t('simulator.targetCurrency')}
+                    </label>
+                    <Select
+                      value={targetCurrency}
+                      onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCIES.map((currency) => (
+                          <SelectItem
+                            key={currency}
+                            value={currency}
+                            disabled={currency === baseCurrency}
+                          >
+                            {currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="max-w-xs">
+                    {t('simulator.targetCurrencyHelp')}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center">
+                      <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                      {t('simulator.baseCurrency')}
+                    </label>
+                    <Select
+                      value={baseCurrency}
+                      onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCIES.map((currency) => (
+                          <SelectItem
+                            key={currency}
+                            value={currency}
+                            disabled={currency === targetCurrency}
+                          >
+                            {currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="max-w-xs">
+                    {t('simulator.baseCurrencyHelp')}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="space-y-2 cursor-pointer">
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
-                    <Briefcase className="mr-2 h-5 w-5 text-primary" />
-                    {t('simulator.baseCurrency')}
+                    <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.tradeDirection')}
                   </label>
-                  <Select
-                    value={baseCurrency}
-                    onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((currency) => (
-                        <SelectItem
-                          key={currency}
-                          value={currency}
-                          disabled={currency === targetCurrency}
-                        >
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                      onClick={() => setTradeDirection('buy')}
+                    >
+                      {t('simulator.buy')} {targetCurrency}
+                    </Button>
+                    <Button
+                      variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                      onClick={() => setTradeDirection('sell')}
+                    >
+                      {t('simulator.sell')} {targetCurrency}
+                    </Button>
+                  </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-                <div className="flex flex-col items-center text-center">
-                  <Briefcase className="h-10 w-10 text-primary mb-2" />
-                  <h3 className="font-bold text-lg mb-1">Base Currency</h3>
-                  <p>This is your domestic or preferred currency. For example, if you're based in Brazil and concerned about USD getting more expensive relative to BRL, choose BRL as your base currency.</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2 cursor-pointer">
-                <label className="text-sm font-medium flex items-center">
-                  <ArrowUpDown className="mr-2 h-5 w-5 text-primary" />
-                  {t('simulator.tradeDirection')}
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('buy')}
-                  >
-                    {t('simulator.buy')} {targetCurrency}
-                  </Button>
-                  <Button
-                    variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                    onClick={() => setTradeDirection('sell')}
-                  >
-                    {t('simulator.sell')} {targetCurrency}
-                  </Button>
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-              <div className="flex flex-col items-center text-center">
-                <ArrowUpDown className="h-10 w-10 text-primary mb-2" />
-                <h3 className="font-bold text-lg mb-1">Trade Direction</h3>
-                <p>
-                  <strong>Buy {targetCurrency}:</strong> Select this if you'll need to purchase {targetCurrency} in the future and want to protect against it becoming more expensive.
-                  <br /><br />
-                  <strong>Sell {targetCurrency}:</strong> Select this if you'll receive {targetCurrency} in the future and want to protect against it becoming less valuable.
+              <TooltipContent side="bottom">
+                <p className="max-w-xs">
+                  {getTradeDirectionHelp()}
                 </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+              </TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2 cursor-pointer">
-                <label className="text-sm font-medium flex items-center">
-                  <DollarSign className="mr-2 h-5 w-5 text-primary" />
-                  {t('simulator.amount')} {targetCurrency}
-                </label>
-                <Input
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center">
+                    <DollarSign className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.amount')} {targetCurrency}
+                  </label>
+                  <Input
                     type="text"
                     value={amount ? amount.toLocaleString('en-US', {
                       maximumFractionDigits: 0,
@@ -312,174 +338,153 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     max={1000000}
                     placeholder={t('simulator.amountField')}
                   />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-              <div className="flex flex-col items-center text-center">
-                <DollarSign className="h-10 w-10 text-primary mb-2" />
-                <h3 className="font-bold text-lg mb-1">Amount to Hedge</h3>
-                <p>
-                  Enter the amount of {targetCurrency} you want to protect. This is the total value of your future transaction that you want to hedge against currency fluctuations.
-                  <br /><br />
-                  For example, if you need to make a $50,000 USD payment in 3 months, enter 50000 here.
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="space-y-2 cursor-pointer pb-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Clock className="mr-2 h-5 w-5 text-primary" />
-                  {t('simulator.durationLabel').replace('{days}', duration.toString())}
-                </label>
-                <Slider
-                  value={[duration]}
-                  onValueChange={([value]) => setDuration(value)}
-                  max={30}
-                  step={1}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center" sideOffset={8} alignOffset={0} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-              <div className="flex flex-col items-center text-center">
-                <Clock className="h-10 w-10 text-primary mb-2" />
-                <h3 className="font-bold text-lg mb-1">Hedge Duration</h3>
-                <p>
-                  The number of days until your future transaction will occur. This determines how long your currency hedge will be active.
-                  <br /><br />
-                  Longer durations typically mean higher hedging costs but provide protection for a longer period.
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-
-          <Button onClick={handleSimulate} className="w-full">
-            {t('simulator.calculateCost')}
-          </Button>
-
-          {simulation && (
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tradeDirection === 'buy' ?
-                      `Buy ${targetCurrency} with ${baseCurrency}` :
-                      `Sell ${targetCurrency} for ${baseCurrency}`}
-                  </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
-                  </p>
-                </div>
-              </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="max-w-xs">
+                  {t('simulator.amountHelp')}
+                </p>
+              </TooltipContent>
+            </Tooltip>
 
-              <div className="space-y-2">
-                <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
-                <div className="bg-muted p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between font-medium">
-                    <span>{t('simulator.totalCost')}</span>
-                    <span>
-                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
-                    </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center">
+                    <Clock className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.durationLabel').replace('{days}', duration.toString())}
+                  </label>
+                  <Slider
+                    value={[duration]}
+                    onValueChange={([value]) => setDuration(value)}
+                    max={30}
+                    step={1}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="max-w-xs">
+                  {t('simulator.durationHelp')}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Button onClick={handleSimulate} className="w-full">
+              {t('simulator.calculateCost')}
+            </Button>
+
+            {simulation && (
+              <div className="space-y-4 pt-4">
+                {showGraph && (
+                  <CurrencyChart data={{
+                    historicalRates: simulation.historicalRates,
+                    currentRate: simulation.rate,
+                    tradeDirection: tradeDirection,
+                    breakEvenRate: simulation.breakEvenRate
+                  }} />
+                )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                    <p className="text-2xl font-bold">
+                      {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tradeDirection === 'buy' ?
+                        `Buy ${targetCurrency} with ${baseCurrency}` :
+                        `Sell ${targetCurrency} for ${baseCurrency}`}
+                    </p>
                   </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{t('simulator.businessDays')}</span>
-                    <span>{simulation.businessDays} {t('simulator.days')}</span>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                    <p className="text-2xl font-bold">
+                      {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {(() => {
+                        const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                        const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                        return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                      })()}
+                    </p>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between font-medium">
+                      <span>{t('simulator.totalCost')}</span>
+                      <span>
+                        {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>{t('simulator.businessDays')}</span>
+                      <span>{simulation.businessDays} {t('simulator.days')}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {onPlaceHedge && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center">
+                      <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                      Margin ({baseCurrency})
+                    </label>
+                    <Input
+                      type="text"
+                      value={margin ? margin.toLocaleString('en-US', {
+                        maximumFractionDigits: 0,
+                        useGrouping: true
+                      }) : ''}
+                      onChange={(e) => {
+                        // Remove all non-numeric characters
+                        const numericValue = e.target.value.replace(/[^\d]/g, '');
+                        // Convert to number or default to 0 if no input
+                        const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                        // Update state
+                        setMargin(numValue);
+                      }}
+                      min={0}
+                      placeholder="Enter margin amount"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Default margin is set to 2x the hedge cost. You can adjust this value as needed.
+                    </p>
+                  </div>
+                )}
+
+                {onPlaceHedge && (
+                  <Button
+                    onClick={handlePlaceHedge}
+                    className="w-full"
+                    variant="outline"
+                    disabled={isPlacingHedge}
+                  >
+                    {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                    {hedgeError && (
+                      <span className="ml-2 text-red-500">
+                        {hedgeError}
+                      </span>
+                    )}
+                  </Button>
+                )}
               </div>
-              
-              {onPlaceHedge && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="space-y-2 cursor-pointer">
-                      <label className="text-sm font-medium flex items-center">
-                        <TrendingUp className="mr-2 h-5 w-5 text-primary" />
-                        Margin ({baseCurrency})
-                      </label>
-                      <Input
-                        type="text"
-                        value={margin ? margin.toLocaleString('en-US', {
-                          maximumFractionDigits: 0,
-                          useGrouping: true
-                        }) : ''}
-                        onChange={(e) => {
-                          // Remove all non-numeric characters
-                          const numericValue = e.target.value.replace(/[^\d]/g, '');
-                          // Convert to number or default to 0 if no input
-                          const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-                          // Update state
-                          setMargin(numValue);
-                        }}
-                        min={0}
-                        placeholder="Enter margin amount"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center" sideOffset={8} className="p-4 max-w-sm bg-background border border-primary/20 animate-in zoom-in-95 duration-100">
-                    <div className="flex flex-col items-center text-center">
-                      <TrendingUp className="h-10 w-10 text-primary mb-2" />
-                      <h3 className="font-bold text-lg mb-1">Margin</h3>
-                      <p>
-                        The margin is the amount of collateral required to secure your hedge position. 
-                        The default is set to 2x the hedge cost. You can adjust this value as needed.
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
-
-              {onPlaceHedge && (
-                <Button
-                  onClick={handlePlaceHedge}
-                  className="w-full"
-                  variant="outline"
-                  disabled={isPlacingHedge}
-                >
-                  {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                  {hedgeError && (
-                    <span className="ml-2 text-red-500">
-                      {hedgeError}
-                    </span>
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </TooltipProvider>
+            )}
+          </CardContent>
+        </Card>
+      </TooltipProvider>
+      
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+        hedgeData={pendingHedgeData}
+        currency={baseCurrency}
+      />
+    </>
   );
-}
-
-interface SimulationResult {
-  rate: number;
-  breakEvenRate: number;
-  totalCost: number;
-  hedgedAmount: number;
-  costDetails: {
-    costPercentage: number;
-    hedgeCost: number;
-  };
-  businessDays: number;
-  historicalRates: Array<{
-    date: string;
-    rate: number;
-  }>;
 }
