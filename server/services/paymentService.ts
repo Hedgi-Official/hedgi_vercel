@@ -145,7 +145,21 @@ class PaymentService {
           failure: `${req.protocol}://${req.get('host')}/payment/failure`,
           pending: `${req.protocol}://${req.get('host')}/payment/pending`
         },
-        auto_return: 'approved'
+        auto_return: 'approved',
+        // Restrict payment methods to only allow credit cards and bank transfers
+        payment_methods: {
+          excluded_payment_methods: [
+            { id: "ticket" },
+            { id: "atm" },
+            { id: "prepaid_card" },
+            { id: "digital_currency" },
+            { id: "digital_wallet" }
+          ],
+          excluded_payment_types: [
+            { id: "ticket" },
+            { id: "atm" }
+          ]
+        }
       };
       
       // Call Mercado Pago API to create preference

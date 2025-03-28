@@ -243,11 +243,12 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                     paymentMethods: {
                       creditCard: 'all',
                       debitCard: 'all',
-                      mercadoPago: 'all',
                       bankTransfer: 'all',
-                      atm: 'all',
-                      ticket: 'all',
-                      prepaidCard: 'all'
+                      // Only include necessary payment methods
+                      mercadoPago: [],
+                      atm: [],
+                      ticket: [],
+                      prepaidCard: []
                     }
                   }}
                   onReady={onReady}
