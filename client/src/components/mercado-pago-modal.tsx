@@ -25,6 +25,7 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
+  const [containerId] = useState(`payment_brick_container_${Date.now()}`); // Generate unique ID
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Check if payments are enabled when component mounts
@@ -141,22 +142,23 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
             return;
           }
 
-          const containerElement = document.getElementById('payment_brick_container');
+          // First try to get the container by ref, then by ID
+          const containerElement = containerRef.current || document.getElementById(containerId);
           
           if (containerElement) {
-            console.log('[MercadoPaymentModal] Container found, initializing payment...');
+            console.log('[MercadoPaymentModal] Container found, initializing payment...', containerElement);
             
             // Ensure SDK is loaded
             if (window.MercadoPago) {
               console.log('[MercadoPaymentModal] SDK found, proceeding with initialization');
-              initializeMercadoPago(data.public_key, data.id, paymentAmount);
+              initializeMercadoPago(data.public_key, data.id, paymentAmount, containerId);
             } else {
               console.log('[MercadoPaymentModal] SDK not found, loading it first');
               const script = document.createElement('script');
               script.src = 'https://sdk.mercadopago.com/js/v2';
               script.onload = () => {
                 console.log('[MercadoPaymentModal] SDK loaded, initializing...');
-                initializeMercadoPago(data.public_key, data.id, paymentAmount);
+                initializeMercadoPago(data.public_key, data.id, paymentAmount, containerId);
               };
               script.onerror = (e) => {
                 console.error('[MercadoPaymentModal] Error loading SDK:', e);
@@ -182,8 +184,11 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
   }, [isOpen, paymentEnabled, hedgeData, currency]);
 
   // Initialize Mercado Pago with the payment preference
-  function initializeMercadoPago(publicKey: string, preferenceId: string, amount: number) {
+  function initializeMercadoPago(publicKey: string, preferenceId: string, amount: number, containerIdParam?: string) {
+    const targetContainerId = containerIdParam || containerId;
     try {
+      console.log(`[MercadoPaymentModal] Initializing Mercado Pago with containerId: ${targetContainerId}`);
+      
       // Create a new MercadoPago instance
       const mp = new window.MercadoPago(publicKey, {
         locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
@@ -275,11 +280,11 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
         };
         
         try {
-          console.log('[MercadoPaymentModal] Creating payment brick...');
+          console.log('[MercadoPaymentModal] Creating payment brick with container ID:', targetContainerId);
           // This is the exact code from the Mercado Pago example
           window.paymentBrickController = await bricksBuilder.create(
             'payment',
-            'payment_brick_container', // Use the same ID as in our HTML
+            targetContainerId, // Use the dynamic container ID
             settings
           );
         } catch (error) {
@@ -336,9 +341,9 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
           <>
             {paymentEnabled ? (
               <>
-                {/* IMPORTANT: This div ID must match exactly what's in the renderPaymentBrick function */}
+                {/* Use the dynamic container ID for the payment container */}
                 <div 
-                  id="payment_brick_container" 
+                  id={containerId} 
                   ref={containerRef} 
                   className="min-h-[300px] border border-gray-200 rounded-md p-4"
                 >
