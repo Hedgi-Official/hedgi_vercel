@@ -55,7 +55,7 @@ class PaymentService {
    * @returns Boolean indicating if payments are enabled
    */
   isPaymentEnabled(): boolean {
-    return this.enablePayments;
+    return this.enablePayments || PAYMENT_CONFIG.SIMULATE_PAYMENTS;
   }
 
   /**
@@ -79,6 +79,17 @@ class PaymentService {
    * @param res Express response
    */
   async createPreference(req: Request, res: Response): Promise<Response> {
+    // Check if we should use the payment simulation flow
+    if (PAYMENT_CONFIG.SIMULATE_PAYMENTS) {
+      console.log('Using payment simulation flow');
+      return res.status(200).json({
+        message: 'Using payment simulation',
+        enabled: false,
+        simulate: true
+      });
+    }
+
+    // If regular payments are disabled and simulation is not enabled
     if (!this.enablePayments) {
       return res.status(200).json({
         message: 'Payments are disabled in this environment',
@@ -170,11 +181,13 @@ class PaymentService {
    * @param res Express response
    */
   async processPayment(req: Request, res: Response): Promise<Response> {
-    if (!this.enablePayments) {
-      // If payments are disabled, simulate a successful payment
+    // Check if payment simulation is enabled
+    if (PAYMENT_CONFIG.SIMULATE_PAYMENTS || !this.enablePayments) {
+      console.log('Using payment simulation flow for processing');
+      // If payments are disabled or in simulation mode, return a successful payment
       return res.status(200).json({
         status: 'approved',
-        message: 'Payment simulation successful (payments disabled)',
+        message: 'Payment simulation successful',
         transactionId: `sim_${Date.now()}`
       });
     }

@@ -88,8 +88,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         
         const data = await response.json();
         
-        if (data.enabled === false) {
-          // If payments are disabled in the backend, simulate payment
+        if (data.enabled === false || data.simulate === true) {
+          // If payments are disabled or in simulation mode, simulate payment
+          console.log('Payment simulation triggered');
           simulatePaymentProcess();
           return;
         }
