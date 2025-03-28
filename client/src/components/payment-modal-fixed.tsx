@@ -42,7 +42,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         if (!data.enabled) {
           // If payments are disabled, inform the user that payments are off
           console.log('[PaymentModal] Payments are disabled');
-          setError('Payments are currently disabled. The hedge cannot be placed at this time.');
+          setError(null);
           setLoading(false);
         } else {
           console.log('[PaymentModal] Payments enabled, proceeding to create preference');
@@ -99,7 +99,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         if (data.enabled === false) {
           // If payments are disabled, show error
           console.log('[PaymentModal] Payments disabled response received');
-          setError('Payments are currently disabled. The hedge cannot be placed at this time.');
+          setError(null);
           setLoading(false);
           return;
         }
@@ -109,9 +109,28 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         }
         
         setPreferenceId(data.id);
-        loadMercadoPago(data.public_key, data.id);
+        
+        // Load the Mercado Pago SDK and initialize the payment brick
+        if (!window.MercadoPago) {
+          console.log('[PaymentModal] Loading MercadoPago SDK...');
+          const script = document.createElement('script');
+          script.src = 'https://sdk.mercadopago.com/js/v2';
+          script.async = true;
+          script.onload = () => {
+            console.log('[PaymentModal] MercadoPago script loaded');
+            initializePayment(data.public_key, data.id, paymentAmount);
+          };
+          script.onerror = () => {
+            setError('Failed to load payment processor. Please try again.');
+            setLoading(false);
+          };
+          document.head.appendChild(script);
+        } else {
+          console.log('[PaymentModal] MercadoPago already loaded');
+          initializePayment(data.public_key, data.id, paymentAmount);
+        }
       } catch (error) {
-        console.error('Error creating payment preference:', error);
+        console.error('[PaymentModal] Error creating payment preference:', error);
         setError('Failed to initialize payment. Please try again.');
         setLoading(false);
       }
@@ -122,172 +141,123 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
     }
   }, [isOpen, hedgeData, paymentEnabled, currency]);
 
-  // Load the Mercado Pago SDK
-  // This is a simplified version that matches the Mercado Pago example
-  const loadMercadoPago = (publicKey: string, prefId: string) => {
-    // Only proceed if payments are enabled
-    if (!paymentEnabled) return;
-    
-    console.log('[PaymentModal] Loading Mercado Pago with public key:', publicKey);
-    console.log('[PaymentModal] Preference ID:', prefId);
-    
-    try {
-      // We assume the script is already loaded in the head section as per the example
-      // Or we inject it if it's not there yet
-      if (!window.MercadoPago) {
-        console.log('[PaymentModal] MercadoPago not found, loading script...');
-        const script = document.createElement('script');
-        script.src = 'https://sdk.mercadopago.com/js/v2';
-        
-        // Use the exact same pattern as the Mercado Pago example
-        script.onload = () => {
-          console.log('[PaymentModal] MercadoPago script loaded successfully');
-          const mp = new window.MercadoPago(publicKey, {
-            locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
-          });
-          
-          const bricksBuilder = mp.bricks();
-          renderPaymentBrick(bricksBuilder, prefId);
-        };
-        
-        script.onerror = (error) => {
-          console.error('[PaymentModal] Error loading MercadoPago script:', error);
-          setError('Failed to load payment processor. Please try again.');
-          setLoading(false);
-        };
-        
-        document.head.appendChild(script);
-      } else {
-        console.log('[PaymentModal] MercadoPago already loaded, initializing...');
-        const mp = new window.MercadoPago(publicKey, {
-          locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
-        });
-        
-        const bricksBuilder = mp.bricks();
-        renderPaymentBrick(bricksBuilder, prefId);
-      }
-    } catch (error) {
-      console.error('[PaymentModal] Error in loadMercadoPago:', error);
-      setError('An error occurred while setting up the payment system.');
+  // Initialize the payment with Mercado Pago
+  const initializePayment = (publicKey: string, prefId: string, amount: number) => {
+    if (!brickContainerRef.current) {
+      console.error('[PaymentModal] Payment container not found');
+      setError('Payment container not found. Please try again.');
       setLoading(false);
+      return;
     }
-  };
-
-  // Define the renderPaymentBrick function to match the Mercado Pago example exactly
-  const renderPaymentBrick = async (bricksBuilder: any, prefId: string) => {
+    
     try {
-      console.log('[PaymentModal] Rendering payment brick');
+      console.log('[PaymentModal] Initializing payment with public key:', publicKey);
+      const mp = new window.MercadoPago(publicKey, {
+        locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
+      });
       
-      if (!brickContainerRef.current) {
-        console.error('[PaymentModal] Container not found');
-        setError('Payment container not found');
-        setLoading(false);
-        return;
-      }
+      const bricksBuilder = mp.bricks();
       
-      // Calculate the payment amount based on hedge cost
-      const hedgeAmount = hedgeData ? Math.abs(Number(hedgeData.amount)) : 0;
-      const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
-      const paymentAmount = Number((hedgeCost).toFixed(2));
-      
-      console.log('[PaymentModal] Payment amount:', paymentAmount);
-
-      // This settings object follows the Mercado Pago example
-      const settings = {
-        initialization: {
-          amount: paymentAmount,
-          preferenceId: prefId,
-        },
-        customization: {
-          visual: {
-            style: {
-              theme: 'default'
+      const renderPaymentBrick = async () => {
+        const settings = {
+          initialization: {
+            amount: amount,
+            preferenceId: prefId,
+          },
+          customization: {
+            visual: {
+              style: {
+                theme: 'default'
+              }
+            },
+            paymentMethods: {
+              creditCard: 'all',
+              bankTransfer: 'all',
+              atm: 'all',
+              maxInstallments: 1
             }
           },
-          paymentMethods: {
-            creditCard: 'all',
-            bankTransfer: 'all',
-            atm: 'all',
-            maxInstallments: 1
-          }
-        },
-        callbacks: {
-          onReady: () => {
-            console.log('[PaymentModal] Payment brick ready');
-            setLoading(false);
-          },
-          onSubmit: (formData: any) => {
-            console.log('[PaymentModal] Payment submitted:', formData);
-            setLoading(true);
-            
-            return new Promise((resolve, reject) => {
-              fetch('/api/payment/process', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  preferenceId: prefId,
-                  currency: currency,
-                  formData: formData
-                }),
-              })
-              .then(response => response.json())
-              .then(result => {
-                console.log('[PaymentModal] Payment process result:', result);
-                
-                if (result.status === 'approved' || result.status === 'in_process') {
-                  if (hedgeData) {
-                    onSuccess(hedgeData);
+          callbacks: {
+            onReady: () => {
+              console.log('[PaymentModal] Payment brick ready');
+              setLoading(false);
+            },
+            onSubmit: (formData: any) => {
+              console.log('[PaymentModal] Payment submitted:', formData);
+              setLoading(true);
+              
+              return new Promise((resolve, reject) => {
+                fetch('/api/payment/process', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    preferenceId: prefId,
+                    currency: currency,
+                    formData: formData
+                  }),
+                })
+                .then(response => response.json())
+                .then(result => {
+                  console.log('[PaymentModal] Payment process result:', result);
+                  
+                  if (result.status === 'approved' || result.status === 'in_process') {
+                    if (hedgeData) {
+                      onSuccess(hedgeData);
+                    }
+                    toast({
+                      title: 'Payment successful',
+                      description: 'Your hedge order has been placed.',
+                      variant: 'default',
+                    });
+                    resolve(undefined);
+                    onClose();
+                  } else {
+                    setError(`Payment ${result.status}: ${result.statusDetail || 'Please try again.'}`);
+                    setLoading(false);
+                    reject();
                   }
-                  toast({
-                    title: 'Payment successful',
-                    description: 'Your hedge order has been placed.',
-                    variant: 'default',
-                  });
-                  resolve(undefined);
-                  onClose();
-                } else {
-                  setError(`Payment ${result.status}: ${result.statusDetail || 'Please try again.'}`);
+                })
+                .catch(error => {
+                  console.error('[PaymentModal] Error processing payment:', error);
+                  setError('Error processing payment. Please try again.');
                   setLoading(false);
-                  reject();
-                }
-              })
-              .catch(error => {
-                console.error('[PaymentModal] Error processing payment:', error);
-                setError('Error processing payment. Please try again.');
-                setLoading(false);
-                reject(error);
+                  reject(error);
+                });
               });
-            });
-          },
-          onError: (error: any) => {
-            console.error('[PaymentModal] Payment brick error:', error);
-            setError('An error occurred with the payment processor. Please try again.');
-            setLoading(false);
+            },
+            onError: (error: any) => {
+              console.error('[PaymentModal] Payment brick error:', error);
+              setError('An error occurred with the payment processor. Please try again.');
+              setLoading(false);
+            }
           }
+        };
+        
+        try {
+          console.log('[PaymentModal] Creating payment brick...');
+          window.paymentBrickController = await bricksBuilder.create(
+            'payment', 
+            'paymentBrick_container', 
+            settings
+          );
+          paymentBrickControllerRef.current = window.paymentBrickController;
+          console.log('[PaymentModal] Payment brick created successfully');
+        } catch (error) {
+          console.error('[PaymentModal] Error creating payment brick:', error);
+          setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
+          setLoading(false);
         }
       };
       
-      // Create the payment brick
-      window.paymentBrickController = await bricksBuilder.create(
-        'payment',
-        'paymentBrick_container',
-        settings
-      );
-      
-      // Also store in our ref for React component lifecycle management
-      paymentBrickControllerRef.current = window.paymentBrickController;
-      
-      console.log('[PaymentModal] Payment brick created successfully');
+      renderPaymentBrick();
     } catch (error) {
-      console.error('[PaymentModal] Error in renderPaymentBrick:', error);
-      setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('[PaymentModal] Error initializing MercadoPago:', error);
+      setError('Failed to initialize payment processor. Please try again.');
       setLoading(false);
     }
   };
-
-  // No simulation function needed anymore, as we're using real Mercado Pago or no payments at all
 
   // Clean up when the component unmounts
   useEffect(() => {
@@ -365,6 +335,18 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
                 <p className="text-sm text-muted-foreground mb-4">
                   In a production environment, you would complete payment before placing your hedge.
                 </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-2" 
+                  onClick={() => {
+                    if (hedgeData) {
+                      onSuccess(hedgeData);
+                      onClose();
+                    }
+                  }}
+                >
+                  Continue without payment
+                </Button>
               </div>
             )}
           </>
