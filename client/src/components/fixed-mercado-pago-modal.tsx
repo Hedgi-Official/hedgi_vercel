@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,8 +32,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   const [paymentEnabled, setPaymentEnabled] = useState(false);
   const [mpScriptLoaded, setMpScriptLoaded] = useState(false);
   
-  // Define a unique ID for the payment container
-  const paymentContainerId = "mp_payment_container";
+  // Use a ref for the payment container element
+  const paymentContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Define a unique ID for the payment container with a timestamp to ensure uniqueness
+  const paymentContainerId = `mp_payment_container_${Date.now()}`;
 
   // Check if payments are enabled when component mounts
   useEffect(() => {
@@ -164,9 +167,12 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         const bricksBuilder = mp.bricks();
         console.log('[MercadoPaymentModal] Bricks builder created');
         
-        // Wait for DOM to be ready
+        // Wait for DOM to be fully ready (longer timeout)
         setTimeout(() => {
-          const containerElement = document.getElementById(paymentContainerId);
+          console.log(`[MercadoPaymentModal] Looking for payment container with ID: ${paymentContainerId}`);
+          
+          // Try both the ref and getElementById approaches
+          const containerElement = paymentContainerRef.current || document.getElementById(paymentContainerId);
           
           if (!containerElement) {
             console.error(`[MercadoPaymentModal] Payment container not found: #${paymentContainerId}`);
@@ -177,8 +183,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
           
           console.log('[MercadoPaymentModal] Container found, rendering payment brick');
           
-          // Render the payment brick
-          bricksBuilder.create('payment', paymentContainerId, {
+          // Render the payment brick - use the container element directly if it's a ref
+          bricksBuilder.create('payment', containerElement, {
             initialization: {
               amount: paymentAmount,
               preferenceId: data.id,
@@ -263,7 +269,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
             setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
             setLoading(false);
           });
-        }, 500); // Give the DOM time to render
+        }, 1000); // Give the DOM more time to render
         
       } catch (error) {
         console.error('[MercadoPaymentModal] Error:', error);
@@ -309,7 +315,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               <>
                 {/* Payment container - Mercado Pago will render the payment form here */}
                 <div 
-                  id={paymentContainerId} 
+                  id={paymentContainerId}
+                  ref={paymentContainerRef}
                   className="min-h-[300px] border border-gray-200 rounded-md p-4"
                 >
                   <div className="flex flex-col items-center justify-center h-full py-4">
