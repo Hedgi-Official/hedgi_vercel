@@ -435,7 +435,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </label>
                     <Input
                       type="text"
-                      value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                      value={margin !== null ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
                       onChange={(e) => {
                         // Remove all non-numeric characters except decimal point
                         const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
