@@ -11,7 +11,7 @@ dotenv.config();
 // Payment configuration
 export const PAYMENT_CONFIG = {
   // Control whether payments are enabled
-  ENABLED: process.env.ENABLE_PAYMENTS === 'true', // Enable payments if ENABLE_PAYMENTS=true
+  ENABLED: true, // Force enable payments
   SIMULATE_PAYMENTS: false, // Disable payment simulation
   BR_PUBLIC_KEY: process.env.MP_BR_PUBLIC_KEY || 'TEST-7f59754b-9b20-4cd3-b2da-851ee9a266d7',
   BR_ACCESS_TOKEN: process.env.MP_BR_ACCESS_TOKEN || '', // Access token from environment
