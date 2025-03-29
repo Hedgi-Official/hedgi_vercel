@@ -240,27 +240,64 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 atm: 'excluded',
                 maxInstallments: 1
               },
-              labels: {
-                // Add English translations for payment form elements
-                formTitle: 'Complete your payment',
-                cardNumber: {
-                  label: 'Card Number'
-                },
-                expirationDate: {
-                  label: 'Expiration Date'
-                },
-                securityCode: {
-                  label: 'Security Code'
-                },
-                cardholderName: {
-                  label: 'Cardholder Name'
-                },
-                installments: {
-                  label: 'Installments'
-                },
-                issuer: {
-                  label: 'Issuer'
-                }
+              // Create a more comprehensive set of translations
+              translations: {
+                // Get language preference for UI text
+                ...((navigator.language || 'en-US').startsWith('pt') || (localStorage.getItem('i18nextLng') || '').startsWith('pt') ? {
+                  // Portuguese texts
+                  formTitle: 'Complete seu pagamento',
+                  cardNumber: 'Número do cartão',
+                  expirationDate: 'Data de vencimento',
+                  securityCode: 'Código de segurança',
+                  cardholderName: 'Nome do titular',
+                  installments: 'Parcelas',
+                  issuer: 'Emissor',
+                  emailAddress: 'E-mail',
+                  identificationNumber: 'Número de identificação',
+                  identificationType: 'Tipo de identificação',
+                  processingPayment: 'Processando pagamento...',
+                  goBack: 'Voltar',
+                  payWith: 'Pagar com',
+                  creditCard: 'Cartão de crédito',
+                  bankTransfer: 'Transferência bancária',
+                  selectInstallments: 'Selecione as parcelas',
+                  otherCards: 'Outros cartões',
+                  otherCard: 'Outro cartão',
+                  ended: 'Finalizado',
+                  pendingPayment: 'Pagamento pendente',
+                  continue: 'Continuar',
+                  cancel: 'Cancelar',
+                  selectPaymentMethod: 'Selecione o meio de pagamento',
+                  ticket: 'Boleto',
+                  choosePaymentMethods: 'Escolha a forma de pagamento'
+                } : {
+                  // English texts
+                  formTitle: 'Complete your payment',
+                  cardNumber: 'Card number',
+                  expirationDate: 'Expiration date',
+                  securityCode: 'Security code',
+                  cardholderName: 'Cardholder name',
+                  installments: 'Installments',
+                  issuer: 'Issuer',
+                  emailAddress: 'Email',
+                  identificationNumber: 'Identification number',
+                  identificationType: 'Identification type',
+                  processingPayment: 'Processing payment...',
+                  goBack: 'Go back',
+                  payWith: 'Pay with',
+                  creditCard: 'Credit card',
+                  bankTransfer: 'Bank transfer',
+                  selectInstallments: 'Select installments',
+                  otherCards: 'Other cards',
+                  otherCard: 'Other card',
+                  ended: 'Finished',
+                  pendingPayment: 'Pending payment',
+                  continue: 'Continue',
+                  cancel: 'Cancel',
+                  selectPaymentMethod: 'Select payment method',
+                  ticket: 'Ticket',
+                  choosePaymentMethods: 'Choose payment method'
+                })
               }
             },
             callbacks: {
@@ -292,9 +329,14 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                       if (hedgeData) {
                         onSuccess(hedgeData);
                       }
-                      // Translated success message based on locale
-                      const successTitle = locale === 'pt-BR' ? 'Pagamento bem-sucedido' : 'Payment successful';
-                      const successDesc = locale === 'pt-BR' 
+                      // Get language preference for success messages
+                      const userLanguage = navigator.language || 'en-US';
+                      const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
+                      const usePortuguese = currentLanguage.startsWith('pt');
+                      
+                      // Translated success message based on detected language
+                      const successTitle = usePortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
+                      const successDesc = usePortuguese
                         ? 'Seu pedido de hedge foi realizado com sucesso.'
                         : 'Your hedge order has been placed successfully.';
                         
