@@ -202,7 +202,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
   return (
     <>
-      <TooltipProvider delayDuration={100}>
+      <TooltipProvider delayDuration={150}>
         <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -241,12 +241,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <div className="flex items-start gap-2">
-                    <span className="text-primary">ℹ️</span>
-                    <p className="max-w-xs">
-                      {t('simulator.targetCurrencyHelp')}
-                    </p>
-                  </div>
+                  <p className="max-w-xs">
+                    {t('simulator.targetCurrencyHelp')}
+                  </p>
                 </TooltipContent>
               </Tooltip>
 
@@ -279,12 +276,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <div className="flex items-start gap-2">
-                    <span className="text-primary">ℹ️</span>
-                    <p className="max-w-xs">
-                      {t('simulator.baseCurrencyHelp')}
-                    </p>
-                  </div>
+                  <p className="max-w-xs">
+                    {t('simulator.baseCurrencyHelp')}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -313,12 +307,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">ℹ️</span>
-                  <p className="max-w-xs">
-                    {getTradeDirectionHelp()}
-                  </p>
-                </div>
+                <p className="max-w-xs">
+                  {getTradeDirectionHelp()}
+                </p>
               </TooltipContent>
             </Tooltip>
 
@@ -350,12 +341,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">ℹ️</span>
-                  <p className="max-w-xs">
-                    {t('simulator.amountHelp')}
-                  </p>
-                </div>
+                <p className="max-w-xs">
+                  {t('simulator.amountHelp')}
+                </p>
               </TooltipContent>
             </Tooltip>
 
@@ -375,12 +363,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <div className="flex items-start gap-2">
-                  <span className="text-primary">ℹ️</span>
-                  <p className="max-w-xs">
-                    {t('simulator.durationHelp')}
-                  </p>
-                </div>
+                <p className="max-w-xs">
+                  {t('simulator.durationHelp')}
+                </p>
               </TooltipContent>
             </Tooltip>
 
@@ -450,7 +435,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </label>
                     <Input
                       type="text"
-                      value={margin !== null ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                      value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
                       onChange={(e) => {
                         // Remove all non-numeric characters except decimal point
                         const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
