@@ -4,12 +4,12 @@
 
 /* Fix for the enhanced tooltip component */
 .enhanced-tooltips [data-radix-tooltip-content] {
-  z-index: 100 !important;
+  z-index: 9999 !important;
 }
 
 /* Ensure tooltips are not hidden by other components */
 [data-radix-tooltip-content] {
-  z-index: 100 !important;
+  z-index: 9999 !important;
   position: relative !important;
 }
 
@@ -18,9 +18,28 @@
   position: relative;
 }
 
+/* Tooltip trigger container needs to be relative */
+[data-state="open"] > [data-radix-tooltip-trigger] {
+  position: relative;
+  z-index: 50;
+}
+
 /* Make sure portal content is always on top */
 [data-radix-popper-content-wrapper] {
-  z-index: 100 !important;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+/* Additional positioning for tooltip content */
+.position-relative {
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+/* Ensure Tooltip components are displayed */
+[role="tooltip"] {
+  position: relative !important;
+  z-index: 9999 !important;
 }
 
 @layer base {
