@@ -63,9 +63,14 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         // Calculate hedge cost based on amount
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
         const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
-        const paymentAmount = Number((hedgeCost).toFixed(2));
         
-        console.log(`[MercadoPayoSDKModal] Creating payment preference for ${paymentAmount} ${currency}`);
+        // Calculate margin amount (defaults to 2x hedgeCost if not provided)
+        const marginAmount = hedgeData.margin ? Number(hedgeData.margin) : hedgeCost * 2;
+        
+        // Total payment is the sum of fees and margin
+        const paymentAmount = Number((hedgeCost + marginAmount).toFixed(2));
+        
+        console.log(`[MercadoPayoSDKModal] Creating payment preference for ${paymentAmount} ${currency} (Fees: ${hedgeCost}, Margin: ${marginAmount})`);
         
         // Create payment preference
         const response = await fetch('/api/payment/preference', {
@@ -120,9 +125,20 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   }, [isOpen, paymentEnabled, hedgeData, currency]);
   
   // Calculate amount from hedge data for payment
-  const paymentAmount = hedgeData ? 
-    Math.abs(Number(hedgeData.amount)) * 0.0025 : // 0.25% cost
-    0;
+  const calculateTotalPaymentAmount = () => {
+    if (!hedgeData) return 0;
+    
+    const hedgeAmount = Math.abs(Number(hedgeData.amount));
+    const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
+    
+    // Calculate margin amount (defaults to 2x hedgeCost if not provided)
+    const marginAmount = hedgeData.margin ? Number(hedgeData.margin) : hedgeCost * 2;
+    
+    // Total payment is the sum of fees and margin
+    return Number((hedgeCost + marginAmount).toFixed(2));
+  };
+  
+  const paymentAmount = calculateTotalPaymentAmount();
     
   // Handler functions
   const onReady = () => {
@@ -192,7 +208,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Complete Payment to Place Hedge</DialogTitle>
         </DialogHeader>
@@ -224,11 +240,19 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
               <div className="min-h-[300px]">
                 {/* Showing debug information */}
                 <div className="bg-muted p-3 rounded-md text-xs mb-3">
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Public Key: {publicKey || 'Not available'}</p>
-                  <p>Preference ID: {preferenceId || 'Not available'}</p>
-                  <p>Payment Amount: {paymentAmount}</p>
+                  <p><strong>Payment Details:</strong></p>
                   <p>Currency: {currency}</p>
+                  {hedgeData && (
+                    <>
+                      <p>Hedge Amount: {Math.abs(Number(hedgeData.amount))}</p>
+                      <p>Fees: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)}</p>
+                      <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)}</p>
+                      <p>Total Payment: {paymentAmount.toFixed(2)}</p>
+                    </>
+                  )}
+                  <p className="mt-2"><strong>Debug Info:</strong></p>
+                  <p>Public Key: {publicKey || 'Not available'}</p>
+                  <p>Preference ID: {preferenceId?.substring(0, 10) + '...' || 'Not available'}</p>
                 </div>
                 
                 <Payment 
@@ -242,7 +266,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                     },
                     paymentMethods: {
                       creditCard: 'all',
-                      debitCard: 'all',
+                      debitCard: [], // Remove debit card payments
                       bankTransfer: 'all',
                       // Only include necessary payment methods
                       mercadoPago: [],

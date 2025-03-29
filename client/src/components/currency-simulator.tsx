@@ -322,6 +322,8 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
               step={1}
             />
           </div>
+          
+          {/* No margin field here - we'll show it after simulation */}
 
           <Button onClick={handleSimulate} className="w-full">
             {t('simulator.calculateCost')}
@@ -375,28 +377,24 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
               {onPlaceHedge && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
-                    <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
                     Margin ({baseCurrency})
                   </label>
                   <Input
-                    type="text"
-                    value={margin ? margin.toLocaleString('en-US', {
-                      maximumFractionDigits: 0,
-                      useGrouping: true
-                    }) : ''}
+                    type="number"
+                    value={margin !== null ? margin : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
                     onChange={(e) => {
-                      // Remove all non-numeric characters
-                      const numericValue = e.target.value.replace(/[^\d]/g, '');
-                      // Convert to number or default to 0 if no input
-                      const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-                      // Update state
+                      const numValue = e.target.value === '' ? null : parseFloat(e.target.value);
                       setMargin(numValue);
                     }}
                     min={0}
-                    placeholder="Enter margin amount"
+                    step={0.01}
+                    placeholder={`Default: ${(simulation.costDetails.hedgeCost * 2).toFixed(2)}`}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Default margin is set to 2x the hedge cost. You can adjust this value as needed.
+                    Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
+                    This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
+                    payment of {(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {baseCurrency}.
                   </p>
                 </div>
               )}
