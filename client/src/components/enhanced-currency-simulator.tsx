@@ -240,7 +240,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </Select>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
+                <TooltipContent side="bottom" className="z-[100]">
                   <p className="max-w-xs">
                     {t('simulator.targetCurrencyHelp')}
                   </p>
@@ -275,7 +275,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </Select>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">
+                <TooltipContent side="bottom" className="z-[100]">
                   <p className="max-w-xs">
                     {t('simulator.baseCurrencyHelp')}
                   </p>
@@ -306,7 +306,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom">
+              <TooltipContent side="bottom" className="z-[100]">
                 <p className="max-w-xs">
                   {getTradeDirectionHelp()}
                 </p>
@@ -340,7 +340,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom">
+              <TooltipContent side="bottom" className="z-[100]">
                 <p className="max-w-xs">
                   {t('simulator.amountHelp')}
                 </p>
@@ -362,7 +362,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom">
+              <TooltipContent side="bottom" className="z-[100]">
                 <p className="max-w-xs">
                   {t('simulator.durationHelp')}
                 </p>

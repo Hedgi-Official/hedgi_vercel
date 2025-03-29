@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix for the enhanced tooltip component */
+.enhanced-tooltips [data-radix-tooltip-content] {
+  z-index: 100 !important;
+}
+
+/* Ensure tooltips are not hidden by other components */
+[data-radix-tooltip-content] {
+  z-index: 100 !important;
+  position: relative !important;
+}
+
+/* Global tooltip container */
+.radix-tooltip {
+  position: relative;
+}
+
+/* Make sure portal content is always on top */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
 @layer base {
   * {
     @apply border-border;
