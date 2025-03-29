@@ -70,10 +70,13 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         
         // Use simulation data if available for more accurate fee calculation
         if (simulation) {
-          hedgeCost = simulation.totalCost;
+          // The correct fee is in simulation.costDetails.hedgeCost, not simulation.totalCost
+          hedgeCost = simulation.costDetails.hedgeCost;
+          console.log('[MercadoPayoSDKModal] Using simulation hedgeCost:', hedgeCost);
         } else {
           // Fallback to the simple percentage calculation
           hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
+          console.log('[MercadoPayoSDKModal] Using fallback hedgeCost calculation:', hedgeCost);
         }
         
         // Calculate margin amount (defaults to 2x hedgeCost if not provided)
@@ -145,7 +148,8 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
     
     // Use simulation data if available for more accurate fee calculation
     if (simulation) {
-      hedgeCost = simulation.totalCost;
+      // The correct fee is in simulation.costDetails.hedgeCost, not simulation.totalCost
+      hedgeCost = simulation.costDetails.hedgeCost;
     } else {
       // Fallback to the simple percentage calculation
       hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
@@ -269,8 +273,8 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                       {/* Get the fees from the simulation result if available */}
                       {simulation ? (
                         <>
-                          <p>Fees: {simulation.totalCost.toFixed(2)} {currency}</p>
-                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.totalCost * 2).toFixed(2)} {currency}</p>
+                          <p>Fees: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
+                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
                           <p>Total Payment: {paymentAmount.toFixed(2)} {currency}</p>
                         </>
                       ) : (
