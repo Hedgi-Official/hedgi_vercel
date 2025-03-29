@@ -202,7 +202,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
   return (
     <>
-      <TooltipProvider delayDuration={150}>
+      <TooltipProvider delayDuration={100}>
         <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -241,9 +241,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p className="max-w-xs">
-                    {t('simulator.targetCurrencyHelp')}
-                  </p>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary">ℹ️</span>
+                    <p className="max-w-xs">
+                      {t('simulator.targetCurrencyHelp')}
+                    </p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
 
@@ -276,9 +279,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p className="max-w-xs">
-                    {t('simulator.baseCurrencyHelp')}
-                  </p>
+                  <div className="flex items-start gap-2">
+                    <span className="text-primary">ℹ️</span>
+                    <p className="max-w-xs">
+                      {t('simulator.baseCurrencyHelp')}
+                    </p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -307,9 +313,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <p className="max-w-xs">
-                  {getTradeDirectionHelp()}
-                </p>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">ℹ️</span>
+                  <p className="max-w-xs">
+                    {getTradeDirectionHelp()}
+                  </p>
+                </div>
               </TooltipContent>
             </Tooltip>
 
@@ -341,9 +350,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <p className="max-w-xs">
-                  {t('simulator.amountHelp')}
-                </p>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">ℹ️</span>
+                  <p className="max-w-xs">
+                    {t('simulator.amountHelp')}
+                  </p>
+                </div>
               </TooltipContent>
             </Tooltip>
 
@@ -363,9 +375,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <p className="max-w-xs">
-                  {t('simulator.durationHelp')}
-                </p>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">ℹ️</span>
+                  <p className="max-w-xs">
+                    {t('simulator.durationHelp')}
+                  </p>
+                </div>
               </TooltipContent>
             </Tooltip>
 
