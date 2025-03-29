@@ -21,7 +21,7 @@ interface Props {
   onOrdersUpdated?: () => void; // Added callback for refreshing orders list
 }
 
-interface SimulationResult {
+export interface SimulationResult {
   rate: number;
   breakEvenRate: number;
   totalCost: number;
@@ -426,6 +426,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
         onSuccess={handlePaymentSuccess}
         hedgeData={pendingHedgeData}
         currency={baseCurrency}
+        simulation={simulation}
       />
     </>
   );

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Hedge } from "db/schema";
+import { SimulationResult } from './enhanced-currency-simulator';
 
 // Extend Window interface to include Mercado Pago typings
 declare global {
@@ -24,9 +25,10 @@ interface PaymentModalProps {
   onSuccess: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
   hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null;
   currency: string;
+  simulation?: SimulationResult | null;
 }
 
-export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }: PaymentModalProps) {
+export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency, simulation }: PaymentModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
@@ -119,8 +121,21 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         
         // Calculate hedge cost based on amount
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
-        const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
-        const paymentAmount = Number((hedgeCost).toFixed(2));
+        let hedgeCost;
+        
+        // Use simulation data if available for more accurate fee calculation
+        if (simulation) {
+          hedgeCost = simulation.totalCost;
+        } else {
+          // Fallback to the simple percentage calculation
+          hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
+        }
+        
+        // Calculate margin amount (defaults to 2x hedgeCost if not provided)
+        const marginAmount = hedgeData.margin ? Number(hedgeData.margin) : hedgeCost * 2;
+        
+        // Total payment is the sum of fees and margin
+        const paymentAmount = Number((hedgeCost + marginAmount).toFixed(2));
         
         console.log(`[MercadoPaymentModal] Creating payment preference for ${paymentAmount} ${currency}`);
         
@@ -279,7 +294,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     };
     
     initializePayment();
-  }, [isOpen, paymentEnabled, mpScriptLoaded, hedgeData, currency, onSuccess, onClose]);
+  }, [isOpen, paymentEnabled, mpScriptLoaded, hedgeData, currency, simulation, onSuccess, onClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -313,6 +328,33 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
           <>
             {paymentEnabled ? (
               <>
+                {/* Payment summary */}
+                <div className="bg-muted p-3 rounded-md text-xs mb-3">
+                  <p><strong>Payment Details:</strong></p>
+                  <p>Currency: {currency}</p>
+                  {hedgeData && (
+                    <>
+                      <p>Hedge Amount: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      
+                      {/* Get the fees from the simulation result if available */}
+                      {simulation ? (
+                        <>
+                          <p>Fees: {simulation.totalCost.toFixed(2)} {currency}</p>
+                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.totalCost * 2).toFixed(2)} {currency}</p>
+                          <p>Total Payment: {(simulation.totalCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.totalCost * 2)).toFixed(2)} {currency}</p>
+                        </>
+                      ) : (
+                        <>
+                          {/* Fallback for when simulation is not available */}
+                          <p>Fees: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                          <p>Total Payment: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                
                 {/* Payment container - Mercado Pago will render the payment form here */}
                 <div 
                   id={paymentContainerId}
