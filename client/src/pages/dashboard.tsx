@@ -3,7 +3,7 @@ import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { CurrencySimulator } from "@/components/currency-simulator";
+import { EnhancedCurrencySimulator } from "@/components/enhanced-currency-simulator";
 import { useTranslation } from 'react-i18next';
 import { Header } from "@/components/header";
 import { ExchangeRatesWidget } from "@/components/exchange-rates-widget";
