@@ -200,26 +200,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     return `I will receive ${targetCurrency} and convert to ${baseCurrency} in the future`;
   };
 
-  // State for tooltip visibility
-  const [tooltipOpen, setTooltipOpen] = useState<{[key: string]: boolean}>({
-    targetCurrency: false,
-    baseCurrency: false,
-    tradeDirection: false,
-    amount: false,
-    duration: false
-  });
-
-  // Toggle tooltip visibility
-  const toggleTooltip = (tooltipName: string) => {
-    setTooltipOpen(prev => ({
-      ...prev,
-      [tooltipName]: !prev[tooltipName]
-    }));
-  };
-
   return (
     <>
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider delayDuration={150}>
         <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -229,16 +212,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <Tooltip 
-                open={tooltipOpen.targetCurrency}
-                onOpenChange={(open) => setTooltipOpen(prev => ({ ...prev, targetCurrency: open }))}
-              >
+              <Tooltip>
                 <TooltipTrigger asChild>
-                  <div 
-                    className="space-y-2 relative"
-                    onMouseEnter={() => toggleTooltip('targetCurrency')}
-                    onMouseLeave={() => toggleTooltip('targetCurrency')}
-                  >
+                  <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center">
                       <Globe className="mr-2 h-4 w-4 text-primary" />
                       {t('simulator.targetCurrency')}
@@ -264,23 +240,16 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </Select>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="z-[100] position-relative" sideOffset={5}>
+                <TooltipContent side="bottom">
                   <p className="max-w-xs">
                     {t('simulator.targetCurrencyHelp')}
                   </p>
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip 
-                open={tooltipOpen.baseCurrency}
-                onOpenChange={(open) => setTooltipOpen(prev => ({ ...prev, baseCurrency: open }))}
-              >
+              <Tooltip>
                 <TooltipTrigger asChild>
-                  <div 
-                    className="space-y-2 relative"
-                    onMouseEnter={() => toggleTooltip('baseCurrency')}
-                    onMouseLeave={() => toggleTooltip('baseCurrency')}
-                  >
+                  <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center">
                       <Briefcase className="mr-2 h-4 w-4 text-primary" />
                       {t('simulator.baseCurrency')}
@@ -306,7 +275,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </Select>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="z-[100] position-relative" sideOffset={5}>
+                <TooltipContent side="bottom">
                   <p className="max-w-xs">
                     {t('simulator.baseCurrencyHelp')}
                   </p>
@@ -314,16 +283,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
               </Tooltip>
             </div>
 
-            <Tooltip
-              open={tooltipOpen.tradeDirection}
-              onOpenChange={(open) => setTooltipOpen(prev => ({ ...prev, tradeDirection: open }))}
-            >
+            <Tooltip>
               <TooltipTrigger asChild>
-                <div 
-                  className="space-y-2 relative"
-                  onMouseEnter={() => toggleTooltip('tradeDirection')}
-                  onMouseLeave={() => toggleTooltip('tradeDirection')}
-                >
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
                     <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.tradeDirection')}
@@ -344,23 +306,16 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="z-[100] position-relative" sideOffset={5}>
+              <TooltipContent side="bottom">
                 <p className="max-w-xs">
                   {getTradeDirectionHelp()}
                 </p>
               </TooltipContent>
             </Tooltip>
 
-            <Tooltip
-              open={tooltipOpen.amount}
-              onOpenChange={(open) => setTooltipOpen(prev => ({ ...prev, amount: open }))}
-            >
+            <Tooltip>
               <TooltipTrigger asChild>
-                <div 
-                  className="space-y-2 relative"
-                  onMouseEnter={() => toggleTooltip('amount')}
-                  onMouseLeave={() => toggleTooltip('amount')}
-                >
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
                     <DollarSign className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.amount')} {targetCurrency}
@@ -385,23 +340,16 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="z-[100] position-relative" sideOffset={5}>
+              <TooltipContent side="bottom">
                 <p className="max-w-xs">
                   {t('simulator.amountHelp')}
                 </p>
               </TooltipContent>
             </Tooltip>
 
-            <Tooltip
-              open={tooltipOpen.duration}
-              onOpenChange={(open) => setTooltipOpen(prev => ({ ...prev, duration: open }))}
-            >
+            <Tooltip>
               <TooltipTrigger asChild>
-                <div 
-                  className="space-y-2 relative"
-                  onMouseEnter={() => toggleTooltip('duration')}
-                  onMouseLeave={() => toggleTooltip('duration')}
-                >
+                <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.durationLabel').replace('{days}', duration.toString())}
@@ -414,7 +362,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="z-[100] position-relative" sideOffset={5}>
+              <TooltipContent side="bottom">
                 <p className="max-w-xs">
                   {t('simulator.durationHelp')}
                 </p>

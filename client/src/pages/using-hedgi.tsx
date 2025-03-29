@@ -108,10 +108,10 @@ export default function UsingHedgi() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen flex flex-col bg-background" style={{ position: 'relative', overflow: 'visible' }}>
+      <div className="min-h-screen flex flex-col bg-background">
         <Header showAuthButton />
 
-        <main className="flex-1 container mx-auto px-4 py-8" style={{ position: 'relative', zIndex: 1 }}>
+        <main className="flex-1 container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6 text-center">Using Hedgi</h1>
 
           <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
@@ -199,7 +199,7 @@ export default function UsingHedgi() {
 
             {/* Enhanced Currency Simulator with better tooltips */}
             <div className="order-1 lg:order-2">
-              <div className="enhanced-tooltips" style={{ position: 'relative' }}>
+              <div className="enhanced-tooltips">
                 <EnhancedCurrencySimulator showGraph={true} />
               </div>
             </div>
