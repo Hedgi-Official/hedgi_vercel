@@ -112,9 +112,9 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
 
   // Initialize payment when SDK is loaded and we have hedge data
   useEffect(() => {
+    if (!isOpen || !paymentEnabled || !mpScriptLoaded || !hedgeData) return;
+    
     const initializePayment = async () => {
-      if (!isOpen || !paymentEnabled || !mpScriptLoaded || !hedgeData) return;
-      
       try {
         setLoading(true);
         setError(null);
@@ -180,18 +180,18 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         const userLanguage = navigator.language || 'en-US';
         const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
         
-        // Set the locale based on current language or currency
-        let locale = 'en-US';  // Default to English
-        if (currentLanguage.startsWith('pt') || currency === 'BRL') {
-          locale = 'pt-BR';  // Portuguese for Brazil
-        } else if (currentLanguage.startsWith('es') || currency === 'MXN') {
-          locale = 'es-MX';  // Spanish for Mexico
-        }
+        // Determine if we should use Portuguese (default for Mercado Pago) or English
+        const usePortuguese = currentLanguage.startsWith('pt') || currency === 'BRL';
+        
+        // Set the locale - this is the key change!
+        // Mercado Pago only supports these locales: 'es-AR', 'es-CL', 'es-CO', 'es-MX', 'es-VE', 'es-UY', 'es-PE', 'pt-BR', 'en-US'
+        const locale = usePortuguese ? 'pt-BR' : 'en-US';
         
         console.log(`[MercadoPaymentModal] Using locale: ${locale}`);
         
+        // Initialize Mercado Pago with the chosen locale
         const mp = new window.MercadoPago(data.public_key, {
-          locale: locale,
+          locale: locale, // This is the critical setting for the SDK language
         });
         
         console.log('[MercadoPaymentModal] Mercado Pago instance created');
@@ -240,64 +240,24 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 atm: 'excluded',
                 maxInstallments: 1
               },
-              // Create a more comprehensive set of translations
-              translations: {
-                // Get language preference for UI text
-                ...((navigator.language || 'en-US').startsWith('pt') || (localStorage.getItem('i18nextLng') || '').startsWith('pt') ? {
-                  // Portuguese texts
-                  formTitle: 'Complete seu pagamento',
-                  cardNumber: 'Número do cartão',
-                  expirationDate: 'Data de vencimento',
-                  securityCode: 'Código de segurança',
-                  cardholderName: 'Nome do titular',
-                  installments: 'Parcelas',
-                  issuer: 'Emissor',
-                  emailAddress: 'E-mail',
-                  identificationNumber: 'Número de identificação',
-                  identificationType: 'Tipo de identificação',
-                  processingPayment: 'Processando pagamento...',
-                  goBack: 'Voltar',
-                  payWith: 'Pagar com',
-                  creditCard: 'Cartão de crédito',
-                  bankTransfer: 'Transferência bancária',
-                  selectInstallments: 'Selecione as parcelas',
-                  otherCards: 'Outros cartões',
-                  otherCard: 'Outro cartão',
-                  ended: 'Finalizado',
-                  pendingPayment: 'Pagamento pendente',
-                  continue: 'Continuar',
-                  cancel: 'Cancelar',
-                  selectPaymentMethod: 'Selecione o meio de pagamento',
-                  ticket: 'Boleto',
-                  choosePaymentMethods: 'Escolha a forma de pagamento'
-                } : {
-                  // English texts
-                  formTitle: 'Complete your payment',
-                  cardNumber: 'Card number',
-                  expirationDate: 'Expiration date',
-                  securityCode: 'Security code',
-                  cardholderName: 'Cardholder name',
-                  installments: 'Installments',
-                  issuer: 'Issuer',
-                  emailAddress: 'Email',
-                  identificationNumber: 'Identification number',
-                  identificationType: 'Identification type',
-                  processingPayment: 'Processing payment...',
-                  goBack: 'Go back',
-                  payWith: 'Pay with',
-                  creditCard: 'Credit card',
-                  bankTransfer: 'Bank transfer',
-                  selectInstallments: 'Select installments',
-                  otherCards: 'Other cards',
-                  otherCard: 'Other card',
-                  ended: 'Finished',
-                  pendingPayment: 'Pending payment',
-                  continue: 'Continue',
-                  cancel: 'Cancel',
-                  selectPaymentMethod: 'Select payment method',
-                  ticket: 'Ticket',
-                  choosePaymentMethods: 'Choose payment method'
-                })
+              // With the Mercado Pago locale set correctly at SDK initialization, 
+              // we only need minimal translations overrides for specific texts
+              //
+              // Since we're already setting the SDK locale, we can streamline the translations
+              // and only provide custom overrides if needed
+              labels: {
+                cardNumber: {
+                  label: usePortuguese ? 'Número do cartão' : 'Card number'
+                },
+                expirationDate: {
+                  label: usePortuguese ? 'Data de vencimento' : 'Expiration date'
+                }, 
+                securityCode: {
+                  label: usePortuguese ? 'Código de segurança' : 'Security code'
+                },
+                cardholderName: {
+                  label: usePortuguese ? 'Nome do titular' : 'Cardholder name'
+                }
               }
             },
             callbacks: {
