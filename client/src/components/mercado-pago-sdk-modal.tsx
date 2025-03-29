@@ -70,7 +70,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         // Total payment is the sum of fees and margin
         const paymentAmount = Number((hedgeCost + marginAmount).toFixed(2));
         
-        console.log(`[MercadoPayoSDKModal] Creating payment preference for ${paymentAmount} ${currency} (Fees: ${hedgeCost}, Margin: ${marginAmount})`);
+        console.log(`[MercadoPayoSDKModal] Creating payment preference for ${paymentAmount} ${currency} (Fees: ${hedgeCost.toFixed(2)}, Margin: ${marginAmount.toFixed(2)})`);
         
         // Create payment preference
         const response = await fetch('/api/payment/preference', {
@@ -244,10 +244,10 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                   <p>Currency: {currency}</p>
                   {hedgeData && (
                     <>
-                      <p>Hedge Amount: {Math.abs(Number(hedgeData.amount))}</p>
-                      <p>Fees: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)}</p>
-                      <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)}</p>
-                      <p>Total Payment: {paymentAmount.toFixed(2)}</p>
+                      <p>Hedge Amount: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      <p>Fees: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                      <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                      <p>Total Payment: {paymentAmount.toFixed(2)} {currency}</p>
                     </>
                   )}
                   <p className="mt-2"><strong>Debug Info:</strong></p>
