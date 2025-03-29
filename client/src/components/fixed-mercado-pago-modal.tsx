@@ -40,6 +40,18 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   // Define a unique ID for the payment container with a timestamp to ensure uniqueness
   const paymentContainerId = `mp_payment_container_${Date.now()}`;
 
+  // Get user language
+  const getUserLanguage = () => {
+    const userLanguage = navigator.language || 'en-US';
+    const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
+    return currentLanguage;
+  };
+
+  // Check if Portuguese should be used
+  const shouldUsePortuguese = () => {
+    return getUserLanguage().startsWith('pt');
+  };
+
   // Check if payments are enabled when component mounts
   useEffect(() => {
     if (!isOpen) return;
@@ -175,23 +187,18 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
           throw new Error('Invalid preference data returned from server');
         }
 
-        // Initialize Mercado Pago with returned public key and preference
-        // Use the user's browser language or default to English if available
-        const userLanguage = navigator.language || 'en-US';
-        const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
+        // Determine language setting
+        // Force English unless explicitly using Portuguese
+        const isPortuguese = shouldUsePortuguese();
+        // Default to English for all non-Portuguese users
+        const locale = isPortuguese ? 'pt-BR' : 'en-US';
         
-        // Determine if we should use Portuguese (default for Mercado Pago) or English
-        const usePortuguese = currentLanguage.startsWith('pt') || currency === 'BRL';
+        console.log(`[MercadoPaymentModal] Current language: ${getUserLanguage()}, Using locale: ${locale}, Is Portuguese: ${isPortuguese}`);
         
-        // Set the locale - this is the key change!
-        // Mercado Pago only supports these locales: 'es-AR', 'es-CL', 'es-CO', 'es-MX', 'es-VE', 'es-UY', 'es-PE', 'pt-BR', 'en-US'
-        const locale = usePortuguese ? 'pt-BR' : 'en-US';
-        
-        console.log(`[MercadoPaymentModal] Using locale: ${locale}`);
-        
-        // Initialize Mercado Pago with the chosen locale
+        // Initialize Mercado Pago with the chosen locale and language
         const mp = new window.MercadoPago(data.public_key, {
-          locale: locale, // This is the critical setting for the SDK language
+          locale: locale, // Set the SDK locale
+          language: locale.split('-')[0], // Also set explicit language code (en or pt)
         });
         
         console.log('[MercadoPaymentModal] Mercado Pago instance created');
@@ -239,25 +246,6 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 // Remove ATM option
                 atm: 'excluded',
                 maxInstallments: 1
-              },
-              // With the Mercado Pago locale set correctly at SDK initialization, 
-              // we only need minimal translations overrides for specific texts
-              //
-              // Since we're already setting the SDK locale, we can streamline the translations
-              // and only provide custom overrides if needed
-              labels: {
-                cardNumber: {
-                  label: usePortuguese ? 'Número do cartão' : 'Card number'
-                },
-                expirationDate: {
-                  label: usePortuguese ? 'Data de vencimento' : 'Expiration date'
-                }, 
-                securityCode: {
-                  label: usePortuguese ? 'Código de segurança' : 'Security code'
-                },
-                cardholderName: {
-                  label: usePortuguese ? 'Nome do titular' : 'Cardholder name'
-                }
               }
             },
             callbacks: {
@@ -289,14 +277,10 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                       if (hedgeData) {
                         onSuccess(hedgeData);
                       }
-                      // Get language preference for success messages
-                      const userLanguage = navigator.language || 'en-US';
-                      const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                      const usePortuguese = currentLanguage.startsWith('pt');
                       
                       // Translated success message based on detected language
-                      const successTitle = usePortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
-                      const successDesc = usePortuguese
+                      const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
+                      const successDesc = isPortuguese
                         ? 'Seu pedido de hedge foi realizado com sucesso.'
                         : 'Your hedge order has been placed successfully.';
                         
@@ -323,12 +307,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               },
               onError: (error: any) => {
                 console.error('[MercadoPaymentModal] Payment brick error:', error);
-                // Get language preference for error messages
-                const userLanguage = navigator.language || 'en-US';
-                const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                const usePortuguese = currentLanguage.startsWith('pt');
                 
-                setError(usePortuguese 
+                setError(isPortuguese 
                   ? 'Ocorreu um erro com o processador de pagamento. Por favor, tente novamente.' 
                   : 'An error occurred with the payment processor. Please try again.');
                 setLoading(false);
@@ -353,60 +333,38 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     initializePayment();
   }, [isOpen, paymentEnabled, mpScriptLoaded, hedgeData, currency, simulation, onSuccess, onClose]);
 
+  // Translation helper function
+  const t = (pt: string, en: string) => {
+    return shouldUsePortuguese() ? pt : en;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          {/* Localized dialog title */}
-          {(() => {
-            const userLanguage = navigator.language || 'en-US';
-            const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-            const usePortuguese = currentLanguage.startsWith('pt');
-            
-            return (
-              <DialogTitle>
-                {usePortuguese ? 'Complete o pagamento para realizar o hedge' : 'Complete Payment to Place Hedge'}
-              </DialogTitle>
-            );
-          })()}
+          <DialogTitle>
+            {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
+          </DialogTitle>
         </DialogHeader>
         
         {loading && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            {/* Localized loading message */}
-            {(() => {
-              const userLanguage = navigator.language || 'en-US';
-              const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-              const usePortuguese = currentLanguage.startsWith('pt');
-              
-              return <p>{usePortuguese ? 'Processando seu pagamento...' : 'Processing your payment...'}</p>;
-            })()}
+            <p>{t('Processando seu pagamento...', 'Processing your payment...')}</p>
           </div>
         )}
         
         {error && (
           <div className="bg-destructive/10 text-destructive p-4 rounded-md my-4">
-            {/* Get language preference for UI text */}
-            {(() => {
-              const userLanguage = navigator.language || 'en-US';
-              const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-              const usePortuguese = currentLanguage.startsWith('pt');
-              
-              return (
-                <>
-                  <p className="font-semibold">{usePortuguese ? 'Erro' : 'Error'}</p>
-                  <p>{error}</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-2" 
-                    onClick={onClose}
-                  >
-                    {usePortuguese ? 'Fechar' : 'Close'}
-                  </Button>
-                </>
-              );
-            })()}
+            <p className="font-semibold">{t('Erro', 'Error')}</p>
+            <p>{error}</p>
+            <Button 
+              variant="outline" 
+              className="mt-2" 
+              onClick={onClose}
+            >
+              {t('Fechar', 'Close')}
+            </Button>
           </div>
         )}
         
@@ -416,72 +374,53 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               <>
                 {/* Payment summary */}
                 <div className="bg-muted p-3 rounded-md text-xs mb-3">
-                  {/* Localized payment details */}
-                  {(() => {
-                    const userLanguage = navigator.language || 'en-US';
-                    const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                    const usePortuguese = currentLanguage.startsWith('pt');
-                    
-                    // Translations
-                    const paymentDetails = usePortuguese ? 'Detalhes do Pagamento:' : 'Payment Details:';
-                    const currencyLabel = usePortuguese ? 'Moeda' : 'Currency';
-                    const hedgeAmountLabel = usePortuguese ? 'Valor do Hedge' : 'Hedge Amount';
-                    const feesLabel = usePortuguese ? 'Taxas' : 'Fees';
-                    const marginLabel = usePortuguese ? 'Margem' : 'Margin';
-                    const totalPaymentLabel = usePortuguese ? 'Pagamento Total' : 'Total Payment';
-                    
-                    return (
-                      <>
-                        <p><strong>{paymentDetails}</strong></p>
-                        <p>{currencyLabel}: {currency}</p>
-                        {hedgeData && (
-                          <>
-                            <p>{hedgeAmountLabel}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
-                            
-                            {/* Get the fees from the simulation result if available */}
-                            {simulation ? (
-                              <>
-                                <p>{feesLabel}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
-                                <p>{marginLabel}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
-                                <p>{totalPaymentLabel}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
-                              </>
-                            ) : (
-                              <>
-                                {/* Fallback for when simulation is not available */}
-                                <p>{feesLabel}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
-                                <p>{marginLabel}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
-                                <p>{totalPaymentLabel}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </>
-                    );
-                  })()}
+                  <p><strong>{t('Detalhes do Pagamento:', 'Payment Details:')}</strong></p>
+                  <p>{t('Moeda', 'Currency')}: {currency}</p>
+                  {hedgeData && (
+                    <>
+                      <p>{t('Valor do Hedge', 'Hedge Amount')}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      
+                      {/* Get the fees from the simulation result if available */}
+                      {simulation ? (
+                        <>
+                          <p>{t('Taxas', 'Fees')}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment')}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
+                        </>
+                      ) : (
+                        <>
+                          {/* Fallback for when simulation is not available */}
+                          <p>{t('Taxas', 'Fees')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
                 
                 {/* Payment container - Mercado Pago will render the payment form here */}
-                <div 
-                  id={paymentContainerId}
-                  ref={paymentContainerRef}
-                  className="min-h-[300px] border border-gray-200 rounded-md p-4"
-                >
-                  <div className="flex flex-col items-center justify-center h-full py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mb-4" />
-                    {/* Localized loading message */}
-                    {(() => {
-                      const userLanguage = navigator.language || 'en-US';
-                      const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                      const usePortuguese = currentLanguage.startsWith('pt');
-                      
-                      return (
-                        <p className="text-sm text-muted-foreground">
-                          {usePortuguese ? 'Carregando interface de pagamento...' : 'Loading payment interface...'}
-                        </p>
-                      );
-                    })()}
+                <div className="relative">
+                  {/* This is our overlay to help with translations if needed */}
+                  <div className="absolute top-0 left-0 z-30 pointer-events-none w-full">
+                    {/* We will add translation overlays here if we need more control */}
+                  </div>
+                
+                  {/* The actual payment container */}
+                  <div 
+                    id={paymentContainerId}
+                    ref={paymentContainerRef}
+                    className="min-h-[300px] border border-gray-200 rounded-md p-4 z-10"
+                  >
+                    <div className="flex flex-col items-center justify-center h-full py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary mb-4" />
+                      <p className="text-sm text-muted-foreground">
+                        {t('Carregando interface de pagamento...', 'Loading payment interface...')}
+                      </p>
+                    </div>
                   </div>
                 </div>
+                
                 <Button 
                   variant="outline" 
                   className="mt-4 w-full" 
@@ -490,33 +429,20 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                     // This simulates a successful payment for testing
                     if (hedgeData) {
                       onSuccess(hedgeData);
-                      // Get current user language
-                      const userLanguage = navigator.language || 'en-US';
-                      const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                      
-                      // Determine if we should use Portuguese
-                      const usePortuguese = currentLanguage.startsWith('pt');
                       
                       toast({
-                        title: usePortuguese ? 'Pagamento de teste processado' : 'Test payment processed',
-                        description: usePortuguese 
-                          ? 'Seu pedido de hedge foi realizado com sucesso.' 
-                          : 'Your hedge order has been placed successfully.',
+                        title: t('Pagamento de teste processado', 'Test payment processed'),
+                        description: t(
+                          'Seu pedido de hedge foi realizado com sucesso.', 
+                          'Your hedge order has been placed successfully.'
+                        ),
                         variant: 'default',
                       });
                       onClose();
                     }
                   }}
                 >
-                  {(() => {
-                    const userLanguage = navigator.language || 'en-US';
-                    const currentLanguage = localStorage.getItem('i18nextLng') || userLanguage;
-                    const usePortuguese = currentLanguage.startsWith('pt');
-                    
-                    return usePortuguese 
-                      ? 'Teste: Continuar sem pagamento' 
-                      : 'Test: Continue without payment';
-                  })()}
+                  {t('Teste: Continuar sem pagamento', 'Test: Continue without payment')}
                 </Button>
               </>
             ) : (
