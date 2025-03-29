@@ -381,10 +381,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                     Margin ({baseCurrency})
                   </label>
                   <Input
-                    type="number"
-                    value={margin !== null ? margin : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                    type="text"
+                    value={margin !== null ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
                     onChange={(e) => {
-                      const numValue = e.target.value === '' ? null : parseFloat(e.target.value);
+                      // Remove all non-numeric characters except decimal point
+                      const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
+                      // Parse the value
+                      const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
                       setMargin(numValue);
                     }}
                     min={0}

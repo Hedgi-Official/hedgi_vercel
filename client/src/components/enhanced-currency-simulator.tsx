@@ -435,23 +435,22 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </label>
                     <Input
                       type="text"
-                      value={margin ? margin.toLocaleString('en-US', {
-                        maximumFractionDigits: 0,
-                        useGrouping: true
-                      }) : ''}
+                      value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
                       onChange={(e) => {
-                        // Remove all non-numeric characters
-                        const numericValue = e.target.value.replace(/[^\d]/g, '');
-                        // Convert to number or default to 0 if no input
-                        const numValue = numericValue ? parseInt(numericValue, 10) : 0;
+                        // Remove all non-numeric characters except decimal point
+                        const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
+                        // Parse the value
+                        const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
                         // Update state
-                        setMargin(numValue);
+                        setMargin(numValue || (simulation.costDetails.hedgeCost * 2));
                       }}
                       min={0}
                       placeholder="Enter margin amount"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Default margin is set to 2x the hedge cost. You can adjust this value as needed.
+                      Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
+                      This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
+                      payment of {(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {baseCurrency}.
                     </p>
                   </div>
                 )}
