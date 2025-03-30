@@ -424,6 +424,52 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
               {t('simulator.calculateCost')}
             </Button>
 
+            {/* Margin field - always shown regardless of simulation */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="space-y-2 mt-6">
+                  <label className="text-sm font-medium flex items-center">
+                    <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.margin')} ({baseCurrency})
+                  </label>
+                  <Input
+                    type="text"
+                    value={margin ? margin.toFixed(2) : (amount * 0.05).toFixed(2)}
+                    onChange={(e) => {
+                      // Remove all non-numeric characters except decimal point
+                      const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
+                      // Parse the value
+                      const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
+                      // Update state
+                      setMargin(numValue || (amount * 0.05));
+                    }}
+                    min={0}
+                    placeholder="Enter margin amount"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="p-0 max-w-xs">
+                <div className="bg-card rounded-lg shadow-md p-4">
+                  <div className="flex flex-col items-center mb-3">
+                    <TrendingUp className="h-7 w-7 text-primary mb-2" />
+                    <h4 className="font-bold text-foreground">{t('simulator.margin')}</h4>
+                  </div>
+                  <div className="text-sm text-foreground space-y-2">
+                    <p>{t('simulator.marginHelp').split('\n\n')[0]}</p>
+                    <p>{t('simulator.marginHelp').split('\n\n')[1]}</p>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+            <p className="text-xs text-muted-foreground">
+              {!simulation ? 
+                `Default margin is set to 5% of the hedge amount (${(amount * 0.05).toFixed(2)} ${baseCurrency}). This provides initial protection for your position.` :
+                `Default margin is set to 2x the hedge cost (${(simulation.costDetails.hedgeCost * 2).toFixed(2)} ${baseCurrency}). 
+                This amount will be added to the fees (${simulation.costDetails.hedgeCost.toFixed(2)} ${baseCurrency}) for a total 
+                payment of ${(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} ${baseCurrency}.`
+              }
+            </p>
+
             {simulation && (
               <div className="space-y-4 pt-4">
                 {showGraph && (
@@ -478,49 +524,14 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium flex items-center">
-                          <TrendingUp className="mr-2 h-4 w-4 text-primary" />
-                          {t('simulator.margin')} ({baseCurrency})
-                        </label>
-                        <Input
-                          type="text"
-                          value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
-                          onChange={(e) => {
-                            // Remove all non-numeric characters except decimal point
-                            const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
-                            // Parse the value
-                            const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
-                            // Update state
-                            setMargin(numValue || (simulation.costDetails.hedgeCost * 2));
-                          }}
-                          min={0}
-                          placeholder="Enter margin amount"
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="p-0 max-w-xs">
-                      <div className="bg-card rounded-lg shadow-md p-4">
-                        <div className="flex flex-col items-center mb-3">
-                          <TrendingUp className="h-7 w-7 text-primary mb-2" />
-                          <h4 className="font-bold text-foreground">{t('simulator.margin')}</h4>
-                        </div>
-                        <div className="text-sm text-foreground space-y-2">
-                          <p>{t('simulator.marginHelp').split('\n\n')[0]}</p>
-                          <p>{t('simulator.marginHelp').split('\n\n')[1]}</p>
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                  <p className="text-xs text-muted-foreground">
-                    Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
-                    This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
-                    payment of {(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {baseCurrency}.
-                  </p>
-                </div>
+                {/* Update margin based on simulation results */}
+                {simulation && (() => {
+                  // Set margin to 2x hedge cost if we have a simulation result
+                  if (!margin || margin < simulation.costDetails.hedgeCost * 2) {
+                    setMargin(simulation.costDetails.hedgeCost * 2);
+                  }
+                  return null;
+                })()}
 
                 {onPlaceHedge && (
                   <Button

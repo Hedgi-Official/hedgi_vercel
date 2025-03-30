@@ -200,7 +200,7 @@ export default function UsingHedgi() {
             {/* Enhanced Currency Simulator with better tooltips */}
             <div className="order-1 lg:order-2">
               <div className="enhanced-tooltips">
-                <EnhancedCurrencySimulator showGraph={true} />
+                <EnhancedCurrencySimulator showGraph={false} />
               </div>
             </div>
           </div>
