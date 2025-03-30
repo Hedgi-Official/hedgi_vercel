@@ -74,6 +74,7 @@ const enUS = {
       targetCurrencyHelp: 'This is the currency you want to hedge. For example, if you\'re worried about USD getting more expensive, select USD here.',
       baseCurrencyHelp: 'This is your domestic or preferred currency. For example, if you\'re based in Brazil and concerned about USD getting more expensive relative to BRL, choose BRL as your base currency.',
       tradeDirectionHelp: 'Buy USD: Select this if you\'ll need to purchase USD in the future and want to protect against it becoming more expensive.\n\nSell USD: Select this if you\'ll receive USD in the future and want to protect against it becoming less valuable.',
+      marginHelp: 'Margin is the amount of capital required to maintain your hedge position.\n\nA higher margin provides a safety buffer against market volatility and reduces the risk of position liquidation if exchange rates move significantly.',
       notifications: {
         hedgeCreated: 'Hedge Created',
         hedgeCreatedDesc: 'Your hedge position has been created successfully.',
@@ -196,6 +197,7 @@ const ptBR = {
       targetCurrencyHelp: 'Esta é a moeda que você deseja proteger. Por exemplo, se você está preocupado com o USD ficando mais caro, selecione USD aqui.',
       baseCurrencyHelp: 'Esta é sua moeda doméstica ou preferida. Por exemplo, se você está no Brasil e preocupado com o USD ficando mais caro em relação ao BRL, escolha BRL como sua moeda base.',
       tradeDirectionHelp: 'Comprar USD: Selecione esta opção se você precisará comprar USD no futuro e deseja se proteger contra o aumento de preço.\n\nVender USD: Selecione esta opção se você receberá USD no futuro e deseja se proteger contra a desvalorização.',
+      marginHelp: 'Margem é o valor de capital necessário para manter sua posição de hedge.\n\nUma margem maior proporciona uma proteção contra a volatilidade do mercado e reduz o risco de liquidação da posição se as taxas de câmbio se moverem significativamente.',
       notifications: {
         hedgeCreated: 'Hedge Criado',
         hedgeCreatedDesc: 'Sua posição de hedge foi criada com sucesso.',

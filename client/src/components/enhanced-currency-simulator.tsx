@@ -480,24 +480,41 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 
                 {onPlaceHedge && (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center">
-                      <TrendingUp className="mr-2 h-4 w-4 text-primary" />
-                      Margin ({baseCurrency})
-                    </label>
-                    <Input
-                      type="text"
-                      value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
-                      onChange={(e) => {
-                        // Remove all non-numeric characters except decimal point
-                        const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
-                        // Parse the value
-                        const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
-                        // Update state
-                        setMargin(numValue || (simulation.costDetails.hedgeCost * 2));
-                      }}
-                      min={0}
-                      placeholder="Enter margin amount"
-                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <label className="text-sm font-medium flex items-center">
+                            <TrendingUp className="mr-2 h-4 w-4 text-primary" />
+                            Margin ({baseCurrency})
+                          </label>
+                          <Input
+                            type="text"
+                            value={margin ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                            onChange={(e) => {
+                              // Remove all non-numeric characters except decimal point
+                              const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
+                              // Parse the value
+                              const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
+                              // Update state
+                              setMargin(numValue || (simulation.costDetails.hedgeCost * 2));
+                            }}
+                            min={0}
+                            placeholder="Enter margin amount"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="p-0 max-w-xs">
+                        <div className="bg-card rounded-lg shadow-md p-4">
+                          <div className="flex flex-col items-center mb-2">
+                            <Shield className="h-7 w-7 text-primary mb-1" />
+                            <h4 className="text-base font-semibold text-foreground">Margin</h4>
+                          </div>
+                          <p className="text-sm text-foreground whitespace-pre-line">
+                            {t('simulator.marginHelp')}
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                     <p className="text-xs text-muted-foreground">
                       Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
                       This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
