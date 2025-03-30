@@ -461,14 +461,13 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipContent>
             </Tooltip>
-            <p className="text-xs text-muted-foreground">
-              {!simulation ? 
-                `Default margin is set to 5% of the hedge amount (${(amount * 0.05).toFixed(2)} ${baseCurrency}). This provides initial protection for your position.` :
-                `Default margin is set to 2x the hedge cost (${(simulation.costDetails.hedgeCost * 2).toFixed(2)} ${baseCurrency}). 
-                This amount will be added to the fees (${simulation.costDetails.hedgeCost.toFixed(2)} ${baseCurrency}) for a total 
-                payment of ${(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} ${baseCurrency}.`
-              }
-            </p>
+            {simulation && (
+              <p className="text-xs text-muted-foreground">
+                Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
+                This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
+                payment of {(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {baseCurrency}.
+              </p>
+            )}
 
             {simulation && (
               <div className="space-y-4 pt-4">
