@@ -207,10 +207,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     
     return (
       <>
-        <p className="text-sm text-muted-foreground mb-2">
+        <p className="text-sm text-foreground mb-2">
           <span className="font-bold">{buyTitle}</span>{buyText}
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-foreground">
           <span className="font-bold">{sellTitle}</span>{sellText}
         </p>
       </>
