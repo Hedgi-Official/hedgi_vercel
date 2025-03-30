@@ -194,7 +194,27 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   };
 
   const getTradeDirectionHelp = () => {
-    return t('simulator.tradeDirectionHelp').replace('USD', targetCurrency);
+    const buyTitle = `Buy ${targetCurrency}:`;
+    const sellTitle = `Sell ${targetCurrency}:`;
+    const buyText = t('simulator.tradeDirectionHelp')
+      .split('\n\n')[0]
+      .replace('Buy USD:', '')
+      .replace('USD', targetCurrency);
+    const sellText = t('simulator.tradeDirectionHelp')
+      .split('\n\n')[1]
+      .replace('Sell USD:', '')
+      .replace('USD', targetCurrency);
+    
+    return (
+      <>
+        <p className="text-sm text-muted-foreground mb-2">
+          <span className="font-bold">{buyTitle}</span>{buyText}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-bold">{sellTitle}</span>{sellText}
+        </p>
+      </>
+    );
   };
 
   return (
@@ -238,7 +258,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="p-0 max-w-xs">
-                  <div className="bg-card rounded-lg shadow-md p-4 transition-all duration-200 hover:scale-[1.02]">
+                  <div className="bg-card rounded-lg shadow-md p-4 ">
                     <div className="flex items-center mb-2">
                       <Globe className="h-5 w-5 text-primary mr-2" />
                       <h4 className="font-bold text-foreground">{t('simulator.targetCurrency')}</h4>
@@ -279,7 +299,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="p-0 max-w-xs">
-                  <div className="bg-card rounded-lg shadow-md p-4 transition-all duration-200 hover:scale-[1.02]">
+                  <div className="bg-card rounded-lg shadow-md p-4 ">
                     <div className="flex items-center mb-2">
                       <Briefcase className="h-5 w-5 text-primary mr-2" />
                       <h4 className="font-bold text-foreground">{t('simulator.baseCurrency')}</h4>
@@ -316,7 +336,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="p-0 max-w-xs">
-                <div className="bg-card rounded-lg shadow-md p-4 transition-all duration-200 hover:scale-[1.02]">
+                <div className="bg-card rounded-lg shadow-md p-4 ">
                   <div className="flex items-center mb-2">
                     <ArrowUpDown className="h-5 w-5 text-primary mr-2" />
                     <h4 className="font-bold text-foreground">{t('simulator.tradeDirection')}</h4>
@@ -356,21 +376,22 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="p-0 max-w-xs">
-                <div className="bg-card rounded-lg shadow-md p-4 transition-all duration-200 hover:scale-[1.02]">
+                <div className="bg-card rounded-lg shadow-md p-4 ">
                   <div className="flex items-center mb-2">
                     <DollarSign className="h-5 w-5 text-primary mr-2" />
                     <h4 className="font-bold text-foreground">{t('simulator.amount')} {targetCurrency}</h4>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('simulator.amountHelp')}
-                  </p>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>{t('simulator.amountHelp').split('\n\n')[0]}</p>
+                    <p>{t('simulator.amountHelp').split('\n\n')[1]}</p>
+                  </div>
                 </div>
               </TooltipContent>
             </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="space-y-2">
+                <div className="space-y-2 py-2">
                   <label className="text-sm font-medium flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.durationLabel').replace('{days}', duration.toString())}
@@ -384,14 +405,15 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="p-0 max-w-xs">
-                <div className="bg-card rounded-lg shadow-md p-4 transition-all duration-200 hover:scale-[1.02]">
+                <div className="bg-card rounded-lg shadow-md p-4 ">
                   <div className="flex items-center mb-2">
                     <Clock className="h-5 w-5 text-primary mr-2" />
                     <h4 className="font-bold text-foreground">{t('simulator.duration')}</h4>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('simulator.durationHelp')}
-                  </p>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>{t('simulator.durationHelp').split('\n\n')[0]}</p>
+                    <p>{t('simulator.durationHelp').split('\n\n')[1]}</p>
+                  </div>
                 </div>
               </TooltipContent>
             </Tooltip>
