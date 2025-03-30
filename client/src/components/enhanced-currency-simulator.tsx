@@ -194,10 +194,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   };
 
   const getTradeDirectionHelp = () => {
-    if (tradeDirection === 'buy') {
-      return `I will make a payment in ${targetCurrency} in the future`;
-    }
-    return `I will receive ${targetCurrency} and convert to ${baseCurrency} in the future`;
+    return t('simulator.tradeDirectionHelp').replace('USD', targetCurrency);
   };
 
   return (
