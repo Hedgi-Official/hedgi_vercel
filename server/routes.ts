@@ -106,7 +106,7 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Trade API][${requestId}] Processing hedge request`);
       
       // Format the trade request with proper validation
-      const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
+      const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
       
       if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
         return res.status(400).json({ 
@@ -131,7 +131,7 @@ export function registerRoutes(app: Express): Server {
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume, 
-        duration
+        dura
       );
       
       console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
@@ -268,15 +268,12 @@ export function registerRoutes(app: Express): Server {
 
       // Enhanced trade execution with detailed logging
       try {
-        // Set the broker name - using 'activtrades' based on our trading implementation
-        const broker = "activtrades";
-
         // Use the trade service with the exact same format as working curl command
         const apiResponse = await tradeService.openTrade(
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume,
-          duration
+          10
         );
         
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
@@ -332,7 +329,6 @@ export function registerRoutes(app: Express): Server {
           rate: apiResponse.price?.toString() || apiResponse.ask?.toString() || apiResponse.bid?.toString() || "0.0",
           duration: duration || 30,
           status: 'active',
-          broker: broker, // Include broker in hedge data
           tradeOrderNumber: tradeOrderNumber, // This now contains either the deal or order number
           tradeStatus: 'open'
         };
@@ -355,7 +351,6 @@ export function registerRoutes(app: Express): Server {
             rate: hedgeValues.rate,
             duration: hedgeValues.duration,
             status: hedgeValues.status,
-            broker: hedgeValues.broker, // Store broker for closing trades
             tradeOrderNumber: String(hedgeValues.tradeOrderNumber), // Ensure it's a string
             tradeStatus: hedgeValues.tradeStatus,
             userId: req.user.id
@@ -512,28 +507,10 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber} via legacy endpoint`);
       
-      // Try to find the hedge in our database to get the broker
-      let broker = 'activtrades'; // Default to activtrades if not found
-      
-      try {
-        const [hedge] = await db
-          .select()
-          .from(hedges)
-          .where(eq(hedges.tradeOrderNumber, tradeOrderNumber));
-          
-        if (hedge && hedge.broker) {
-          broker = hedge.broker;
-          console.log(`[Trade API][${requestId}] Found broker ${broker} for trade ${tradeOrderNumber}`);
-        }
-      } catch (dbError) {
-        console.warn(`[Trade API][${requestId}] Error retrieving hedge for broker lookup: ${dbError}`);
-        // Continue with default broker
-      }
-      
-      // Use the trade service to close the trade with the found or default broker
+      // Use the new trade service to close the trade with broker "tickmill"
       // CRITICAL FIX: Convert tradeOrderNumber to a number for the broker API
       const closeResponse = await tradeService.closeTrade(
-        broker, // Use broker from database or default
+        'tickmill', // Default broker as specified in requirements
         Number(tradeOrderNumber) // Ensure position is a number
       );
       
@@ -611,16 +588,14 @@ export function registerRoutes(app: Express): Server {
       // Close the trade via new Trade API if there's a trade order number
       if (hedge.tradeOrderNumber) {
         try {
-          // Use the broker stored with the hedge, or fall back to 'activtrades' if not available
-          const broker = hedge.broker || 'activtrades';
-          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with broker ${broker} via Trade API`);
+          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
           // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
           // could be either a deal or order number. We need to make sure we're using
           // the right identifier when closing the position.
           // CRITICAL FIX: Convert position to a number for broker API
           const closeResponse = await tradeService.closeTrade(
-            broker, // Use the broker stored with the hedge
+            'tickmill', // Default broker as specified in requirements
             Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
           );
 

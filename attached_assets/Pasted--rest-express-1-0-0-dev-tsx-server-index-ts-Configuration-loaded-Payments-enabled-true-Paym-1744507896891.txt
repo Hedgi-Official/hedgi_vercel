@@ -1,0 +1,79 @@
+
+> rest-express@1.0.0 dev
+> tsx server/index.ts
+
+Configuration loaded:
+- Payments enabled: true
+Payment service initialized. Payments enabled: true
+BR Access Token: Available (Key length: 71)
+MX Access Token: Available (Key length: 71)
+1:29:48 AM [express] Starting server initialization...
+1:29:48 AM [express] Routes registered successfully
+1:29:48 AM [express] Setting up Vite in development mode...
+1:29:49 AM [express] Vite setup completed
+1:29:49 AM [express] Attempting to start server on port 5000...
+1:29:49 AM [express] Server successfully bound and listening on port 5000
+1:29:49 AM [express] Test endpoint available at http://0.0.0.0:5000/ping
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+1:29:53 AM [express] GET /api/user 401 in 2ms
+[ActivTrades] Fetching rate for USDBRL...
+[ActivTrades] Rate data: {
+  ask: 5.8708,
+  bid: 5.8608,
+  broker: 'activetrades',
+  swap_long: -170,
+  swap_short: 45.8,
+  symbol: 'USDBRL'
+}
+1:29:53 AM [express] GET /api/activtrades-rate 304 in 95ms :: {"ask":5.8708,"bid":5.8608,"broker":"a…
+1:30:09 AM [express] POST /api/login 200 in 904ms :: {"message":"Login successful","user":{"id":7,"u…
+1:30:09 AM [express] GET /api/user 304 in 77ms :: {"id":7,"username":"hjalmartest","email":"h.l@gmai…
+[Tickmill] Fetching rate for USDBRL...
+[Tickmill] Rate data: {
+  ask: 5.90931,
+  bid: 5.90309,
+  broker: 'tickmill',
+  swap_long: -149.94,
+  swap_short: 79.04,
+  symbol: 'USDBRL'
+}
+1:30:09 AM [express] GET /api/tickmill-rate 304 in 153ms :: {"ask":5.90931,"bid":5.90309,"broker":"t…
+[FBS] Fetching rate for USDBRL...
+[FBS] Rate data: {
+  ask: 5.9041,
+  bid: 5.9013,
+  broker: 'fbs',
+  swap_long: -58.99,
+  swap_short: 11.97,
+  symbol: 'USDBRL'
+}
+1:30:10 AM [express] GET /api/fbs-rate 200 in 159ms :: {"ask":5.9041,"bid":5.9013,"broker":"fbs","sw…
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: column "broker" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:167:24) {
+  length: 107,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '111',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
