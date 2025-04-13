@@ -34,7 +34,7 @@ export interface TradeResponse {
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => Promise<TradeResponse>;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => Promise<TradeResponse> | void;
   onOrdersUpdated?: () => void; // Added callback for refreshing orders list
 }
 
