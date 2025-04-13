@@ -156,7 +156,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       margin: margin ? margin.toString() : null, // Include margin field
       tradeDirection, // 'buy' or 'sell'
       tradeOrderNumber: null,
-      tradeStatus: null
+      tradeStatus: null,
+      broker: 'activtrades', // Default broker
+      status: 'pending' // Initial status
     };
 
     console.log('[EnhancedCurrencySimulator] Opening payment modal with hedge data:', hedgeData);

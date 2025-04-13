@@ -173,7 +173,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       margin: margin ? margin.toString() : null, // Include margin field
       tradeDirection, // 'buy' or 'sell'
       tradeOrderNumber: null,
-      tradeStatus: null
+      tradeStatus: null,
+      broker: 'activtrades', // Default broker
+      status: 'pending' // Initial status
     };
 
     console.log('[CurrencySimulator] Opening payment modal with hedge data:', hedgeData);
@@ -217,18 +219,22 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
   
-      const message = result.comment; // Or result.message if you prefer to name it that way
-      const brokerMatch = message.match(/broker\s+(\w+)/i);
-      const broker = brokerMatch ? brokerMatch[1] : null;
-      const magic = result.request.magic;
-
-      const order = Date.now()
+      // Extract broker from comment if possible, otherwise default to 'activtrades'
+      let broker = 'activtrades';
+      if (result && result.comment) {
+        const brokerMatch = result.comment.match(/broker\s+(\w+)/i);
+        if (brokerMatch && brokerMatch[1]) {
+          broker = brokerMatch[1];
+        }
+      }
+      
+      // Create hedge data that matches our schema
       const hedgeDataToStore = {
         ...hedgeData,
-        broker: broker, 
-        magic: magic,  
-        status: 'active', 
-        order: order,
+        broker: broker,
+        status: 'active',
+        tradeOrderNumber: result && result.order ? String(result.order) : String(Date.now()),
+        tradeStatus: 'open'
       };
 
       saveHedgeData(hedgeDataToStore);
