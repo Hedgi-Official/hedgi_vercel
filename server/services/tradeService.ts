@@ -33,22 +33,22 @@ export class TradeService {
    * @returns The API response with trade details
    */
   async openTrade(
-    broker: string = 'tickmill',
     symbol: string,
     direction: 'buy' | 'sell',
-    volume: number
+    volume: number,
+    duration: number
   ): Promise<TradeResponse> {
-    console.log(`[TradeService] Opening trade: ${direction} ${volume} lots of ${symbol} using broker ${broker}`);
+    console.log(`[TradeService] Opening trading: ${direction} ${volume} lots of ${symbol}`);
     
     // Use EXACTLY the same payload format as the working curl command
     const tradeData = {
-      broker,
       symbol,
       direction,
       volume,
+      days : duration, 
       deviation: 5,
       magic: 123456,
-      comment: "Hedgi test trade"
+      comment: "Hedgi test trading"
     };
     
     const requestBody = JSON.stringify(tradeData);
@@ -56,7 +56,7 @@ export class TradeService {
     
     try {
       // Use exactly the same fetch call as the working curl command
-      const response = await fetch(`${this.TRADE_API_URL}/trade`, {
+      const response = await fetch(`${this.TRADE_API_URL}/hedge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: requestBody

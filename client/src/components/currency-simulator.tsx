@@ -12,12 +12,29 @@ import { calculateBusinessDays } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
+import { hedges } from '@db/schema';
+import type { db } from '@db/index.ts';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 import { MercadoPayoSDKModal } from './mercado-pago-sdk-modal';
 
+export interface TradeResponse {
+  ask: number;
+  bid: number;
+  comment: string;
+  deal: number;
+  order: number;
+  price: number;
+  request: any;
+  request_id: number;
+  retcode: number;
+  retcode_external: number;
+  volume: number;
+  error?: string;
+}
+
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => void;
+  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => Promise<TradeResponse>;
   onOrdersUpdated?: () => void; // Added callback for refreshing orders list
 }
 
@@ -165,6 +182,25 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     setPendingHedgeData(hedgeData);
     setIsPaymentModalOpen(true);
   };
+
+  const saveHedgeData = async (hedgeDataToStore: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
+    try {
+      const response = await fetch('/api/hedges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hedgeDataToStore),
+        credentials: 'include', // Include credentials for session management
+      });
+      const result = await response.json();
+      if (response.ok) {
+        console.log('Hedge data stored successfully:', result);
+      } else {
+        console.error('Error storing hedge data:', result.error);
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+    }
+  };
   
   // This function is called after successful payment
   const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
@@ -172,7 +208,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       console.error('Missing required callbacks');
       return;
     }
-
+    
     console.log('[CurrencySimulator] Payment successful, placing hedge...');
     setIsPlacingHedge(true);
     
@@ -180,7 +216,24 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
       // Call the parent component's handler to place the hedge after payment
       const result = await onPlaceHedge(hedgeData);
       console.log('[CurrencySimulator] Hedge placement result:', result);
+  
+      const message = result.comment; // Or result.message if you prefer to name it that way
+      const brokerMatch = message.match(/broker\s+(\w+)/i);
+      const broker = brokerMatch ? brokerMatch[1] : null;
+      const magic = result.request.magic;
 
+      const order = Date.now()
+      const hedgeDataToStore = {
+        ...hedgeData,
+        broker: broker, 
+        magic: magic,  
+        status: 'active', 
+        order: order,
+      };
+
+      saveHedgeData(hedgeDataToStore);
+
+    
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
 

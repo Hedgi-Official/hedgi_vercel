@@ -22,6 +22,7 @@ export const hedges = pgTable("hedges", {
   duration: integer("duration").notNull(), // in days
   margin: decimal("margin", { precision: 10, scale: 2 }), // Margin amount for the hedge
   status: text("status").notNull(), // active, completed, cancelled
+  broker: text("broker").default("tickmill"), // Broker used for the trade (e.g., 'activtrades', 'tickmill')
   tradeOrderNumber: text("trade_order_number"), // Trade order number (stored as text to handle large values)
   tradeStatus: text("trade_status"), // Trade status (open, closed, etc)
   createdAt: timestamp("created_at").defaultNow().notNull(),

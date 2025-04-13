@@ -20,7 +20,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`http://3.145.164.47/symbol_info?broker=activtrades&symbol=${symbol}`, {
+      const response = await fetch(`http://3.145.164.47/symbol_info?broker=activetrades&symbol=${symbol}`, {
         signal: controller.signal
       });
       

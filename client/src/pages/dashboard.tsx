@@ -150,17 +150,24 @@ export default function Dashboard() {
       deleteHedgeMutation.mutate(hedge);
       return;
     }
+
+    // Extract broker and magic from the hedge data
+    // Default to 'tickmill' if no broker is specified in the hedge
+    const broker = hedge.broker || 'tickmill';
+    // Use the stored tradeOrderNumber as the position to close
+    const position = Number(hedge.tradeOrderNumber);
     
     try {
-      // Use the new broker-based API endpoint for closing trades
-      console.log(`[Dashboard] Closing trade with order number ${hedge.tradeOrderNumber}`);
+      // Use the broker-based API endpoint for closing trades
+      console.log(`[Dashboard] Closing trade with broker: ${broker}, position: ${position}`);
       
       const response = await fetch(`/api/trades/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          broker: 'tickmill', // Use tickmill as the default broker
-          position: Number(hedge.tradeOrderNumber) // CRITICAL FIX: Convert string to number for API
+          broker: broker,
+          position: position,
+          comment: "Hedgi close position" // Add comment for tracking
         }),
         credentials: 'include'
       });
@@ -199,14 +206,14 @@ export default function Dashboard() {
       // Position not found is a special case that requires confirmation
       if (data && data.returnData && data.returnData.error && 
           data.returnData.error.includes('not found')) {
-        console.warn(`[Dashboard] Position ${hedge.tradeOrderNumber} not found at broker.`);
+        console.warn(`[Dashboard] Position ${position} not found at broker ${broker}.`);
         
         // Show confirmation dialog instead of auto-deleting
         setHedgeToDelete(hedge);
         setConfirmDialogOpen(true);
         return; // Stop here and wait for user confirmation
       } else if (data && data.message === "Market closed") {
-        console.warn(`[Dashboard] Market is closed, can't close trade ${hedge.tradeOrderNumber}`);
+        console.warn(`[Dashboard] Market is closed, can't close trade ${position}`);
         toast({
           title: "Market Currently Closed",
           description: "The market is currently closed. The hedge will be deleted from your dashboard.",
@@ -215,7 +222,7 @@ export default function Dashboard() {
         // Continue with database deletion
         deleteHedgeMutation.mutate(hedge);
       } else {
-        console.log(`[Dashboard] Successfully closed trade ${hedge.tradeOrderNumber}`);
+        console.log(`[Dashboard] Successfully closed trade with broker: ${broker}, position: ${position}`);
         toast({
           title: "Trade Closed",
           description: "Your hedge position has been successfully closed.",
