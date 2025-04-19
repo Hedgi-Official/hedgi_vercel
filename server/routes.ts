@@ -1,9 +1,9 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { hedges } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
+import { hedges, trades } from "@db/schema";
+import { eq, desc, ne } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
@@ -106,7 +106,7 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Trade API][${requestId}] Processing hedge request`);
       
       // Format the trade request with proper validation
-      const { amount, baseCurrency, targetCurrency, tradeDirection } = req.body;
+      const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
       
       if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
         return res.status(400).json({ 
@@ -131,7 +131,7 @@ export function registerRoutes(app: Express): Server {
         symbol,
         tradeDirection as 'buy' | 'sell',
         volume, 
-        dura
+        duration || 30 // Default to 30 days if duration is not provided
       );
       
       console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
@@ -273,7 +273,7 @@ export function registerRoutes(app: Express): Server {
           symbol,
           tradeDirection as 'buy' | 'sell',
           volume,
-          10
+          duration || 30 // Default to 30 days if duration is not provided
         );
         
         console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
@@ -358,6 +358,10 @@ export function registerRoutes(app: Express): Server {
           .returning();
 
         console.log(`[DEBUG][${requestId}] Database insert result:`, newHedge);
+        
+        // Create a trade record from the MT5 response
+        console.log(`[DEBUG][${requestId}] Creating trade record from MT5 response`);
+        await tradeService.createTradeRecord(apiResponse, req.user.id, newHedge[0]?.id);
         
         // Return a successful response with all needed data
         const response = {
@@ -564,6 +568,87 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // New endpoints for trade tracking
+  // GET /api/trades/open - List all open trades
+  app.get("/api/trades/open", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+    
+    try {
+      const openTrades = await tradeService.getOpenTrades(req.user.id);
+      return res.json(openTrades);
+    } catch (error) {
+      console.error('Error getting open trades:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // GET /api/trades/closed - List all closed trades
+  app.get("/api/trades/closed", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+    
+    try {
+      const closedTrades = await tradeService.getClosedTrades(req.user.id);
+      return res.json(closedTrades);
+    } catch (error) {
+      console.error('Error getting closed trades:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // POST /api/trades/cancel - Cancel a trade
+  app.post("/api/trades/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+    
+    const { tradeOrderNumber } = req.body;
+    if (!tradeOrderNumber) {
+      return res.status(400).json({ 
+        status: false,
+        error: 'Missing required field: tradeOrderNumber' 
+      });
+    }
+    
+    try {
+      const result = await tradeService.cancelTrade(Number(tradeOrderNumber), req.user.id);
+      
+      if (!result.status) {
+        return res.status(500).json({ 
+          status: false,
+          error: result.error || 'Failed to cancel trade'
+        });
+      }
+      
+      return res.json({ 
+        status: true,
+        message: result.message || 'Trade cancelled successfully'
+      });
+    } catch (error) {
+      console.error('Error cancelling trade:', error);
+      return res.status(500).json({ 
+        status: false,
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
   app.delete("/api/hedges/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).send("Not authenticated");

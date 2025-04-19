@@ -1,4 +1,7 @@
 import fetch from 'node-fetch';
+import { db } from '@db';
+import { trades } from '@db/schema';
+import { eq } from 'drizzle-orm';
 
 // Trading API response interface - based on the successful curl response
 export interface TradeResponse {
@@ -14,10 +17,231 @@ export interface TradeResponse {
   retcode_external: number;
   volume: number;
   error?: string; // For error responses
+  // MT5 specific fields that might be in the response
+  custom_order?: {
+    ticket: number;
+    symbol: string;
+    volume: number;
+    open_time: number; // Unix timestamp
+    duration_days: number;
+  };
+  message?: string; // Contains broker information in some responses
+}
+
+// Interface for the response from the GET /api/trades/open endpoint
+export interface OpenTradeResponse {
+  symbol: string;
+  volume: string; // Formatted as "0.20 lots"
+  openTime: string; // ISO formatted date
+}
+
+// Interface for the response from the GET /api/trades/closed endpoint
+export interface ClosedTradeResponse extends OpenTradeResponse {
+  closedAt: string; // ISO formatted date
+  status: string; // cancelled or closed_by_sl
 }
 
 export class TradeService {
   private readonly TRADE_API_URL = 'http://3.145.164.47';
+  
+  /**
+   * Creates a trade record from the MT5 response
+   * @param response MT5 API response
+   * @param userId User ID
+   * @param hedgeId Hedge ID
+   * @returns The created trade record
+   */
+  async createTradeRecord(response: TradeResponse, userId: number, hedgeId?: number) {
+    console.log(`[TradeService] Parsing trade response to create trade record`);
+    
+    try {
+      // Extract broker from message if available
+      let broker = 'tickmill'; // Default broker
+      if (response.message) {
+        const brokerMatch = response.message.match(/on broker (.+) with/);
+        if (brokerMatch && brokerMatch[1]) {
+          broker = brokerMatch[1];
+        }
+      }
+      
+      // Create trade record from response
+      let ticket = '';
+      let symbol = '';
+      let volume = 0;
+      let openTime = new Date();
+      let durationDays = 30; // Default duration
+      
+      // Parse fields from custom_order if available
+      if (response.custom_order) {
+        ticket = response.custom_order.ticket.toString();
+        symbol = response.custom_order.symbol;
+        volume = response.custom_order.volume;
+        openTime = new Date(response.custom_order.open_time * 1000); // Convert Unix timestamp to Date
+        durationDays = response.custom_order.duration_days;
+      } else {
+        // Fallback to order number if no custom_order available
+        ticket = response.order.toString();
+        // Try to extract symbol and volume from request
+        if (response.request && typeof response.request === 'object') {
+          symbol = response.request.symbol || '';
+          volume = response.request.volume || 0;
+        }
+      }
+      
+      // Insert trade record
+      const newTrade = await db.insert(trades)
+        .values({
+          userId,
+          ticket,
+          broker,
+          volume: volume.toString(),
+          symbol,
+          openTime,
+          durationDays,
+          status: 'open',
+          hedgeId
+        })
+        .returning();
+        
+      console.log(`[TradeService] Created trade record:`, newTrade[0]);
+      return newTrade[0];
+    } catch (error) {
+      console.error(`[TradeService] Error creating trade record:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get all open trades for a user
+   * @param userId User ID
+   * @returns List of open trades with non-sensitive fields
+   */
+  async getOpenTrades(userId: number): Promise<OpenTradeResponse[]> {
+    try {
+      const openTrades = await db.query.trades.findMany({
+        where: (trade, { eq, and }) => and(
+          eq(trade.userId, userId),
+          eq(trade.status, 'open')
+        )
+      });
+      
+      // Map to API response format with only non-sensitive fields
+      return openTrades.map(trade => ({
+        symbol: trade.symbol,
+        volume: `${Number(trade.volume).toFixed(2)} lots`,
+        openTime: trade.openTime.toISOString()
+      }));
+    } catch (error) {
+      console.error(`[TradeService] Error fetching open trades:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get all closed trades for a user
+   * @param userId User ID
+   * @returns List of closed trades with non-sensitive fields
+   */
+  async getClosedTrades(userId: number): Promise<ClosedTradeResponse[]> {
+    try {
+      const closedTrades = await db.query.trades.findMany({
+        where: (trade, { eq, and, ne }) => and(
+          eq(trade.userId, userId),
+          ne(trade.status, 'open')
+        )
+      });
+      
+      // Map to API response format with only non-sensitive fields
+      return closedTrades.map(trade => ({
+        symbol: trade.symbol,
+        volume: `${Number(trade.volume).toFixed(2)} lots`,
+        openTime: trade.openTime.toISOString(),
+        closedAt: trade.closedAt?.toISOString() || new Date().toISOString(),
+        status: trade.status
+      }));
+    } catch (error) {
+      console.error(`[TradeService] Error fetching closed trades:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Cancel a trade by order number
+   * @param tradeOrderNumber Internal DB record ID
+   * @param userId User ID
+   * @returns API response from MT5
+   */
+  async cancelTrade(tradeOrderNumber: number, userId: number): Promise<{status: boolean, message?: string, error?: string}> {
+    try {
+      // Find the trade record
+      const trade = await db.query.trades.findFirst({
+        where: (t, { eq, and }) => and(
+          eq(t.id, tradeOrderNumber),
+          eq(t.userId, userId)
+        )
+      });
+      
+      if (!trade) {
+        return {
+          status: false,
+          error: `Trade with ID ${tradeOrderNumber} not found`
+        };
+      }
+      
+      // Extract ticket and broker from the trade record
+      const { ticket, broker } = trade;
+      
+      // Call MT5 API to close the trade by magic number
+      const response = await fetch(`${this.TRADE_API_URL}/close_trade_by_magic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          magic: parseInt(ticket, 10),
+          broker,
+          comment: 'User-initiated cancel'
+        })
+      });
+      
+      const responseText = await response.text();
+      console.log(`[TradeService] Cancel trade API response:`, responseText);
+      
+      try {
+        const result = JSON.parse(responseText);
+        
+        // Update trade status to cancelled
+        if (result.retcode === 0 || result.retcode === 10009) {
+          await db.update(trades)
+            .set({
+              status: 'cancelled',
+              closedAt: new Date()
+            })
+            .where(eq(trades.id, tradeOrderNumber));
+            
+          return {
+            status: true,
+            message: 'Trade cancelled successfully'
+          };
+        } else {
+          return {
+            status: false,
+            error: result.error || `Failed to cancel trade: ${result.comment || 'Unknown error'}`
+          };
+        }
+      } catch (parseError) {
+        console.error(`[TradeService] Error parsing cancel response:`, parseError);
+        return {
+          status: false,
+          error: `Failed to parse API response: ${responseText.substring(0, 200)}`
+        };
+      }
+    } catch (error) {
+      console.error(`[TradeService] Error cancelling trade:`, error);
+      return {
+        status: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
 
   /**
    * Open a new trade with the specified broker
