@@ -29,8 +29,24 @@ export const hedges = pgTable("hedges", {
   completedAt: timestamp("completed_at"),
 });
 
+export const trades = pgTable("trades", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id").references(() => users.id),
+  ticket: text("ticket").notNull(), // MT5 order ID (from custom_order.ticket)
+  broker: text("broker").notNull(), // Broker name (e.g., "fbs", from request context)
+  volume: decimal("volume", { precision: 10, scale: 2 }).notNull(), // From custom_order.volume or trade_details.volume
+  symbol: text("symbol").notNull(), // Currency pair symbol
+  openTime: timestamp("open_time").notNull(), // Trade open time
+  durationDays: integer("duration_days").notNull(), // Duration in days
+  status: text("status").notNull().default('open'), // open, cancelled, closed_by_sl
+  closedAt: timestamp("closed_at"), // When the trade was closed/cancelled
+  hedgeId: integer("hedge_id").references(() => hedges.id), // Reference to associated hedge
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const userRelations = relations(users, ({ many }) => ({
   hedges: many(hedges),
+  trades: many(trades),
 }));
 
 export const hedgeRelations = relations(hedges, ({ one }) => ({
@@ -40,9 +56,22 @@ export const hedgeRelations = relations(hedges, ({ one }) => ({
   }),
 }));
 
+export const tradeRelations = relations(trades, ({ one }) => ({
+  user: one(users, {
+    fields: [trades.userId],
+    references: [users.id],
+  }),
+  hedge: one(hedges, {
+    fields: [trades.hedgeId],
+    references: [hedges.id],
+  }),
+}));
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Hedge = typeof hedges.$inferSelect;
 export type NewHedge = typeof hedges.$inferInsert;
+export type Trade = typeof trades.$inferSelect;
+export type NewTrade = typeof trades.$inferInsert;
