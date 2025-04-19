@@ -391,6 +391,69 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // API endpoint to get open trades
+  app.get("/api/trades/open", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const openTrades = await tradeService.getOpenTrades(req.user.id);
+      res.json(openTrades);
+    } catch (error) {
+      console.error("[Trades API] Error fetching open trades:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to fetch open trades" 
+      });
+    }
+  });
+
+  // API endpoint to get closed trades (history)
+  app.get("/api/trades/history", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    try {
+      const closedTrades = await tradeService.getClosedTrades(req.user.id);
+      res.json(closedTrades);
+    } catch (error) {
+      console.error("[Trades API] Error fetching trade history:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to fetch trade history" 
+      });
+    }
+  });
+
+  // API endpoint to cancel a trade
+  app.post("/api/trades/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const { tradeOrderNumber } = req.body;
+    if (!tradeOrderNumber) {
+      return res.status(400).json({ error: "Missing trade order number" });
+    }
+
+    try {
+      const result = await tradeService.cancelTrade(tradeOrderNumber, req.user.id);
+      if (result.status) {
+        res.json({ status: true, message: result.message });
+      } else {
+        res.status(400).json({ status: false, error: result.error });
+      }
+    } catch (error) {
+      console.error("[Trades API] Error cancelling trade:", error);
+      res.status(500).json({ 
+        status: false, 
+        error: error instanceof Error ? error.message : "Failed to cancel trade" 
+      });
+    }
+  });
+
+  // API endpoint for webhook notifications from trading bots has been moved below
+
   // Add explicit close trade endpoint to support dashboard.tsx
   // Add the new API endpoint for trade closure with enhanced error handling
   app.post("/api/trades/close", async (req, res) => {
@@ -569,47 +632,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // New endpoints for trade tracking
-  // GET /api/trades/open - List all open trades
-  app.get("/api/trades/open", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-    
-    try {
-      const openTrades = await tradeService.getOpenTrades(req.user.id);
-      return res.json(openTrades);
-    } catch (error) {
-      console.error('Error getting open trades:', error);
-      return res.status(500).json({ 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-  
-  // GET /api/trades/closed - List all closed trades
-  app.get("/api/trades/closed", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-    
-    try {
-      const closedTrades = await tradeService.getClosedTrades(req.user.id);
-      return res.json(closedTrades);
-    } catch (error) {
-      console.error('Error getting closed trades:', error);
-      return res.status(500).json({ 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-  
   // POST /api/trades/webhook - Receive notifications from trading bot
   app.post("/api/trades/webhook", async (req, res) => {
     // This endpoint doesn't require authentication as it's called by the trading bot
