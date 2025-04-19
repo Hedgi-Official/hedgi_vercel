@@ -609,6 +609,63 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // POST /api/trades/webhook - Receive notifications from trading bot
+  app.post("/api/trades/webhook", async (req, res) => {
+    // This endpoint doesn't require authentication as it's called by the trading bot
+    
+    try {
+      const { broker, ticket, symbol, closed_at } = req.body;
+      
+      // Validate required fields
+      if (!broker || !ticket) {
+        return res.status(400).json({
+          error: "Missing required fields: broker and ticket are required"
+        });
+      }
+      
+      // Find the trade in the database
+      const trade = await db.query.trades.findFirst({
+        where: eq(trades.ticket, ticket.toString())
+      });
+      
+      if (!trade) {
+        return res.status(404).json({
+          error: "Trade not found"
+        });
+      }
+      
+      // Update the trade status
+      // Find the trade first then update
+      const tradeRecord = await db.query.trades.findFirst({
+        where: eq(trades.ticket, ticket.toString())
+      });
+      
+      if (!tradeRecord) {
+        return res.status(404).json({
+          error: "Trade not found"
+        });
+      }
+      
+      // Update the trade using a separate update statement
+      await db
+        .update(trades)
+        .set({
+          status: 'closed',
+          closedAt: new Date(closed_at * 1000)
+        })
+        .where(eq(trades.id, tradeRecord.id));
+      
+      return res.json({
+        message: "Trade marked closed"
+      });
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // POST /api/trades/cancel - Cancel a trade
   app.post("/api/trades/cancel", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -718,6 +775,27 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
+
+  // Trade history endpoint for completed trades
+  app.get("/api/trades/history", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ 
+        status: false,
+        error: 'Not authenticated' 
+      });
+    }
+    
+    try {
+      const closedTrades = await tradeService.getClosedTrades(req.user.id);
+      return res.json(closedTrades);
+    } catch (error) {
+      console.error('Error getting trade history:', error);
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+
   
   // Test endpoint for trade API integration
   // Test endpoint to close a trade without authentication

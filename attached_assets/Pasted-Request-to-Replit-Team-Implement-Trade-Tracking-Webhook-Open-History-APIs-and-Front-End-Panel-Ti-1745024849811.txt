@@ -1,0 +1,142 @@
+Request to Replit Team: Implement Trade‑Tracking Webhook, Open/History APIs, and Front‑End Panel
+
+Title:
+Add backend trade‑tracking endpoints and front‑end history panel
+
+Overview:
+We need to wire our trading‑bot’s close notifications into the Replit‑hosted backend and surface both open and historical trades in the UI—without ever exposing raw MT5 IDs or broker names to end users.
+
+1. Webhook Receiver
+Endpoint: POST /api/trades/webhook
+Purpose: Receive notifications from the trading bot when a trade closes (stop‑loss or scheduled close).
+
+Payload (from the bot):
+
+json
+Copy
+{
+  "broker":    "fbs",
+  "ticket":    808958848,
+  "symbol":    "USDMXN",
+  "closed_at": 1744919404.3258727
+}
+Implementation Steps:
+
+Validate broker and ticket are present.
+
+Lookup the trade in trades table by trades.ticket = ticket.toString().
+
+If found, update:
+
+ts
+Copy
+status   = 'closed';
+closedAt = new Date(closed_at * 1000);
+Respond with 200 { message: "Trade marked closed" }.
+
+If not found, respond 404 { error: "Trade not found" }.
+
+2. Open‑Trades API
+Endpoint: GET /api/trades/open
+Purpose: Return all active trades for the logged‑in user, showing only user‑safe fields.
+
+Response Shape:
+
+json
+Copy
+[
+  {
+    "tradeOrderNumber": 1,             // internal DB ID
+    "symbol":           "USDMXN",
+    "volume":           "0.20 lots",
+    "openTime":         "2025-05-01T14:30:00Z"
+  },
+  …
+]
+Implementation Steps:
+
+Query trades where status = 'open' and userId = currentUser.
+
+Map each record to the above shape.
+
+Return as JSON.
+
+3. Trade‑History API
+Endpoint: GET /api/trades/history
+Purpose: Return all closed trades for the user, with open/close timestamps and optional P/L.
+
+Response Shape:
+
+json
+Copy
+[
+  {
+    "symbol":    "USDMXN",
+    "volume":    "0.20 lots",
+    "openTime":  "2025-05-01T14:30:00Z",
+    "closedAt":  "2025-05-01T14:45:00Z",
+    "status":    "closed",
+    "profit":    "123.45"
+  },
+  …
+]
+Implementation Steps:
+
+Query trades where status != 'open' and userId = currentUser.
+
+Map to the above shape.
+
+Return as JSON.
+
+4. Front‑End Panel
+Component: <TradeHistory /> under the “New Hedge” box.
+
+Behavior:
+
+Renders a toggle button: “Show Past Hedges ▼” / “Hide Past Hedges ▲”
+
+On expand, fetch:
+
+GET /api/trades/open → display list of open trades with symbol, volume, openTime
+
+GET /api/trades/history → display list of past trades with open/close times and P/L
+
+Each open trade row shows:
+
+Symbol — Volume — Opened At — [×] button
+
+Clicking [×] on an open trade should call:
+
+bash
+Copy
+curl -X POST https://<bot‑host>/close_trade_by_magic \
+  -H "Content-Type: application/json" \
+  -d '{
+    "broker":   "<stored‑broker>",
+    "magic":     <ticket>,
+    "comment":  "user‑initiated cancel"
+  }'
+On success, remove that trade from the open list immediately.
+
+UI Notes:
+
+Do not display ticket, broker, or any MT5 internals.
+
+Format volumes with two decimals plus “lots”.
+
+Format times with .toLocaleString() or ISO.
+
+Please implement these changes end‑to‑end:
+
+Database schema adjustments if needed (trades table: ticket, broker, status, openTime, closedAt, volume, profit`).
+
+Route handlers in routes.ts.
+
+Front‑end React component and Redux/State updates.
+
+Let me know if anything’s unclear. Thank you!
+
+
+
+
+
