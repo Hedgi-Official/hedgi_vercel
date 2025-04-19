@@ -7,6 +7,7 @@ import { CurrencySimulator } from "@/components/currency-simulator";
 import { useTranslation } from 'react-i18next';
 import { Header } from "@/components/header";
 import { ExchangeRatesWidget } from "@/components/exchange-rates-widget";
+import { TradeHistory } from "@/components/trade-history";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -395,6 +396,9 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgeData) => createHedgeMutation.mutate(hedgeData)}
                 onOrdersUpdated={() => queryClient.invalidateQueries({ queryKey: ["/api/hedges"] })}
               />
+              
+              {/* Trade History Component */}
+              <TradeHistory />
             </CardContent>
           </Card>
         </div>

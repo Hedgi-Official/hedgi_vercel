@@ -12,6 +12,7 @@ import fbsRouter from './routes/fbs-rate';
 import paymentRouter from './routes/payment';
 // Import our modern trade service for the curl-based API implementation
 import { tradeService } from "./services/tradeService";
+import type { TradeResponse } from "./services/tradeService";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
