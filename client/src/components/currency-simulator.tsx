@@ -5,16 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
-import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
-import { hedges } from '@db/schema';
-import type { db } from '@db/index.ts';
-import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
+import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
 import { MercadoPayoSDKModal } from './mercado-pago-sdk-modal';
 
 export interface TradeResponse {
@@ -71,11 +66,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
   // Get rates from ActivTrades API
-  const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
+  const { data: activTradesRate} = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
-    const currencyPair = `${targetCurrency}${baseCurrency}`;
-
     let currentRate;
     let swapValues;
     
@@ -250,13 +243,6 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
     } finally {
       setIsPlacingHedge(false);
     }
-  };
-
-  const getTradeDirectionHelp = () => {
-    if (tradeDirection === 'buy') {
-      return `I will make a payment in ${targetCurrency} in the future`;
-    }
-    return `I will receive ${targetCurrency} and convert to ${baseCurrency} in the future`;
   };
 
   return (

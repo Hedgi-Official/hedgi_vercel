@@ -66,19 +66,17 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         
         // Calculate hedge cost based on amount
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
+        let hedgeCost;
         
         // Use simulation data if available for more accurate fee calculation
-        let hedgeCost: number;
-        if (
-          simulation?.costDetails != null &&
-          typeof simulation.costDetails.hedgeCost === 'number'
-        ) {
+        if (simulation) {
           // The correct fee is in simulation.costDetails.hedgeCost, not simulation.totalCost
           hedgeCost = simulation.costDetails.hedgeCost;
           console.log('[MercadoPayoSDKModal] Using simulation hedgeCost:', hedgeCost);
         } else {
           // Fallback to the simple percentage calculation
-          throw new Error('Failed to initialize payment modal');
+          hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
+          console.log('[MercadoPayoSDKModal] Using fallback hedgeCost calculation:', hedgeCost);
         }
         
         // Calculate margin amount (defaults to 2x hedgeCost if not provided)
@@ -126,29 +124,8 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         setPublicKey(data.public_key);
         
         // Initialize MercadoPago with the public key
-        
-
-        // 2) Create your map with `as const` so that each value is a literal type:
-        const localeMap = {
-          BRL:  "pt-BR",
-          USD:  "en-US",
-          MXN:  "es-MX",
-        } as const;
-
-        // 3) Extract the union of the map’s values:
-        type LocaleMap = typeof localeMap;
-        type Locale = LocaleMap[keyof LocaleMap];  
-        // this is exactly the same as MercadoLocale
-
-        // 4) When you pull from the map, TS knows you either get one of those literals or `undefined`:
-        const raw = localeMap[currency.toUpperCase() as keyof LocaleMap]; // raw: MercadoLocale | undefined
-
-        // 5) Provide a fallback that is itself a literal in the union:
-        const mpLocale: Locale = raw ?? "en-US";
-
-        // 6) Now this is perfectly typed:
-        initMercadoPago(data.public_key, {
-          locale: mpLocale                        
+        initMercadoPago(data.public_key, { 
+          locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
         });
         
         setLoading(false);

@@ -1,9 +1,9 @@
-import type { Express, Request, Response } from "express";
+import type { Express} from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
 import { hedges, trades } from "@db/schema";
-import { eq, desc, ne } from "drizzle-orm";
+import { eq, desc} from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
@@ -12,7 +12,7 @@ import fbsRouter from './routes/fbs-rate';
 import paymentRouter from './routes/payment';
 // Import our modern trade service for the curl-based API implementation
 import { tradeService } from "./services/tradeService";
-import type { TradeResponse } from "./services/tradeService";
+;
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);

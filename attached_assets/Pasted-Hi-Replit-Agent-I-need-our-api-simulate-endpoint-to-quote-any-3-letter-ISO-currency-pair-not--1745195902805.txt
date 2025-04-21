@@ -1,0 +1,86 @@
+Hi Replit Agent! 👋
+
+I need our /api/simulate endpoint to quote any 3‑letter ISO currency pair (not just USD/BRL) by:
+
+Parsing base, target, and amount from the query string.
+
+Upper‑casing them so requests like eur/usd work the same as EUR/USD.
+
+Fetching the live FX rate from a free service (e.g. exchangerate.host).
+
+Calculating the hedge cost as:
+
+js
+Copy
+// delivered amount in “target” currency
+const delivered = Number(amount) * rate;
+// fee = 0.25% of delivered
+const hedgeCost = Number((delivered * 0.0025).toFixed(2));
+Returning JSON in this shape:
+
+json
+Copy
+{
+  "costDetails": {
+    "hedgeCost": 12.34,     // number
+    "rate": 5.6789,         // FX rate used
+    "timestamp": 1680000000 // Date.now()
+  }
+}
+Error handling: if the FX lookup fails or parameters are missing, respond with a 400 or 500 and a helpful {"error":"..."} message.
+
+Here’s a Next.js‐style handler you can drop in pages/api/simulate.ts:
+
+ts
+Copy
+// pages/api/simulate.ts
+import type { NextApiHandler } from 'next';
+import fetch from 'node-fetch';
+
+const handler: NextApiHandler = async (req, res) => {
+  const { base, target, amount } = req.query;
+  if (
+    typeof base !== 'string' ||
+    typeof target !== 'string' ||
+    typeof amount !== 'string'
+  ) {
+    return res.status(400).json({ error: 'Missing or invalid parameters' });
+  }
+
+  const b = base.toUpperCase();
+  const t = target.toUpperCase();
+  const amt = Number(amount);
+  if (isNaN(amt) || amt <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
+  try {
+    // fetch FX rate
+    const fxRes = await fetch(
+      `https://api.exchangerate.host/convert?from=${b}&to=${t}`
+    );
+    if (!fxRes.ok) throw new Error(`FX lookup failed: ${fxRes.status}`);
+    const fxData = await fxRes.json();
+    const rate = fxData.result as number;
+
+    // compute hedgeCost
+    const delivered = amt * rate;
+    const hedgeCost = Number((delivered * 0.0025).toFixed(2));
+
+    return res.status(200).json({
+      costDetails: {
+        hedgeCost,
+        rate,
+        timestamp: Date.now(),
+      },
+    });
+  } catch (err: any) {
+    console.error('Simulate error', b, t, err);
+    return res
+      .status(500)
+      .json({ error: err.message || 'Simulation service error' });
+  }
+};
+
+export default handler;
+This will ensure our front‑end React modal always receives a valid costDetails.hedgeCost for any currency pair. Please implement and deploy—thanks! 🚀
