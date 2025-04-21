@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Hedge } from "db/schema";
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { Request, Response } from 'express';
-import { useTranslation } from 'react-i18next';
+import { i18n } from 'i18next';
 
 // Import the SimulationResult interface
 import { SimulationResult } from "./currency-simulator";
@@ -31,7 +31,6 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   const [paymentEnabled, setPaymentEnabled] = useState(false);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const { i18n } = useTranslation();
   
   // Check if payments are enabled when component mounts
   useEffect(() => {
