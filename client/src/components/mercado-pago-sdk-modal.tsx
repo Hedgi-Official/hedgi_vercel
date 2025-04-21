@@ -31,7 +31,16 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   const [paymentEnabled, setPaymentEnabled] = useState(false);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  
+  // Determine localization for Mercado Pago based on user's website language
+  const isPortuguese = i18n.language === 'pt-BR';
+  
+  // Map our supported locales to Mercado Pago supported locales
+  // This ensures the payment interface language matches the website language
+  const getMercadoPagoLocale = () => {
+    return isPortuguese ? 'pt-BR' : 'en-US';
+  };
   
   // Check if payments are enabled when component mounts
   useEffect(() => {
@@ -50,13 +59,13 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         }
       } catch (error) {
         console.error('[MercadoPayoSDKModal] Error checking payment status:', error);
-        setError('Failed to check payment status');
+        setError(isPortuguese ? 'Falha ao verificar status de pagamento' : 'Failed to check payment status');
         setLoading(false);
       }
     };
 
     checkPaymentStatus();
-  }, [isOpen]);
+  }, [isOpen, isPortuguese]);
 
   // Create payment preference when component mounts and payments are enabled
   useEffect(() => {
@@ -81,7 +90,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
           console.log('[MercadoPayoSDKModal] Using simulation hedgeCost:', hedgeCost);
         } else {
           // Fallback to the simple percentage calculation
-          throw new Error('Failed to initialize payment modal');
+          throw new Error(isPortuguese ? 'Falha ao inicializar modal de pagamento' : 'Failed to initialize payment modal');
         }
         
         // Calculate margin amount (defaults to 2x hedgeCost if not provided)
@@ -122,48 +131,33 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         }
         
         if (!data.id || !data.public_key) {
-          throw new Error('Invalid preference data returned from server');
+          throw new Error(isPortuguese 
+            ? 'Dados de preferência inválidos retornados pelo servidor' 
+            : 'Invalid preference data returned from server');
         }
         
         setPreferenceId(data.id);
         setPublicKey(data.public_key);
         
-        // Initialize MercadoPago with the public key
+        // Get the user's preferred locale for Mercado Pago
+        const mpLocale = getMercadoPagoLocale();
+        console.log(`[MercadoPayoSDKModal] Current website language: ${i18n.language}, using Mercado Pago locale: ${mpLocale}`);
         
-
-        // 2) Create your map with `as const` so that each value is a literal type:
-        const localeMap = {
-          BRL:  "pt-BR",
-          USD:  "en-US",
-          MXN:  "es-MX",
-        } as const;
-
-        // 3) Extract the union of the map’s values:
-        type LocaleMap = typeof localeMap;
-        type Locale = LocaleMap[keyof LocaleMap];  
-        // this is exactly the same as MercadoLocale
-
-        // 4) When you pull from the map, TS knows you either get one of those literals or `undefined`:
-        const raw = localeMap[currency.toUpperCase() as keyof LocaleMap]; // raw: MercadoLocale | undefined
-
-        // 5) Provide a fallback that is itself a literal in the union:
-        const mpLocale: Locale = raw ?? "en-US";
-
-        // 6) Now this is perfectly typed:
+        // Initialize Mercado Pago with the correct locale based on the user's website language
         initMercadoPago(data.public_key, {
-          locale: mpLocale                        
+          locale: mpLocale
         });
         
         setLoading(false);
       } catch (error) {
         console.error('[MercadoPayoSDKModal] Error creating preference:', error);
-        setError('Failed to initialize payment');
+        setError(isPortuguese ? 'Falha ao inicializar pagamento' : 'Failed to initialize payment');
         setLoading(false);
       }
     };
     
     createPreference();
-  }, [isOpen, paymentEnabled, hedgeData, currency, simulation]);
+  }, [isOpen, paymentEnabled, hedgeData, currency, simulation, i18n.language, isPortuguese]);
   
   // Calculate amount from hedge data for payment
   const calculateTotalPaymentAmount = () => {
@@ -199,7 +193,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   const onError = (error: any) => {
     console.error('[MercadoPayoSDKModal] Payment error:', error);
     // Format the error message properly
-    let errorMessage = 'An unexpected error occurred';
+    let errorMessage = isPortuguese ? 'Ocorreu um erro inesperado' : 'An unexpected error occurred';
     
     if (typeof error === 'string') {
       errorMessage = error;
@@ -214,7 +208,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
       }
     }
     
-    setError(`Payment error: ${errorMessage}`);
+    setError(isPortuguese ? `Erro de pagamento: ${errorMessage}` : `Payment error: ${errorMessage}`);
   };
   
   const onSubmit = async (formData: any) => {
@@ -240,18 +234,22 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
           onSuccess(hedgeData);
         }
         toast({
-          title: 'Payment successful',
-          description: 'Your hedge order has been placed.',
+          title: isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful',
+          description: isPortuguese ? 'Sua ordem de proteção foi registrada.' : 'Your hedge order has been placed.',
           variant: 'default',
         });
         onClose();
       } else {
-        setError(`Payment ${result.status}: ${result.statusDetail || 'Please try again.'}`);
+        setError(isPortuguese 
+          ? `Pagamento ${result.status}: ${result.statusDetail || 'Por favor, tente novamente.'}` 
+          : `Payment ${result.status}: ${result.statusDetail || 'Please try again.'}`);
         setLoading(false);
       }
     } catch (error) {
       console.error('[MercadoPayoSDKModal] Error processing payment:', error);
-      setError('Error processing payment. Please try again.');
+      setError(isPortuguese 
+        ? 'Erro ao processar pagamento. Por favor, tente novamente.' 
+        : 'Error processing payment. Please try again.');
       setLoading(false);
     }
   };
@@ -260,26 +258,28 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Complete Payment to Place Hedge</DialogTitle>
+          <DialogTitle>
+            {isPortuguese ? 'Complete o Pagamento para Registrar Proteção' : 'Complete Payment to Place Hedge'}
+          </DialogTitle>
         </DialogHeader>
         
         {loading && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p>Processing your payment...</p>
+            <p>{isPortuguese ? 'Processando seu pagamento...' : 'Processing your payment...'}</p>
           </div>
         )}
         
         {error && (
           <div className="bg-destructive/10 text-destructive p-4 rounded-md my-4">
-            <p className="font-semibold">Error</p>
+            <p className="font-semibold">{isPortuguese ? 'Erro' : 'Error'}</p>
             <p>{error}</p>
             <Button 
               variant="outline" 
               className="mt-2" 
               onClick={onClose}
             >
-              Close
+              {isPortuguese ? 'Fechar' : 'Close'}
             </Button>
           </div>
         )}
@@ -290,32 +290,33 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
               <div className="min-h-[300px]">
                 {/* Showing debug information */}
                 <div className="bg-muted p-3 rounded-md text-xs mb-3">
-                  <p><strong>Payment Details:</strong></p>
-                  <p>Currency: {currency}</p>
+                  <p><strong>{isPortuguese ? 'Detalhes do Pagamento:' : 'Payment Details:'}</strong></p>
+                  <p>{isPortuguese ? 'Moeda:' : 'Currency:'} {currency}</p>
                   {hedgeData && (
                     <>
-                      <p>Hedge Amount: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      <p>{isPortuguese ? 'Valor da Proteção:' : 'Hedge Amount:'} {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
                       
                       {/* Get the fees from the simulation result if available */}
                       {simulation ? (
                         <>
-                          <p>Fees: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
-                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
-                          <p>Total Payment: {paymentAmount.toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Taxas:' : 'Fees:'} {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Margem:' : 'Margin:'} {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Pagamento Total:' : 'Total Payment:'} {paymentAmount.toFixed(2)} {currency}</p>
                         </>
                       ) : (
                         <>
                           {/* Fallback for when simulation is not available */}
-                          <p>Fees: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
-                          <p>Margin: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
-                          <p>Total Payment: {paymentAmount.toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Taxas:' : 'Fees:'} {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Margem:' : 'Margin:'} {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                          <p>{isPortuguese ? 'Pagamento Total:' : 'Total Payment:'} {paymentAmount.toFixed(2)} {currency}</p>
                         </>
                       )}
                     </>
                   )}
-                  <p className="mt-2"><strong>Debug Info:</strong></p>
+                  <p className="mt-2"><strong>{isPortuguese ? 'Info para Depuração:' : 'Debug Info:'}</strong></p>
                   <p>Public Key: {publicKey || 'Not available'}</p>
                   <p>Preference ID: {preferenceId?.substring(0, 10) + '...' || 'Not available'}</p>
+                  <p>Language: {i18n.language} | MP Locale: {getMercadoPagoLocale()}</p>
                 </div>
                 
                 <Payment 
@@ -351,22 +352,28 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                     if (hedgeData) {
                       onSuccess(hedgeData);
                       toast({
-                        title: 'Test payment processed',
-                        description: 'Your hedge order has been placed.',
+                        title: isPortuguese ? 'Pagamento de teste processado' : 'Test payment processed',
+                        description: isPortuguese ? 'Sua ordem de proteção foi registrada.' : 'Your hedge order has been placed.',
                         variant: 'default',
                       });
                       onClose();
                     }
                   }}
                 >
-                  Test: Continue without payment
+                  {isPortuguese ? 'Teste: Continuar sem pagamento' : 'Test: Continue without payment'}
                 </Button>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8">
-                <p className="mb-4">Payment processing is disabled in this environment.</p>
+                <p className="mb-4">
+                  {isPortuguese 
+                    ? 'O processamento de pagamentos está desativado neste ambiente.' 
+                    : 'Payment processing is disabled in this environment.'}
+                </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  In a production environment, you would complete payment before placing your hedge.
+                  {isPortuguese 
+                    ? 'Em um ambiente de produção, você completaria o pagamento antes de registrar sua proteção.' 
+                    : 'In a production environment, you would complete payment before placing your hedge.'}
                 </p>
                 <Button 
                   variant="outline" 
@@ -378,7 +385,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                     }
                   }}
                 >
-                  Continue without payment
+                  {isPortuguese ? 'Continuar sem pagamento' : 'Continue without payment'}
                 </Button>
               </div>
             )}
