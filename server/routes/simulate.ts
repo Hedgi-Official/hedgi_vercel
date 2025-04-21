@@ -3,17 +3,18 @@ import fetch from "node-fetch";
 
 // Define the type for the exchange rate API response
 interface ExchangeRateResponse {
-  result: number;
-  success: boolean;
-  query: {
-    from: string;
-    to: string;
-    amount: number;
+  result: string;
+  provider: string;
+  documentation: string;
+  terms_of_use: string;
+  time_last_update_unix: number;
+  time_last_update_utc: string;
+  time_next_update_unix: number;
+  time_next_update_utc: string;
+  base_code: string;
+  rates: {
+    [currencyCode: string]: number;
   };
-  info: {
-    rate: number;
-  };
-  date: string;
 }
 
 const router = Router();
@@ -49,21 +50,21 @@ router.get("/api/simulate", async (req: Request, res: Response) => {
   }
 
   try {
-    // Fetch FX rate from exchangerate.host API
-    const fxRes = await fetch(
-      `https://api.exchangerate.host/convert?from=${b}&to=${t}`
-    );
+    // Fetch FX rate from open.er-api.com
+    const fxRes = await fetch(`https://open.er-api.com/v6/latest/${b}`);
     
     if (!fxRes.ok) {
       throw new Error(`FX lookup failed: ${fxRes.status}`);
     }
     
     const fxData = await fxRes.json() as ExchangeRateResponse;
-    const rate = fxData.result;
-
-    if (!rate) {
-      throw new Error('Invalid exchange rate received');
+    
+    // Check if response is successful and target currency exists in rates
+    if (fxData.result !== 'success' || !fxData.rates[t]) {
+      throw new Error(`Exchange rate not available for ${b} to ${t}`);
     }
+    
+    const rate = Number(fxData.rates[t]);
 
     // Calculate hedgeCost (0.25% of delivered amount)
     const delivered = amt * rate;
