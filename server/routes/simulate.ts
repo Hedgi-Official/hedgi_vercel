@@ -1,6 +1,21 @@
 import { Router, Request, Response } from "express";
 import fetch from "node-fetch";
 
+// Define the type for the exchange rate API response
+interface ExchangeRateResponse {
+  result: number;
+  success: boolean;
+  query: {
+    from: string;
+    to: string;
+    amount: number;
+  };
+  info: {
+    rate: number;
+  };
+  date: string;
+}
+
 const router = Router();
 
 /**
@@ -43,8 +58,8 @@ router.get("/api/simulate", async (req: Request, res: Response) => {
       throw new Error(`FX lookup failed: ${fxRes.status}`);
     }
     
-    const fxData = await fxRes.json();
-    const rate = fxData.result as number;
+    const fxData = await fxRes.json() as ExchangeRateResponse;
+    const rate = fxData.result;
 
     if (!rate) {
       throw new Error('Invalid exchange rate received');

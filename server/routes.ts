@@ -10,6 +10,7 @@ import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
 import paymentRouter from './routes/payment';
+import simulateRouter from './routes/simulate';
 // Import our modern trade service for the curl-based API implementation
 import { tradeService } from "./services/tradeService";
 ;
@@ -24,6 +25,7 @@ export function registerRoutes(app: Express): Server {
   app.use(tickmillRouter);
   app.use(fbsRouter);
   app.use(paymentRouter);
+  app.use(simulateRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // List of supported symbols for exchange rates
