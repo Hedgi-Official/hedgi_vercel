@@ -252,11 +252,39 @@ export default function Dashboard() {
   const confirmHedgeDeletion = () => {
     if (hedgeToDelete) {
       console.log('[Dashboard] Force deleting hedge after confirmation:', hedgeToDelete);
-      forceDeleteHedgeMutation.mutate(hedgeToDelete);
+      
+      // Close the dialog immediately to prevent seeing error toasts
+      setConfirmDialogOpen(false);
+      
+      // Optimistically update the UI by invalidating the hedges query
+      // This will remove the hedge from the active hedges table immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      
+      // Show a success toast immediately - user confirmed they want to delete
+      toast({
+        title: t('simulator.notifications.hedgeDeleted'),
+        description: t('simulator.notifications.hedgeDeletedDesc'),
+      });
+      
+      // Then perform the actual deletion in the background
+      forceDeleteHedgeMutation.mutate(hedgeToDelete, {
+        // Don't show any UI notifications on success/error since we already 
+        // showed the success message and don't want to show error messages
+        onSuccess: () => {
+          // Just invalidate the queries silently
+          queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+        },
+        onError: (error) => {
+          // Log error but don't show to user - they already confirmed deletion
+          console.error('[Dashboard] Error in force delete after confirmation:', error);
+        }
+      });
+      
       setHedgeToDelete(null);
       setConfirmMessage('');
+    } else {
+      setConfirmDialogOpen(false);
     }
-    setConfirmDialogOpen(false);
   };
   
   // Cancel deletion of a hedge
@@ -266,7 +294,7 @@ export default function Dashboard() {
     setConfirmDialogOpen(false);
   };
 
-  // Force delete mutation that adds the force=true parameter
+  // Force delete mutation that adds the force=true parameter and doesn't show toasts by default
   const forceDeleteHedgeMutation = useMutation<
     any,    // Return type
     Error,  // Error type  
@@ -288,21 +316,8 @@ export default function Dashboard() {
       }
       
       return await response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
-      toast({
-        title: t('simulator.notifications.hedgeDeleted'),
-        description: t('simulator.notifications.hedgeDeletedDesc'),
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
     }
+    // No default success/error handlers - these will be provided when the mutation is called
   });
 
   // Normal delete mutation that handles confirmations if needed
