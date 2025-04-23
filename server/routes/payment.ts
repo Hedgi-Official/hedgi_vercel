@@ -36,7 +36,85 @@ router.get('/api/payment/status', (_req: Request, res: Response) => {
  * Mercado Pago redirects here after a successful payment
  */
 router.get('/payment/success', (_req: Request, res: Response) => {
-  res.redirect('/dashboard?payment=success');
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payment Successful</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          background-color: #f9fafb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          margin: 0;
+          padding: 16px;
+        }
+        .container {
+          background-color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          padding: 24px;
+          max-width: 400px;
+          width: 100%;
+          text-align: center;
+        }
+        h1 {
+          color: #10b981;
+          margin-bottom: 16px;
+        }
+        p {
+          color: #374151;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        button {
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 10px 16px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        button:hover {
+          background-color: #2563eb;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Payment Successful!</h1>
+        <p>Your hedge order has been placed successfully. You can close this window and return to the application.</p>
+        <button onclick="notifySuccess()">Close Window</button>
+      </div>
+      <script>
+        function notifySuccess() {
+          // Notify the opener window about the successful payment
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'PAYMENT_SUCCESS',
+              data: { result: 'success' }
+            }, '*');
+          }
+          // Close this window
+          window.close();
+        }
+        
+        // Auto-notify on page load
+        window.addEventListener('load', function() {
+          // Short delay to ensure parent window is ready
+          setTimeout(notifySuccess, 500);
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 /**
@@ -44,7 +122,85 @@ router.get('/payment/success', (_req: Request, res: Response) => {
  * Mercado Pago redirects here after a failed payment
  */
 router.get('/payment/failure', (_req: Request, res: Response) => {
-  res.redirect('/dashboard?payment=failure');
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payment Failed</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          background-color: #f9fafb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          margin: 0;
+          padding: 16px;
+        }
+        .container {
+          background-color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          padding: 24px;
+          max-width: 400px;
+          width: 100%;
+          text-align: center;
+        }
+        h1 {
+          color: #ef4444;
+          margin-bottom: 16px;
+        }
+        p {
+          color: #374151;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        button {
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 10px 16px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        button:hover {
+          background-color: #2563eb;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Payment Failed</h1>
+        <p>There was an issue processing your payment. Please try again or contact customer support if the problem persists.</p>
+        <button onclick="notifyFailure()">Close Window</button>
+      </div>
+      <script>
+        function notifyFailure() {
+          // Notify the opener window about the failed payment
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'PAYMENT_FAILED',
+              data: { result: 'failure' }
+            }, '*');
+          }
+          // Close this window
+          window.close();
+        }
+        
+        // Auto-notify on page load
+        window.addEventListener('load', function() {
+          // Short delay to ensure parent window is ready
+          setTimeout(notifyFailure, 500);
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 /**
@@ -52,7 +208,85 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
  * Mercado Pago redirects here when the payment is pending
  */
 router.get('/payment/pending', (_req: Request, res: Response) => {
-  res.redirect('/dashboard?payment=pending');
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payment Pending</title>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+          background-color: #f9fafb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          margin: 0;
+          padding: 16px;
+        }
+        .container {
+          background-color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          padding: 24px;
+          max-width: 400px;
+          width: 100%;
+          text-align: center;
+        }
+        h1 {
+          color: #f59e0b;
+          margin-bottom: 16px;
+        }
+        p {
+          color: #374151;
+          margin-bottom: 24px;
+          line-height: 1.5;
+        }
+        button {
+          background-color: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 10px 16px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        button:hover {
+          background-color: #2563eb;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Payment Pending</h1>
+        <p>Your payment is being processed. We'll notify you once the payment is confirmed. This may take some time depending on your payment method.</p>
+        <button onclick="notifyPending()">Close Window</button>
+      </div>
+      <script>
+        function notifyPending() {
+          // Notify the opener window about the pending payment
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'PAYMENT_PENDING',
+              data: { result: 'pending' }
+            }, '*');
+          }
+          // Close this window
+          window.close();
+        }
+        
+        // Auto-notify on page load
+        window.addEventListener('load', function() {
+          // Short delay to ensure parent window is ready
+          setTimeout(notifyPending, 500);
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 export default router;

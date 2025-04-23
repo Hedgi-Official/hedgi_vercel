@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Hedge } from '@db/schema';
-import StaticBrick from './static-brick';
+import DirectLinkPayment from './direct-link-payment';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -12,38 +12,27 @@ interface PaymentModalProps {
 }
 
 /**
- * Payment Modal Using Static Brick Approach
+ * Payment Modal Using Direct Link Approach
  * 
- * This approach uses a special component that initializes the payment brick once and never again,
- * regardless of parent re-renders. It's completely immune to the React re-render cycle.
+ * This approach completely bypasses the Mercado Pago brick component and
+ * instead opens the checkout page in a separate window. This eliminates any
+ * issues with the brick component being reinitialized due to React re-renders.
  */
 export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }: PaymentModalProps) {
-  // Generate a unique ID only when the modal is opened or closed (not on every render)
-  const [modalInstance] = useState(() => Math.random().toString(36).substring(2, 9));
-  
-  // Keep track of whether the component is mounted
-  const componentMounted = useRef(false);
-  
-  // Make sure we only initialize once per modal opening
-  useEffect(() => {
-    if (isOpen) {
-      componentMounted.current = true;
-    } else {
-      componentMounted.current = false;
-    }
-  }, [isOpen]);
+  // Generate a unique ID each time the modal is opened (for cache-busting)
+  const [modalKey] = useState(() => `payment-${Date.now()}`);
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Complete Payment to Place Hedge</DialogTitle>
         </DialogHeader>
         
         {hedgeData && isOpen ? (
-          // The key is only based on the modalInstance - it doesn't change during the modal's lifetime
-          <div key={`payment-${modalInstance}`} className="payment-wrapper">
-            <StaticBrick
+          // Using modalKey ensures we create a fresh component for each payment attempt
+          <div key={modalKey}>
+            <DirectLinkPayment
               hedgeData={hedgeData}
               currency={currency}
               onSuccess={onSuccess}
