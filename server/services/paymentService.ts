@@ -124,11 +124,12 @@ class PaymentService {
       // Initialize the Preference resource
       const preference = new Preference(client);
 
-      // Get the base URL from the request
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      // Create absolute URL for redirection - this is crucial for Mercado Pago to work
+      const absoluteBaseUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+      console.log(`[PaymentService] Using base URL: ${absoluteBaseUrl}`);
       
       // Create preference object according to MercadoPago v2.3.0 API
-      const preferenceData = {
+      const preferenceData: any = {
         items: [
           {
             id: `item_${Date.now()}`,
@@ -144,17 +145,14 @@ class PaymentService {
           identification: payer.identification
         },
         
-        // Add back_urls for success, failure, and pending scenarios
+        // Proper back_urls structure exactly matching Mercado Pago's documentation
         back_urls: {
-          success: `${baseUrl}/payment/success`,
-          failure: `${baseUrl}/payment/failure`, 
-          pending: `${baseUrl}/payment/pending`
+          success: `${absoluteBaseUrl}/payment/success`,
+          failure: `${absoluteBaseUrl}/payment/failure`, 
+          pending: `${absoluteBaseUrl}/payment/pending`
         },
         
-        // Set auto_return to approved to automatically redirect users when payment is approved
-        auto_return: "approved",
-        
-        // Restrict payment methods to only allow credit cards and bank transfers
+        // Restrict payment methods
         payment_methods: {
           excluded_payment_methods: [
             { id: "ticket" },
@@ -169,6 +167,15 @@ class PaymentService {
           ]
         }
       };
+      
+      // Use a different approach for test/dev environment
+      if (process.env.NODE_ENV !== 'production') {
+        // For testing, we'll use a simpler configuration that doesn't require redirection
+        delete preferenceData.auto_return; // Remove this property completely for test env
+      } else {
+        // Only set auto_return in production with valid URLs
+        preferenceData.auto_return = "approved";
+      }
       
       // Call Mercado Pago API to create preference
       const response = await preference.create({ body: preferenceData });

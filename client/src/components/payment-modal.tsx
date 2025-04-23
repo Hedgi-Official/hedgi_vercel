@@ -161,11 +161,63 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
   // Flag to track if we already have an active brick to prevent rebuilding
   const [brickInitialized, setBrickInitialized] = useState(false);
   
+  // Track initialization attempts to prevent infinite loops
+  const [initializationAttempts, setInitializationAttempts] = useState(0);
+  
+  // Clean up when the modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset all state
+      setPreferenceId(null);
+      setError(null);
+      setLoading(false);
+      setBrickInitialized(false);
+      setInitializationAttempts(0);
+      
+      // Unmount the controller if it exists
+      if (paymentBrickControllerRef.current) {
+        try {
+          paymentBrickControllerRef.current.unmount();
+          paymentBrickControllerRef.current = null;
+        } catch (e) {
+          console.error('[PaymentModal] Error unmounting payment brick:', e);
+        }
+      }
+      
+      // Reset the brick container
+      if (brickContainerRef.current) {
+        brickContainerRef.current.innerHTML = '';
+      }
+    }
+  }, [isOpen]);
+  
+  // Add debug output for server and client environment
+  useEffect(() => {
+    if (isOpen && paymentEnabled) {
+      console.log('[PaymentModal] Environment check:', {
+        isDevelopment: process.env.NODE_ENV !== 'production',
+        origin: window.location.origin,
+        hostname: window.location.hostname,
+      });
+    }
+  }, [isOpen, paymentEnabled]);
+  
   // Load the Mercado Pago SDK
   // This is a simplified version that matches the Mercado Pago example
   const loadMercadoPago = (publicKey: string, prefId: string) => {
     // Only proceed if payments are enabled and brick not already initialized
-    if (!paymentEnabled || brickInitialized) return;
+    // Also limit the number of initialization attempts to prevent infinite loops
+    if (!paymentEnabled || brickInitialized || initializationAttempts >= 2) {
+      if (initializationAttempts >= 2 && !brickInitialized) {
+        // If we've tried twice and failed, show the test payment option
+        setError('Unable to initialize payment system after multiple attempts. Please use the test option below.');
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Increment initialization attempts
+    setInitializationAttempts(prev => prev + 1);
     
     // Mark as initialized to prevent multiple attempts
     setBrickInitialized(true);
@@ -174,6 +226,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
     console.log('[PaymentModal] Preference ID:', prefId);
     
     try {
+      // Clear previous errors
+      setError(null);
+      
       // We assume the script is already loaded in the head section as per the example
       // Or we inject it if it's not there yet
       if (!window.MercadoPago) {
@@ -194,7 +249,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         
         script.onerror = (error) => {
           console.error('[PaymentModal] Error loading MercadoPago script:', error);
-          setError('Failed to load payment processor. Please try again.');
+          setError('Failed to load payment processor. Please use the test option below.');
           setLoading(false);
           setBrickInitialized(false); // Reset so user can try again
         };
@@ -211,7 +266,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
       }
     } catch (error) {
       console.error('[PaymentModal] Error in loadMercadoPago:', error);
-      setError('An error occurred while setting up the payment system.');
+      setError('Error setting up payment system. Please use the test option below.');
       setLoading(false);
       setBrickInitialized(false); // Reset so user can try again
     }
