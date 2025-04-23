@@ -36,9 +36,19 @@ export default function Dashboard() {
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
   const [confirmMessage, setConfirmMessage] = React.useState<string>("");
 
-  const { data: hedges } = useQuery<Hedge[]>({
+  // Track hedge IDs that are in the process of being deleted
+  const [hedgesBeingDeleted, setHedgesBeingDeleted] = React.useState<Set<number>>(new Set());
+
+  // Get hedges and filter out any that are marked for deletion
+  const { data: allHedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
   });
+  
+  // Filter out any hedges that are marked for deletion
+  const hedges = React.useMemo(() => {
+    if (!allHedges) return [];
+    return allHedges.filter(hedge => !hedgesBeingDeleted.has(hedge.id));
+  }, [allHedges, hedgesBeingDeleted]);
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: string) => {
@@ -146,6 +156,13 @@ export default function Dashboard() {
   // Handle initiating the hedge close process
   const initiateHedgeClose = async (hedge: Hedge) => {
     console.log('[Dashboard] Initiating hedge close process for:', hedge);
+    
+    // Mark this hedge as being deleted to immediately remove from UI
+    setHedgesBeingDeleted(prev => {
+      const newSet = new Set(prev);
+      newSet.add(hedge.id);
+      return newSet;
+    });
     
     // If there's no trade order number, just delete the hedge directly
     if (!hedge.tradeOrderNumber) {
@@ -308,9 +325,21 @@ export default function Dashboard() {
   
   // Cancel deletion of a hedge
   const cancelHedgeDeletion = () => {
+    // Remove the hedge from the being deleted set so it reappears in UI
+    if (hedgeToDelete) {
+      setHedgesBeingDeleted(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(hedgeToDelete.id);
+        return newSet;
+      });
+    }
+    
     setHedgeToDelete(null);
     setConfirmMessage('');
     setConfirmDialogOpen(false);
+    
+    // Refresh the hedges list
+    queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
   };
 
   // Force delete mutation that adds the force=true parameter and doesn't show toasts by default
@@ -321,6 +350,13 @@ export default function Dashboard() {
   >({
     mutationFn: async (hedge: Hedge) => {
       console.log('[Dashboard] Force deleting hedge from database:', hedge);
+
+      // Ensure hedge is marked as being deleted in UI
+      setHedgesBeingDeleted(prev => {
+        const newSet = new Set(prev);
+        newSet.add(hedge.id);
+        return newSet;
+      });
 
       // Add force=true parameter to the request to bypass trade existence checks
       const response = await fetch(`/api/hedges/${hedge.id}?force=true`, {
@@ -335,8 +371,20 @@ export default function Dashboard() {
       }
       
       return await response.json();
+    },
+    onSuccess: (_data, hedge) => {
+      // Remove from being deleted set on success (complete cleanup)
+      setHedgesBeingDeleted(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(hedge.id);
+        return newSet;
+      });
+    },
+    onError: (_error, hedge) => {
+      // On error, we don't remove from being deleted since we've shown the success message already
+      // and we don't want the item to reappear in the UI
+      console.error(`[Dashboard] Error in force delete, but won't show to user for hedge ID: ${hedge?.id}`);
     }
-    // No default success/error handlers - these will be provided when the mutation is called
   });
 
   // Normal delete mutation that handles confirmations if needed
@@ -375,8 +423,14 @@ export default function Dashboard() {
       if (data.needsConfirmation) {
         console.log('[Dashboard] Delete requires confirmation:', data.confirmationMessage);
         
+        // Ensure hedge is in the hedgesBeingDeleted set to remove it from UI
+        setHedgesBeingDeleted(prev => {
+          const newSet = new Set(prev);
+          newSet.add(hedge.id);
+          return newSet;
+        });
+        
         // Optimistically update the UI by invalidating the hedges query
-        // This will remove the hedge from the active hedges table immediately
         queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
         
         // Show confirmation dialog with the API-provided message
@@ -386,14 +440,31 @@ export default function Dashboard() {
         return;
       }
       
-      // Normal success case
+      // Normal success case - remove from being deleted set
+      setHedgesBeingDeleted(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(hedge.id);
+        return newSet;
+      });
+      
+      // Still invalidate the queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      
       toast({
         title: t('simulator.notifications.hedgeDeleted'),
         description: t('simulator.notifications.hedgeDeletedDesc'),
       });
     },
-    onError: (error) => {
+    onError: (error, hedge) => {
+      // On error, remove from being deleted set so it reappears in UI if needed
+      if (hedge) {
+        setHedgesBeingDeleted(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(hedge.id);
+          return newSet;
+        });
+      }
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -516,7 +587,16 @@ export default function Dashboard() {
       </main>
 
       {/* Confirmation Dialog for Position Not Found */}
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+      <AlertDialog 
+        open={confirmDialogOpen} 
+        onOpenChange={(isOpen) => {
+          // If dialog is being closed without explicit button press
+          if (!isOpen && confirmDialogOpen) {
+            cancelHedgeDeletion(); // Handle cleanup properly
+          } else {
+            setConfirmDialogOpen(isOpen);
+          }
+        }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('Trade Action Required')}</AlertDialogTitle>
