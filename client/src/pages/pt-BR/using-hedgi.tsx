@@ -20,6 +20,9 @@ export default function UsingHedgi() {
   const [sessionId] = useState(generateSessionId());
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const simulatorRef = useRef<HTMLDivElement>(null);
+  const chatCardRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState<number>(600);
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
     {type: 'bot', content: 'Olá! Eu sou o HedgiBot. Posso te ajudar a entender como configurar e gerenciar hedge cambial. Para qual evento você gostaria de fazer hedge?'}
   ]);
