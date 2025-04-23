@@ -60,12 +60,19 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
     }
   }, [isOpen, hedgeData]);
 
+  // Flag to track if preference creation is in progress
+  const [preferenceCreationInProgress, setPreferenceCreationInProgress] = useState(false);
+  
   // Create a payment preference when the modal opens and payments are enabled
   useEffect(() => {
+    let isMounted = true; // Track if component is mounted
+    
     async function createPaymentPreference() {
-      if (!hedgeData) return;
+      if (!hedgeData || preferenceCreationInProgress) return;
       
       try {
+        // Set the flag to prevent multiple requests
+        setPreferenceCreationInProgress(true);
         setLoading(true);
         setError(null);
         
@@ -73,6 +80,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
         const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
         const paymentAmount = Number((hedgeCost).toFixed(2));
+        
+        console.log('[PaymentModal] Creating payment preference with amount:', paymentAmount);
         
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -94,13 +103,27 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           }),
         });
         
+        // Check for HTTP errors
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[PaymentModal] API error:', response.status, errorText);
+          if (isMounted) {
+            setError(`API error: ${response.status}`);
+            setLoading(false);
+          }
+          return;
+        }
+        
         const data = await response.json();
+        console.log('[PaymentModal] Preference created successfully:', data);
         
         if (data.enabled === false) {
           // If payments are disabled, show error
           console.log('[PaymentModal] Payments disabled response received');
-          setError('Payments are currently disabled. The hedge cannot be placed at this time.');
-          setLoading(false);
+          if (isMounted) {
+            setError('Payments are currently disabled. The hedge cannot be placed at this time.');
+            setLoading(false);
+          }
           return;
         }
         
@@ -108,19 +131,32 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           throw new Error('No preference ID returned');
         }
         
-        setPreferenceId(data.id);
-        loadMercadoPago(data.public_key, data.id);
+        if (isMounted) {
+          setPreferenceId(data.id);
+          loadMercadoPago(data.public_key, data.id);
+        }
       } catch (error) {
-        console.error('Error creating payment preference:', error);
-        setError('Failed to initialize payment. Please try again.');
-        setLoading(false);
+        console.error('[PaymentModal] Error creating payment preference:', error);
+        if (isMounted) {
+          setError('Failed to initialize payment. Please try again.');
+          setLoading(false);
+        }
+      } finally {
+        if (isMounted) {
+          setPreferenceCreationInProgress(false);
+        }
       }
     }
     
-    if (isOpen && hedgeData && paymentEnabled) {
+    if (isOpen && hedgeData && paymentEnabled && !preferenceId) {
       createPaymentPreference();
     }
-  }, [isOpen, hedgeData, paymentEnabled, currency]);
+    
+    // Cleanup function to handle component unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, hedgeData, paymentEnabled, currency, preferenceCreationInProgress, preferenceId]);
 
   // Flag to track if we already have an active brick to prevent rebuilding
   const [brickInitialized, setBrickInitialized] = useState(false);

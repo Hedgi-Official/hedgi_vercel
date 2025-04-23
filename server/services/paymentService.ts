@@ -124,6 +124,9 @@ class PaymentService {
       // Initialize the Preference resource
       const preference = new Preference(client);
 
+      // Get the base URL from the request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
       // Create preference object according to MercadoPago v2.3.0 API
       const preferenceData = {
         items: [
@@ -140,6 +143,16 @@ class PaymentService {
           name: payer.name,
           identification: payer.identification
         },
+        
+        // Add back_urls for success, failure, and pending scenarios
+        back_urls: {
+          success: `${baseUrl}/payment/success`,
+          failure: `${baseUrl}/payment/failure`, 
+          pending: `${baseUrl}/payment/pending`
+        },
+        
+        // Set auto_return to approved to automatically redirect users when payment is approved
+        auto_return: "approved",
         
         // Restrict payment methods to only allow credit cards and bank transfers
         payment_methods: {
