@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Hedge } from '@db/schema';
-import PopupPayment from './popup-payment';
+import StaticBrick from './static-brick';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -12,15 +12,26 @@ interface PaymentModalProps {
 }
 
 /**
- * Payment Modal Using Popup Window Approach
+ * Payment Modal Using Static Brick Approach
  * 
- * This approach opens a separate browser window for the Mercado Pago payment flow.
- * By using a separate window, we completely isolate the payment process from any
- * React render cycles or state updates in the main application.
+ * This approach uses a special component that initializes the payment brick once and never again,
+ * regardless of parent re-renders. It's completely immune to the React re-render cycle.
  */
 export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }: PaymentModalProps) {
-  // Generate a unique ID each time the modal is opened
-  const [modalKey] = useState(() => `payment-${Date.now()}`);
+  // Generate a unique ID only when the modal is opened or closed (not on every render)
+  const [modalInstance] = useState(() => Math.random().toString(36).substring(2, 9));
+  
+  // Keep track of whether the component is mounted
+  const componentMounted = useRef(false);
+  
+  // Make sure we only initialize once per modal opening
+  useEffect(() => {
+    if (isOpen) {
+      componentMounted.current = true;
+    } else {
+      componentMounted.current = false;
+    }
+  }, [isOpen]);
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -30,9 +41,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         </DialogHeader>
         
         {hedgeData && isOpen ? (
-          // Using the modalKey ensures we create a fresh component for each payment attempt
-          <div key={modalKey}>
-            <PopupPayment
+          // The key is only based on the modalInstance - it doesn't change during the modal's lifetime
+          <div key={`payment-${modalInstance}`} className="payment-wrapper">
+            <StaticBrick
               hedgeData={hedgeData}
               currency={currency}
               onSuccess={onSuccess}
