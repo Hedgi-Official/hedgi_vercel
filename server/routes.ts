@@ -731,23 +731,14 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
-  // Handle hedge deletion with proper trade handling and confirmation
   app.delete("/api/hedges/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({
-        status: false,
-        error: "Not authenticated"
-      });
+      return res.status(401).send("Not authenticated");
     }
 
     const hedgeId = parseInt(req.params.id);
-    const forceDelete = req.query.force === 'true';
-    
     if (isNaN(hedgeId)) {
-      return res.status(400).json({
-        status: false,
-        error: "Invalid hedge ID"
-      });
+      return res.status(400).send("Invalid hedge ID");
     }
 
     try {
@@ -758,139 +749,40 @@ export function registerRoutes(app: Express): Server {
         .where(eq(hedges.id, hedgeId));
 
       if (!hedge) {
-        return res.status(404).json({
-          status: false,
-          error: "Hedge not found"
-        });
+        return res.status(404).send("Hedge not found");
       }
 
-      // Find any associated trades for this hedge (for foreign key constraint)
-      const associatedTrades = await db.query.trades.findMany({
-        where: (trade, { eq }) => eq(trade.hedgeId, hedgeId)
-      });
-
-      console.log(`[Routes] Found ${associatedTrades?.length || 0} associated trades for hedge ID ${hedgeId}`);
-
-      // First, attempt to close the trade via Trade API if there's a trade order number
-      let needsConfirmation = false;
-      let confirmationMessage = "";
-      
-      if (hedge.tradeOrderNumber && !forceDelete) {
+      // Close the trade via new Trade API if there's a trade order number
+      if (hedge.tradeOrderNumber) {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // Get the broker from the hedge data or default to tickmill
-          const broker = hedge.broker || 'tickmill';
-          
-          // First try the Flask API endpoint that uses magic number
-          let closeResponse = null;
-          
-          try {
-            // Call Flask API to close trade by magic number
-            const flaskResponse = await fetch('http://3.145.164.47/close_trade_by_magic', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                magic: Number(hedge.tradeOrderNumber),
-                broker,
-                comment: "Hedgi close position"
-              })
-            });
+          // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
+          // could be either a deal or order number. We need to make sure we're using
+          // the right identifier when closing the position.
+          // CRITICAL FIX: Convert position to a number for broker API
+          const closeResponse = await tradeService.closeTrade(
+            'tickmill', // Default broker as specified in requirements
+            Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
+          );
 
-            const responseText = await flaskResponse.text();
-            console.log(`[Routes] Flask close_trade_by_magic raw response:`, responseText);
-            
-            try {
-              closeResponse = JSON.parse(responseText);
-            } catch (parseError) {
-              console.error(`[Routes] Error parsing Flask API response:`, parseError);
-              // Set a default response if parsing fails
-              closeResponse = { 
-                comment: "Failed to parse Flask API response",
-                error: "Parse error" 
-              };
-              
-              // If we can't parse the response, we need confirmation
-              needsConfirmation = true;
-              confirmationMessage = "The trade service returned an invalid response. The trade may have been closed elsewhere. Close anyway?";
-            }
-            console.log(`[Routes] Flask close_trade_by_magic response:`, closeResponse);
-          } catch (flaskError) {
-            console.error(`[Routes] Error calling Flask close_trade_by_magic API:`, flaskError);
-            
-            // If Flask API fails, fall back to the regular close trade endpoint
-            try {
-              closeResponse = await tradeService.closeTrade(
-                broker,
-                Number(hedge.tradeOrderNumber)
-              );
-              console.log(`[Routes] Trade API fallback close response:`, closeResponse);
-            } catch (fallbackError) {
-              console.error(`[Routes] Error with fallback close:`, fallbackError);
-              needsConfirmation = true;
-              confirmationMessage = "Could not connect to the trade service. The trade may have been closed elsewhere. Close anyway?";
-            }
-          }
+          console.log(`[Routes] Trade close response:`, closeResponse);
           
-          // If we got a valid response, check if it needs confirmation
-          if (closeResponse) {
-            // Handle different response scenarios that need confirmation
-            if (closeResponse.error && closeResponse.error.includes('not found')) {
-              console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Needs confirmation.`);
-              needsConfirmation = true;
-              confirmationMessage = "This position was not found in the broker's system. It may have been closed externally. Close anyway?";
-            } else if (closeResponse.error && closeResponse.error.includes('No hedge order found for magic')) {
-              console.warn(`[Routes] Hedge order with magic ${hedge.tradeOrderNumber} not found. Needs confirmation.`);
-              needsConfirmation = true;
-              confirmationMessage = "This trade was not found in the broker's system. It may have been closed externally. Close anyway?";
-            } else if (closeResponse.comment === "Market closed") {
-              console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Needs confirmation.`);
-              needsConfirmation = true;
-              confirmationMessage = "The market is currently closed. This position cannot be closed right now. Do you want to remove it from your dashboard anyway?";
-            } else if (closeResponse.error && closeResponse.error.includes('Invalid broker')) {
-              console.warn(`[Routes] Invalid broker parameter for position ${hedge.tradeOrderNumber}. Needs confirmation.`);
-              needsConfirmation = true;
-              confirmationMessage = "The broker configuration for this trade appears to be invalid. The trade may have been closed elsewhere. Close anyway?";
-            } else {
-              console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
-            }
+          // Handle different response scenarios
+          if (closeResponse.error && closeResponse.error.includes('not found')) {
+            console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Continuing with database deletion.`);
+          } else if (closeResponse.comment === "Market closed") {
+            console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Continuing with database deletion.`);
+          } else {
+            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
           }
         } catch (tradeError) {
-          // Log the error and set confirmation needed
+          // Log the error but continue with database deletion
           console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);
-          needsConfirmation = true;
-          confirmationMessage = "An error occurred while trying to close this trade. It may have been closed elsewhere. Close anyway?";
         }
       }
 
-      // If confirmation is needed and this is not a force-delete request, return the confirmation request
-      if (needsConfirmation && !forceDelete) {
-        return res.status(200).json({
-          status: false,
-          needsConfirmation: true,
-          confirmationMessage: confirmationMessage,
-          message: "Confirmation required to close this trade."
-        });
-      }
-      
-      // Either no confirmation needed or this is a force-delete request, proceed with database cleanup
-      
-      // UPDATE ASSOCIATED TRADES FIRST to avoid foreign key constraint violations
-      if (associatedTrades && associatedTrades.length > 0) {
-        console.log(`[Routes] Updating ${associatedTrades.length} associated trades to closed status`);
-        
-        // Update all associated trades to 'closed' status
-        for (const trade of associatedTrades) {
-          await db.update(trades)
-            .set({
-              status: 'closed_by_user',
-              closedAt: new Date()
-            })
-            .where(eq(trades.id, trade.id));
-        }
-      }
-
-      // Now we can safely delete the hedge from the database
+      // Always delete the hedge from database, even if trade closing fails
       const [deletedHedge] = await db
         .delete(hedges)
         .where(eq(hedges.id, hedgeId))
