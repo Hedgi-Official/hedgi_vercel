@@ -108,6 +108,37 @@ export default function UsingHedgi() {
       }]);
     }
   }, [chatMessages]);
+  
+  // Effect to synchronize heights between simulator and chat
+  useEffect(() => {
+    // Observer to monitor height changes in the simulator component
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === simulatorRef.current) {
+          // Get the height of the simulator card
+          const simulatorHeight = entry.contentRect.height;
+          
+          // Update the state if the height is different from current
+          if (simulatorHeight > 0 && simulatorHeight !== containerHeight) {
+            setContainerHeight(simulatorHeight);
+          }
+        }
+      }
+    });
+    
+    // Start observing the simulator component
+    if (simulatorRef.current) {
+      resizeObserver.observe(simulatorRef.current);
+    }
+    
+    // Cleanup function
+    return () => {
+      if (simulatorRef.current) {
+        resizeObserver.unobserve(simulatorRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [containerHeight]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -125,14 +156,17 @@ export default function UsingHedgi() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             {/* Hedgi AI Chatbot */}
             <div className="order-2 lg:order-1">
-              <Card className="h-full shadow-lg">
+              <Card ref={chatCardRef} className="h-full shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <MessageCircle className="mr-2 h-5 w-5" />
                     Assistente de IA da Hedgi
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[600px] flex flex-col">
+                <CardContent 
+                  className="flex flex-col"
+                  style={{ height: `${containerHeight}px` }}
+                >
                   <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
                     <div className="space-y-4">
                       {chatMessages.map((msg, i) => (
@@ -202,8 +236,8 @@ export default function UsingHedgi() {
 
             {/* Enhanced Currency Simulator with better tooltips */}
             <div className="order-1 lg:order-2">
-              <div className="enhanced-tooltips">
-                <EnhancedCurrencySimulator showGraph={true} />
+              <div className="enhanced-tooltips" ref={simulatorRef}>
+                <EnhancedCurrencySimulator showGraph={false} />
               </div>
             </div>
           </div>
