@@ -111,31 +111,43 @@ export default function UsingHedgi() {
   
   // Effect to synchronize heights between simulator and chat
   useEffect(() => {
-    // Observer to monitor height changes in the simulator component
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        if (entry.target === simulatorRef.current) {
-          // Get the height of the simulator card
-          const simulatorHeight = entry.contentRect.height;
+    // Function to measure and update heights
+    const updateHeights = () => {
+      // Only proceed if we have refs to both components
+      if (simulatorRef.current && chatCardRef.current) {
+        // Get the current height of simulator
+        const simulatorHeight = simulatorRef.current.getBoundingClientRect().height;
+        
+        // Update state if height is valid and changed
+        if (simulatorHeight > 100 && simulatorHeight !== containerHeight) {
+          setContainerHeight(simulatorHeight);
           
-          // Update the state if the height is different from current
-          if (simulatorHeight > 0 && simulatorHeight !== containerHeight) {
-            setContainerHeight(simulatorHeight);
-          }
+          // Force an immediate layout adjustment
+          requestAnimationFrame(() => {
+            const chatContent = chatCardRef.current?.querySelector('.chat-content');
+            if (chatContent) {
+              (chatContent as HTMLElement).style.height = `${simulatorHeight}px`;
+            }
+          });
         }
       }
+    };
+    
+    // Setup resize observer for continuous monitoring
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeights();
     });
     
-    // Start observing the simulator component
+    // Initial height measurement (after components have rendered)
+    setTimeout(updateHeights, 100);
+    
+    // Observe both components for size changes
     if (simulatorRef.current) {
       resizeObserver.observe(simulatorRef.current);
     }
     
     // Cleanup function
     return () => {
-      if (simulatorRef.current) {
-        resizeObserver.unobserve(simulatorRef.current);
-      }
       resizeObserver.disconnect();
     };
   }, [containerHeight]);
@@ -164,7 +176,7 @@ export default function UsingHedgi() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent 
-                  className="flex flex-col"
+                  className="flex flex-col chat-content"
                   style={{ height: `${containerHeight}px` }}
                 >
                   <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
