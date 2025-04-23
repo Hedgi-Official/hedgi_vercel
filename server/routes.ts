@@ -752,21 +752,60 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).send("Hedge not found");
       }
 
-      // Close the trade via new Trade API if there's a trade order number
+      // Find any associated trades for this hedge (for foreign key constraint)
+      const associatedTrades = await db.query.trades.findMany({
+        where: (trade, { eq }) => eq(trade.hedgeId, hedgeId)
+      });
+
+      console.log(`[Routes] Found ${associatedTrades?.length || 0} associated trades for hedge ID ${hedgeId}`);
+
+      // First, attempt to close the trade via Trade API if there's a trade order number
       if (hedge.tradeOrderNumber) {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
-          // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
-          // could be either a deal or order number. We need to make sure we're using
-          // the right identifier when closing the position.
-          // CRITICAL FIX: Convert position to a number for broker API
-          const closeResponse = await tradeService.closeTrade(
-            'tickmill', // Default broker as specified in requirements
-            Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
-          );
+          // Get the broker from the hedge data or default to tickmill
+          const broker = hedge.broker || 'tickmill';
+          
+          // First try the Flask API endpoint that uses magic number
+          let closeResponse = null;
+          
+          try {
+            // Call Flask API to close trade by magic number
+            const flaskResponse = await fetch('http://3.145.164.47/close_trade_by_magic', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                magic: Number(hedge.tradeOrderNumber),
+                broker,
+                comment: "Hedgi close position"
+              })
+            });
 
-          console.log(`[Routes] Trade close response:`, closeResponse);
+            const responseText = await flaskResponse.text();
+            console.log(`[Routes] Flask close_trade_by_magic raw response:`, responseText);
+            
+            try {
+              closeResponse = JSON.parse(responseText);
+            } catch (parseError) {
+              console.error(`[Routes] Error parsing Flask API response:`, parseError);
+              // Set a default response if parsing fails
+              closeResponse = { 
+                comment: "Failed to parse Flask API response",
+                error: "Parse error" 
+              };
+            }
+            console.log(`[Routes] Flask close_trade_by_magic response:`, closeResponse);
+          } catch (flaskError) {
+            console.error(`[Routes] Error calling Flask close_trade_by_magic API:`, flaskError);
+            
+            // If Flask API fails, fall back to the regular close trade endpoint
+            closeResponse = await tradeService.closeTrade(
+              broker,
+              Number(hedge.tradeOrderNumber)
+            );
+            console.log(`[Routes] Trade API fallback close response:`, closeResponse);
+          }
           
           // Handle different response scenarios
           if (closeResponse.error && closeResponse.error.includes('not found')) {
@@ -782,7 +821,22 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // Always delete the hedge from database, even if trade closing fails
+      // UPDATE ASSOCIATED TRADES FIRST to avoid foreign key constraint violations
+      if (associatedTrades && associatedTrades.length > 0) {
+        console.log(`[Routes] Updating ${associatedTrades.length} associated trades to closed status`);
+        
+        // Update all associated trades to 'closed' status
+        for (const trade of associatedTrades) {
+          await db.update(trades)
+            .set({
+              status: 'closed_by_user',
+              closedAt: new Date()
+            })
+            .where(eq(trades.id, trade.id));
+        }
+      }
+
+      // Now we can safely delete the hedge (no more foreign key constraint issue)
       const [deletedHedge] = await db
         .delete(hedges)
         .where(eq(hedges.id, hedgeId))
