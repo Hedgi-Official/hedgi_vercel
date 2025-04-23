@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Hedge } from "db/schema";
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
-import { Request, Response } from 'express';
 import { useTranslation } from 'react-i18next';
 
 // Import the SimulationResult interface

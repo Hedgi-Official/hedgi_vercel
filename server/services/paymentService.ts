@@ -140,12 +140,7 @@ class PaymentService {
           name: payer.name,
           identification: payer.identification
         },
-        back_urls: {
-          success: `${req.protocol}://${req.get('host')}/payment/success`,
-          failure: `${req.protocol}://${req.get('host')}/payment/failure`,
-          pending: `${req.protocol}://${req.get('host')}/payment/pending`
-        },
-        auto_return: 'approved',
+        
         // Restrict payment methods to only allow credit cards and bank transfers
         payment_methods: {
           excluded_payment_methods: [
