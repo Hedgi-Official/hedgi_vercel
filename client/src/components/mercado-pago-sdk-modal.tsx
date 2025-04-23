@@ -89,8 +89,9 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
           hedgeCost = simulation.costDetails.hedgeCost;
           console.log('[MercadoPayoSDKModal] Using simulation hedgeCost:', hedgeCost);
         } else {
-          // Fallback to the simple percentage calculation
-          throw new Error(isPortuguese ? 'Falha ao inicializar modal de pagamento' : 'Failed to initialize payment modal');
+          // Fallback to the simple percentage calculation (0.25% of hedge amount)
+          hedgeCost = hedgeAmount * 0.0025;
+          console.log('[MercadoPayoSDKModal] Using fallback hedgeCost calculation:', hedgeCost);
         }
         
         // Calculate margin amount (defaults to 2x hedgeCost if not provided)
@@ -143,10 +144,19 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
         const mpLocale = getMercadoPagoLocale();
         console.log(`[MercadoPayoSDKModal] Current website language: ${i18n.language}, using Mercado Pago locale: ${mpLocale}`);
         
-        // Initialize Mercado Pago with the correct locale based on the user's website language
-        initMercadoPago(data.public_key, {
-          locale: mpLocale
-        });
+        try {
+          // Initialize Mercado Pago with the correct locale based on the user's website language
+          console.log(`[MercadoPayoSDKModal] Initializing Mercado Pago with key length: ${data.public_key.length}, locale: ${mpLocale}`);
+          initMercadoPago(data.public_key, {
+            locale: mpLocale
+          });
+          console.log('[MercadoPayoSDKModal] Mercado Pago initialized successfully');
+        } catch (initError) {
+          console.error('[MercadoPayoSDKModal] Error initializing Mercado Pago:', initError);
+          throw new Error(isPortuguese 
+            ? `Falha ao inicializar SDK do Mercado Pago: ${initError instanceof Error ? initError.message : String(initError)}` 
+            : `Failed to initialize Mercado Pago SDK: ${initError instanceof Error ? initError.message : String(initError)}`);
+        }
         
         setLoading(false);
       } catch (error) {
@@ -167,19 +177,23 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
     let hedgeCost;
     
     // Use simulation data if available for more accurate fee calculation
-    if (simulation) {
+    if (simulation?.costDetails != null && typeof simulation.costDetails.hedgeCost === 'number') {
       // The correct fee is in simulation.costDetails.hedgeCost, not simulation.totalCost
       hedgeCost = simulation.costDetails.hedgeCost;
+      console.log('[MercadoPayoSDKModal] calculateTotalPaymentAmount using simulation hedgeCost:', hedgeCost);
     } else {
       // Fallback to the simple percentage calculation
       hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
+      console.log('[MercadoPayoSDKModal] calculateTotalPaymentAmount using fallback hedgeCost:', hedgeCost);
     }
     
     // Calculate margin amount (defaults to 2x hedgeCost if not provided)
     const marginAmount = hedgeData.margin ? Number(hedgeData.margin) : hedgeCost * 2;
     
     // Total payment is the sum of fees and margin
-    return Number((hedgeCost + marginAmount).toFixed(2));
+    const totalAmount = Number((hedgeCost + marginAmount).toFixed(2));
+    console.log('[MercadoPayoSDKModal] Total payment amount calculated:', totalAmount);
+    return totalAmount;
   };
   
   const paymentAmount = calculateTotalPaymentAmount();
@@ -297,7 +311,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                       <p>{isPortuguese ? 'Valor da Proteção:' : 'Hedge Amount:'} {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
                       
                       {/* Get the fees from the simulation result if available */}
-                      {simulation ? (
+                      {simulation?.costDetails != null && typeof simulation.costDetails.hedgeCost === 'number' ? (
                         <>
                           <p>{isPortuguese ? 'Taxas:' : 'Fees:'} {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
                           <p>{isPortuguese ? 'Margem:' : 'Margin:'} {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
@@ -305,7 +319,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                         </>
                       ) : (
                         <>
-                          {/* Fallback for when simulation is not available */}
+                          {/* Fallback for when simulation is not available or has invalid cost details */}
                           <p>{isPortuguese ? 'Taxas:' : 'Fees:'} {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
                           <p>{isPortuguese ? 'Margem:' : 'Margin:'} {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
                           <p>{isPortuguese ? 'Pagamento Total:' : 'Total Payment:'} {paymentAmount.toFixed(2)} {currency}</p>
