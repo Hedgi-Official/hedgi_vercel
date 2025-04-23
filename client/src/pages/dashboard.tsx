@@ -34,6 +34,7 @@ export default function Dashboard() {
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
+  const [confirmMessage, setConfirmMessage] = React.useState<string>("");
 
   const { data: hedges } = useQuery<Hedge[]>({
     queryKey: ["/api/hedges"],
@@ -247,10 +248,13 @@ export default function Dashboard() {
   };
   
   // Confirm deletion of a hedge that wasn't found on the broker
+  // Force delete the hedge with confirmation
   const confirmHedgeDeletion = () => {
     if (hedgeToDelete) {
-      deleteHedgeMutation.mutate(hedgeToDelete);
+      console.log('[Dashboard] Force deleting hedge after confirmation:', hedgeToDelete);
+      forceDeleteHedgeMutation.mutate(hedgeToDelete);
       setHedgeToDelete(null);
+      setConfirmMessage('');
     }
     setConfirmDialogOpen(false);
   };
@@ -258,10 +262,55 @@ export default function Dashboard() {
   // Cancel deletion of a hedge
   const cancelHedgeDeletion = () => {
     setHedgeToDelete(null);
+    setConfirmMessage('');
     setConfirmDialogOpen(false);
   };
 
-  const deleteHedgeMutation = useMutation({
+  // Force delete mutation that adds the force=true parameter
+  const forceDeleteHedgeMutation = useMutation<
+    any,    // Return type
+    Error,  // Error type  
+    Hedge   // Variables type
+  >({
+    mutationFn: async (hedge: Hedge) => {
+      console.log('[Dashboard] Force deleting hedge from database:', hedge);
+
+      // Add force=true parameter to the request to bypass trade existence checks
+      const response = await fetch(`/api/hedges/${hedge.id}?force=true`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Dashboard] Force delete error response:', errorText);
+        throw new Error(errorText || 'Failed to delete hedge');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      toast({
+        title: t('simulator.notifications.hedgeDeleted'),
+        description: t('simulator.notifications.hedgeDeletedDesc'),
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  });
+
+  // Normal delete mutation that handles confirmations if needed
+  const deleteHedgeMutation = useMutation<
+    { data: any; hedge: Hedge }, // Return type
+    Error,                       // Error type  
+    Hedge                        // Variables type
+  >({
     mutationFn: async (hedge: Hedge) => {
       console.log('[Dashboard] Deleting hedge from database:', hedge);
 
@@ -271,11 +320,34 @@ export default function Dashboard() {
         credentials: 'include'
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+      // Check if the response is ok before parsing
+      if (!response.ok && response.status !== 200) {
+        const errorText = await response.text();
+        console.error('[Dashboard] Delete error response:', errorText);
+        throw new Error(errorText || 'Failed to delete hedge');
       }
+      
+      // Parse response to check for confirmation needed
+      const data = await response.json();
+      console.log('[Dashboard] Delete response:', data);
+      
+      // Return the data along with the hedge object for handling in onSuccess/onError
+      return { data, hedge };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      const { data, hedge } = result;
+      
+      // Check if the API returned a confirmation request
+      if (data.needsConfirmation) {
+        console.log('[Dashboard] Delete requires confirmation:', data.confirmationMessage);
+        // Show confirmation dialog with the API-provided message
+        setHedgeToDelete(hedge);
+        setConfirmMessage(data.confirmationMessage);
+        setConfirmDialogOpen(true);
+        return;
+      }
+      
+      // Normal success case
       queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
       toast({
         title: t('simulator.notifications.hedgeDeleted'),
@@ -408,17 +480,16 @@ export default function Dashboard() {
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Position Not Found</AlertDialogTitle>
+            <AlertDialogTitle>{t('Trade Action Required')}</AlertDialogTitle>
             <AlertDialogDescription>
-              The trade position couldn't be found at the broker.
-              This could be because it was closed elsewhere or never existed.
-              Would you like to remove it from your dashboard?
+              {confirmMessage || 
+               "This trade could not be closed through the broker system. It may have been closed elsewhere. Would you like to remove it from your dashboard?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelHedgeDeletion}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelHedgeDeletion}>{t('Cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmHedgeDeletion}>
-              Yes, remove it
+              {t('Yes, close anyway')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

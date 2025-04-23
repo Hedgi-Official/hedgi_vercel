@@ -731,14 +731,23 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Handle hedge deletion with proper trade handling and confirmation
   app.delete("/api/hedges/:id", async (req, res) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
+      return res.status(401).json({
+        status: false,
+        error: "Not authenticated"
+      });
     }
 
     const hedgeId = parseInt(req.params.id);
+    const forceDelete = req.query.force === 'true';
+    
     if (isNaN(hedgeId)) {
-      return res.status(400).send("Invalid hedge ID");
+      return res.status(400).json({
+        status: false,
+        error: "Invalid hedge ID"
+      });
     }
 
     try {
@@ -749,7 +758,10 @@ export function registerRoutes(app: Express): Server {
         .where(eq(hedges.id, hedgeId));
 
       if (!hedge) {
-        return res.status(404).send("Hedge not found");
+        return res.status(404).json({
+          status: false,
+          error: "Hedge not found"
+        });
       }
 
       // Find any associated trades for this hedge (for foreign key constraint)
@@ -760,7 +772,10 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Routes] Found ${associatedTrades?.length || 0} associated trades for hedge ID ${hedgeId}`);
 
       // First, attempt to close the trade via Trade API if there's a trade order number
-      if (hedge.tradeOrderNumber) {
+      let needsConfirmation = false;
+      let confirmationMessage = "";
+      
+      if (hedge.tradeOrderNumber && !forceDelete) {
         try {
           console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
           
@@ -794,33 +809,72 @@ export function registerRoutes(app: Express): Server {
                 comment: "Failed to parse Flask API response",
                 error: "Parse error" 
               };
+              
+              // If we can't parse the response, we need confirmation
+              needsConfirmation = true;
+              confirmationMessage = "The trade service returned an invalid response. The trade may have been closed elsewhere. Close anyway?";
             }
             console.log(`[Routes] Flask close_trade_by_magic response:`, closeResponse);
           } catch (flaskError) {
             console.error(`[Routes] Error calling Flask close_trade_by_magic API:`, flaskError);
             
             // If Flask API fails, fall back to the regular close trade endpoint
-            closeResponse = await tradeService.closeTrade(
-              broker,
-              Number(hedge.tradeOrderNumber)
-            );
-            console.log(`[Routes] Trade API fallback close response:`, closeResponse);
+            try {
+              closeResponse = await tradeService.closeTrade(
+                broker,
+                Number(hedge.tradeOrderNumber)
+              );
+              console.log(`[Routes] Trade API fallback close response:`, closeResponse);
+            } catch (fallbackError) {
+              console.error(`[Routes] Error with fallback close:`, fallbackError);
+              needsConfirmation = true;
+              confirmationMessage = "Could not connect to the trade service. The trade may have been closed elsewhere. Close anyway?";
+            }
           }
           
-          // Handle different response scenarios
-          if (closeResponse.error && closeResponse.error.includes('not found')) {
-            console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Continuing with database deletion.`);
-          } else if (closeResponse.comment === "Market closed") {
-            console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Continuing with database deletion.`);
-          } else {
-            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
+          // If we got a valid response, check if it needs confirmation
+          if (closeResponse) {
+            // Handle different response scenarios that need confirmation
+            if (closeResponse.error && closeResponse.error.includes('not found')) {
+              console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Needs confirmation.`);
+              needsConfirmation = true;
+              confirmationMessage = "This position was not found in the broker's system. It may have been closed externally. Close anyway?";
+            } else if (closeResponse.error && closeResponse.error.includes('No hedge order found for magic')) {
+              console.warn(`[Routes] Hedge order with magic ${hedge.tradeOrderNumber} not found. Needs confirmation.`);
+              needsConfirmation = true;
+              confirmationMessage = "This trade was not found in the broker's system. It may have been closed externally. Close anyway?";
+            } else if (closeResponse.comment === "Market closed") {
+              console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Needs confirmation.`);
+              needsConfirmation = true;
+              confirmationMessage = "The market is currently closed. This position cannot be closed right now. Do you want to remove it from your dashboard anyway?";
+            } else if (closeResponse.error && closeResponse.error.includes('Invalid broker')) {
+              console.warn(`[Routes] Invalid broker parameter for position ${hedge.tradeOrderNumber}. Needs confirmation.`);
+              needsConfirmation = true;
+              confirmationMessage = "The broker configuration for this trade appears to be invalid. The trade may have been closed elsewhere. Close anyway?";
+            } else {
+              console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
+            }
           }
         } catch (tradeError) {
-          // Log the error but continue with database deletion
+          // Log the error and set confirmation needed
           console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);
+          needsConfirmation = true;
+          confirmationMessage = "An error occurred while trying to close this trade. It may have been closed elsewhere. Close anyway?";
         }
       }
 
+      // If confirmation is needed and this is not a force-delete request, return the confirmation request
+      if (needsConfirmation && !forceDelete) {
+        return res.status(200).json({
+          status: false,
+          needsConfirmation: true,
+          confirmationMessage: confirmationMessage,
+          message: "Confirmation required to close this trade."
+        });
+      }
+      
+      // Either no confirmation needed or this is a force-delete request, proceed with database cleanup
+      
       // UPDATE ASSOCIATED TRADES FIRST to avoid foreign key constraint violations
       if (associatedTrades && associatedTrades.length > 0) {
         console.log(`[Routes] Updating ${associatedTrades.length} associated trades to closed status`);
@@ -836,7 +890,7 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
-      // Now we can safely delete the hedge (no more foreign key constraint issue)
+      // Now we can safely delete the hedge from the database
       const [deletedHedge] = await db
         .delete(hedges)
         .where(eq(hedges.id, hedgeId))
