@@ -210,12 +210,21 @@ export default function Dashboard() {
           data.returnData.error.includes('not found')) {
         console.warn(`[Dashboard] Position ${position} not found at broker ${broker}.`);
         
+        // Optimistically update the UI by invalidating the hedges query
+        // This will remove the hedge from the active hedges table immediately
+        queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+        
         // Show confirmation dialog instead of auto-deleting
         setHedgeToDelete(hedge);
         setConfirmDialogOpen(true);
         return; // Stop here and wait for user confirmation
       } else if (data && data.message === "Market closed") {
         console.warn(`[Dashboard] Market is closed, can't close trade ${position}`);
+        
+        // Optimistically update the UI by invalidating the hedges query
+        // This will remove the hedge from the active hedges table immediately
+        queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+        
         toast({
           title: "Market Currently Closed",
           description: "The market is currently closed. The hedge will be deleted from your dashboard.",
@@ -225,6 +234,11 @@ export default function Dashboard() {
         deleteHedgeMutation.mutate(hedge);
       } else {
         console.log(`[Dashboard] Successfully closed trade with broker: ${broker}, position: ${position}`);
+        
+        // Optimistically update the UI by invalidating the hedges query
+        // This will remove the hedge from the active hedges table immediately
+        queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+        
         toast({
           title: "Trade Closed",
           description: "Your hedge position has been successfully closed.",
@@ -237,6 +251,11 @@ export default function Dashboard() {
       console.error(`[Dashboard] Error closing trade:`, closeError);
       // Even if trade close fails, we still want to try to delete the hedge from database
       console.log(`[Dashboard] Will continue with database deletion despite close error`);
+      
+      // Optimistically update the UI by invalidating the hedges query
+      // This will remove the hedge from the active hedges table immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      
       toast({
         variant: "destructive",
         title: t('Trade Closure Warning'),
