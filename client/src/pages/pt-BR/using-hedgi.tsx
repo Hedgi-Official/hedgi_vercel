@@ -189,49 +189,53 @@ export default function UsingHedgi() {
                     Assistente de IA da Hedgi
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col flex-grow chat-content p-4 pb-6">
-                  <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
-                    <div className="space-y-4">
-                      {chatMessages.map((msg, i) => (
-                        <div 
-                          key={i}
-                          className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
+                <CardContent className="flex flex-col flex-grow chat-content p-4 pb-6 overflow-hidden">
+                  {/* Message container with fixed height and scrolling */}
+                  <div className="flex-1 overflow-hidden flex flex-col mb-4">
+                    <ScrollArea ref={scrollAreaRef} className="w-full h-full flex-1 pr-4" type="always">
+                      <div className="space-y-4">
+                        {chatMessages.map((msg, i) => (
                           <div 
-                            className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                              msg.type === 'user' 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'bg-muted'
-                            }`}
+                            key={i}
+                            className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                           >
-                            {msg.type === 'bot' ? (
-                              <div className="markdown-content whitespace-pre-line">
-                                {msg.content.split('**').map((part, i) => 
-                                  i % 2 === 0 ? (
-                                    <span key={i}>{part}</span>
-                                  ) : (
-                                    <strong key={i}>{part}</strong>
-                                  )
-                                )}
-                              </div>
-                            ) : (
-                              msg.content
-                            )}
+                            <div 
+                              className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                                msg.type === 'user' 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'bg-muted'
+                              }`}
+                            >
+                              {msg.type === 'bot' ? (
+                                <div className="markdown-content whitespace-pre-line">
+                                  {msg.content.split('**').map((part, i) => 
+                                    i % 2 === 0 ? (
+                                      <span key={i}>{part}</span>
+                                    ) : (
+                                      <strong key={i}>{part}</strong>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                msg.content
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {isLoading && (
-                        <div className="flex justify-start">
-                          <div className="rounded-lg px-4 py-2 bg-muted flex items-center space-x-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Pensando...</span>
+                        ))}
+                        {isLoading && (
+                          <div className="flex justify-start">
+                            <div className="rounded-lg px-4 py-2 bg-muted flex items-center space-x-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Pensando...</span>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
 
-                  <div className="flex items-center mt-auto">
+                  {/* Input area fixed to bottom */}
+                  <div className="flex items-center mt-4 flex-shrink-0">
                     <Input
                       placeholder="Pergunte sobre hedge cambial..."
                       value={message}
