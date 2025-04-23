@@ -62,10 +62,14 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
 
   // Create a payment preference when the modal opens and payments are enabled
   useEffect(() => {
+    // Flag to prevent multiple attempts in case of errors
+    let isInitializing = false;
+    
     async function createPaymentPreference() {
-      if (!hedgeData) return;
+      if (!hedgeData || isInitializing) return;
       
       try {
+        isInitializing = true;
         setLoading(true);
         setError(null);
         
@@ -73,6 +77,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
         const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
         const paymentAmount = Number((hedgeCost).toFixed(2));
+        
+        console.log('[PaymentModal] Creating payment preference with amount:', paymentAmount);
         
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -94,7 +100,15 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           }),
         });
         
+        // Check for HTTP errors
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[PaymentModal] API error:', response.status, errorText);
+          throw new Error(`API error: ${response.status} ${errorText}`);
+        }
+        
         const data = await response.json();
+        console.log('[PaymentModal] Preference created successfully:', data);
         
         if (data.enabled === false) {
           // If payments are disabled, show error
@@ -111,9 +125,11 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         setPreferenceId(data.id);
         loadMercadoPago(data.public_key, data.id);
       } catch (error) {
-        console.error('Error creating payment preference:', error);
-        setError('Failed to initialize payment. Please try again.');
+        console.error('[PaymentModal] Error creating payment preference:', error);
+        setError('Failed to initialize payment: ' + (error instanceof Error ? error.message : String(error)));
         setLoading(false);
+      } finally {
+        isInitializing = false;
       }
     }
     
@@ -175,12 +191,27 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
 
   // Define the renderPaymentBrick function to match the Mercado Pago example exactly
   const renderPaymentBrick = async (bricksBuilder: any, prefId: string) => {
+    // Skip if we already have an error or brick is already created
+    if (error || paymentBrickControllerRef.current) {
+      console.log('[PaymentModal] Skipping brick creation - error exists or controller already set');
+      return;
+    }
+    
     try {
       console.log('[PaymentModal] Rendering payment brick');
       
       if (!brickContainerRef.current) {
         console.error('[PaymentModal] Container not found');
         setError('Payment container not found');
+        setLoading(false);
+        return;
+      }
+      
+      // Check if the container is actually in the DOM
+      const domContainer = document.getElementById('paymentBrick_container');
+      if (!domContainer) {
+        console.error('[PaymentModal] DOM container #paymentBrick_container not found');
+        setError('Payment container not found in DOM');
         setLoading(false);
         return;
       }
@@ -202,12 +233,15 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           visual: {
             style: {
               theme: 'default'
-            }
+            },
+            hideFormTitle: true
           },
           paymentMethods: {
             creditCard: 'all',
             bankTransfer: 'all',
-            atm: 'all',
+            // Exclude some payment methods to focus on credit cards and bank transfers
+            atm: 'excluded',
+            ticket: 'excluded',
             maxInstallments: 1
           }
         },
@@ -269,17 +303,25 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         }
       };
       
-      // Create the payment brick
-      window.paymentBrickController = await bricksBuilder.create(
-        'payment',
-        'paymentBrick_container',
-        settings
-      );
-      
-      // Also store in our ref for React component lifecycle management
-      paymentBrickControllerRef.current = window.paymentBrickController;
-      
-      console.log('[PaymentModal] Payment brick created successfully');
+      try {
+        console.log('[PaymentModal] Creating payment brick with settings:', JSON.stringify(settings, null, 2));
+        
+        // Create the payment brick
+        const controller = await bricksBuilder.create(
+          'payment',
+          'paymentBrick_container',
+          settings
+        );
+        
+        // Store the controller in both global and ref
+        window.paymentBrickController = controller;
+        paymentBrickControllerRef.current = controller;
+        
+        console.log('[PaymentModal] Payment brick created successfully');
+      } catch (brickError) {
+        console.error('[PaymentModal] Error creating brick:', brickError);
+        throw new Error(`Brick creation failed: ${brickError instanceof Error ? brickError.message : String(brickError)}`);
+      }
     } catch (error) {
       console.error('[PaymentModal] Error in renderPaymentBrick:', error);
       setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
