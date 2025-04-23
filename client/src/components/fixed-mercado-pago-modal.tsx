@@ -122,10 +122,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     };
   }, []);
 
-  // Initialize payment when SDK is loaded and we have hedge data
+  // Initialize payment and get checkout URL when modal opens
   useEffect(() => {
-    if (!isOpen || !paymentEnabled || !mpScriptLoaded || !hedgeData) return;
+    if (!isOpen || !paymentEnabled || !hedgeData) return;
     
+    // We don't need to wait for the MP SDK to load since we're using direct checkout URL
     const initializePayment = async () => {
       try {
         setLoading(true);
@@ -183,146 +184,94 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
           return;
         }
         
-        if (!data.id || !data.public_key) {
-          throw new Error('Invalid preference data returned from server');
+        if (!data.init_point) {
+          throw new Error('Invalid preference data returned from server - missing checkout URL');
         }
 
-        // Determine language setting
-        // Force English unless explicitly using Portuguese
-        const isPortuguese = shouldUsePortuguese();
-        // Default to English for all non-Portuguese users
-        const locale = isPortuguese ? 'pt-BR' : 'en-US';
+        // Store the Direct Checkout URL in the ref for later use
+        if (paymentContainerRef.current) {
+          // Add a data attribute with the checkout URL to the container
+          paymentContainerRef.current.dataset.checkoutUrl = data.init_point;
+        }
         
-        console.log(`[MercadoPaymentModal] Current language: ${getUserLanguage()}, Using locale: ${locale}, Is Portuguese: ${isPortuguese}`);
-        
-        // Initialize Mercado Pago with the chosen locale and language
-        const mp = new window.MercadoPago(data.public_key, {
-          locale: locale, // Set the SDK locale
-          language: locale.split('-')[0], // Also set explicit language code (en or pt)
-        });
-        
-        console.log('[MercadoPaymentModal] Mercado Pago instance created');
-        
-        const bricksBuilder = mp.bricks();
-        console.log('[MercadoPaymentModal] Bricks builder created');
-        
-        // Wait for DOM to be fully ready (longer timeout)
-        setTimeout(() => {
-          console.log(`[MercadoPaymentModal] Looking for payment container with ID: ${paymentContainerId}`);
-          
-          // Try both the ref and getElementById approaches
-          const containerElement = paymentContainerRef.current || document.getElementById(paymentContainerId);
-          
-          if (!containerElement) {
-            console.error(`[MercadoPaymentModal] Payment container not found: #${paymentContainerId}`);
-            setError('Payment interface could not be initialized - container not found');
-            setLoading(false);
-            return;
-          }
-          
-          console.log('[MercadoPaymentModal] Container found, rendering payment brick');
-          
-          // Render the payment brick - use the container element directly if it's a ref
-          bricksBuilder.create('payment', containerElement, {
-            initialization: {
-              amount: paymentAmount,
-              preferenceId: data.id,
-              payer: {
-                email: 'customer@example.com',
-              }
-            },
-            customization: {
-              visual: {
-                style: {
-                  theme: 'default'
-                },
-                hideFormTitle: true
-              },
-              paymentMethods: {
-                creditCard: 'all',
-                bankTransfer: 'all',
-                debit_card: 'excluded',
-                ticket: 'all',
-                // Remove ATM option
-                atm: 'excluded',
-                maxInstallments: 1
-              }
-            },
-            callbacks: {
-              onReady: () => {
-                console.log('[MercadoPaymentModal] Payment brick ready');
-                setLoading(false);
-              },
-              onSubmit: (formData: any) => {
-                console.log('[MercadoPaymentModal] Payment submitted:', formData);
-                setLoading(true);
+        // Setup message event listener for payment completion
+        const handleMessage = (event: MessageEvent) => {
+          try {
+            // Check if the message is from our payment callback page
+            if (event.data && typeof event.data === 'object') {
+              const messageData = event.data;
+              
+              if (messageData.type === 'PAYMENT_SUCCESS') {
+                console.log('[MercadoPaymentModal] Received payment success message:', messageData);
                 
-                return new Promise((resolve, reject) => {
-                  fetch('/api/payment/process', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      preferenceId: data.id,
-                      currency: currency,
-                      formData: formData
-                    }),
-                  })
-                  .then(response => response.json())
-                  .then(result => {
-                    console.log('[MercadoPaymentModal] Payment process result:', result);
+                if (hedgeData) {
+                  onSuccess(hedgeData);
+                  
+                  // Show success toast
+                  const isPortuguese = shouldUsePortuguese();
+                  const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
+                  const successDesc = isPortuguese
+                    ? 'Seu pedido de hedge foi realizado com sucesso.'
+                    : 'Your hedge order has been placed successfully.';
                     
-                    if (result.status === 'approved' || result.status === 'in_process') {
-                      if (hedgeData) {
-                        onSuccess(hedgeData);
-                      }
-                      
-                      // Translated success message based on detected language
-                      const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
-                      const successDesc = isPortuguese
-                        ? 'Seu pedido de hedge foi realizado com sucesso.'
-                        : 'Your hedge order has been placed successfully.';
-                        
-                      toast({
-                        title: successTitle,
-                        description: successDesc,
-                        variant: 'default',
-                      });
-                      resolve(undefined);
-                      onClose();
-                    } else {
-                      setError(`Payment ${result.status}: ${result.statusDetail || 'Please try again.'}`);
-                      setLoading(false);
-                      reject();
-                    }
-                  })
-                  .catch(error => {
-                    console.error('[MercadoPaymentModal] Error processing payment:', error);
-                    setError('Error processing payment. Please try again.');
-                    setLoading(false);
-                    reject(error);
+                  toast({
+                    title: successTitle,
+                    description: successDesc,
+                    variant: 'default',
                   });
-                });
-              },
-              onError: (error: any) => {
-                console.error('[MercadoPaymentModal] Payment brick error:', error);
-                
-                setError(isPortuguese 
-                  ? 'Ocorreu um erro com o processador de pagamento. Por favor, tente novamente.' 
-                  : 'An error occurred with the payment processor. Please try again.');
+                  
+                  // Close the modal
+                  onClose();
+                }
+              } else if (messageData.type === 'PAYMENT_FAILED') {
+                console.log('[MercadoPaymentModal] Received payment failure message:', messageData);
+                setError('Payment failed. Please try again.');
                 setLoading(false);
+              } else if (messageData.type === 'PAYMENT_PENDING') {
+                console.log('[MercadoPaymentModal] Received payment pending message:', messageData);
+                
+                if (hedgeData) {
+                  onSuccess(hedgeData);
+                  
+                  // Show pending toast
+                  const isPortuguese = shouldUsePortuguese();
+                  const pendingTitle = isPortuguese ? 'Pagamento pendente' : 'Payment pending';
+                  const pendingDesc = isPortuguese
+                    ? 'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.'
+                    : 'Your payment is being processed. Your hedge will be placed when confirmed.';
+                    
+                  toast({
+                    title: pendingTitle,
+                    description: pendingDesc,
+                    variant: 'default',
+                  });
+                  
+                  // Close the modal
+                  onClose();
+                }
               }
             }
-          }).then((controller: any) => {
-            window.paymentBrickController = controller;
-          }).catch((error: any) => {
-            console.error('[MercadoPaymentModal] Error creating payment brick:', error);
-            setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
-            setLoading(false);
-          });
-        }, 1000); // Give the DOM more time to render
+          } catch (e) {
+            console.error('[MercadoPaymentModal] Error handling message:', e);
+          }
+        };
         
+        // Add event listener for cross-window messaging
+        window.addEventListener('message', handleMessage);
+        
+        // Store the cleanup function
+        const cleanup = () => {
+          window.removeEventListener('message', handleMessage);
+        };
+        
+        // Store the cleanup function in a ref for later use
+        if (paymentContainerRef.current) {
+          paymentContainerRef.current.dataset.cleanup = 'true';
+        }
+        
+        setLoading(false);
+        
+        return cleanup;
       } catch (error) {
         console.error('[MercadoPaymentModal] Error:', error);
         setError('Failed to initialize payment');
@@ -331,7 +280,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     };
     
     initializePayment();
-  }, [isOpen, paymentEnabled, mpScriptLoaded, hedgeData, currency, simulation, onSuccess, onClose]);
+  }, [isOpen, paymentEnabled, hedgeData, currency, simulation, onSuccess, onClose]);
 
   // Translation helper function
   const t = (pt: string, en: string) => {
@@ -399,24 +348,59 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                   )}
                 </div>
                 
-                {/* Payment container - Mercado Pago will render the payment form here */}
-                <div className="relative">
-                  {/* This is our overlay to help with translations if needed */}
-                  <div className="absolute top-0 left-0 z-30 pointer-events-none w-full">
-                    {/* We will add translation overlays here if we need more control */}
-                  </div>
-                
-                  {/* The actual payment container */}
-                  <div 
-                    id={paymentContainerId}
-                    ref={paymentContainerRef}
-                    className="min-h-[300px] border border-gray-200 rounded-md p-4 z-10"
-                  >
-                    <div className="flex flex-col items-center justify-center h-full py-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary mb-4" />
-                      <p className="text-sm text-muted-foreground">
-                        {t('Carregando interface de pagamento...', 'Loading payment interface...')}
-                      </p>
+                {/* Direct Link Payment Container */}
+                <div 
+                  id={paymentContainerId}
+                  ref={paymentContainerRef}
+                  className="rounded-md border p-5 z-10"
+                >
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium mb-4">
+                      {t('Complete o seu pagamento', 'Complete Your Payment')}
+                    </h3>
+                    
+                    <p className="text-muted-foreground mb-6">
+                      {t(
+                        'Clique no botão abaixo para abrir uma janela de pagamento segura. Após concluir o pagamento, seu hedge será colocado automaticamente.',
+                        'Click the button below to open a secure payment window. After completing your payment, your hedge will be automatically placed.'
+                      )}
+                    </p>
+                    
+                    <Button 
+                      variant="default"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => {
+                        const checkoutUrl = paymentContainerRef.current?.dataset.checkoutUrl;
+                        if (!checkoutUrl) {
+                          console.error('[MercadoPaymentModal] No checkout URL found');
+                          setError('Payment URL not found. Please try again.');
+                          return;
+                        }
+                        
+                        console.log('[MercadoPaymentModal] Opening payment window with URL:', checkoutUrl);
+                        
+                        // Open the checkout URL in a new window with specific dimensions
+                        const width = 800;
+                        const height = 700;
+                        const left = window.screenX + (window.outerWidth - width) / 2;
+                        const top = window.screenY + (window.outerHeight - height) / 2;
+                        
+                        window.open(
+                          checkoutUrl,
+                          'MercadoPagoPayment',
+                          `width=${width},height=${height},left=${left},top=${top}`
+                        );
+                      }}
+                    >
+                      {t('Abrir Janela de Pagamento', 'Open Payment Window')}
+                    </Button>
+                    
+                    <div className="text-xs text-muted-foreground text-center">
+                      {t(
+                        'Você será redirecionado para a plataforma de pagamento segura do Mercado Pago',
+                        'You\'ll be redirected to Mercado Pago\'s secure payment platform'
+                      )}
                     </div>
                   </div>
                 </div>
