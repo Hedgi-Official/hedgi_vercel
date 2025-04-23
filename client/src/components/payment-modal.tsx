@@ -1,7 +1,7 @@
-import { useState, useId } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Hedge } from '@db/schema';
-import IsolatedPaymentBrick from './isolated-payment-brick';
+import PopupPayment from './popup-payment';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -12,27 +12,27 @@ interface PaymentModalProps {
 }
 
 /**
- * Completely Isolated Payment Modal Component
- * This version uses an isolated component that only mounts once and doesn't re-render
- * The key trick is to use the uniqueId to force React to only mount the component once per dialog open
+ * Payment Modal Using Popup Window Approach
+ * 
+ * This approach opens a separate browser window for the Mercado Pago payment flow.
+ * By using a separate window, we completely isolate the payment process from any
+ * React render cycles or state updates in the main application.
  */
 export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }: PaymentModalProps) {
   // Generate a unique ID each time the modal is opened
-  // When the dialog closes and reopens, we'll get a new component instance
-  const [uniqueId] = useState(() => Math.random().toString(36).substring(2, 11));
+  const [modalKey] = useState(() => `payment-${Date.now()}`);
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Complete Payment to Place Hedge</DialogTitle>
         </DialogHeader>
         
         {hedgeData && isOpen ? (
-          // The uniqueId ensures we get a fresh component each time the dialog opens
-          // but the component isn't recreated during the lifetime of the dialog
-          <div key={uniqueId}>
-            <IsolatedPaymentBrick
+          // Using the modalKey ensures we create a fresh component for each payment attempt
+          <div key={modalKey}>
+            <PopupPayment
               hedgeData={hedgeData}
               currency={currency}
               onSuccess={onSuccess}

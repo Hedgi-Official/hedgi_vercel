@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Processing</title>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .success {
+      background-color: #d1fae5;
+      color: #064e3b;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    .button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    .button.secondary {
+      background-color: #e5e7eb;
+      color: #1f2937;
+    }
+    #payment-form {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Complete Your Payment</h2>
+    </div>
+    
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Loading payment interface...</p>
+    </div>
+    
+    <div id="error-message" class="error" style="display: none;"></div>
+    <div id="success-message" class="success" style="display: none;"></div>
+    
+    <div id="payment-brick-container"></div>
+    
+    <div id="test-payment" style="display: none;">
+      <p style="text-align: center; margin-top: 20px; color: #6b7280;">
+        If you're having trouble with the payment system, you can use the test option:
+      </p>
+      <button id="test-payment-button" class="button secondary">
+        Continue with Test Payment
+      </button>
+    </div>
+    
+    <button id="close-button" class="button secondary" style="display: none;">
+      Close
+    </button>
+  </div>
+
+  <script>
+    // Extract URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const publicKey = urlParams.get('publicKey');
+    const preferenceId = urlParams.get('preferenceId');
+    const hedgeId = urlParams.get('hedgeId');
+    
+    // Elements
+    const loadingEl = document.getElementById('loading');
+    const errorMessageEl = document.getElementById('error-message');
+    const successMessageEl = document.getElementById('success-message');
+    const testPaymentEl = document.getElementById('test-payment');
+    const closeButtonEl = document.getElementById('close-button');
+    const paymentBrickContainer = document.getElementById('payment-brick-container');
+    
+    // Show error and test payment option
+    function showError(message) {
+      loadingEl.style.display = 'none';
+      errorMessageEl.style.display = 'block';
+      errorMessageEl.textContent = message;
+      testPaymentEl.style.display = 'block';
+    }
+    
+    // Show success message
+    function showSuccess(message) {
+      loadingEl.style.display = 'none';
+      paymentBrickContainer.style.display = 'none';
+      testPaymentEl.style.display = 'none';
+      successMessageEl.style.display = 'block';
+      successMessageEl.textContent = message;
+      closeButtonEl.style.display = 'block';
+    }
+    
+    // Initialize Mercado Pago
+    async function initializeMercadoPago() {
+      if (!publicKey || !preferenceId) {
+        showError('Missing required payment information. Please try again.');
+        return;
+      }
+      
+      try {
+        const mp = new MercadoPago(publicKey);
+        
+        const brickSettings = {
+          initialization: {
+            preferenceId: preferenceId
+          },
+          callbacks: {
+            onReady: () => {
+              // Hide loading when brick is ready
+              loadingEl.style.display = 'none';
+              
+              // Show test payment option after a delay
+              setTimeout(() => {
+                testPaymentEl.style.display = 'block';
+              }, 5000);
+            },
+            onError: (error) => {
+              console.error('Brick error:', error);
+              showError('Payment error: ' + (error.message || 'Unknown error'));
+            },
+            onSubmit: async (cardFormData) => {
+              // This callback doesn't run unless it's a custom brick implementation
+              // For preferenceId-based payments, MP handles the submission
+              console.log('Payment submitted');
+            }
+          },
+          locale: 'en',
+          customization: {
+            visual: {
+              hidePaymentButton: false
+            }
+          }
+        };
+        
+        // Create the brick
+        const paymentBrick = mp.bricks().create('payment', 'payment-brick-container', brickSettings);
+      } catch (error) {
+        console.error('Error initializing MercadoPago:', error);
+        showError('Failed to initialize payment system: ' + (error.message || 'Unknown error'));
+      }
+    }
+    
+    // Handle test payment
+    async function handleTestPayment() {
+      try {
+        const response = await fetch('/api/payment/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isTest: true,
+            hedgeId: hedgeId
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Payment processed successfully.');
+          
+          // Notify parent window of success
+          window.parent.postMessage({
+            type: 'PAYMENT_SUCCESS',
+            data: { hedgeId }
+          }, '*');
+        } else {
+          showError('Test payment failed: ' + (data.message || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error processing test payment:', error);
+        showError('Test payment failed: ' + (error.message || 'Network error'));
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set up event listeners
+      document.getElementById('test-payment-button').addEventListener('click', handleTestPayment);
+      closeButtonEl.addEventListener('click', () => {
+        // Notify parent window to close the modal
+        window.parent.postMessage({
+          type: 'CLOSE_PAYMENT_MODAL'
+        }, '*');
+      });
+      
+      // Initialize the payment system
+      initializeMercadoPago();
+    });
+  </script>
+</body>
+</html>
