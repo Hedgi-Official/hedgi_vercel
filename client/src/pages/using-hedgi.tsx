@@ -22,7 +22,7 @@ export default function UsingHedgi() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const simulatorRef = useRef<HTMLDivElement>(null);
   const chatCardRef = useRef<HTMLDivElement>(null);
-  const [containerHeight, setContainerHeight] = useState<number>(600);
+  const [containerHeight, setContainerHeight] = useState<number>(700); // Start with a reasonable default height
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
     {type: 'bot', content: 'Hello! I\'m HedgiBot. I can help you understand how to set up and manage currency hedges. For what event would you like to hedge?'}
   ]);
@@ -118,7 +118,7 @@ export default function UsingHedgi() {
     const timer = setTimeout(() => {
       if (!simulatorRef.current) return;
       
-      // Initial height measurement
+      // Initial height measurement - get the simulator card
       const simulatorCard = simulatorRef.current!.querySelector('.card-container');
       if (simulatorCard) {
         const initialHeight = simulatorCard.getBoundingClientRect().height;
@@ -126,7 +126,7 @@ export default function UsingHedgi() {
           setContainerHeight(initialHeight);
         }
       }
-    }, 200);
+    }, 300); // Slightly longer delay to ensure full rendering
     
     return () => clearTimeout(timer);
   }, []);
@@ -137,30 +137,21 @@ export default function UsingHedgi() {
     const updateHeights = () => {
       // Only proceed if we have refs to both components
       if (simulatorRef.current && chatCardRef.current) {
-        // Get the current height of simulator
+        // Get the current height of simulator including any expanded content
         const simulatorHeight = simulatorRef.current.getBoundingClientRect().height;
         
-        // Update state if height is valid and changed
+        // Update state if height is valid and different from current
         if (simulatorHeight > 100 && simulatorHeight !== containerHeight) {
+          // Set the new height
           setContainerHeight(simulatorHeight);
-          
-          // Force an immediate layout adjustment
-          requestAnimationFrame(() => {
-            const chatContent = chatCardRef.current?.querySelector('.chat-content');
-            if (chatContent) {
-              (chatContent as HTMLElement).style.height = `${simulatorHeight}px`;
-            }
-          });
         }
       }
     };
     
     // Setup resize observer for continuous monitoring
-    const resizeObserver = new ResizeObserver(() => {
-      updateHeights();
-    });
+    const resizeObserver = new ResizeObserver(updateHeights);
     
-    // Observe simulator component for size changes
+    // Observe the simulator container for changes
     if (simulatorRef.current) {
       resizeObserver.observe(simulatorRef.current);
     }
@@ -187,17 +178,18 @@ export default function UsingHedgi() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
             {/* Hedgi AI Chatbot */}
             <div className="order-2 lg:order-1">
-              <Card ref={chatCardRef} className="h-full shadow-lg">
-                <CardHeader>
+              <Card 
+                ref={chatCardRef}
+                className="h-full shadow-lg flex flex-col"
+                style={{ height: `${containerHeight}px` }}
+              >
+                <CardHeader className="flex-shrink-0">
                   <CardTitle className="flex items-center">
                     <MessageCircle className="mr-2 h-5 w-5" />
                     Hedgi AI Assistant
                   </CardTitle>
                 </CardHeader>
-                <CardContent 
-                  className="flex flex-col chat-content"
-                  style={{ height: `${containerHeight}px` }}
-                >
+                <CardContent className="flex flex-col flex-grow chat-content p-4 pb-6">
                   <ScrollArea ref={scrollAreaRef} className="flex-1 pr-4 mb-4">
                     <div className="space-y-4">
                       {chatMessages.map((msg, i) => (
