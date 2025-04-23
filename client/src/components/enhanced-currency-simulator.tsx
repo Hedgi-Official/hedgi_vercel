@@ -222,7 +222,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   return (
     <>
       <TooltipProvider delayDuration={150}>
-        <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10">
+        <Card className="w-full max-w-2xl mx-auto bg-background shadow-lg relative z-10 card-container">
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart2 className="mr-2 h-5 w-5" />

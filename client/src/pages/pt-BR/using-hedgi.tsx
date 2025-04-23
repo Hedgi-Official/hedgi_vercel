@@ -109,7 +109,29 @@ export default function UsingHedgi() {
     }
   }, [chatMessages]);
   
-  // Effect to synchronize heights between simulator and chat
+  // Effect to measure initial height of the simulator without the expanded content
+  useEffect(() => {
+    // Only proceed if both refs are valid
+    if (!simulatorRef.current || !chatCardRef.current) return;
+    
+    // Delay slightly to ensure the components are fully rendered
+    const timer = setTimeout(() => {
+      if (!simulatorRef.current) return;
+      
+      // Initial height measurement
+      const simulatorCard = simulatorRef.current!.querySelector('.card-container');
+      if (simulatorCard) {
+        const initialHeight = simulatorCard.getBoundingClientRect().height;
+        if (initialHeight > 100) {
+          setContainerHeight(initialHeight);
+        }
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Effect to synchronize heights between simulator and chat during interaction
   useEffect(() => {
     // Function to measure and update heights
     const updateHeights = () => {
@@ -138,10 +160,7 @@ export default function UsingHedgi() {
       updateHeights();
     });
     
-    // Initial height measurement (after components have rendered)
-    setTimeout(updateHeights, 100);
-    
-    // Observe both components for size changes
+    // Observe simulator component for size changes
     if (simulatorRef.current) {
       resizeObserver.observe(simulatorRef.current);
     }
