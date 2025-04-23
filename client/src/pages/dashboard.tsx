@@ -355,6 +355,11 @@ export default function Dashboard() {
       // Check if the API returned a confirmation request
       if (data.needsConfirmation) {
         console.log('[Dashboard] Delete requires confirmation:', data.confirmationMessage);
+        
+        // Optimistically update the UI by invalidating the hedges query
+        // This will remove the hedge from the active hedges table immediately
+        queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+        
         // Show confirmation dialog with the API-provided message
         setHedgeToDelete(hedge);
         setConfirmMessage(data.confirmationMessage);
