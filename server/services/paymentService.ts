@@ -141,15 +141,6 @@ class PaymentService {
           identification: payer.identification
         },
         
-        // Add back_urls for auto_return - required by Mercado Pago
-        back_urls: {
-          success: `${req.protocol}://${req.get('host')}/payment/success`,
-          failure: `${req.protocol}://${req.get('host')}/payment/failure`,
-          pending: `${req.protocol}://${req.get('host')}/payment/pending`
-        },
-        // Set auto_return to approved so MercadoPago will redirect on successful payment
-        auto_return: "approved",
-        
         // Restrict payment methods to only allow credit cards and bank transfers
         payment_methods: {
           excluded_payment_methods: [

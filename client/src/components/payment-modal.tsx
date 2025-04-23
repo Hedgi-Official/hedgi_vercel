@@ -62,14 +62,10 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
 
   // Create a payment preference when the modal opens and payments are enabled
   useEffect(() => {
-    // Flag to prevent multiple attempts in case of errors
-    let isInitializing = false;
-    
     async function createPaymentPreference() {
-      if (!hedgeData || isInitializing) return;
+      if (!hedgeData) return;
       
       try {
-        isInitializing = true;
         setLoading(true);
         setError(null);
         
@@ -77,8 +73,6 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         const hedgeAmount = Math.abs(Number(hedgeData.amount));
         const hedgeCost = hedgeAmount * 0.0025; // 0.25% cost
         const paymentAmount = Number((hedgeCost).toFixed(2));
-        
-        console.log('[PaymentModal] Creating payment preference with amount:', paymentAmount);
         
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -100,15 +94,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           }),
         });
         
-        // Check for HTTP errors
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[PaymentModal] API error:', response.status, errorText);
-          throw new Error(`API error: ${response.status} ${errorText}`);
-        }
-        
         const data = await response.json();
-        console.log('[PaymentModal] Preference created successfully:', data);
         
         if (data.enabled === false) {
           // If payments are disabled, show error
@@ -125,11 +111,9 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
         setPreferenceId(data.id);
         loadMercadoPago(data.public_key, data.id);
       } catch (error) {
-        console.error('[PaymentModal] Error creating payment preference:', error);
-        setError('Failed to initialize payment: ' + (error instanceof Error ? error.message : String(error)));
+        console.error('Error creating payment preference:', error);
+        setError('Failed to initialize payment. Please try again.');
         setLoading(false);
-      } finally {
-        isInitializing = false;
       }
     }
     
@@ -138,11 +122,17 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
     }
   }, [isOpen, hedgeData, paymentEnabled, currency]);
 
+  // Flag to track if we already have an active brick to prevent rebuilding
+  const [brickInitialized, setBrickInitialized] = useState(false);
+  
   // Load the Mercado Pago SDK
   // This is a simplified version that matches the Mercado Pago example
   const loadMercadoPago = (publicKey: string, prefId: string) => {
-    // Only proceed if payments are enabled
-    if (!paymentEnabled) return;
+    // Only proceed if payments are enabled and brick not already initialized
+    if (!paymentEnabled || brickInitialized) return;
+    
+    // Mark as initialized to prevent multiple attempts
+    setBrickInitialized(true);
     
     console.log('[PaymentModal] Loading Mercado Pago with public key:', publicKey);
     console.log('[PaymentModal] Preference ID:', prefId);
@@ -170,6 +160,7 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           console.error('[PaymentModal] Error loading MercadoPago script:', error);
           setError('Failed to load payment processor. Please try again.');
           setLoading(false);
+          setBrickInitialized(false); // Reset so user can try again
         };
         
         document.head.appendChild(script);
@@ -186,32 +177,18 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
       console.error('[PaymentModal] Error in loadMercadoPago:', error);
       setError('An error occurred while setting up the payment system.');
       setLoading(false);
+      setBrickInitialized(false); // Reset so user can try again
     }
   };
 
   // Define the renderPaymentBrick function to match the Mercado Pago example exactly
   const renderPaymentBrick = async (bricksBuilder: any, prefId: string) => {
-    // Skip if we already have an error or brick is already created
-    if (error || paymentBrickControllerRef.current) {
-      console.log('[PaymentModal] Skipping brick creation - error exists or controller already set');
-      return;
-    }
-    
     try {
       console.log('[PaymentModal] Rendering payment brick');
       
       if (!brickContainerRef.current) {
         console.error('[PaymentModal] Container not found');
         setError('Payment container not found');
-        setLoading(false);
-        return;
-      }
-      
-      // Check if the container is actually in the DOM
-      const domContainer = document.getElementById('paymentBrick_container');
-      if (!domContainer) {
-        console.error('[PaymentModal] DOM container #paymentBrick_container not found');
-        setError('Payment container not found in DOM');
         setLoading(false);
         return;
       }
@@ -233,15 +210,12 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           visual: {
             style: {
               theme: 'default'
-            },
-            hideFormTitle: true
+            }
           },
           paymentMethods: {
             creditCard: 'all',
             bankTransfer: 'all',
-            // Exclude some payment methods to focus on credit cards and bank transfers
-            atm: 'excluded',
-            ticket: 'excluded',
+            atm: 'all',
             maxInstallments: 1
           }
         },
@@ -297,35 +271,58 @@ export function PaymentModal({ isOpen, onClose, onSuccess, hedgeData, currency }
           },
           onError: (error: any) => {
             console.error('[PaymentModal] Payment brick error:', error);
-            setError('An error occurred with the payment processor. Please try again.');
+            // Check for specific MercadoPago API errors
+            if (error && error.error === 'invalid_auto_return') {
+              // Use the test payment option instead when this specific error occurs
+              setError('Mercado Pago setup requires additional configuration. Please use the test option below.');
+            } else {
+              setError('An error occurred with the payment processor. Please try again.');
+            }
             setLoading(false);
+            // Reset initialization flag so user can try again
+            setBrickInitialized(false);
           }
         }
       };
       
       try {
-        console.log('[PaymentModal] Creating payment brick with settings:', JSON.stringify(settings, null, 2));
-        
-        // Create the payment brick
-        const controller = await bricksBuilder.create(
+        // Attempt to create the payment brick
+        console.log('[PaymentModal] Creating payment brick for preference ID:', prefId);
+        window.paymentBrickController = await bricksBuilder.create(
           'payment',
           'paymentBrick_container',
           settings
         );
         
-        // Store the controller in both global and ref
-        window.paymentBrickController = controller;
-        paymentBrickControllerRef.current = controller;
+        // Also store in our ref for React component lifecycle management
+        paymentBrickControllerRef.current = window.paymentBrickController;
         
         console.log('[PaymentModal] Payment brick created successfully');
       } catch (brickError) {
-        console.error('[PaymentModal] Error creating brick:', brickError);
-        throw new Error(`Brick creation failed: ${brickError instanceof Error ? brickError.message : String(brickError)}`);
+        // Check for specific error about back_url.success missing (SDK error)
+        console.error('[PaymentModal] Error creating payment brick:', brickError);
+        
+        if (brickError && typeof brickError === 'object' && 'error' in brickError && brickError.error === 'invalid_auto_return') {
+          setError('Mercado Pago configuration issue. Please use the test option below.');
+        } else {
+          throw brickError; // Re-throw to be caught by outer catch
+        }
+        
+        // Reset the initialization flag
+        setBrickInitialized(false);
       }
     } catch (error) {
       console.error('[PaymentModal] Error in renderPaymentBrick:', error);
-      setError(`Error creating payment interface: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      // Check if error contains auto_return invalid message
+      if (errorMsg.includes('auto_return invalid') || errorMsg.includes('back_url.success')) {
+        setError('Mercado Pago requires redirects that are not configured. Please use the test payment option.');
+      } else {
+        setError(`Error creating payment interface: ${errorMsg}`);
+      }
       setLoading(false);
+      // Reset initialization flag
+      setBrickInitialized(false);
     }
   };
 
