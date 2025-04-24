@@ -47,8 +47,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     return currentLanguage;
   };
 
-  // Check if Portuguese should be used
+  // Check if Portuguese should be used - prioritize currency over browser language
   const shouldUsePortuguese = () => {
+    // For BRL currency transactions, always use Portuguese
+    if (currency === 'BRL') return true;
+    // Fall back to browser language if currency doesn't dictate the language
     return getUserLanguage().startsWith('pt');
   };
   
@@ -103,6 +106,9 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
       const script = document.createElement('script');
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.async = true;
+      
+      // Set the correct locale as a dataset attribute
+      script.dataset.locale = getLocaleForCurrency();
       
       script.onload = () => {
         console.log('[MercadoPaymentModal] Mercado Pago SDK loaded successfully');
@@ -170,6 +176,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         
         console.log(`[MercadoPaymentModal] Creating payment preference for ${paymentAmount} ${currency}`);
         
+        // Determine the correct identification type based on currency
+        const idType = currency === 'MXN' ? 'RFC' : 'CPF';
+        // Sample identification numbers (these are just test values)
+        const idNumber = currency === 'MXN' ? 'XAXX010101000' : '219585466';
+        
         // Create payment preference
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -184,8 +195,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               email: 'customer@example.com',
               name: 'Test Customer',
               identification: {
-                type: 'CPF',
-                number: '219585466'
+                type: idType,
+                number: idNumber
               }
             },
           }),
@@ -424,8 +435,15 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                         const left = window.screenX + (window.outerWidth - width) / 2;
                         const top = window.screenY + (window.outerHeight - height) / 2;
                         
+                        // Add the locale to the checkout URL for proper language display
+                        const localeParam = new URL(checkoutUrl);
+                        // Set the locale based on currency
+                        const locale = getLocaleForCurrency();
+                        localeParam.searchParams.set('locale', locale);
+                        console.log(`[MercadoPaymentModal] Setting locale to ${locale} for currency: ${currency}`);
+                        
                         window.open(
-                          checkoutUrl,
+                          localeParam.toString(),
                           'MercadoPagoPayment',
                           `width=${width},height=${height},left=${left},top=${top}`
                         );
