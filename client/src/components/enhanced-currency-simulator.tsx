@@ -573,11 +573,19 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
               </p>
             </DialogHeader>
             
-            <StandaloneWindowPayment
-              hedgeData={pendingHedgeData}
-              onSuccess={handlePaymentSuccess}
-              onClose={() => setIsPaymentModalOpen(false)}
-            />
+            {/* For MXN payments, show the DirectTestPayment component to bypass window issues */}
+            {pendingHedgeData.baseCurrency === 'MXN' ? (
+              <DirectTestPayment
+                hedgeData={pendingHedgeData}
+                onSuccess={handlePaymentSuccess}
+              />
+            ) : (
+              <StandaloneWindowPayment
+                hedgeData={pendingHedgeData}
+                onSuccess={handlePaymentSuccess}
+                onClose={() => setIsPaymentModalOpen(false)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       )}
