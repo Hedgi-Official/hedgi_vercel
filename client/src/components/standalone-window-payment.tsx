@@ -82,9 +82,9 @@ export default function StandaloneWindowPayment({
     const usesMXN = hedgeData.baseCurrency === 'MXN';
     
     // Create URL with all hedge data as parameters
-    // Always use MXN-specific page for MXN currency to ensure test payment is available
+    // Use currency-specific payment pages - one for MXN and one for BRL (and other currencies)
     const url = new URL(
-      usesMXN ? '/standalone-payment-mxn.html' : '/standalone-payment-fixed.html', 
+      usesMXN ? '/payment-mxn.html' : '/payment-brl.html', 
       window.location.origin
     );
     

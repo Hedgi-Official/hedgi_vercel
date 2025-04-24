@@ -90,7 +90,9 @@ export default function HtmlIframePayment({ hedgeData, currency, onSuccess, onCl
         }
         
         // Create URL with query parameters for the iframe
-        const url = new URL('/payment.html', window.location.origin);
+        // Use different payment pages for MXN and other currencies
+        const usesMXN = currency === 'MXN';
+        const url = new URL(usesMXN ? '/payment-mxn.html' : '/payment-brl.html', window.location.origin);
         url.searchParams.append('publicKey', data.public_key);
         url.searchParams.append('preferenceId', data.id);
         url.searchParams.append('hedgeId', 'test-hedge-123'); // This would normally be a real ID
