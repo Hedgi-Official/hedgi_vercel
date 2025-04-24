@@ -78,8 +78,15 @@ export default function StandaloneWindowPayment({
       return;
     }
     
+    // Check currency to determine which payment page to use
+    const usesMXN = hedgeData.baseCurrency === 'MXN';
+    
     // Create URL with all hedge data as parameters
-    const url = new URL('/standalone-payment.html', window.location.origin);
+    // Use MXN-specific payment page for MXN currency
+    const url = new URL(
+      usesMXN ? '/standalone-payment-mxn.html' : '/standalone-payment.html', 
+      window.location.origin
+    );
     
     // Add all hedge data as URL parameters
     Object.entries(hedgeData).forEach(([key, value]) => {
@@ -93,6 +100,9 @@ export default function StandaloneWindowPayment({
     const height = 700;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
+    
+    // Log which payment page is being used
+    console.log(`[StandaloneWindowPayment] Opening ${usesMXN ? 'MXN' : 'standard'} payment window`);
     
     // Open the window
     const newWindow = window.open(
