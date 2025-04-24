@@ -140,11 +140,11 @@
     
     <div id="payment-brick-container"></div>
     
-    <div id="test-payment" style="display: block;">
+    <div id="test-payment" style="display: block !important;">
       <p style="text-align: center; margin-top: 20px; color: #6b7280;">
-        If you're having trouble with the payment system, you can use the test option:
+        <strong>MXN payments are currently limited.</strong> Please use the test option below:
       </p>
-      <button id="test-payment-button" class="button secondary">
+      <button id="test-payment-button" class="button secondary" style="background-color: #f59e0b; color: white; font-weight: bold;">
         Test: Continue without payment
       </button>
     </div>
@@ -164,9 +164,12 @@
     const paymentBrickContainer = document.getElementById('payment-brick-container');
     const mxnWarningEl = document.getElementById('mxn-warning');
     
-    // Always show test payment button for MXN payments
+    // Always show test payment button for MXN payments and hide loading immediately
+    loadingEl.style.display = 'none';
     testPaymentEl.style.display = 'block';
     mxnWarningEl.style.display = 'block';
+    
+    console.log('MXN payment page loaded - test payment button displayed');
     
     // Store all hedge data from URL parameters
     const hedgeData = {};
@@ -236,7 +239,7 @@
     function showSuccess(message) {
       loadingEl.style.display = 'none';
       paymentBrickContainer.style.display = 'none';
-      testPaymentEl.style.display = 'none';
+      testPaymentEl.style.display = 'none'; // Only hide test button after success
       mxnWarningEl.style.display = 'none';
       successMessageEl.style.display = 'block';
       successMessageEl.textContent = message;
@@ -245,6 +248,14 @@
     
     // Create payment preference
     async function createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, currency) {
+      // For MXN, immediately hide loading and show the test button more prominently
+      if (currency === 'MXN') {
+        loadingEl.style.display = 'none';
+        testPaymentEl.style.display = 'block';
+        console.log('MXN currency detected - showing test payment button');
+        return; // Skip payment processing for MXN entirely
+      }
+      
       try {
         console.log('Creating payment preference...');
         
