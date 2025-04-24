@@ -89,10 +89,26 @@ router.get('/payment/success', (_req: Request, res: Response) => {
     </head>
     <body>
       <div class="container">
-        <h1>Payment Successful!</h1>
-        <p>Your hedge order has been placed successfully. You can close this window and return to the application.</p>
-        <button onclick="notifySuccess()">Close Window</button>
+        <h1 id="successTitle">Payment Successful!</h1>
+        <p id="successMessage">Your hedge order has been placed successfully. You can close this window and return to the application.</p>
+        <button onclick="notifySuccess()" id="closeButton">Close Window</button>
       </div>
+      <script>
+        // Get language from URL or browser
+        const urlParams = new URLSearchParams(window.location.search);
+        const locale = urlParams.get('locale') || navigator.language || 'en-US';
+        
+        // Set content based on language
+        if (locale.startsWith('es')) {
+          document.getElementById('successTitle').innerText = '¡Pago Exitoso!';
+          document.getElementById('successMessage').innerText = 'Tu orden de cobertura ha sido realizada con éxito. Puedes cerrar esta ventana y volver a la aplicación.';
+          document.getElementById('closeButton').innerText = 'Cerrar Ventana';
+        } else if (locale.startsWith('pt')) {
+          document.getElementById('successTitle').innerText = 'Pagamento Bem-sucedido!';
+          document.getElementById('successMessage').innerText = 'Seu pedido de hedge foi realizado com sucesso. Você pode fechar esta janela e retornar ao aplicativo.';
+          document.getElementById('closeButton').innerText = 'Fechar Janela';
+        }
+      </script>
       <script>
         function notifySuccess() {
           // Notify the opener window about the successful payment
@@ -175,10 +191,26 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
     </head>
     <body>
       <div class="container">
-        <h1>Payment Failed</h1>
-        <p>There was an issue processing your payment. Please try again or contact customer support if the problem persists.</p>
-        <button onclick="notifyFailure()">Close Window</button>
+        <h1 id="failureTitle">Payment Failed</h1>
+        <p id="failureMessage">There was an issue processing your payment. Please try again or contact customer support if the problem persists.</p>
+        <button onclick="notifyFailure()" id="failureCloseButton">Close Window</button>
       </div>
+      <script>
+        // Get language from URL or browser
+        const urlParams = new URLSearchParams(window.location.search);
+        const locale = urlParams.get('locale') || navigator.language || 'en-US';
+        
+        // Set content based on language
+        if (locale.startsWith('es')) {
+          document.getElementById('failureTitle').innerText = 'Pago Fallido';
+          document.getElementById('failureMessage').innerText = 'Hubo un problema al procesar tu pago. Por favor, intenta nuevamente o contacta a soporte al cliente si el problema persiste.';
+          document.getElementById('failureCloseButton').innerText = 'Cerrar Ventana';
+        } else if (locale.startsWith('pt')) {
+          document.getElementById('failureTitle').innerText = 'Pagamento Falhou';
+          document.getElementById('failureMessage').innerText = 'Houve um problema ao processar seu pagamento. Por favor, tente novamente ou entre em contato com o suporte ao cliente se o problema persistir.';
+          document.getElementById('failureCloseButton').innerText = 'Fechar Janela';
+        }
+      </script>
       <script>
         function notifyFailure() {
           // Notify the opener window about the failed payment
@@ -261,10 +293,26 @@ router.get('/payment/pending', (_req: Request, res: Response) => {
     </head>
     <body>
       <div class="container">
-        <h1>Payment Pending</h1>
-        <p>Your payment is being processed. We'll notify you once the payment is confirmed. This may take some time depending on your payment method.</p>
-        <button onclick="notifyPending()">Close Window</button>
+        <h1 id="pendingTitle">Payment Pending</h1>
+        <p id="pendingMessage">Your payment is being processed. We'll notify you once the payment is confirmed. This may take some time depending on your payment method.</p>
+        <button onclick="notifyPending()" id="pendingCloseButton">Close Window</button>
       </div>
+      <script>
+        // Get language from URL or browser
+        const urlParams = new URLSearchParams(window.location.search);
+        const locale = urlParams.get('locale') || navigator.language || 'en-US';
+        
+        // Set content based on language
+        if (locale.startsWith('es')) {
+          document.getElementById('pendingTitle').innerText = 'Pago Pendiente';
+          document.getElementById('pendingMessage').innerText = 'Tu pago está siendo procesado. Te notificaremos una vez que el pago sea confirmado. Esto puede tomar algún tiempo dependiendo de tu método de pago.';
+          document.getElementById('pendingCloseButton').innerText = 'Cerrar Ventana';
+        } else if (locale.startsWith('pt')) {
+          document.getElementById('pendingTitle').innerText = 'Pagamento Pendente';
+          document.getElementById('pendingMessage').innerText = 'Seu pagamento está sendo processado. Notificaremos você assim que o pagamento for confirmado. Isso pode levar algum tempo dependendo do seu método de pagamento.';
+          document.getElementById('pendingCloseButton').innerText = 'Fechar Janela';
+        }
+      </script>
       <script>
         function notifyPending() {
           // Notify the opener window about the pending payment

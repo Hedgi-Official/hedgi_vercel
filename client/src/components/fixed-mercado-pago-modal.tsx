@@ -181,6 +181,13 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         // Sample identification numbers (these are just test values)
         const idNumber = currency === 'MXN' ? 'XAXX010101000' : '219585466';
         
+        // Log currency-specific payment settings
+        console.log(`[MercadoPaymentModal] Using ${currency}-specific settings:`, {
+          locale: getLocaleForCurrency(),
+          identificationType: idType,
+          identificationNumber: idNumber
+        });
+        
         // Create payment preference
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
