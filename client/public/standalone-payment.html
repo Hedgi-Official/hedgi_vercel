@@ -259,6 +259,8 @@
       } catch (error) {
         console.error('Error creating payment preference:', error);
         showError('Failed to initialize payment. Please try again or use the test option.');
+        // Show test payment option immediately when there's an error creating payment preference
+        testPaymentEl.style.display = 'block';
       }
     }
     
@@ -284,6 +286,8 @@
             onError: (error) => {
               console.error('Brick error:', error);
               showError('Payment error: ' + (error.message || 'Unknown error'));
+              // Show test payment option immediately when there's an error with the brick
+              testPaymentEl.style.display = 'block';
             },
             onSubmit: async (cardFormData) => {
               // This callback doesn't run unless it's a custom brick implementation
@@ -308,6 +312,8 @@
       } catch (error) {
         console.error('Error initializing MercadoPago:', error);
         showError('Failed to initialize payment system: ' + (error.message || 'Unknown error'));
+        // Show test payment option immediately when there's an error initializing MercadoPago
+        testPaymentEl.style.display = 'block';
       }
     }
     
