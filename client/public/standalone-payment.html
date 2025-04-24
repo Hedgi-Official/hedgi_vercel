@@ -126,14 +126,18 @@
     <div id="error-message" class="error" style="display: none;"></div>
     <div id="success-message" class="success" style="display: none;"></div>
     
+    <div id="currency-warning" class="warning" style="display: none;">
+      <p>MXN payments may require the test payment option below due to regional processing limitations.</p>
+    </div>
+    
     <div id="payment-brick-container"></div>
     
-    <div id="test-payment" style="display: none;">
+    <div id="test-payment" style="display: block;">
       <p style="text-align: center; margin-top: 20px; color: #6b7280;">
         If you're having trouble with the payment system, you can use the test option:
       </p>
       <button id="test-payment-button" class="button secondary">
-        Continue with Test Payment
+        Test: Continue without payment
       </button>
     </div>
     
@@ -150,6 +154,7 @@
     const testPaymentEl = document.getElementById('test-payment');
     const closeButtonEl = document.getElementById('close-button');
     const paymentBrickContainer = document.getElementById('payment-brick-container');
+    const currencyWarningEl = document.getElementById('currency-warning');
     
     // Store all hedge data from URL parameters
     const hedgeData = {};
@@ -197,6 +202,11 @@
       
       // Show payment details section
       document.getElementById('payment-details').style.display = 'block';
+      
+      // Check if this is MXN currency and show the currency warning
+      if (baseCurrency === 'MXN') {
+        currencyWarningEl.style.display = 'block';
+      }
       
       // Initialize payment creation
       createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, baseCurrency);
@@ -280,10 +290,9 @@
               // Hide loading when brick is ready
               loadingEl.style.display = 'none';
               
-              // Show test payment option after a delay
-              setTimeout(() => {
-                testPaymentEl.style.display = 'block';
-              }, 5000);
+              // Test payment button is always visible now
+              // but explicitly ensure it remains that way
+              testPaymentEl.style.display = 'block';
             },
             onError: (error) => {
               console.error('Brick error:', error);
