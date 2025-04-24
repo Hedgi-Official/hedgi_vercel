@@ -78,12 +78,12 @@
 <body>
   <div class="container">
     <div class="header">
-      <h2 id="payment-title">Complete Your Payment</h2>
+      <h2>Complete Your Payment</h2>
     </div>
     
     <div id="loading" class="loading">
       <div class="loading-spinner"></div>
-      <p id="loading-text">Loading payment interface...</p>
+      <p>Loading payment interface...</p>
     </div>
     
     <div id="error-message" class="error" style="display: none;"></div>
@@ -92,7 +92,7 @@
     <div id="payment-brick-container"></div>
     
     <div id="test-payment" style="display: none;">
-      <p id="test-payment-text" style="text-align: center; margin-top: 20px; color: #6b7280;">
+      <p style="text-align: center; margin-top: 20px; color: #6b7280;">
         If you're having trouble with the payment system, you can use the test option:
       </p>
       <button id="test-payment-button" class="button secondary">
@@ -111,8 +111,6 @@
     const publicKey = urlParams.get('publicKey');
     const preferenceId = urlParams.get('preferenceId');
     const hedgeId = urlParams.get('hedgeId');
-    const currency = urlParams.get('currency');
-    const locale = urlParams.get('locale');
     
     // Elements
     const loadingEl = document.getElementById('loading');
@@ -174,8 +172,7 @@
               console.log('Payment submitted');
             }
           },
-          // Set the locale based on the URL parameter or default based on currency
-          locale: locale || (currency === 'MXN' ? 'es-MX' : (currency === 'BRL' ? 'pt-BR' : 'en-US')),
+          locale: 'en',
           customization: {
             visual: {
               hidePaymentButton: false
@@ -224,40 +221,8 @@
       }
     }
     
-    // Set UI language based on locale/currency
-    function setLanguage() {
-      // Determine locale to use
-      const currentLocale = locale || (currency === 'MXN' ? 'es-MX' : (currency === 'BRL' ? 'pt-BR' : 'en-US'));
-      console.log('Setting UI language based on locale:', currentLocale);
-      
-      const paymentTitle = document.getElementById('payment-title');
-      const loadingText = document.getElementById('loading-text');
-      const testPaymentText = document.getElementById('test-payment-text');
-      const testPaymentButton = document.getElementById('test-payment-button');
-      const closeButton = document.getElementById('close-button');
-      
-      if (currentLocale.startsWith('es')) {
-        // Spanish
-        paymentTitle.textContent = 'Completa tu Pago';
-        loadingText.textContent = 'Cargando interfaz de pago...';
-        testPaymentText.textContent = 'Si tienes problemas con el sistema de pago, puedes usar la opción de prueba:';
-        testPaymentButton.textContent = 'Continuar con Pago de Prueba';
-        closeButton.textContent = 'Cerrar';
-      } else if (currentLocale.startsWith('pt')) {
-        // Portuguese
-        paymentTitle.textContent = 'Complete o seu Pagamento';
-        loadingText.textContent = 'Carregando interface de pagamento...';
-        testPaymentText.textContent = 'Se você estiver com problemas com o sistema de pagamento, pode usar a opção de teste:';
-        testPaymentButton.textContent = 'Continuar com Pagamento de Teste';
-        closeButton.textContent = 'Fechar';
-      }
-    }
-    
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-      // Set UI language based on locale/currency
-      setLanguage();
-      
       // Set up event listeners
       document.getElementById('test-payment-button').addEventListener('click', handleTestPayment);
       closeButtonEl.addEventListener('click', () => {

@@ -47,27 +47,9 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     return currentLanguage;
   };
 
-  // Check if Portuguese should be used - prioritize currency over browser language
+  // Check if Portuguese should be used
   const shouldUsePortuguese = () => {
-    // For BRL currency transactions, always use Portuguese
-    if (currency === 'BRL') return true;
-    // Fall back to browser language if currency doesn't dictate the language
     return getUserLanguage().startsWith('pt');
-  };
-  
-  // Check if Spanish should be used - prioritize currency over browser language
-  const shouldUseSpanish = () => {
-    // For MXN currency transactions, always use Spanish
-    if (currency === 'MXN') return true;
-    // Fall back to browser language if currency doesn't dictate the language
-    return getUserLanguage().startsWith('es');
-  };
-  
-  // Get the locale based on currency
-  const getLocaleForCurrency = () => {
-    if (currency === 'BRL') return 'pt-BR';
-    if (currency === 'MXN') return 'es-MX';
-    return 'en-US';
   };
 
   // Check if payments are enabled when component mounts
@@ -106,9 +88,6 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
       const script = document.createElement('script');
       script.src = 'https://sdk.mercadopago.com/js/v2';
       script.async = true;
-      
-      // Set the correct locale as a dataset attribute
-      script.dataset.locale = getLocaleForCurrency();
       
       script.onload = () => {
         console.log('[MercadoPaymentModal] Mercado Pago SDK loaded successfully');
@@ -176,18 +155,6 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
         
         console.log(`[MercadoPaymentModal] Creating payment preference for ${paymentAmount} ${currency}`);
         
-        // Determine the correct identification type based on currency
-        const idType = currency === 'MXN' ? 'RFC' : 'CPF';
-        // Sample identification numbers (these are just test values)
-        const idNumber = currency === 'MXN' ? 'XAXX010101000' : '219585466';
-        
-        // Log currency-specific payment settings
-        console.log(`[MercadoPaymentModal] Using ${currency}-specific settings:`, {
-          locale: getLocaleForCurrency(),
-          identificationType: idType,
-          identificationNumber: idNumber
-        });
-        
         // Create payment preference
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -202,8 +169,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               email: 'customer@example.com',
               name: 'Test Customer',
               identification: {
-                type: idType,
-                number: idNumber
+                type: 'CPF',
+                number: '219585466'
               }
             },
           }),
@@ -241,16 +208,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                   onSuccess(hedgeData);
                   
                   // Show success toast
-                  const successTitle = t(
-                    'Pagamento bem-sucedido', 
-                    'Payment successful',
-                    'Pago exitoso'
-                  );
-                  const successDesc = t(
-                    'Seu pedido de hedge foi realizado com sucesso.',
-                    'Your hedge order has been placed successfully.',
-                    'Tu orden de cobertura ha sido colocada con éxito.'
-                  );
+                  const isPortuguese = shouldUsePortuguese();
+                  const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
+                  const successDesc = isPortuguese
+                    ? 'Seu pedido de hedge foi realizado com sucesso.'
+                    : 'Your hedge order has been placed successfully.';
                     
                   toast({
                     title: successTitle,
@@ -263,13 +225,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 }
               } else if (messageData.type === 'PAYMENT_FAILED') {
                 console.log('[MercadoPaymentModal] Received payment failure message:', messageData);
-                // Localized error message
-                const errorMessage = t(
-                  'Falha no pagamento. Por favor, tente novamente.',
-                  'Payment failed. Please try again.',
-                  'Pago fallido. Por favor, inténtalo de nuevo.'
-                );
-                setError(errorMessage);
+                setError('Payment failed. Please try again.');
                 setLoading(false);
               } else if (messageData.type === 'PAYMENT_PENDING') {
                 console.log('[MercadoPaymentModal] Received payment pending message:', messageData);
@@ -278,16 +234,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                   onSuccess(hedgeData);
                   
                   // Show pending toast
-                  const pendingTitle = t(
-                    'Pagamento pendente', 
-                    'Payment pending',
-                    'Pago pendiente'
-                  );
-                  const pendingDesc = t(
-                    'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.',
-                    'Your payment is being processed. Your hedge will be placed when confirmed.',
-                    'Tu pago está siendo procesado. La cobertura se colocará cuando se confirme.'
-                  );
+                  const isPortuguese = shouldUsePortuguese();
+                  const pendingTitle = isPortuguese ? 'Pagamento pendente' : 'Payment pending';
+                  const pendingDesc = isPortuguese
+                    ? 'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.'
+                    : 'Your payment is being processed. Your hedge will be placed when confirmed.';
                     
                   toast({
                     title: pendingTitle,
@@ -332,10 +283,8 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   }, [isOpen, paymentEnabled, hedgeData, currency, simulation, onSuccess, onClose]);
 
   // Translation helper function
-  const t = (pt: string, en: string, es?: string) => {
-    if (shouldUsePortuguese()) return pt;
-    if (shouldUseSpanish() && es) return es;
-    return en;
+  const t = (pt: string, en: string) => {
+    return shouldUsePortuguese() ? pt : en;
   };
 
   return (
@@ -343,31 +292,27 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {t(
-              'Complete o pagamento para realizar o hedge', 
-              'Complete Payment to Place Hedge',
-              'Completa el pago para colocar la cobertura'
-            )}
+            {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
           </DialogTitle>
         </DialogHeader>
         
         {loading && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p>{t('Processando seu pagamento...', 'Processing your payment...', 'Procesando tu pago...')}</p>
+            <p>{t('Processando seu pagamento...', 'Processing your payment...')}</p>
           </div>
         )}
         
         {error && (
           <div className="bg-destructive/10 text-destructive p-4 rounded-md my-4">
-            <p className="font-semibold">{t('Erro', 'Error', 'Error')}</p>
+            <p className="font-semibold">{t('Erro', 'Error')}</p>
             <p>{error}</p>
             <Button 
               variant="outline" 
               className="mt-2" 
               onClick={onClose}
             >
-              {t('Fechar', 'Close', 'Cerrar')}
+              {t('Fechar', 'Close')}
             </Button>
           </div>
         )}
@@ -378,25 +323,25 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               <>
                 {/* Payment summary */}
                 <div className="bg-muted p-3 rounded-md text-xs mb-3">
-                  <p><strong>{t('Detalhes do Pagamento:', 'Payment Details:', 'Detalles del Pago:')}</strong></p>
-                  <p>{t('Moeda', 'Currency', 'Moneda')}: {currency}</p>
+                  <p><strong>{t('Detalhes do Pagamento:', 'Payment Details:')}</strong></p>
+                  <p>{t('Moeda', 'Currency')}: {currency}</p>
                   {hedgeData && (
                     <>
-                      <p>{t('Valor do Hedge', 'Hedge Amount', 'Monto de Cobertura')}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      <p>{t('Valor do Hedge', 'Hedge Amount')}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
                       
                       {/* Get the fees from the simulation result if available */}
                       {simulation ? (
                         <>
-                          <p>{t('Taxas', 'Fees', 'Comisiones')}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
-                          <p>{t('Margem', 'Margin', 'Margen')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
-                          <p>{t('Pagamento Total', 'Total Payment', 'Pago Total')}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
+                          <p>{t('Taxas', 'Fees')}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment')}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
                         </>
                       ) : (
                         <>
                           {/* Fallback for when simulation is not available */}
-                          <p>{t('Taxas', 'Fees', 'Comisiones')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
-                          <p>{t('Margem', 'Margin', 'Margen')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
-                          <p>{t('Pagamento Total', 'Total Payment', 'Pago Total')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
+                          <p>{t('Taxas', 'Fees')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
                         </>
                       )}
                     </>
@@ -411,14 +356,13 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 >
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium mb-4">
-                      {t('Complete o seu pagamento', 'Complete Your Payment', 'Completa tu pago')}
+                      {t('Complete o seu pagamento', 'Complete Your Payment')}
                     </h3>
                     
                     <p className="text-muted-foreground mb-6">
                       {t(
                         'Clique no botão abaixo para abrir uma janela de pagamento segura. Após concluir o pagamento, seu hedge será colocado automaticamente.',
-                        'Click the button below to open a secure payment window. After completing your payment, your hedge will be automatically placed.',
-                        'Haz clic en el botón de abajo para abrir una ventana de pago segura. Después de completar tu pago, tu cobertura se colocará automáticamente.'
+                        'Click the button below to open a secure payment window. After completing your payment, your hedge will be automatically placed.'
                       )}
                     </p>
                     
@@ -442,29 +386,20 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                         const left = window.screenX + (window.outerWidth - width) / 2;
                         const top = window.screenY + (window.outerHeight - height) / 2;
                         
-                        // Add the locale and currency to the checkout URL for proper language display
-                        const localeParam = new URL(checkoutUrl);
-                        // Set the locale based on currency
-                        const locale = getLocaleForCurrency();
-                        localeParam.searchParams.set('locale', locale);
-                        localeParam.searchParams.set('currency', currency);
-                        console.log(`[MercadoPaymentModal] Setting locale to ${locale} for currency: ${currency}`);
-                        
                         window.open(
-                          localeParam.toString(),
+                          checkoutUrl,
                           'MercadoPagoPayment',
                           `width=${width},height=${height},left=${left},top=${top}`
                         );
                       }}
                     >
-                      {t('Abrir Janela de Pagamento', 'Open Payment Window', 'Abrir Ventana de Pago')}
+                      {t('Abrir Janela de Pagamento', 'Open Payment Window')}
                     </Button>
                     
                     <div className="text-xs text-muted-foreground text-center">
                       {t(
                         'Você será redirecionado para a plataforma de pagamento segura do Mercado Pago',
-                        'You\'ll be redirected to Mercado Pago\'s secure payment platform',
-                        'Serás redirigido a la plataforma de pago segura de Mercado Pago'
+                        'You\'ll be redirected to Mercado Pago\'s secure payment platform'
                       )}
                     </div>
                   </div>
@@ -480,15 +415,10 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                       onSuccess(hedgeData);
                       
                       toast({
-                        title: t(
-                          'Pagamento de teste processado', 
-                          'Test payment processed',
-                          'Pago de prueba procesado'
-                        ),
+                        title: t('Pagamento de teste processado', 'Test payment processed'),
                         description: t(
                           'Seu pedido de hedge foi realizado com sucesso.', 
-                          'Your hedge order has been placed successfully.',
-                          'Tu orden de cobertura ha sido colocada con éxito.'
+                          'Your hedge order has been placed successfully.'
                         ),
                         variant: 'default',
                       });
@@ -496,7 +426,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                     }
                   }}
                 >
-                  {t('Teste: Continuar sem pagamento', 'Test: Continue without payment', 'Prueba: Continuar sin pago')}
+                  {t('Teste: Continuar sem pagamento', 'Test: Continue without payment')}
                 </Button>
               </>
             ) : (

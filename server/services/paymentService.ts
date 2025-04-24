@@ -142,15 +142,8 @@ class PaymentService {
         payer: {
           email: payer.email,
           name: payer.name,
-          // Set identification based on payer info, with currency-specific default
-          identification: payer.identification ? payer.identification : {
-            type: currency === 'MXN' ? 'RFC' : 'CPF',
-            number: currency === 'MXN' ? 'XAXX010101000' : '219585466'
-          }
+          identification: payer.identification
         },
-        
-        // Set the correct locale based on currency
-        locale: currency === 'MXN' ? 'es-MX' : (currency === 'BRL' ? 'pt-BR' : 'en-US'),
         
         // Proper back_urls structure exactly matching Mercado Pago's documentation
         back_urls: {
@@ -183,12 +176,6 @@ class PaymentService {
         // Only set auto_return in production with valid URLs
         preferenceData.auto_return = "approved";
       }
-      
-      // Log the currency, locale, and identification for debugging
-      console.log(`[PaymentService] Creating preference with currency: ${currency}, locale: ${preferenceData.locale}`, {
-        identificationType: preferenceData.payer.identification.type,
-        identificationNumber: preferenceData.payer.identification.number
-      });
       
       // Call Mercado Pago API to create preference
       const response = await preference.create({ body: preferenceData });
