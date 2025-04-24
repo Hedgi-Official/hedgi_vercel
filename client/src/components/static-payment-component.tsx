@@ -4,6 +4,13 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 
+// Helper function for translations based on currency
+const getTranslation = (currency: string, texts: { EN: string, PT: string, ES: string }): string => {
+  if (currency === 'BRL') return texts.PT;
+  if (currency === 'MXN') return texts.ES;
+  return texts.EN;
+};
+
 // Define the Mercado Pago types based on their SDK
 declare global {
   interface Window {
@@ -96,8 +103,8 @@ const StaticPaymentComponent = memo(({ hedgeData, currency, onSuccess, onClose }
               email: 'customer@example.com',
               name: 'Test Customer',
               identification: {
-                type: 'CPF',
-                number: '219585466'
+                type: currency === 'MXN' ? 'RFC' : 'CPF',
+                number: currency === 'MXN' ? 'XAXX010101000' : '219585466'
               }
             },
           }),
@@ -229,9 +236,23 @@ const StaticPaymentComponent = memo(({ hedgeData, currency, onSuccess, onClose }
                 
                 if (result.status === 'approved' || result.status === 'in_process') {
                   onSuccess(hedgeData);
+                  // Use appropriate language based on currency
+                  const translations = {
+                    title: {
+                      MXN: 'Pago exitoso',
+                      BRL: 'Pagamento bem-sucedido',
+                      default: 'Payment successful'
+                    },
+                    description: {
+                      MXN: 'Tu orden de cobertura ha sido colocada.',
+                      BRL: 'Seu pedido de hedge foi realizado com sucesso.',
+                      default: 'Your hedge order has been placed.'
+                    }
+                  };
+                  
                   toast({
-                    title: 'Payment successful',
-                    description: 'Your hedge order has been placed.',
+                    title: translations.title[currency as keyof typeof translations.title] || translations.title.default,
+                    description: translations.description[currency as keyof typeof translations.description] || translations.description.default,
                     variant: 'default',
                   });
                   resolve(undefined);
@@ -286,7 +307,11 @@ const StaticPaymentComponent = memo(({ hedgeData, currency, onSuccess, onClose }
       {loading && !error && (
         <div className="flex flex-col items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-          <p>Processing your payment...</p>
+          <p>{getTranslation(currency, {
+            EN: 'Processing your payment...',
+            PT: 'Processando seu pagamento...',
+            ES: 'Procesando tu pago...'
+          })}</p>
         </div>
       )}
       
