@@ -152,26 +152,19 @@ class PaymentService {
           pending: `${absoluteBaseUrl}/payment/pending`
         },
         
-        // Restrict payment methods - with different settings for BRL vs MXN
+        // Restrict payment methods
         payment_methods: {
-          excluded_payment_methods: currency === 'BRL' 
-            ? [
-                { id: "ticket" },
-                { id: "atm" },
-                { id: "prepaid_card" },
-                { id: "digital_currency" },
-                { id: "digital_wallet" }
-              ]
-            : [
-                // For MXN, use a more permissive configuration
-                { id: "digital_currency" }
-              ],
-          excluded_payment_types: currency === 'BRL'
-            ? [
-                { id: "ticket" },
-                { id: "atm" }
-              ]
-            : []
+          excluded_payment_methods: [
+            { id: "ticket" },
+            { id: "atm" },
+            { id: "prepaid_card" },
+            { id: "digital_currency" },
+            { id: "digital_wallet" }
+          ],
+          excluded_payment_types: [
+            { id: "ticket" },
+            { id: "atm" }
+          ]
         }
       };
       

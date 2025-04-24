@@ -36,12 +36,9 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
   const isPortuguese = i18n.language === 'pt-BR';
   
   // Map our supported locales to Mercado Pago supported locales
-  // This ensures the payment interface language matches the website language and currency
+  // This ensures the payment interface language matches the website language
   const getMercadoPagoLocale = () => {
-    if (isPortuguese) return 'pt-BR';
-    // Return es-MX for Mexican Pesos to ensure proper form validators
-    if (currency === 'MXN') return 'es-MX';
-    return 'en-US';
+    return isPortuguese ? 'pt-BR' : 'en-US';
   };
   
   // Check if payments are enabled when component mounts
@@ -116,13 +113,10 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
             payer: {
               email: 'customer@example.com',
               name: 'Test Customer',
-              // Use appropriate identification type based on currency
-              ...(currency === 'BRL' ? {
-                identification: {
-                  type: 'CPF',
-                  number: '219585466'
-                }
-              } : {}) // Omit identification for MXN to avoid validation errors
+              identification: {
+                type: 'CPF',
+                number: '219585466'
+              }
             },
           }),
         });
@@ -335,8 +329,7 @@ export function MercadoPayoSDKModal({ isOpen, onClose, onSuccess, hedgeData, cur
                     },
                     paymentMethods: {
                       creditCard: 'all',
-                      // Allow all debit cards for MXN but exclude for BRL
-                      debitCard: currency === 'MXN' ? 'all' : [], 
+                      debitCard: [], // Remove debit card payments
                       bankTransfer: 'all',
                       // Only include necessary payment methods
                       mercadoPago: [],
