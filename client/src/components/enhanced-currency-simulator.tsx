@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays } from '@/lib/utils';
@@ -14,7 +15,7 @@ import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 // Use HtmlIframePayment instead of FixedMercadoPaymentModal for better isolation from React's refresh cycle
-import { HtmlIframePayment } from './html-iframe-payment';
+import HtmlIframePayment from './html-iframe-payment';
 
 interface Props {
   showGraph?: boolean;
@@ -556,15 +557,25 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         </Card>
       </TooltipProvider>
       
-      {/* Payment Modal */}
-      <FixedMercadoPaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
-        hedgeData={pendingHedgeData}
-        currency={baseCurrency}
-        simulation={simulation}
-      />
+      {/* Payment Modal - Using HtmlIframePayment for complete isolation from React refresh cycles */}
+      {isPaymentModalOpen && pendingHedgeData && (
+        <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <HtmlIframePayment
+              hedgeData={pendingHedgeData}
+              currency={baseCurrency}
+              onSuccess={handlePaymentSuccess}
+              onClose={() => setIsPaymentModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
