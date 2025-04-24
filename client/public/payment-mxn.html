@@ -131,20 +131,20 @@
       <p>Loading payment interface...</p>
     </div>
     
-    <div id="error-message" class="error" style="display: none;"></div>
+    <div id="error-message" class="error" style="display: block;"></div>
     <div id="success-message" class="success" style="display: none;"></div>
     
-    <div id="mxn-warning" class="warning" style="display: none;">
+    <div id="mxn-warning" class="warning" style="display: block !important; visibility: visible !important;">
       <p>We're experiencing issues with MXN payments. Please use the test payment option below.</p>
     </div>
     
     <div id="payment-brick-container"></div>
     
-    <div id="test-payment" style="display: block !important;">
+    <div id="test-payment" style="display: block !important; visibility: visible !important;">
       <p style="text-align: center; margin-top: 20px; color: #6b7280;">
         <strong>MXN payments are currently limited.</strong> Please use the test option below:
       </p>
-      <button id="test-payment-button" class="button secondary" style="background-color: #f59e0b; color: white; font-weight: bold;">
+      <button id="test-payment-button" class="button secondary" style="display: block !important; margin: 0 auto; background-color: #f59e0b; color: white; font-weight: bold;">
         Test: Continue without payment
       </button>
     </div>
@@ -167,7 +167,15 @@
     // Always show test payment button for MXN payments and hide loading immediately
     loadingEl.style.display = 'none';
     testPaymentEl.style.display = 'block';
+    testPaymentEl.style.cssText = 'display: block !important; visibility: visible !important;';
     mxnWarningEl.style.display = 'block';
+    
+    // Ensure the test button is visible
+    const testPaymentButton = document.getElementById('test-payment-button');
+    if (testPaymentButton) {
+      testPaymentButton.style.display = 'block';
+      testPaymentButton.style.cssText = 'display: block !important; margin: 0 auto;';
+    }
     
     console.log('MXN payment page loaded - test payment button displayed');
     
@@ -232,7 +240,10 @@
       loadingEl.style.display = 'none';
       errorMessageEl.style.display = 'block';
       errorMessageEl.textContent = message;
+      // Ensure the test payment section is visible
       testPaymentEl.style.display = 'block';
+      testPaymentEl.style.cssText = 'display: block !important';
+      document.getElementById('test-payment-button').style.display = 'block';
     }
     
     // Show success message
@@ -248,10 +259,19 @@
     
     // Create payment preference
     async function createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, currency) {
-      // For MXN, immediately hide loading and show the test button more prominently
+      // For ANY currency, ensure test payment button is visible
+      testPaymentEl.style.display = 'block';
+      testPaymentEl.style.cssText = 'display: block !important; visibility: visible !important;';
+      document.getElementById('test-payment-button').style.display = 'block';
+      document.getElementById('test-payment-button').style.cssText = 'display: block !important; margin: 0 auto;';
+      
+      // For MXN, show error message and skip payment processing
       if (currency === 'MXN') {
         loadingEl.style.display = 'none';
-        testPaymentEl.style.display = 'block';
+        errorMessageEl.style.display = 'block';
+        errorMessageEl.textContent = 'MXN payments are currently limited. Please use the test option below.';
+        mxnWarningEl.style.display = 'block';
+        mxnWarningEl.style.cssText = 'display: block !important;';
         console.log('MXN currency detected - showing test payment button');
         return; // Skip payment processing for MXN entirely
       }
@@ -295,6 +315,11 @@
       } catch (error) {
         console.error('Error creating payment preference:', error);
         showError('Failed to initialize payment. Please use the test option to continue.');
+        
+        // Ensure test payment button is visible even after error
+        testPaymentEl.style.display = 'block';
+        testPaymentEl.style.cssText = 'display: block !important; visibility: visible !important;';
+        document.getElementById('test-payment-button').style.display = 'block';
       }
     }
     
@@ -336,6 +361,12 @@
       } catch (error) {
         console.error('Error initializing MercadoPago:', error);
         showError('Failed to initialize payment system: ' + (error.message || 'Unknown error'));
+        
+        // Ensure test payment button is visible even after MercadoPago initialization error
+        testPaymentEl.style.display = 'block';
+        testPaymentEl.style.cssText = 'display: block !important; visibility: visible !important;';
+        document.getElementById('test-payment-button').style.display = 'block';
+        document.getElementById('test-payment-button').style.cssText = 'display: block !important; margin: 0 auto;';
       }
     }
     
