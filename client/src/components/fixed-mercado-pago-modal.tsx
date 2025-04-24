@@ -442,11 +442,12 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                         const left = window.screenX + (window.outerWidth - width) / 2;
                         const top = window.screenY + (window.outerHeight - height) / 2;
                         
-                        // Add the locale to the checkout URL for proper language display
+                        // Add the locale and currency to the checkout URL for proper language display
                         const localeParam = new URL(checkoutUrl);
                         // Set the locale based on currency
                         const locale = getLocaleForCurrency();
                         localeParam.searchParams.set('locale', locale);
+                        localeParam.searchParams.set('currency', currency);
                         console.log(`[MercadoPaymentModal] Setting locale to ${locale} for currency: ${currency}`);
                         
                         window.open(

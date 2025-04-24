@@ -33,7 +33,7 @@ export default function MercadoIframe({ hedgeData, currency, onSuccess, onClose 
     
     async function createPaymentPreference() {
       try {
-        console.log('[MercadoIframe] Creating payment preference');
+        console.log(`[MercadoIframe] Creating payment preference for currency: ${currency}`);
         
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
@@ -48,8 +48,8 @@ export default function MercadoIframe({ hedgeData, currency, onSuccess, onClose 
               email: 'customer@example.com',
               name: 'Test Customer',
               identification: {
-                type: 'CPF',
-                number: '219585466'
+                type: currency === 'MXN' ? 'RFC' : 'CPF',
+                number: currency === 'MXN' ? 'XAXX010101000' : '219585466'
               }
             },
           }),
