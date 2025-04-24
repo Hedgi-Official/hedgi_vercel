@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
-// Use HtmlIframePayment instead of FixedMercadoPaymentModal for better isolation from React's refresh cycle
-import HtmlIframePayment from './html-iframe-payment';
+// Use StandaloneWindowPayment for complete isolation from React's refresh cycle
+import StandaloneWindowPayment from './standalone-window-payment';
 
 interface Props {
   showGraph?: boolean;
@@ -557,7 +557,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         </Card>
       </TooltipProvider>
       
-      {/* Payment Modal - Using HtmlIframePayment for complete isolation from React refresh cycles */}
+      {/* Payment Modal - Using StandaloneWindowPayment for complete isolation from React refresh cycles */}
       {isPaymentModalOpen && pendingHedgeData && (
         <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
           <DialogContent className="sm:max-w-[600px]">
@@ -565,11 +565,14 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
               <DialogTitle>
                 {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
               </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('Uma nova janela será aberta para o processamento do pagamento. Mantenha-a aberta até concluir o pagamento.', 
+                   'A new window will open for payment processing. Keep it open until you complete the payment.')}
+              </p>
             </DialogHeader>
             
-            <HtmlIframePayment
+            <StandaloneWindowPayment
               hedgeData={pendingHedgeData}
-              currency={baseCurrency}
               onSuccess={handlePaymentSuccess}
               onClose={() => setIsPaymentModalOpen(false)}
             />
