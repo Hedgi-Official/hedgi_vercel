@@ -220,11 +220,16 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                   onSuccess(hedgeData);
                   
                   // Show success toast
-                  const isPortuguese = shouldUsePortuguese();
-                  const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
-                  const successDesc = isPortuguese
-                    ? 'Seu pedido de hedge foi realizado com sucesso.'
-                    : 'Your hedge order has been placed successfully.';
+                  const successTitle = t(
+                    'Pagamento bem-sucedido', 
+                    'Payment successful',
+                    'Pago exitoso'
+                  );
+                  const successDesc = t(
+                    'Seu pedido de hedge foi realizado com sucesso.',
+                    'Your hedge order has been placed successfully.',
+                    'Tu orden de cobertura ha sido colocada con éxito.'
+                  );
                     
                   toast({
                     title: successTitle,
@@ -237,7 +242,13 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 }
               } else if (messageData.type === 'PAYMENT_FAILED') {
                 console.log('[MercadoPaymentModal] Received payment failure message:', messageData);
-                setError('Payment failed. Please try again.');
+                // Localized error message
+                const errorMessage = t(
+                  'Falha no pagamento. Por favor, tente novamente.',
+                  'Payment failed. Please try again.',
+                  'Pago fallido. Por favor, inténtalo de nuevo.'
+                );
+                setError(errorMessage);
                 setLoading(false);
               } else if (messageData.type === 'PAYMENT_PENDING') {
                 console.log('[MercadoPaymentModal] Received payment pending message:', messageData);
@@ -246,11 +257,16 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                   onSuccess(hedgeData);
                   
                   // Show pending toast
-                  const isPortuguese = shouldUsePortuguese();
-                  const pendingTitle = isPortuguese ? 'Pagamento pendente' : 'Payment pending';
-                  const pendingDesc = isPortuguese
-                    ? 'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.'
-                    : 'Your payment is being processed. Your hedge will be placed when confirmed.';
+                  const pendingTitle = t(
+                    'Pagamento pendente', 
+                    'Payment pending',
+                    'Pago pendiente'
+                  );
+                  const pendingDesc = t(
+                    'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.',
+                    'Your payment is being processed. Your hedge will be placed when confirmed.',
+                    'Tu pago está siendo procesado. La cobertura se colocará cuando se confirme.'
+                  );
                     
                   toast({
                     title: pendingTitle,
@@ -295,8 +311,10 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   }, [isOpen, paymentEnabled, hedgeData, currency, simulation, onSuccess, onClose]);
 
   // Translation helper function
-  const t = (pt: string, en: string) => {
-    return shouldUsePortuguese() ? pt : en;
+  const t = (pt: string, en: string, es?: string) => {
+    if (shouldUsePortuguese()) return pt;
+    if (shouldUseSpanish() && es) return es;
+    return en;
   };
 
   return (
@@ -304,27 +322,31 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
+            {t(
+              'Complete o pagamento para realizar o hedge', 
+              'Complete Payment to Place Hedge',
+              'Completa el pago para colocar la cobertura'
+            )}
           </DialogTitle>
         </DialogHeader>
         
         {loading && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p>{t('Processando seu pagamento...', 'Processing your payment...')}</p>
+            <p>{t('Processando seu pagamento...', 'Processing your payment...', 'Procesando tu pago...')}</p>
           </div>
         )}
         
         {error && (
           <div className="bg-destructive/10 text-destructive p-4 rounded-md my-4">
-            <p className="font-semibold">{t('Erro', 'Error')}</p>
+            <p className="font-semibold">{t('Erro', 'Error', 'Error')}</p>
             <p>{error}</p>
             <Button 
               variant="outline" 
               className="mt-2" 
               onClick={onClose}
             >
-              {t('Fechar', 'Close')}
+              {t('Fechar', 'Close', 'Cerrar')}
             </Button>
           </div>
         )}
@@ -335,18 +357,18 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               <>
                 {/* Payment summary */}
                 <div className="bg-muted p-3 rounded-md text-xs mb-3">
-                  <p><strong>{t('Detalhes do Pagamento:', 'Payment Details:')}</strong></p>
-                  <p>{t('Moeda', 'Currency')}: {currency}</p>
+                  <p><strong>{t('Detalhes do Pagamento:', 'Payment Details:', 'Detalles del Pago:')}</strong></p>
+                  <p>{t('Moeda', 'Currency', 'Moneda')}: {currency}</p>
                   {hedgeData && (
                     <>
-                      <p>{t('Valor do Hedge', 'Hedge Amount')}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
+                      <p>{t('Valor do Hedge', 'Hedge Amount', 'Monto de Cobertura')}: {Math.abs(Number(hedgeData.amount)).toLocaleString()}</p>
                       
                       {/* Get the fees from the simulation result if available */}
                       {simulation ? (
                         <>
-                          <p>{t('Taxas', 'Fees')}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
-                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
-                          <p>{t('Pagamento Total', 'Total Payment')}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
+                          <p>{t('Taxas', 'Fees', 'Comisiones')}: {simulation.costDetails.hedgeCost.toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin', 'Margen')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment', 'Pago Total')}: {(simulation.costDetails.hedgeCost + (hedgeData.margin ? Number(hedgeData.margin) : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {currency}</p>
                         </>
                       ) : (
                         <>
@@ -427,10 +449,15 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                       onSuccess(hedgeData);
                       
                       toast({
-                        title: t('Pagamento de teste processado', 'Test payment processed'),
+                        title: t(
+                          'Pagamento de teste processado', 
+                          'Test payment processed',
+                          'Pago de prueba procesado'
+                        ),
                         description: t(
                           'Seu pedido de hedge foi realizado com sucesso.', 
-                          'Your hedge order has been placed successfully.'
+                          'Your hedge order has been placed successfully.',
+                          'Tu orden de cobertura ha sido colocada con éxito.'
                         ),
                         variant: 'default',
                       });
