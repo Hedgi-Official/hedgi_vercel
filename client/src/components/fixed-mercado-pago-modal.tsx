@@ -52,8 +52,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     return getUserLanguage().startsWith('pt');
   };
   
-  // Check if Spanish should be used
+  // Check if Spanish should be used - prioritize currency over browser language
   const shouldUseSpanish = () => {
+    // For MXN currency transactions, always use Spanish
+    if (currency === 'MXN') return true;
+    // Fall back to browser language if currency doesn't dictate the language
     return getUserLanguage().startsWith('es');
   };
   
@@ -373,9 +376,9 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                       ) : (
                         <>
                           {/* Fallback for when simulation is not available */}
-                          <p>{t('Taxas', 'Fees')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
-                          <p>{t('Margem', 'Margin')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
-                          <p>{t('Pagamento Total', 'Total Payment')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
+                          <p>{t('Taxas', 'Fees', 'Comisiones')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+                          <p>{t('Margem', 'Margin', 'Margen')}: {hedgeData.margin ? Number(hedgeData.margin).toFixed(2) : (Math.abs(Number(hedgeData.amount)) * 0.0025 * 2).toFixed(2)} {currency}</p>
+                          <p>{t('Pagamento Total', 'Total Payment', 'Pago Total')}: {(Math.abs(Number(hedgeData.amount)) * 0.0025 + (hedgeData.margin ? Number(hedgeData.margin) : Math.abs(Number(hedgeData.amount)) * 0.0025 * 2)).toFixed(2)} {currency}</p>
                         </>
                       )}
                     </>
@@ -390,13 +393,14 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 >
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium mb-4">
-                      {t('Complete o seu pagamento', 'Complete Your Payment')}
+                      {t('Complete o seu pagamento', 'Complete Your Payment', 'Completa tu pago')}
                     </h3>
                     
                     <p className="text-muted-foreground mb-6">
                       {t(
                         'Clique no botão abaixo para abrir uma janela de pagamento segura. Após concluir o pagamento, seu hedge será colocado automaticamente.',
-                        'Click the button below to open a secure payment window. After completing your payment, your hedge will be automatically placed.'
+                        'Click the button below to open a secure payment window. After completing your payment, your hedge will be automatically placed.',
+                        'Haz clic en el botón de abajo para abrir una ventana de pago segura. Después de completar tu pago, tu cobertura se colocará automáticamente.'
                       )}
                     </p>
                     
@@ -427,13 +431,14 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                         );
                       }}
                     >
-                      {t('Abrir Janela de Pagamento', 'Open Payment Window')}
+                      {t('Abrir Janela de Pagamento', 'Open Payment Window', 'Abrir Ventana de Pago')}
                     </Button>
                     
                     <div className="text-xs text-muted-foreground text-center">
                       {t(
                         'Você será redirecionado para a plataforma de pagamento segura do Mercado Pago',
-                        'You\'ll be redirected to Mercado Pago\'s secure payment platform'
+                        'You\'ll be redirected to Mercado Pago\'s secure payment platform',
+                        'Serás redirigido a la plataforma de pago segura de Mercado Pago'
                       )}
                     </div>
                   </div>
@@ -465,7 +470,7 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                     }
                   }}
                 >
-                  {t('Teste: Continuar sem pagamento', 'Test: Continue without payment')}
+                  {t('Teste: Continuar sem pagamento', 'Test: Continue without payment', 'Prueba: Continuar sin pago')}
                 </Button>
               </>
             ) : (
