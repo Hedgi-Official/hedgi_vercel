@@ -15,9 +15,9 @@ import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 // Use StandaloneWindowPayment for complete isolation from React's refresh cycle
+// This opens a standalone HTML file in a new window which handles payment processing
+// independently from React's refresh cycle, ensuring consistent display of payment UI
 import StandaloneWindowPayment from './standalone-window-payment';
-// Use DirectTestPayment for MXN currency to bypass window issues completely
-import DirectTestPayment from './direct-test-payment';
 
 interface Props {
   showGraph?: boolean;
