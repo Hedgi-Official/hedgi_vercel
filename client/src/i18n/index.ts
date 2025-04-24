@@ -227,12 +227,126 @@ const ptBR = {
   }
 };
 
+// Mexican Spanish translations
+const esMX = {
+  translation: {
+    welcome: 'Bienvenido a Hedgi',
+    description: 'Tu plataforma integral de cobertura cambiaria',
+    'Get Started': 'Comenzar',
+    'Start Hedging Now': 'Comienza a Protegerte Ahora',
+    'Protect the value': 'Protege el valor',
+    'of your': 'de tu',
+    'Professional currency hedging made simple': 'Cobertura cambiaria profesional simplificada',
+    'Live Exchange Rates': 'Tipos de Cambio en Tiempo Real',
+    'Active Hedges': 'Coberturas Activas',
+    'New Hedge': 'Nueva Cobertura',
+    'No active hedges': 'No hay coberturas activas',
+    'Welcome': 'Bienvenido',
+    'Logout': 'Cerrar Sesión',
+    'Home': 'Inicio',
+    auth: {
+      'Sign In': 'Iniciar Sesión',
+      'Sign Up': 'Registrarse',
+      'Email': 'Correo electrónico',
+      'Password': 'Contraseña',
+      'Username': 'Nombre de usuario',
+      'Enter your email': 'Ingresa tu correo electrónico',
+      'Enter your password': 'Ingresa tu contraseña',
+      'Enter your username': 'Ingresa tu nombre de usuario',
+      'or': 'o',
+      'Forgot password?': '¿Olvidaste tu contraseña?',
+      'Already have an account?': '¿Ya tienes una cuenta?',
+      'Don\'t have an account?': '¿No tienes una cuenta?',
+      'Welcome back': 'Bienvenido de nuevo',
+      'Create your account': 'Crea tu cuenta',
+      'Sign in to your account': 'Inicia sesión en tu cuenta',
+      'Start protecting your currency today': 'Comienza a proteger tu moneda hoy',
+      'Date of Birth': 'Fecha de Nacimiento',
+      'Phone Number (Optional)': 'Número de Teléfono (Opcional)',
+      'Confirm Password': 'Confirmar Contraseña',
+      'Enter username': 'Ingresa tu nombre de usuario',
+      'Select your birth date': 'Selecciona tu fecha de nacimiento'
+    },
+    currencyPairs: {
+      'USDBRL': 'USD/BRL - Dólar Estadounidense/Real Brasileño',
+      'EURUSD': 'EUR/USD - Euro/Dólar Estadounidense',
+      'USDMXN': 'USD/MXN - Dólar Estadounidense/Peso Mexicano',
+      'BRLUSD': 'BRL/USD - Real Brasileño/Dólar Estadounidense',
+      'BRLEUR': 'BRL/EUR - Real Brasileño/Euro',
+      'BRLMXN': 'BRL/MXN - Real Brasileño/Peso Mexicano',
+      'MXNUSD': 'MXN/USD - Peso Mexicano/Dólar Estadounidense',
+      'MXNEUR': 'MXN/EUR - Peso Mexicano/Euro',
+      'MXNBRL': 'MXN/BRL - Peso Mexicano/Real Brasileño'
+    },
+    simulator: {
+      title: 'Simulador de Cobertura Cambiaria',
+      targetCurrency: 'Moneda Objetivo',
+      baseCurrency: 'Moneda Base',
+      tradeDirection: 'Dirección de Operación',
+      buy: 'Comprar',
+      sell: 'Vender',
+      buyHelp: 'Realizaré un pago en',
+      sellHelp: 'Recibiré y convertiré a',
+      amount: 'Monto en',
+      amountField: 'Monto a cubrir',
+      amountHelp: 'Ingresa el monto en USD que deseas proteger. Este es el valor total de tu transacción futura que deseas cubrir contra fluctuaciones cambiarias.\n\nPor ejemplo, si necesitas realizar un pago de $50,000 USD en 3 meses, ingresa 50000 aquí.',
+      duration: 'Duración',
+      durationLabel: 'Duración: {days} días',
+      durationHelp: 'El número de días hasta que ocurra tu transacción futura. Esto determina por cuánto tiempo estará activa tu cobertura cambiaria.\n\nDuraciones más largas típicamente significan costos de cobertura más altos, pero proporcionan protección por un período más largo.',
+      days: 'días',
+      calculateCost: 'Calcular Costo de Cobertura',
+      currentRate: 'Tipo de Cambio Actual',
+      breakEvenRate: 'Tipo de Cambio de Equilibrio',
+      hedgeDetails: 'Detalles de la Cobertura',
+      totalCost: 'Costo Total',
+      businessDays: 'Días Hábiles',
+      placeHedge: 'Realizar Cobertura',
+      margin: 'Margen',
+      marginHelp: 'El margen es un monto adicional que pagas para mantener tu posición abierta en caso de movimientos adversos del mercado. Si no se consume, se te devuelve después de que se cierra tu cobertura.\n\nEl margen predeterminado se establece en 2 veces el costo de la cobertura para proporcionar protección suficiente para tu posición.',
+      willMakePayment: 'Realizaré un pago en',
+      willReceive: 'Recibiré',
+      convertTo: 'y convertiré a',
+      inFuture: 'en el futuro',
+      enterAmount: 'Ingresa el monto',
+      selectDuration: 'Selecciona la duración: {days} días',
+      lastDays: 'Últimos {days} Días del Historial de Tipo de Cambio',
+      targetCurrencyHelp: 'Esta es la moneda que deseas cubrir. Por ejemplo, si te preocupa que el USD se vuelva más caro, selecciona USD aquí.',
+      baseCurrencyHelp: 'Esta es tu moneda doméstica o preferida. Por ejemplo, si estás en México y te preocupa que el USD se vuelva más caro en relación con el MXN, elige MXN como tu moneda base.',
+      tradeDirectionHelp: 'Comprar USD: Selecciona esto si necesitarás comprar USD en el futuro y quieres protegerte contra su encarecimiento.\n\nVender USD: Selecciona esto si recibirás USD en el futuro y quieres protegerte contra su devaluación.',
+      notifications: {
+        hedgeCreated: 'Cobertura Creada',
+        hedgeCreatedDesc: 'Tu posición de cobertura ha sido creada exitosamente.',
+        hedgeDeleted: 'Cobertura Eliminada',
+        hedgeDeletedDesc: 'La posición de cobertura ha sido eliminada.',
+        error: 'Error'
+      },
+      status: {
+        active: 'Activa',
+        completed: 'Completada',
+        cancelled: 'Cancelada'
+      },
+      hedgeTitles: {
+        bought: 'Compró',
+        sold: 'Vendió'
+      },
+      tradeOrderNumber: 'Orden de Operación'
+    },
+    'What is a Hedge?': '¿Qué es una Cobertura?',
+    'What is Hedging?': '¿Qué es la Cobertura Cambiaria?',
+    'Using Hedgi': 'Usando Hedgi',
+    'About Us': 'Acerca de Nosotros',
+    'Page Under Construction': 'Página En Construcción',
+    'Coming Soon': 'Esta página está en construcción. Por favor, vuelve pronto.'
+  }
+};
+
 i18n
   .use(initReactI18next)
   .init({
     resources: {
       'en-US': enUS,
-      'pt-BR': ptBR
+      'pt-BR': ptBR,
+      'es-MX': esMX
     },
     lng: 'en-US', // default language
     fallbackLng: 'en-US',
