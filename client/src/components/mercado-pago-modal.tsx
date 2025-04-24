@@ -4,7 +4,6 @@ import { Hedge } from '@db/schema';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { getIdentificationForCurrency, getLocaleForCurrency } from '../utils/payment-utils';
 
 // Define the Mercado Pago types based on their SDK
 declare global {
@@ -115,7 +114,10 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
             payer: {
               email: 'customer@example.com',
               name: 'Test Customer',
-              identification: getIdentificationForCurrency(currency)
+              identification: {
+                type: 'CPF',
+                number: '219585466'
+              }
             },
           }),
         });
@@ -189,7 +191,7 @@ export function MercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData, cur
       
       // Create a new MercadoPago instance
       const mp = new window.MercadoPago(publicKey, {
-        locale: getLocaleForCurrency(currency)
+        locale: currency === 'BRL' ? 'pt-BR' : 'es-MX'
       });
       
       const bricksBuilder = mp.bricks();
