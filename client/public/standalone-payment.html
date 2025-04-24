@@ -143,6 +143,14 @@
   </div>
 
   <script>
+    // DOM Elements - Define them at the top so they're available throughout the script
+    const loadingEl = document.getElementById('loading');
+    const errorMessageEl = document.getElementById('error-message');
+    const successMessageEl = document.getElementById('success-message');
+    const testPaymentEl = document.getElementById('test-payment');
+    const closeButtonEl = document.getElementById('close-button');
+    const paymentBrickContainer = document.getElementById('payment-brick-container');
+    
     // Store all hedge data from URL parameters
     const hedgeData = {};
     
@@ -161,6 +169,8 @@
     // Validate required parameters
     if (!amount || !baseCurrency || !targetCurrency || !rate || !duration || !tradeDirection) {
       showError('Missing required hedge parameters. Please try again.');
+      // Show test payment option immediately when parameters are missing
+      testPaymentEl.style.display = 'block';
     } else {
       // Store hedge data in the object
       hedgeData.amount = amount;
@@ -191,14 +201,6 @@
       // Initialize payment creation
       createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, baseCurrency);
     }
-    
-    // Elements
-    const loadingEl = document.getElementById('loading');
-    const errorMessageEl = document.getElementById('error-message');
-    const successMessageEl = document.getElementById('success-message');
-    const testPaymentEl = document.getElementById('test-payment');
-    const closeButtonEl = document.getElementById('close-button');
-    const paymentBrickContainer = document.getElementById('payment-brick-container');
     
     // Show error and test payment option
     function showError(message) {
