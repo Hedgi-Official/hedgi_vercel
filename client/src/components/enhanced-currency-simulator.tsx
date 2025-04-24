@@ -16,6 +16,8 @@ import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 // Use StandaloneWindowPayment for complete isolation from React's refresh cycle
 import StandaloneWindowPayment from './standalone-window-payment';
+// Use DirectTestPayment for MXN currency to bypass window issues completely
+import DirectTestPayment from './direct-test-payment';
 
 interface Props {
   showGraph?: boolean;
