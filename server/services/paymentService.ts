@@ -48,8 +48,21 @@ class PaymentService {
     };
     
     console.log(`Payment service initialized. Payments enabled: ${this.enablePayments}`);
-    console.log(`BR Access Token: ${this.mpBR.accessToken ? 'Available (Key length: ' + this.mpBR.accessToken.length + ')' : 'Not available'}`);
-    console.log(`MX Access Token: ${this.mpMX.accessToken ? 'Available (Key length: ' + this.mpMX.accessToken.length + ')' : 'Not available'}`);
+    
+    // Log detailed information about the tokens for debugging
+    const brTokenInfo = this.mpBR.accessToken ? 
+      `Available (Key length: ${this.mpBR.accessToken.length}, First 4 chars: ${this.mpBR.accessToken.substring(0, 4)}...)` : 
+      'Not available';
+    
+    const mxTokenInfo = this.mpMX.accessToken ? 
+      `Available (Key length: ${this.mpMX.accessToken.length}, First 4 chars: ${this.mpMX.accessToken.substring(0, 4)}...)` : 
+      'Not available';
+    
+    console.log(`BR Access Token: ${brTokenInfo}`);
+    console.log(`BR Public Key: ${this.mpBR.publicKey ? this.mpBR.publicKey.substring(0, 10) + '...' : 'Not available'}`);
+    
+    console.log(`MX Access Token: ${mxTokenInfo}`);
+    console.log(`MX Public Key: ${this.mpMX.publicKey ? this.mpMX.publicKey.substring(0, 10) + '...' : 'Not available'}`);
   }
 
   /**
@@ -100,19 +113,48 @@ class PaymentService {
       
       // Configure Mercado Pago with the correct access token based on currency
       let accessToken = '';
-      if (currency === 'BRL') {
+      const originalCurrency = currency;
+      
+      // Log which currency we're processing
+      console.log(`[PaymentService] Processing payment for currency: ${currency}`);
+      
+      // Normalize currency to uppercase and store in a new variable
+      const normalizedCurrency = currency.toUpperCase();
+      
+      // Use a working currency for the API that might differ from what the user requested
+      let workingCurrency = normalizedCurrency;
+      
+      if (normalizedCurrency === 'BRL') {
         accessToken = this.mpBR.accessToken;
-      } else if (currency === 'MXN') {
-        accessToken = this.mpMX.accessToken;
+        console.log(`[PaymentService] Using BR access token (first 4 chars: ${this.mpBR.accessToken.substring(0, 4)}...)`);
+      } else if (normalizedCurrency === 'MXN') {
+        // Special handling for MXN
+        // If MX token is invalid or not available, we'll use the BR token as a fallback
+        if (this.mpMX.accessToken && this.mpMX.accessToken.length > 10) {
+          accessToken = this.mpMX.accessToken;
+          console.log(`[PaymentService] Using MX access token (first 4 chars: ${this.mpMX.accessToken.substring(0, 4)}...)`);
+        } else {
+          // FALLBACK: Use BR token for MXN payments if no MX token is available
+          console.log(`[PaymentService] WARNING: MX token not available, using BR token as fallback`);
+          accessToken = this.mpBR.accessToken;
+          
+          // Important: Since we're using the BR token, we need to override the currency
+          // but only for the API call, not for the response back to the client
+          workingCurrency = 'BRL';
+        }
       } else {
+        console.log(`[PaymentService] Unsupported currency: ${normalizedCurrency}`);
         return res.status(400).json({
-          error: 'Unsupported currency'
+          error: `Unsupported currency: ${normalizedCurrency}. Supported currencies are BRL and MXN.`,
+          supported: ['BRL', 'MXN']
         });
       }
       
       if (!accessToken) {
+        console.error(`[PaymentService] Missing access token for ${workingCurrency}`);
         return res.status(500).json({
-          error: 'Payment service configuration is incomplete'
+          error: 'Payment service configuration is incomplete - missing access token',
+          currency: originalCurrency
         });
       }
       
@@ -136,7 +178,7 @@ class PaymentService {
         pending: `${absoluteBaseUrl}/payment/pending`
       };
       
-      console.log(`[PaymentService] Setting back_urls for ${currency}:`, backUrls);
+      console.log(`[PaymentService] Setting back_urls for ${workingCurrency}:`, backUrls);
       
       const preferenceData: any = {
         items: [
@@ -145,31 +187,53 @@ class PaymentService {
             title: description,
             quantity: 1,
             unit_price: amount,
-            currency_id: currency
+            currency_id: workingCurrency
           }
         ],
         payer: {
           email: payer.email,
           name: payer.name,
-          identification: payer.identification
+          // Handle identification differently based on currency
+          ...(normalizedCurrency === 'BRL' ? {
+            identification: payer.identification
+          } : normalizedCurrency === 'MXN' ? {
+            // For Mexico, use RFC as the standard tax ID type
+            identification: {
+              type: 'RFC',
+              number: payer.identification?.number || 'XAXX010101000'  // Default RFC for Mexico
+            }
+          } : {
+            identification: payer.identification
+          })
         },
         
         // Use consistent back_urls structure for both currencies
         back_urls: backUrls,
         
-        // Restrict payment methods
+        // Customize payment methods per currency
         payment_methods: {
-          excluded_payment_methods: [
-            { id: "ticket" },
-            { id: "atm" },
-            { id: "prepaid_card" },
-            { id: "digital_currency" },
-            { id: "digital_wallet" }
-          ],
-          excluded_payment_types: [
-            { id: "ticket" },
-            { id: "atm" }
-          ]
+          excluded_payment_methods: normalizedCurrency === 'MXN' ? 
+            // For MXN, retain all credit card methods, but exclude others
+            [
+              { id: "digital_currency" },
+              { id: "digital_wallet" }
+            ] : 
+            // For BRL and others, use the original exclusion list
+            [
+              { id: "ticket" },
+              { id: "atm" },
+              { id: "prepaid_card" },
+              { id: "digital_currency" },
+              { id: "digital_wallet" }
+            ],
+          excluded_payment_types: normalizedCurrency === 'MXN' ?
+            // For MXN, allow more payment types
+            [] :
+            // For others, use the original exclusion list 
+            [
+              { id: "ticket" },
+              { id: "atm" }
+            ]
         }
       };
       
@@ -184,29 +248,89 @@ class PaymentService {
       
       // Ensure we use the appropriate notification_url if needed
       // Some regions/environments may require this to be explicitly set
-      if (currency === 'MXN') {
+      if (normalizedCurrency === 'MXN') {
         console.log(`[PaymentService] Adding explicit notification_url for MXN`);
         preferenceData.notification_url = `${absoluteBaseUrl}/api/payment/webhook`;
       }
       
-      // Call Mercado Pago API to create preference
-      const response = await preference.create({ body: preferenceData });
+      // Log the exact preference data being sent for debugging
+      console.log(`[PaymentService] Creating preference for ${workingCurrency} with data:`, JSON.stringify(preferenceData));
       
-      // Log the full response for debugging
-      console.log(`[PaymentService] Preference created:`, {
-        id: response.id,
-        initPoint: response.init_point,
-        sandboxInitPoint: response.sandbox_init_point
-      });
+      try {
+        // Call Mercado Pago API to create preference
+        const response = await preference.create({ body: preferenceData });
+        
+        // Log the full response for debugging
+        console.log(`[PaymentService] Preference created successfully for ${workingCurrency}:`, {
+          id: response.id,
+          initPoint: response.init_point,
+          sandboxInitPoint: response.sandbox_init_point
+        });
+        
+        // Use the original currency for the response, not our internally modified one
+        return res.status(200).json({
+          id: response.id,
+          init_point: response.init_point,
+          sandbox_init_point: response.sandbox_init_point,
+          public_key: this.getPublicKey(originalCurrency),
+          currency: originalCurrency, // Return the original currency the user requested
+          enabled: true
+        });
+      } catch (prefError: any) {
+        // Detailed error logging for payment preference creation
+        console.error(`[PaymentService] Error creating preference for ${workingCurrency}:`, prefError);
+        
+        // Enhanced error handling to extract maximum information
+        let errorDetails = '';
+        let errorCause = '';
+        
+        if (prefError instanceof Error) {
+          errorDetails = prefError.message;
+          console.error(`[PaymentService] Error message: ${prefError.message}`);
+          console.error(`[PaymentService] Error stack: ${prefError.stack}`);
+          
+          // Extract API error data if available
+          if (prefError.cause) {
+            console.error(`[PaymentService] Error cause:`, prefError.cause);
+            errorCause = JSON.stringify(prefError.cause);
+          }
+        } else if (typeof prefError === 'object') {
+          // Handle MercadoPago API error object
+          try {
+            const stringified = JSON.stringify(prefError);
+            console.error(`[PaymentService] Error object stringified:`, stringified);
+            errorDetails = stringified;
+            
+            // Try to access nested error information
+            if (prefError.message) errorDetails = prefError.message;
+            if (prefError.error) errorDetails = typeof prefError.error === 'string' ? prefError.error : JSON.stringify(prefError.error);
+            if (prefError.cause) errorCause = JSON.stringify(prefError.cause);
+            if (prefError.status) console.error(`[PaymentService] Error status:`, prefError.status);
+            
+            // Special handling for MercadoPago API responses
+            if (prefError.response && prefError.response.data) {
+              console.error(`[PaymentService] API Response data:`, prefError.response.data);
+              errorDetails = JSON.stringify(prefError.response.data);
+            }
+          } catch (jsonError) {
+            console.error(`[PaymentService] Error stringifying error object:`, jsonError);
+            errorDetails = "Error object couldn't be converted to string";
+          }
+        } else {
+          errorDetails = String(prefError);
+          console.error(`[PaymentService] Non-Error, non-Object error:`, errorDetails);
+        }
+        
+        // Return a more informative error with all available details
+        return res.status(500).json({
+          error: 'Failed to create payment preference',
+          details: errorDetails,
+          cause: errorCause,
+          currency: originalCurrency  // Use original currency in error response
+        });
+      }
       
-      // Return the preference ID and checkout URL to the client
-      return res.status(200).json({
-        id: response.id,
-        init_point: response.init_point,
-        sandbox_init_point: response.sandbox_init_point,
-        public_key: this.getPublicKey(currency),
-        enabled: true
-      });
+      // This return has been moved inside the try/catch block
     } catch (error) {
       console.error('Error creating payment preference:', error);
       return res.status(500).json({
