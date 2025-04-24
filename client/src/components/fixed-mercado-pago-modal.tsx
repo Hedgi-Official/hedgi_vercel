@@ -51,6 +51,21 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   const shouldUsePortuguese = () => {
     return getUserLanguage().startsWith('pt');
   };
+  
+  // Check if Spanish should be used
+  const shouldUseSpanish = () => {
+    return getUserLanguage().startsWith('es');
+  };
+  
+  // Get the appropriate Mercado Pago locale based on currency and language
+  const getMercadoPagoLocale = () => {
+    if (currency === 'BRL' || shouldUsePortuguese()) {
+      return 'pt-BR';
+    } else if (currency === 'MXN' || shouldUseSpanish()) {
+      return 'es-MX';
+    }
+    return 'en'; // Default fallback
+  };
 
   // Check if payments are enabled when component mounts
   useEffect(() => {
@@ -169,8 +184,10 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
               email: 'customer@example.com',
               name: 'Test Customer',
               identification: {
-                type: 'CPF',
-                number: '219585466'
+                // Use the correct identification type based on currency
+                type: currency === 'BRL' ? 'CPF' : 'RFC',
+                // Use a different test number for each currency
+                number: currency === 'BRL' ? '219585466' : 'XAXX010101000'
               }
             },
           }),
@@ -207,12 +224,22 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 if (hedgeData) {
                   onSuccess(hedgeData);
                   
-                  // Show success toast
+                  // Show success toast with multi-language support
                   const isPortuguese = shouldUsePortuguese();
-                  const successTitle = isPortuguese ? 'Pagamento bem-sucedido' : 'Payment successful';
-                  const successDesc = isPortuguese
-                    ? 'Seu pedido de hedge foi realizado com sucesso.'
-                    : 'Your hedge order has been placed successfully.';
+                  const isSpanish = shouldUseSpanish();
+                  
+                  let successTitle, successDesc;
+                  
+                  if (isPortuguese) {
+                    successTitle = 'Pagamento bem-sucedido';
+                    successDesc = 'Seu pedido de hedge foi realizado com sucesso.';
+                  } else if (isSpanish) {
+                    successTitle = 'Pago exitoso';
+                    successDesc = 'Su orden de cobertura ha sido realizada con éxito.';
+                  } else {
+                    successTitle = 'Payment successful';
+                    successDesc = 'Your hedge order has been placed successfully.';
+                  }
                     
                   toast({
                     title: successTitle,
@@ -233,12 +260,22 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
                 if (hedgeData) {
                   onSuccess(hedgeData);
                   
-                  // Show pending toast
+                  // Show pending toast with multi-language support
                   const isPortuguese = shouldUsePortuguese();
-                  const pendingTitle = isPortuguese ? 'Pagamento pendente' : 'Payment pending';
-                  const pendingDesc = isPortuguese
-                    ? 'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.'
-                    : 'Your payment is being processed. Your hedge will be placed when confirmed.';
+                  const isSpanish = shouldUseSpanish();
+                  
+                  let pendingTitle, pendingDesc;
+                  
+                  if (isPortuguese) {
+                    pendingTitle = 'Pagamento pendente';
+                    pendingDesc = 'Seu pagamento está sendo processado. O hedge será colocado quando confirmado.';
+                  } else if (isSpanish) {
+                    pendingTitle = 'Pago pendiente';
+                    pendingDesc = 'Su pago está siendo procesado. La cobertura se colocará cuando se confirme.';
+                  } else {
+                    pendingTitle = 'Payment pending';
+                    pendingDesc = 'Your payment is being processed. Your hedge will be placed when confirmed.';
+                  }
                     
                   toast({
                     title: pendingTitle,
@@ -282,9 +319,11 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
     initializePayment();
   }, [isOpen, paymentEnabled, hedgeData, currency, simulation, onSuccess, onClose]);
 
-  // Translation helper function
-  const t = (pt: string, en: string) => {
-    return shouldUsePortuguese() ? pt : en;
+  // Translation helper function with Spanish support
+  const t = (pt: string, en: string, es?: string) => {
+    if (shouldUsePortuguese()) return pt;
+    if (shouldUseSpanish() && es) return es;
+    return en;
   };
 
   return (
@@ -292,14 +331,14 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
+            {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge', 'Complete el pago para realizar la cobertura')}
           </DialogTitle>
         </DialogHeader>
         
         {loading && (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p>{t('Processando seu pagamento...', 'Processing your payment...')}</p>
+            <p>{t('Processando seu pagamento...', 'Processing your payment...', 'Procesando su pago...')}</p>
           </div>
         )}
         
