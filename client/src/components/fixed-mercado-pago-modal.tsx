@@ -51,6 +51,18 @@ export function FixedMercadoPaymentModal({ isOpen, onClose, onSuccess, hedgeData
   const shouldUsePortuguese = () => {
     return getUserLanguage().startsWith('pt');
   };
+  
+  // Check if Spanish should be used
+  const shouldUseSpanish = () => {
+    return getUserLanguage().startsWith('es');
+  };
+  
+  // Get the locale based on currency
+  const getLocaleForCurrency = () => {
+    if (currency === 'BRL') return 'pt-BR';
+    if (currency === 'MXN') return 'es-MX';
+    return 'en-US';
+  };
 
   // Check if payments are enabled when component mounts
   useEffect(() => {
