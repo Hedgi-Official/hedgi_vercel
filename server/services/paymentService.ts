@@ -129,6 +129,15 @@ class PaymentService {
       console.log(`[PaymentService] Using base URL: ${absoluteBaseUrl}`);
       
       // Create preference object according to MercadoPago v2.3.0 API
+      // Consistent back URL format for both currencies
+      const backUrls = {
+        success: `${absoluteBaseUrl}/payment/success`,
+        failure: `${absoluteBaseUrl}/payment/failure`,
+        pending: `${absoluteBaseUrl}/payment/pending`
+      };
+      
+      console.log(`[PaymentService] Setting back_urls for ${currency}:`, backUrls);
+      
       const preferenceData: any = {
         items: [
           {
@@ -145,12 +154,8 @@ class PaymentService {
           identification: payer.identification
         },
         
-        // Proper back_urls structure exactly matching Mercado Pago's documentation
-        back_urls: {
-          success: `${absoluteBaseUrl}/payment/success`,
-          failure: `${absoluteBaseUrl}/payment/failure`, 
-          pending: `${absoluteBaseUrl}/payment/pending`
-        },
+        // Use consistent back_urls structure for both currencies
+        back_urls: backUrls,
         
         // Restrict payment methods
         payment_methods: {
@@ -168,13 +173,20 @@ class PaymentService {
         }
       };
       
-      // Use a different approach for test/dev environment
+      // Different configuration based on environment and currency
       if (process.env.NODE_ENV !== 'production') {
-        // For testing, we'll use a simpler configuration that doesn't require redirection
-        delete preferenceData.auto_return; // Remove this property completely for test env
+        // For testing, ensure auto_return is not set to avoid issues
+        delete preferenceData.auto_return;
       } else {
-        // Only set auto_return in production with valid URLs
+        // In production, handle auto_return consistently for all currencies
         preferenceData.auto_return = "approved";
+      }
+      
+      // Ensure we use the appropriate notification_url if needed
+      // Some regions/environments may require this to be explicitly set
+      if (currency === 'MXN') {
+        console.log(`[PaymentService] Adding explicit notification_url for MXN`);
+        preferenceData.notification_url = `${absoluteBaseUrl}/api/payment/webhook`;
       }
       
       // Call Mercado Pago API to create preference

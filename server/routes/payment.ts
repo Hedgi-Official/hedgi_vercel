@@ -4,6 +4,21 @@ import { paymentService } from '../services/paymentService';
 const router = express.Router();
 
 /**
+ * Payment webhook handler
+ * This endpoint receives notifications from Mercado Pago about payment status changes
+ */
+router.post('/api/payment/webhook', (req: Request, res: Response) => {
+  // Log the webhook data received
+  console.log('[PaymentWebhook] Received payment notification:', req.body);
+  
+  // Return a 200 success response immediately to acknowledge receipt
+  res.status(200).send('OK');
+  
+  // Process the webhook asynchronously (in a real implementation, you would update the payment status)
+  // This is just a placeholder since we're not implementing full webhook handling right now
+});
+
+/**
  * Create a payment preference
  * This endpoint generates a payment preference ID that can be used to initiate
  * the Mercado Pago payment flow on the client side.
