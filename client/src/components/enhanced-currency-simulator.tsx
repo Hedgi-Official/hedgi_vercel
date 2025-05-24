@@ -171,6 +171,58 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     setPendingHedgeData(hedgeData);
     setIsPaymentModalOpen(true);
   };
+
+  // Handle bypass button - directly create trade without payment
+  const handleBypassPayment = async () => {
+    if (!simulation) return;
+
+    setIsPlacingHedge(true);
+    setHedgeError(null);
+
+    try {
+      const symbol = `${baseCurrency}${targetCurrency}`;
+      const response = await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          direction: tradeDirection,
+          volume: amount,
+          metadata: {
+            bypassPayment: true,
+            hedgeCost: simulation.costDetails.hedgeCost,
+            margin: margin || simulation.costDetails.hedgeCost * 2,
+            duration,
+            baseCurrency,
+            targetCurrency,
+            rate: simulation.rate
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create trade');
+      }
+
+      const result = await response.json();
+      console.log('[EnhancedCurrencySimulator] Trade created successfully:', result);
+      
+      // Refresh orders list if available
+      if (onOrdersUpdated) {
+        onOrdersUpdated();
+      }
+
+      // Reset form
+      setSimulation(null);
+      setMargin(null);
+      
+    } catch (error) {
+      console.error('[EnhancedCurrencySimulator] Error creating trade:', error);
+      setHedgeError(error instanceof Error ? error.message : 'Failed to create trade');
+    } finally {
+      setIsPlacingHedge(false);
+    }
+  };
   
   // This function is called after successful payment
   const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
@@ -539,19 +591,37 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 })()}
 
                 {onPlaceHedge && (
-                  <Button
-                    onClick={handlePlaceHedge}
-                    className="w-full"
-                    variant="outline"
-                    disabled={isPlacingHedge}
-                  >
-                    {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                    {hedgeError && (
-                      <span className="ml-2 text-red-500">
-                        {hedgeError}
-                      </span>
-                    )}
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      onClick={handlePlaceHedge}
+                      className="w-full"
+                      variant="outline"
+                      disabled={isPlacingHedge}
+                    >
+                      {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                      {hedgeError && (
+                        <span className="ml-2 text-red-500">
+                          {hedgeError}
+                        </span>
+                      )}
+                    </Button>
+                    
+                    {/* Bypass Payment Button for Testing */}
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-muted-foreground mb-2 text-center">
+                        Testing Mode - Skip Payment Processing
+                      </p>
+                      <Button
+                        onClick={handleBypassPayment}
+                        className="w-full"
+                        variant="secondary"
+                        disabled={isPlacingHedge}
+                        size="sm"
+                      >
+                        🧪 Test Hedge Placement (No Payment)
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

@@ -172,6 +172,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get open trades endpoint
+  app.get('/api/trades/open', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const openTrades = await db.query.trades.findMany({
+        where: inArray(trades.status, ['NEW', 'Executed', 'open']),
+        orderBy: desc(trades.createdAt)
+      });
+
+      res.json(openTrades);
+    } catch (error) {
+      console.error('Error fetching open trades:', error);
+      res.status(500).json({ error: 'Failed to fetch open trades' });
+    }
+  });
+
   // List of supported symbols for exchange rates
   const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
