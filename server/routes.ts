@@ -1,9 +1,9 @@
-import type { Express} from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { db } from "@db";
-import { hedges, trades } from "@db/schema";
-import { eq, desc} from "drizzle-orm";
+import { trades } from "@db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import activtradesRouter from './routes/activtrades-rate';
@@ -11,9 +11,8 @@ import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
 import paymentRouter from './routes/payment';
 import simulateRouter from './routes/simulate';
-// Import our modern trade service for the curl-based API implementation
-import { tradeService } from "./services/tradeService";
-;
+
+const FLASK = process.env.FLASK_URL || 'http://3.145.164.47';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -26,7 +25,141 @@ export function registerRoutes(app: Express): Server {
   app.use(fbsRouter);
   app.use(paymentRouter);
   app.use(simulateRouter);
-  // app.use(xtbRouter); // Removed - we're using direct routes below
+
+  // New Trades API - Flask Backend Integration
+  
+  // 1) Create a new trade → POST /api/trades
+  app.post('/api/trades', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const { symbol, direction, volume, metadata } = req.body;
+      
+      const tradeData = {
+        symbol,
+        direction,
+        volume,
+        status: 'NEW',
+        metadata: metadata || {}
+      };
+
+      const response = await fetch(`${FLASK}/trades`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tradeData)
+      });
+
+      const flaskTrade = await response.json();
+      
+      // Persist to local DB
+      const dbTrade = await db.insert(trades).values({
+        userId: req.user.id,
+        flaskTradeId: flaskTrade.id,
+        symbol: flaskTrade.symbol,
+        direction: flaskTrade.direction,
+        volume: flaskTrade.volume,
+        status: flaskTrade.status,
+        metadata: flaskTrade.metadata,
+        createdAt: new Date(flaskTrade.created_at),
+        updatedAt: new Date(flaskTrade.updated_at)
+      }).returning();
+
+      res.json(dbTrade[0]);
+    } catch (error) {
+      console.error('Error creating trade:', error);
+      res.status(500).json({ error: 'Failed to create trade' });
+    }
+  });
+
+  // 2) Poll a trade's status → GET /api/trades/:id/status
+  app.get('/api/trades/:id/status', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const trade = await db.query.trades.findFirst({
+        where: eq(trades.id, parseInt(req.params.id))
+      });
+
+      if (!trade || trade.userId !== req.user.id) {
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+
+      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+      const { status } = await response.json();
+
+      // Map status to UI labels
+      const statusMap = {
+        'NEW': 'Order sent',
+        'Executed': 'Order placed',
+        'Closed': 'Closed',
+        'FAILED': 'Failed'
+      };
+
+      // Update local DB
+      await db.update(trades)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(trades.id, trade.id));
+
+      res.json({ 
+        status, 
+        label: statusMap[status] || status 
+      });
+    } catch (error) {
+      console.error('Error checking trade status:', error);
+      res.status(500).json({ error: 'Failed to check status' });
+    }
+  });
+
+  // 3) Close a trade early → POST /api/trades/:id/close
+  app.post('/api/trades/:id/close', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const trade = await db.query.trades.findFirst({
+        where: eq(trades.id, parseInt(req.params.id))
+      });
+
+      if (!trade || trade.userId !== req.user.id) {
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+
+      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+      res.json(result);
+    } catch (error) {
+      console.error('Error closing trade:', error);
+      res.status(500).json({ error: 'Failed to close trade' });
+    }
+  });
+
+  // 4) History tab → GET /api/trades/history
+  app.get('/api/trades/history', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const historyTrades = await db.query.trades.findMany({
+        where: inArray(trades.status, ['Closed', 'FAILED']),
+        orderBy: desc(trades.updatedAt)
+      });
+
+      res.json(historyTrades);
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+      res.status(500).json({ error: 'Failed to fetch history' });
+    }
+  });
 
   // List of supported symbols for exchange rates
   const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
@@ -100,238 +233,54 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Broker API route for hedge execution - Now using our new Trade API
-
-  app.get("/api/hedges", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    const userHedges = await db.query.hedges.findMany({
-      where: eq(hedges.userId, req.user.id),
-      orderBy: desc(hedges.createdAt),
-    });
-
-    res.json(userHedges);
-  });
-
-  // Optimized endpoint to check trade status (simplified for now as our new API doesn't have a specific status check)
-  app.get("/api/hedges/status/:tradeOrderNumber", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    // No need to parse as integer since we've changed to storing as string
-    const tradeOrderNumber = req.params.tradeOrderNumber;
-    if (!tradeOrderNumber) {
-      return res.status(400).send("Invalid trade order number");
-    }
-
+  // 1) Check status
+  app.get("/api/trades/:tradeId/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
     try {
-      // With the new API, we don't have a direct way to check trade status
-      // So we'll just return a success response that the trade order exists in our database
-      // In a real implementation, you might want to add a status check endpoint to your API
-      
-      // Find the hedge in our database with this trade order number
-      const hedge = await db.query.hedges.findFirst({
-        where: eq(hedges.tradeOrderNumber, tradeOrderNumber)
-      });
-      
-      if (!hedge) {
-        return res.json({ 
-          status: true, 
-          found: false, 
-          message: `Trade with order number ${tradeOrderNumber} not found in database` 
-        });
-      }
-
-      // Return a simplified trade object based on our database record
-      res.json({
-        status: true,
-        found: true,
-        trade: {
-          order: hedge.tradeOrderNumber,
-          symbol: `${hedge.targetCurrency}${hedge.baseCurrency}`,
-          amount: hedge.amount,
-          type: Number(hedge.amount) > 0 ? 'buy' : 'sell',
-          price: Number(hedge.rate),
-          status: hedge.status
-        }
-      });
-    } catch (error) {
-      console.error('Error checking trade status:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to check trade status" });
+      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/status`);
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (err: any) {
+      console.error("[Trades][status]", err);
+      return res.status(502).json({ error: "Trade-service unavailable" });
     }
   });
 
-
-  app.post("/api/hedges", async (req, res) => {
-    // Enhanced logging throughout the entire process
-    const requestId = Date.now().toString();
-    console.log(`[DEBUG][${requestId}] POST /api/hedges request received:`, {
-      headers: req.headers,
-      body: req.body,
-      auth: req.isAuthenticated()
-    });
-    
-    if (!req.isAuthenticated()) {
-      console.log(`[DEBUG][${requestId}] Request rejected: Not authenticated`);
-      return res.status(401).send("Not authenticated");
-    }
-
+  // 2) Create (open) a new trade
+  app.post("/api/trades", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
     try {
-      console.log(`[Trade API][${requestId}] Processing hedge request from /api/hedges`);
-      
-      // Parse and validate request data
-      const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
-      
-      console.log(`[DEBUG][${requestId}] Request data:`, { 
-        amount, baseCurrency, targetCurrency, tradeDirection, duration 
+      const resp = await fetch(`${FLASK}/trades`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body)
       });
-      
-      if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
-        console.log(`[DEBUG][${requestId}] Missing required fields`);
-        return res.status(400).json({ 
-          status: false,
-          error: 'Missing required fields' 
-        });
-      }
-      
-      const volume = Math.abs(Number(amount)) / 100000;
-      if (isNaN(volume) || volume <= 0) {
-        console.log(`[DEBUG][${requestId}] Invalid amount: ${amount}, calculated volume: ${volume}`);
-        return res.status(400).json({ 
-          status: false,
-          error: 'Invalid amount' 
-        });
-      }
-      
-      const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
-
-      // Enhanced trade execution with detailed logging
-      try {
-        // Use the trade service with the exact same format as working curl command
-        const apiResponse = await tradeService.openTrade(
-          symbol,
-          tradeDirection as 'buy' | 'sell',
-          volume,
-          duration || 30 // Default to 30 days if duration is not provided
-        );
-        
-        console.log(`[DEBUG][${requestId}] Trade API response:`, JSON.stringify(apiResponse));
-
-        // Extract the order number from response with validation
-        // If trade API call succeeded but returned market closed or other error,
-        // handle this properly
-        
-        // CRITICAL FIX: For Tickmill, we need to use the ORDER number, not the deal number
-        // for closing trades. When a trade is opened, it returns both order and deal numbers.
-        // The broker API expects the ORDER number when closing a position as confirmed by direct testing.
-        let tradeOrderNumber = apiResponse.order;
-        
-        // Check for errors in the API response
-        if (apiResponse.error) {
-          console.error(`[DEBUG][${requestId}] Error from trade API: ${apiResponse.error}`);
-          return res.status(400).json({
-            status: false,
-            error: apiResponse.error
-          });
-        }
-        
-        // Order number 0 indicates market is likely closed or got a specific broker message
-        // But not all status 0 responses are errors, only market closed is a true error
-        if (tradeOrderNumber === 0) {
-          console.log(`[DEBUG][${requestId}] Order number is 0, comment: ${apiResponse.comment}`);
-          
-          // ONLY check for "Market closed" comment and treat it as an error
-          if (apiResponse.comment === "Market closed") {
-            return res.status(400).json({
-              status: false,
-              error: "Market is currently closed. Please try again during market hours."
-            });
-          }
-          
-          // CRITICAL FIX: Don't treat "No money" as an error
-          // For "No money" responses, we should still allow the trade to proceed
-          // This is working as expected according to the user's confirmation
-        }
-        
-        if (!tradeOrderNumber) {
-          console.warn(`[DEBUG][${requestId}] No order number in API response, using request ID as fallback`);
-          tradeOrderNumber = Date.now(); // Use timestamp as fallback ID
-        }
-        
-        console.log(`[DEBUG][${requestId}] Trade order number:`, tradeOrderNumber);
-
-        // Create and log the exact hedge data to be stored
-        const hedgeValues = {
-          baseCurrency: baseCurrency,
-          targetCurrency: targetCurrency,
-          amount: String(volume * 100000 * (tradeDirection === 'buy' ? 1 : -1)),
-          rate: apiResponse.price?.toString() || apiResponse.ask?.toString() || apiResponse.bid?.toString() || "0.0",
-          duration: duration || 30,
-          status: 'active',
-          tradeOrderNumber: tradeOrderNumber, // This now contains either the deal or order number
-          tradeStatus: 'open'
-        };
-        
-        // Log all available identifiers for debugging
-        console.log(`[DEBUG][${requestId}] All trade identifiers:`, {
-          deal: apiResponse.deal,
-          order: apiResponse.order,
-          tradeOrderNumber: tradeOrderNumber
-        });
-        
-        console.log(`[DEBUG][${requestId}] Hedge values to insert:`, hedgeValues);
-        
-        // Insert with userId, ensuring proper type handling
-        const newHedge = await db.insert(hedges)
-          .values({
-            baseCurrency: hedgeValues.baseCurrency,
-            targetCurrency: hedgeValues.targetCurrency,
-            amount: hedgeValues.amount,
-            rate: hedgeValues.rate,
-            duration: hedgeValues.duration,
-            status: hedgeValues.status,
-            tradeOrderNumber: String(hedgeValues.tradeOrderNumber), // Ensure it's a string
-            tradeStatus: hedgeValues.tradeStatus,
-            userId: req.user.id
-          })
-          .returning();
-
-        console.log(`[DEBUG][${requestId}] Database insert result:`, newHedge);
-        
-        // Create a trade record from the MT5 response
-        console.log(`[DEBUG][${requestId}] Creating trade record from MT5 response`);
-        await tradeService.createTradeRecord(apiResponse, req.user.id, newHedge[0]?.id);
-        
-        // Return a successful response with all needed data
-        const response = {
-          status: true,
-          returnData: {
-            order: tradeOrderNumber,
-            price: apiResponse.price || apiResponse.ask || apiResponse.bid || 0
-          },
-          hedgeId: newHedge[0]?.id,
-          message: `Successfully placed ${tradeDirection} hedge for ${volume} lots of ${symbol}`
-        };
-        
-        console.log(`[DEBUG][${requestId}] Sending successful response:`, response);
-        return res.json(response);
-        
-      } catch (tradeError) {
-        console.error(`[DEBUG][${requestId}] Error executing trade:`, tradeError);
-        throw tradeError; // Re-throw to be caught by the outer catch
-      }
-    } catch (error) {
-      console.error('[Trade API] Error executing hedge:', error);
-      return res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (err: any) {
+      console.error("[Trades][create]", err);
+      return res.status(502).json({ error: "Trade-service unavailable" });
     }
   });
+
+  // 3) Close an existing trade
+  app.post("/api/trades/:tradeId/close", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    try {
+      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body)  // if your Flask close needs extra fields
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (err: any) {
+      console.error("[Trades][close]", err);
+      return res.status(502).json({ error: "Trade-service unavailable" });
+    }
+  });
+
+
 
   // API endpoint to get open trades
   app.get("/api/trades/open", async (req, res) => {
@@ -367,562 +316,5 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // API endpoint to cancel a trade
-  app.post("/api/trades/cancel", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    const { tradeOrderNumber } = req.body;
-    if (!tradeOrderNumber) {
-      return res.status(400).json({ error: "Missing trade order number" });
-    }
-
-    try {
-      const result = await tradeService.cancelTrade(tradeOrderNumber, req.user.id);
-      if (result.status) {
-        res.json({ status: true, message: result.message });
-      } else {
-        res.status(400).json({ status: false, error: result.error });
-      }
-    } catch (error) {
-      console.error("[Trades API] Error cancelling trade:", error);
-      res.status(500).json({ 
-        status: false, 
-        error: error instanceof Error ? error.message : "Failed to cancel trade" 
-      });
-    }
-  });
-
-  // API endpoint for webhook notifications from trading bots has been moved below
-
-  // Add explicit close trade endpoint to support dashboard.tsx
-  // Add the new API endpoint for trade closure with enhanced error handling
-  app.post("/api/trades/close", async (req, res) => {
-    res.header('Content-Type', 'application/json');
-    const requestId = Date.now().toString();
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-
-    // Extract broker and position from the request body (needed for new API format)
-    const { broker, position } = req.body;
-    if (!broker || !position) {
-      return res.status(400).json({ 
-        status: false,
-        error: 'Missing required fields: broker and position' 
-      });
-    }
-    
-    console.log(`[API][${requestId}] Closing position: ${position} with broker: ${broker}`);
-
-    try {
-      console.log(`[Trade API][${requestId}] Closing trade ${position} with broker ${broker}`);
-      
-      // Use the trade service to close the trade
-      // CRITICAL FIX: Ensure we pass the position as a number for broker API
-      // Position needs to be a number without quotes in the request body
-      const closeResponse = await tradeService.closeTrade(
-        broker,  // Use the broker from the request
-        Number(position) // Ensure position is a number by explicitly converting
-      );
-      
-      console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
-      
-      // Check if we got an error about position not found
-      if (closeResponse.error && closeResponse.error.includes('not found')) {
-        console.warn(`[Trade API][${requestId}] Position ${position} not found at broker ${broker}`);
-        
-        // Return a special response for "position not found" case
-        return res.json({
-          status: true, // Still return success status so client continues with DB deletion
-          returnData: {
-            position: position,
-            price: 0,
-            error: closeResponse.error
-          },
-          message: `Position ${position} not found at broker ${broker}, but hedge will be removed from database`
-        });
-      }
-      
-      // Handle market closed scenario similarly
-      if (closeResponse.comment === "Market closed") {
-        console.warn(`[Trade API][${requestId}] Market is closed, cannot close position ${position}`);
-        
-        return res.json({
-          status: true, // Still return success status so client continues with DB deletion
-          returnData: {
-            position: position,
-            price: 0
-          },
-          message: "Market closed",
-          error: "Market is currently closed. The hedge will be removed from your dashboard."
-        });
-      }
-      
-      // Standard success response
-      return res.json({
-        status: true,
-        returnData: {
-          position: position,
-          price: closeResponse.price || closeResponse.ask || closeResponse.bid || 0
-        },
-        message: `Successfully closed trade ${position}`
-      });
-    } catch (error) {
-      console.error(`[Trade API][${requestId}] Error closing trade:`, error);
-      
-      // Special handling for HTML responses (which could happen if the API endpoint is down)
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('<!DOCTYPE html>') || errorMessage.includes('<html>')) {
-        return res.status(502).json({
-          status: false,
-          error: 'Trading API server returned HTML instead of JSON. The service may be down.',
-          message: 'Trading API server is currently unavailable'
-        });
-      }
-      
-      return res.status(500).json({ 
-        status: false,
-        error: errorMessage
-      });
-    }
-  });
-  
-  // Keep the old endpoint for backward compatibility during transition
-  app.post("/api/xtb/trades/:tradeOrderNumber/close", async (req, res) => {
-    res.header('Content-Type', 'application/json');
-    const requestId = Date.now().toString();
-
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-
-    // We're now storing trade order numbers as strings to handle large values from the broker API
-    const tradeOrderNumber = req.params.tradeOrderNumber;
-    if (!tradeOrderNumber) {
-      return res.status(400).json({ 
-        status: false,
-        error: 'Invalid trade order number' 
-      });
-    }
-
-    try {
-      console.log(`[Trade API][${requestId}] Closing trade ${tradeOrderNumber} via legacy endpoint`);
-      
-      // Use the new trade service to close the trade with broker "tickmill"
-      // CRITICAL FIX: Convert tradeOrderNumber to a number for the broker API
-      const closeResponse = await tradeService.closeTrade(
-        'tickmill', // Default broker as specified in requirements
-        Number(tradeOrderNumber) // Ensure position is a number
-      );
-      
-      console.log(`[Trade API][${requestId}] Trade close response:`, closeResponse);
-      
-      // Check for position not found
-      if (closeResponse.error && closeResponse.error.includes('not found')) {
-        console.warn(`[Trade API][${requestId}] Position ${tradeOrderNumber} not found at broker`);
-        
-        return res.json({
-          status: true, // Still return success status so client continues with DB deletion
-          returnData: {
-            order: tradeOrderNumber,
-            price: 0,
-            error: closeResponse.error
-          },
-          message: `Position ${tradeOrderNumber} not found at broker, but hedge will be removed from database`
-        });
-      }
-      
-      // Handle market closed scenario similarly
-      if (closeResponse.comment === "Market closed") {
-        console.warn(`[Trade API][${requestId}] Market is closed, cannot close position ${tradeOrderNumber}`);
-        
-        return res.json({
-          status: true, // Still return success status so client continues with DB deletion
-          returnData: {
-            order: tradeOrderNumber,
-            price: 0
-          },
-          message: "Market closed",
-          error: "Market is currently closed. The hedge will be removed from your dashboard."
-        });
-      }
-      
-      // Standard success response
-      return res.json({
-        status: true,
-        returnData: {
-          order: tradeOrderNumber,
-          price: closeResponse.price || closeResponse.ask || closeResponse.bid || 0
-        },
-        message: `Successfully closed trade ${tradeOrderNumber}`
-      });
-    } catch (error) {
-      console.error(`[Trade API][${requestId}] Error closing trade:`, error);
-      return res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // POST /api/trades/webhook - Receive notifications from trading bot
-  app.post("/api/trades/webhook", async (req, res) => {
-    // This endpoint doesn't require authentication as it's called by the trading bot
-    
-    try {
-      const { broker, ticket, symbol, closed_at } = req.body;
-      
-      // Validate required fields
-      if (!broker || !ticket) {
-        return res.status(400).json({
-          error: "Missing required fields: broker and ticket are required"
-        });
-      }
-      
-      // Find the trade in the database
-      const trade = await db.query.trades.findFirst({
-        where: eq(trades.ticket, ticket.toString())
-      });
-      
-      if (!trade) {
-        return res.status(404).json({
-          error: "Trade not found"
-        });
-      }
-      
-      // Update the trade status
-      // Find the trade first then update
-      const tradeRecord = await db.query.trades.findFirst({
-        where: eq(trades.ticket, ticket.toString())
-      });
-      
-      if (!tradeRecord) {
-        return res.status(404).json({
-          error: "Trade not found"
-        });
-      }
-      
-      // Update the trade using a separate update statement
-      await db
-        .update(trades)
-        .set({
-          status: 'closed',
-          closedAt: new Date(closed_at * 1000)
-        })
-        .where(eq(trades.id, tradeRecord.id));
-      
-      return res.json({
-        message: "Trade marked closed"
-      });
-    } catch (error) {
-      console.error('Error processing webhook:', error);
-      return res.status(500).json({
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-  
-  // POST /api/trades/cancel - Cancel a trade
-  app.post("/api/trades/cancel", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-    
-    const { tradeOrderNumber } = req.body;
-    if (!tradeOrderNumber) {
-      return res.status(400).json({ 
-        status: false,
-        error: 'Missing required field: tradeOrderNumber' 
-      });
-    }
-    
-    try {
-      const result = await tradeService.cancelTrade(Number(tradeOrderNumber), req.user.id);
-      
-      if (!result.status) {
-        return res.status(500).json({ 
-          status: false,
-          error: result.error || 'Failed to cancel trade'
-        });
-      }
-      
-      return res.json({ 
-        status: true,
-        message: result.message || 'Trade cancelled successfully'
-      });
-    } catch (error) {
-      console.error('Error cancelling trade:', error);
-      return res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-  
-  app.delete("/api/hedges/:id", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).send("Not authenticated");
-    }
-
-    const hedgeId = parseInt(req.params.id);
-    if (isNaN(hedgeId)) {
-      return res.status(400).send("Invalid hedge ID");
-    }
-
-    try {
-      // Get the hedge details first
-      const [hedge] = await db
-        .select()
-        .from(hedges)
-        .where(eq(hedges.id, hedgeId));
-
-      if (!hedge) {
-        return res.status(404).send("Hedge not found");
-      }
-
-      // Close the trade via new Trade API if there's a trade order number
-      if (hedge.tradeOrderNumber) {
-        try {
-          console.log(`[Routes] Closing trade ${hedge.tradeOrderNumber} with Trade API`);
-          
-          // CRITICAL FIX: For Tickmill, the tradeOrderNumber stored in our database
-          // could be either a deal or order number. We need to make sure we're using
-          // the right identifier when closing the position.
-          // CRITICAL FIX: Convert position to a number for broker API
-          const closeResponse = await tradeService.closeTrade(
-            'tickmill', // Default broker as specified in requirements
-            Number(hedge.tradeOrderNumber) // Ensure position is passed as a number
-          );
-
-          console.log(`[Routes] Trade close response:`, closeResponse);
-          
-          // Handle different response scenarios
-          if (closeResponse.error && closeResponse.error.includes('not found')) {
-            console.warn(`[Routes] Position ${hedge.tradeOrderNumber} not found at broker. Continuing with database deletion.`);
-          } else if (closeResponse.comment === "Market closed") {
-            console.warn(`[Routes] Market is closed, can't close position ${hedge.tradeOrderNumber}. Continuing with database deletion.`);
-          } else {
-            console.log(`[Routes] Successfully closed trade ${hedge.tradeOrderNumber} with the Trade API`);
-          }
-        } catch (tradeError) {
-          // Log the error but continue with database deletion
-          console.error(`[Routes] Error closing trade ${hedge.tradeOrderNumber}:`, tradeError);
-        }
-      }
-
-      // Always delete the hedge from database, even if trade closing fails
-      const [deletedHedge] = await db
-        .delete(hedges)
-        .where(eq(hedges.id, hedgeId))
-        .returning();
-
-      res.json({ 
-        status: true,
-        message: "Hedge deleted successfully" 
-      });
-    } catch (error) {
-      console.error('Error deleting hedge:', error);
-      res.status(500).json({ 
-        status: false, 
-        error: error instanceof Error ? error.message : "Failed to delete hedge" 
-      });
-    }
-  });
-
-  // Trade history endpoint for completed trades
-  app.get("/api/trades/history", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ 
-        status: false,
-        error: 'Not authenticated' 
-      });
-    }
-    
-    try {
-      const closedTrades = await tradeService.getClosedTrades(req.user.id);
-      return res.json(closedTrades);
-    } catch (error) {
-      console.error('Error getting trade history:', error);
-      return res.status(500).json({ 
-        error: error instanceof Error ? error.message : String(error) 
-      });
-    }
-  });
-
-  
-  // Test endpoint for trade API integration
-  // Test endpoint to close a trade without authentication
-  app.post("/api/test-close-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Close Trade API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker, position, useDeal = false, duration } = req.body;
-      
-      if (!position) {
-        return res.status(400).json({
-          status: false,
-          error: 'Missing required field: position'
-        });
-      }
-      
-      // Use the trade service to close the trade
-      console.log(`[Test Close Trade API][${requestId}] Closing position ${position} with broker ${broker} (position type: ${typeof position})`);
-      
-      // CRITICAL FIX: Do NOT convert position to string - the API expects a number
-      const closeResult = await tradeService.closeTrade(
-        broker,
-        position // Pass position as-is to our updated tradeService
-      );
-      
-      console.log(`[Test Close Trade API][${requestId}] Close response:`, closeResult);
-      
-      res.json({
-        status: true,
-        result: closeResult,
-        message: `Attempted to close trade: position ${position} via ${broker}`
-      });
-    } catch (error) {
-      console.error(`[Test Close Trade API][${requestId}] Error:`, error);
-      res.status(500).json({
-        status: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.post("/api/test-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Trade API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker = 'tickmill', symbol = 'USDBRL', direction = 'buy', volume = 0.1, autoClose = false, duration} = req.body;
-      
-      console.log(`[Test Trade API][${requestId}] Executing ${direction} trade for ${volume} lots of ${symbol} via ${broker}`);
-      
-      // Use exact same format as working curl command
-      const result = await tradeService.openTrade(
-        symbol,
-        'sell',
-        Number(volume),
-        duration
-      );
-      
-      console.log(`[Test Trade API][${requestId}] Trade response:`, result);
-      
-      // If autoClose flag is set, immediately close the trade for testing
-      let closeResult = null;
-      if (autoClose && result && (result.deal || result.order)) {
-        try {
-          // CRITICAL FIX: For Tickmill, we need to use the ORDER number, not the deal number
-          // to close positions as confirmed by direct testing
-          // CRITICAL FIX: Always use ORDER number, not deal number for closing positions
-          const positionId = result.order;
-          console.log(`[Test Trade API][${requestId}] Auto-closing trade position ${positionId} (deal: ${result.deal}, order: ${result.order})`);
-          
-          // Wait a bit to ensure the order is registered in the broker system
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // CRITICAL FIX: Do NOT convert position to string - the API expects a number
-          closeResult = await tradeService.closeTrade(
-            broker,
-            positionId // Pass position number as-is
-          );
-          console.log(`[Test Trade API][${requestId}] Close response:`, closeResult);
-        } catch (closeError) {
-          console.error(`[Test Trade API][${requestId}] Error closing trade:`, closeError);
-          closeResult = { error: closeError instanceof Error ? closeError.message : String(closeError) };
-          // Continue with response even if close fails
-        }
-      }
-      
-      res.json({
-        status: true,
-        result,
-        closeResult,
-        message: `Successfully executed test trade: ${direction} ${volume} lots of ${symbol} via ${broker}${autoClose ? ' and attempted to close it' : ''}`
-      });
-    } catch (error) {
-      console.error(`[Test Trade API][${requestId}] Error:`, error);
-      res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error),
-        message: 'Failed to execute test trade'
-      });
-    }
-  });
-  
-  // Test endpoint for closing trades - doesn't require authentication
-  app.post("/api/test-close-trade", async (req, res) => {
-    const requestId = Date.now().toString();
-    console.log(`[Test Close API][${requestId}] Request received:`, req.body);
-    
-    try {
-      const { broker = 'tickmill', position } = req.body;
-      
-      if (!position) {
-        return res.status(400).json({
-          status: false,
-          error: 'Missing required position number',
-          message: 'Position/order number is required'
-        });
-      }
-      
-      console.log(`[Test Close API][${requestId}] Closing position ${position} via ${broker}`);
-      
-      // Use exact same format as working curl command - pass position as-is without converting to Number
-      const result = await tradeService.closeTrade(
-        broker,
-        position
-      );
-      
-      console.log(`[Test Close API][${requestId}] Close response:`, result);
-      
-      // Handle market closed scenario
-      if (result.comment === "Market closed") {
-        return res.json({
-          status: false,  // For test endpoint, return false status to indicate issue
-          result,
-          message: "Market closed - cannot close position at this time"
-        });
-      }
-      
-      // Handle position not found
-      if (result.error && result.error.includes('not found')) {
-        return res.json({
-          status: false,  // For test endpoint, return false status to indicate issue
-          result,
-          message: `Position ${position} not found at broker ${broker}`
-        });
-      }
-      
-      res.json({
-        status: true,
-        result,
-        message: `Successfully closed position ${position} via ${broker}`
-      });
-    } catch (error) {
-      console.error(`[Test Close API][${requestId}] Error:`, error);
-      res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error),
-        message: 'Failed to close trade'
-      });
-    }
-  });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }
+ 

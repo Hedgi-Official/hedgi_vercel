@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, decimal, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, decimal, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 
@@ -32,16 +32,14 @@ export const hedges = pgTable("hedges", {
 export const trades = pgTable("trades", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
-  ticket: text("ticket").notNull(), // MT5 order ID (from custom_order.ticket)
-  broker: text("broker").notNull(), // Broker name (e.g., "fbs", from request context)
-  volume: decimal("volume", { precision: 10, scale: 2 }).notNull(), // From custom_order.volume or trade_details.volume
-  symbol: text("symbol").notNull(), // Currency pair symbol
-  openTime: timestamp("open_time").notNull(), // Trade open time
-  durationDays: integer("duration_days").notNull(), // Duration in days
-  status: text("status").notNull().default('open'), // open, cancelled, closed_by_sl
-  closedAt: timestamp("closed_at"), // When the trade was closed/cancelled
-  hedgeId: integer("hedge_id").references(() => hedges.id), // Reference to associated hedge
+  flaskTradeId: integer("flask_trade_id").notNull(), // ID from Flask service
+  symbol: text("symbol").notNull(), // Currency pair symbol (e.g., USDMXN)
+  direction: text("direction").notNull(), // 'buy' or 'sell'
+  volume: decimal("volume", { precision: 10, scale: 4 }).notNull(), // Trade volume
+  status: text("status").notNull().default('NEW'), // NEW, Executed, Closed, FAILED
+  metadata: text("metadata"), // Additional trade metadata from Flask (JSON string)
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const userRelations = relations(users, ({ many }) => ({
@@ -60,10 +58,6 @@ export const tradeRelations = relations(trades, ({ one }) => ({
   user: one(users, {
     fields: [trades.userId],
     references: [users.id],
-  }),
-  hedge: one(hedges, {
-    fields: [trades.hedgeId],
-    references: [hedges.id],
   }),
 }));
 

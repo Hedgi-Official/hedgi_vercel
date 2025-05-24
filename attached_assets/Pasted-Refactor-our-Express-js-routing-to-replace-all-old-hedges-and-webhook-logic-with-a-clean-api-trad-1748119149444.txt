@@ -1,0 +1,73 @@
+Refactor our Express.js routing to replace all old “hedges” and webhook logic with a clean /api/trades surface, and correctly power both an Active tab and a History tab. In every routes file:
+
+1. **Remove** any old endpoints related to hedges or webhooks:
+   - All `app.post("/api/hedges…")`
+   - All `app.get("/api/hedges/status…")`
+   - Any `/api/trades/webhook*`, `/api/xtb/trades/:*/close`
+   - Any `/api/test-*`, `/api/trades/open`, `/api/trades/cancel`
+   - The old `/api/trades/history`
+
+2. **Keep** unrelated routes (e.g. `/api/xtb/rates`) intact, and ensure at the top of your main router you have:
+   ```ts
+   import express from 'express';
+   import fetch from 'node-fetch';
+   import { setupAuth } from './auth';
+   import { db } from '@db';
+   import { trades } from '@db/schema';
+   import { eq, inArray, desc } from 'drizzle-orm';
+   const FLASK = 'http://3.145.164.47';
+   app.use(express.json());
+   setupAuth(app);
+Insert exactly four /api/trades endpoints:
+
+ts
+Copy
+Edit
+// 1) Create a new trade → POST /api/trades
+//    Proxies to HTTP POST ${FLASK}/trades
+//    Body must be { symbol, direction, volume, status:'NEW', metadata }
+//    Persist the returned trade in your DB with status='NEW'
+app.post('/api/trades', …);
+
+// 2) Poll a trade’s status → GET /api/trades/:id/status
+//    Proxies to HTTP GET ${FLASK}/trades/:id/status
+//    Returns { status: 'NEW'|'Executed'|'Closed'|'FAILED' }
+//    Map for UI:
+//      NEW      → label 'Order sent'   (still Active)
+//      Executed → label 'Order placed' (still Active)
+//      Closed   → move to History
+//      FAILED   → move to History with 'Failed' marker
+//    Update your DB record’s status & updatedAt, then return { status, label }
+app.get('/api/trades/:id/status', …);
+
+// 3) Close a trade early → POST /api/trades/:id/close
+//    Proxies to HTTP POST ${FLASK}/trades/:id/close
+//    Return the raw Flask JSON; client will poll /status until it becomes Closed or FAILED
+app.post('/api/trades/:id/close', …);
+
+// 4) History tab → GET /api/trades/history
+//    SELECT * FROM trades WHERE status IN ('Closed','FAILED') ORDER BY updatedAt DESC
+//    Return full trade records with createdAt, updatedAt, status, metadata
+app.get('/api/trades/history', …);
+Key History logic
+
+Active trades are those with status ‘NEW’ or ‘Executed’.
+
+History trades are those with status ‘Closed’ or ‘FAILED’.
+
+Agent instructions
+
+Don’t touch any other routes.
+
+Keep each handler concise (<25 lines).
+
+Archive all removed code in a backup.
+
+Use existing db + trades schema, express.json(), and async/await.
+
+Verify imports: fetch, setupAuth, db, trades, eq, inArray, desc.
+
+Apply as a unified diff, review carefully, then smoke-test Active, Status, Close, and History flows.
+
+Copy
+Edit
