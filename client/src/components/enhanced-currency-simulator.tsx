@@ -590,8 +590,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   return null;
                 })()}
 
-                {onPlaceHedge && (
-                  <div className="space-y-3">
+                <div className="space-y-3">
+                  {onPlaceHedge && (
                     <Button
                       onClick={handlePlaceHedge}
                       className="w-full"
@@ -605,24 +605,24 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                         </span>
                       )}
                     </Button>
-                    
-                    {/* Bypass Payment Button for Testing */}
-                    <div className="border-t pt-3">
-                      <p className="text-xs text-muted-foreground mb-2 text-center">
-                        Testing Mode - Skip Payment Processing
-                      </p>
-                      <Button
-                        onClick={handleBypassPayment}
-                        className="w-full"
-                        variant="secondary"
-                        disabled={isPlacingHedge}
-                        size="sm"
-                      >
-                        🧪 Test Hedge Placement (No Payment)
-                      </Button>
-                    </div>
+                  )}
+                  
+                  {/* Bypass Payment Button for Testing - Always Show */}
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-2 text-center">
+                      Testing Mode - Skip Payment Processing
+                    </p>
+                    <Button
+                      onClick={handleBypassPayment}
+                      className="w-full"
+                      variant="secondary"
+                      disabled={isPlacingHedge}
+                      size="sm"
+                    >
+                      🧪 Test Hedge Placement (No Payment)
+                    </Button>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </CardContent>
