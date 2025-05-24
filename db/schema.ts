@@ -31,7 +31,7 @@ export const hedges = pgTable("hedges", {
 
 export const trades = pgTable("trades", {
   id: serial("id").primaryKey(),
-  userId: serial("user_id").references(() => users.id),
+  userId: integer("user_id").references(() => users.id).notNull(),
   flaskTradeId: integer("flask_trade_id").notNull(), // ID from Flask service
   symbol: text("symbol").notNull(), // Currency pair symbol (e.g., USDMXN)
   direction: text("direction").notNull(), // 'buy' or 'sell'
