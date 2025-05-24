@@ -163,11 +163,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       status: 'pending' // Initial status
     };
 
-    console.log('[EnhancedCurrencySimulator] Opening payment modal with hedge data:', hedgeData);
+    console.log('[EnhancedCurrencySimulator] Bypassing payment - hedge data:', hedgeData);
     
-    // Store the hedge data and open the payment modal
-    setPendingHedgeData(hedgeData);
-    setIsPaymentModalOpen(true);
+    // Always use bypass method now
+    handleBypassPayment();
   };
 
   // Handle bypass button - directly create trade without payment
