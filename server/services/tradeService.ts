@@ -192,11 +192,11 @@ export class TradeService {
       const { ticket, broker } = trade;
       
       // Call MT5 API to close the trade by magic number
-      const response = await fetch(`${this.TRADE_API_URL}/close_trade_by_magic`, {
+      const response = await fetch(`${this.TRADE_API_URL}/close_trade_by_ticket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          magic: parseInt(ticket, 10),
+          ticket: parseInt(ticket, 10),
           broker,
           comment: 'User-initiated cancel'
         })
@@ -263,53 +263,63 @@ export class TradeService {
     duration: number
   ): Promise<TradeResponse> {
     console.log(`[TradeService] Opening trading: ${direction} ${volume} lots of ${symbol}`);
-    
+
     // Use EXACTLY the same payload format as the working curl command
     const tradeData = {
       symbol,
       direction,
       volume,
-      days : duration, 
+      days: duration,
       deviation: 5,
       magic: 123456,
       comment: "Hedgi test trading"
     };
-    
+
     const requestBody = JSON.stringify(tradeData);
     console.log(`[TradeService] Sending trade request:`, requestBody);
-    
+
     try {
-      // Use exactly the same fetch call as the working curl command
+      // Send the request exactly like the working curl
       const response = await fetch(`${this.TRADE_API_URL}/hedge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: requestBody
       });
-      
-      // Get the text response for logging
+
+      // Read raw text for full logging
       const responseText = await response.text();
       console.log(`[TradeService] Trade API raw response:`, responseText);
-      
-      // Parse the response JSON
+
       try {
-        const result = JSON.parse(responseText) as TradeResponse;
-        
-        // Detailed logging of response properties for debugging
-        console.log(`[TradeService] Trade response details - order: ${result.order}, deal: ${result.deal}, comment: ${result.comment}`);
-        
-        // Check if we received a valid order number (not 0)
-        // This handles cases where the market is closed or the order wasn't placed successfully
+        // First parse into the envelope containing your real payload
+        const outer = JSON.parse(responseText) as {
+          trade_details: TradeResponse;
+          message?: string;
+          custom_order?: TradeResponse['custom_order'];
+          error?: string;
+        };
+
+        // ⇩ Pivot: lift the real payload up one level ⇩
+        const result: TradeResponse = {
+          ...outer.trade_details,
+          message: outer.message,
+          custom_order: outer.custom_order,
+          error: outer.error
+        };
+        // ⇧ End pivot ⇧
+
+        console.log(
+          `[TradeService] Trade response details - order: ${result.order}, deal: ${result.deal}, comment: ${result.comment}`
+        );
+
+        // Preserve "no money" warnings but treat "market closed" as error
         if (result.order === 0) {
           console.log(`[TradeService] Received order number 0. Comment: ${result.comment}`);
-          
-          // CRITICAL FIX: "No money" is not actually an error - the orders still work
-          // We should only treat "Market closed" as a real error
           if (result.comment === "Market closed") {
             result.error = "Market is currently closed. Please try again during market hours.";
           }
-          // Do not treat "No money" warnings as errors
         }
-        
+
         return result;
       } catch (parseError) {
         console.error(`[TradeService] JSON parse error:`, parseError);

@@ -101,66 +101,6 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Broker API route for hedge execution - Now using our new Trade API
-  app.post("/api/xtb/hedge", async (req, res) => {
-    res.header('Content-Type', 'application/json');
-    const requestId = Date.now().toString();
-
-    try {
-      console.log(`[Trade API][${requestId}] Processing hedge request`);
-      
-      // Format the trade request with proper validation
-      const { amount, baseCurrency, targetCurrency, tradeDirection, duration } = req.body;
-      
-      if (!amount || !baseCurrency || !targetCurrency || !tradeDirection) {
-        return res.status(400).json({ 
-          status: false,
-          error: 'Missing required fields'
-        });
-      }
-      
-      const volume = Math.abs(Number(amount)) / 100000;
-      if (isNaN(volume) || volume <= 0) {
-        return res.status(400).json({ 
-          status: false,
-          error: 'Invalid amount' 
-        });
-      }
-      
-      const symbol = `${targetCurrency}${baseCurrency}`;
-      console.log(`[Trade API][${requestId}] Placing ${tradeDirection} order for ${volume} lots of ${symbol}`);
-
-      // Use the trade service with the exact format as working curl
-      const apiResponse = await tradeService.openTrade(
-        symbol,
-        tradeDirection as 'buy' | 'sell',
-        volume, 
-        duration || 30 // Default to 30 days if duration is not provided
-      );
-      
-      console.log(`[Trade API][${requestId}] Trade response:`, apiResponse);
-
-      // Ensure we have a valid order number
-      const tradeOrderNumber = apiResponse.order;
-      if (!tradeOrderNumber) {
-        throw new Error('No valid order number returned from Trade API');
-      }
-
-      // Return the confirmed response with order number
-      return res.json({
-        status: true,
-        returnData: {
-          order: tradeOrderNumber,
-          price: apiResponse.price
-        }
-      });
-    } catch (error) {
-      console.error(`[Trade API][${requestId}] Error executing hedge:`, error);
-      return res.status(500).json({ 
-        status: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
 
   app.get("/api/hedges", async (req, res) => {
     if (!req.isAuthenticated()) {
