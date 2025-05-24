@@ -53,7 +53,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
   
-  // Payment bypass - no payment modal needed
+  // Payment modal state
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
   // Get rates from ActivTrades API
   const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
@@ -163,62 +165,11 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       status: 'pending' // Initial status
     };
 
-    console.log('[EnhancedCurrencySimulator] Bypassing payment - hedge data:', hedgeData);
+    console.log('[EnhancedCurrencySimulator] Opening payment modal with hedge data:', hedgeData);
     
-    // Always use bypass method now
-    handleBypassPayment();
-  };
-
-  // Handle bypass button - directly create trade without payment
-  const handleBypassPayment = async () => {
-    if (!simulation) return;
-
-    setIsPlacingHedge(true);
-    setHedgeError(null);
-
-    try {
-      const symbol = `${baseCurrency}${targetCurrency}`;
-      const response = await fetch('/api/trades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol,
-          direction: tradeDirection,
-          volume: amount,
-          metadata: {
-            bypassPayment: true,
-            hedgeCost: simulation.costDetails.hedgeCost,
-            margin: margin || simulation.costDetails.hedgeCost * 2,
-            duration,
-            baseCurrency,
-            targetCurrency,
-            rate: simulation.rate
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create trade');
-      }
-
-      const result = await response.json();
-      console.log('[EnhancedCurrencySimulator] Trade created successfully:', result);
-      
-      // Refresh orders list if available
-      if (onOrdersUpdated) {
-        onOrdersUpdated();
-      }
-
-      // Reset form
-      setSimulation(null);
-      setMargin(null);
-      
-    } catch (error) {
-      console.error('[EnhancedCurrencySimulator] Error creating trade:', error);
-      setHedgeError(error instanceof Error ? error.message : 'Failed to create trade');
-    } finally {
-      setIsPlacingHedge(false);
-    }
+    // Store the hedge data and open the payment modal
+    setPendingHedgeData(hedgeData);
+    setIsPaymentModalOpen(true);
   };
   
   // This function is called after successful payment
@@ -587,46 +538,50 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   return null;
                 })()}
 
-                <div className="space-y-3">
-                  {onPlaceHedge && (
-                    <Button
-                      onClick={handlePlaceHedge}
-                      className="w-full"
-                      variant="outline"
-                      disabled={isPlacingHedge}
-                    >
-                      {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                      {hedgeError && (
-                        <span className="ml-2 text-red-500">
-                          {hedgeError}
-                        </span>
-                      )}
-                    </Button>
-                  )}
-                  
-                  {/* Bypass Payment Button for Testing - Always Show */}
-                  <div className="border-t pt-3">
-                    <p className="text-xs text-muted-foreground mb-2 text-center">
-                      Testing Mode - Skip Payment Processing
-                    </p>
-                    <Button
-                      onClick={handleBypassPayment}
-                      className="w-full"
-                      variant="secondary"
-                      disabled={isPlacingHedge}
-                      size="sm"
-                    >
-                      🧪 Test Hedge Placement (No Payment)
-                    </Button>
-                  </div>
-                </div>
+                {onPlaceHedge && (
+                  <Button
+                    onClick={handlePlaceHedge}
+                    className="w-full"
+                    variant="outline"
+                    disabled={isPlacingHedge}
+                  >
+                    {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
+                    {hedgeError && (
+                      <span className="ml-2 text-red-500">
+                        {hedgeError}
+                      </span>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       </TooltipProvider>
       
-
+      {/* Payment Modal - Using StandaloneWindowPayment for complete isolation from React refresh cycles */}
+      {isPaymentModalOpen && pendingHedgeData && (
+        <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('Uma nova janela será aberta para o processamento do pagamento. Mantenha-a aberta até concluir o pagamento.', 
+                   'A new window will open for payment processing. Keep it open until you complete the payment.')}
+              </p>
+            </DialogHeader>
+            
+            {/* Always use StandaloneWindowPayment for consistency */}
+            <StandaloneWindowPayment
+              hedgeData={pendingHedgeData}
+              onSuccess={handlePaymentSuccess}
+              onClose={() => setIsPaymentModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

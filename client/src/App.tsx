@@ -16,7 +16,6 @@ import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
-import TradeManagement from "@/components/trade-management";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -37,9 +36,6 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
-      </Route>
-      <Route path="/trades">
-        {user ? <TradeManagement /> : <AuthPage />}
       </Route>
       <Route path="/what-is-hedge">
         {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
