@@ -39,17 +39,31 @@ export const hedges = pgTable('hedges', {
   completedAt:      timestamp('completed_at'),
 });
 
-export const flaskTrades = pgTable('flask_trades', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id').references(() => users.id).notNull(),
-  flaskTradeId: integer('flask_trade_id').notNull(),
-  symbol: text('symbol').notNull(),
-  direction: text('direction').notNull(),
-  volume: decimal('volume', { precision: 10, scale: 4 }).notNull(),
-  status: text('status').notNull().default('NEW'),
-  metadata: text('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const trades = pgTable('trades', {
+  id:            serial('id').primaryKey(),
+  userId:        integer('user_id').notNull(),
+  ticket:        text('ticket').notNull(),
+  broker:        text('broker').notNull(),
+  volume:        numeric('volume', { precision: 10, scale: 2 }).notNull(),
+  symbol:        text('symbol').notNull(),
+  openTime:      timestamp('open_time').notNull(),
+  durationDays:  integer('duration_days').notNull(),
+
+  // Order status in the DB; use .default() instead of sql``  
+  status:        text('status').notNull().default('open'),
+  closedAt:      timestamp('closed_at'),
+  hedgeId:       integer('hedge_id'),
+
+  // Basic timestamps
+  createdAt:     timestamp('created_at').notNull().defaultNow(),
+  updatedAt:     timestamp('updated_at').notNull().defaultNow(),
+
+  // ← Flask integration columns
+  flaskTradeId:  integer('flask_trade_id'),
+  metadata:      jsonb('metadata').notNull().default({}), // JSONB default empty object
+
+  // RLS flag if you need it
+  enableRLS:     boolean('enable_rls').notNull().default(false),
 });
 
 export const userRelations = relations(users, ({ many }) => ({
