@@ -248,39 +248,7 @@ export function registerRoutes(app: Express): Server {
 
 
 
-  // API endpoint to get open trades
-  app.get("/api/trades/open", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const openTrades = await tradeService.getOpenTrades(req.user.id);
-      res.json(openTrades);
-    } catch (error) {
-      console.error("[Trades API] Error fetching open trades:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to fetch open trades" 
-      });
-    }
-  });
-
-  // API endpoint to get closed trades (history)
-  app.get("/api/trades/history", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const closedTrades = await tradeService.getClosedTrades(req.user.id);
-      res.json(closedTrades);
-    } catch (error) {
-      console.error("[Trades API] Error fetching trade history:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to fetch trade history" 
-      });
-    }
-  });
-
+  const httpServer = createServer(app);
+  return httpServer;
 }
  
