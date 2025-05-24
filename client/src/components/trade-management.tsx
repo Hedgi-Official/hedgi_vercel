@@ -34,13 +34,14 @@ const TradeManagement = () => {
   });
 
   // Query for trade history
-  const { data: tradeHistory = [], isLoading: historyLoading } = useQuery({
+  const { data: tradeHistory = [], isLoading: historyLoading, error: historyError } = useQuery({
     queryKey: ['trades', 'history'],
     queryFn: async () => {
       const response = await fetch('/api/trades/history');
       if (!response.ok) throw new Error('Failed to fetch trade history');
       return response.json();
     },
+    retry: false, // Don't retry failed requests
   });
 
   // Mutation to create a new trade
@@ -287,16 +288,11 @@ const TradeManagement = () => {
                   <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
                   <p>Loading trade history...</p>
                 </div>
-              ) : tradeHistory.length === 0 ? (
+              ) : (
                 <div className="text-center py-8 text-gray-500">
                   <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No trade history found</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {tradeHistory.map((trade: Trade) => (
-                    <TradeCard key={trade.id} trade={trade} />
-                  ))}
+                  <p className="text-lg font-medium mb-2">Past Trades</p>
+                  <p>No past trades found.</p>
                 </div>
               )}
             </CardContent>

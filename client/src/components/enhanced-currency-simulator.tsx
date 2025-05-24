@@ -53,9 +53,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
   
-  // Payment modal state
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
+  // Payment bypass - no payment modal needed
 
   // Get rates from ActivTrades API
   const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
@@ -629,29 +627,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         </Card>
       </TooltipProvider>
       
-      {/* Payment Modal - Using StandaloneWindowPayment for complete isolation from React refresh cycles */}
-      {isPaymentModalOpen && pendingHedgeData && (
-        <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {t('Complete o pagamento para realizar o hedge', 'Complete Payment to Place Hedge')}
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-2">
-                {t('Uma nova janela será aberta para o processamento do pagamento. Mantenha-a aberta até concluir o pagamento.', 
-                   'A new window will open for payment processing. Keep it open until you complete the payment.')}
-              </p>
-            </DialogHeader>
-            
-            {/* Always use StandaloneWindowPayment for consistency */}
-            <StandaloneWindowPayment
-              hedgeData={pendingHedgeData}
-              onSuccess={handlePaymentSuccess}
-              onClose={() => setIsPaymentModalOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+
     </>
   );
 }
