@@ -37,7 +37,7 @@ export const trades = pgTable("trades", {
   direction: text("direction").notNull(), // 'buy' or 'sell'
   volume: decimal("volume", { precision: 10, scale: 4 }).notNull(), // Trade volume
   status: text("status").notNull().default('NEW'), // NEW, Executed, Closed, FAILED
-  metadata: text("metadata"), // Additional trade metadata from Flask (JSON string)
+  metadata: jsonb("metadata"), // Additional trade metadata from Flask (JSON object)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

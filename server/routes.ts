@@ -67,7 +67,7 @@ export function registerRoutes(app: Express): Server {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbol, direction, volume, status: 'NEW', metadata })
       });
-      
+
       const ft = (await resp.json()) as FlaskTrade;
 
       const [dbEntry] = await db
