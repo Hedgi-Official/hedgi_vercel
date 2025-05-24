@@ -467,15 +467,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
         </CardContent>
       </Card>
       
-      {/* Payment Modal */}
-      <MercadoPayoSDKModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
-        hedgeData={pendingHedgeData}
-        currency={baseCurrency}
-        simulation={simulation}
-      />
+      {/* Payment Modal Disabled - Using Bypass Only */}
     </>
   );
 }

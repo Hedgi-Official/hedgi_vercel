@@ -74,12 +74,7 @@ export function TradeHistory() {
           <div className="text-center py-4">Loading trade history...</div>
         )}
 
-        {/* Error state */}
-        {historyError && (
-          <div className="text-red-500 py-4">
-            Error loading trade history. Please try again.
-          </div>
-        )}
+        {/* Remove error state - just show empty state */}
 
         {/* Closed trades section */}
         <div>
