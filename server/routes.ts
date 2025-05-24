@@ -53,20 +53,25 @@ export function registerRoutes(app: Express): Server {
 
       const flaskTrade = await response.json();
       
-      // Persist to local DB
+      // Store trade info using new schema structure
       const dbTrade = await db.insert(trades).values({
         userId: req.user.id,
         flaskTradeId: flaskTrade.id,
-        symbol: flaskTrade.symbol,
-        direction: flaskTrade.direction,
-        volume: flaskTrade.volume,
-        status: flaskTrade.status,
-        metadata: flaskTrade.metadata,
-        createdAt: new Date(flaskTrade.created_at),
-        updatedAt: new Date(flaskTrade.updated_at)
+        symbol: symbol,
+        direction: direction,
+        volume: volume.toString(),
+        status: 'NEW',
+        metadata: JSON.stringify(metadata || {})
       }).returning();
 
-      res.json(dbTrade[0]);
+      res.json({
+        id: dbTrade[0].id,
+        symbol,
+        direction,
+        volume,
+        status: 'NEW',
+        flaskTradeId: flaskTrade.id
+      });
     } catch (error) {
       console.error('Error creating trade:', error);
       res.status(500).json({ error: 'Failed to create trade' });
@@ -92,16 +97,16 @@ export function registerRoutes(app: Express): Server {
       const { status } = await response.json();
 
       // Map status to UI labels
-      const statusMap = {
+      const statusMap: Record<string, string> = {
         'NEW': 'Order sent',
         'Executed': 'Order placed',
         'Closed': 'Closed',
         'FAILED': 'Failed'
       };
 
-      // Update local DB
+      // Update local DB status
       await db.update(trades)
-        .set({ status, updatedAt: new Date() })
+        .set({ status: status === 'Closed' ? 'closed_by_sl' : 'open' })
         .where(eq(trades.id, trade.id));
 
       res.json({ 
@@ -135,6 +140,12 @@ export function registerRoutes(app: Express): Server {
       });
 
       const result = await response.json();
+      
+      // Update local DB to mark as closed
+      await db.update(trades)
+        .set({ status: 'Closed', updatedAt: new Date() })
+        .where(eq(trades.id, trade.id));
+
       res.json(result);
     } catch (error) {
       console.error('Error closing trade:', error);
@@ -151,7 +162,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const historyTrades = await db.query.trades.findMany({
         where: inArray(trades.status, ['Closed', 'FAILED']),
-        orderBy: desc(trades.updatedAt)
+        orderBy: desc(trades.createdAt)
       });
 
       res.json(historyTrades);
@@ -233,52 +244,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 1) Check status
-  app.get("/api/trades/:tradeId/status", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/status`);
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][status]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
 
-  // 2) Create (open) a new trade
-  app.post("/api/trades", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)
-      });
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][create]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
-
-  // 3) Close an existing trade
-  app.post("/api/trades/:tradeId/close", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/close`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)  // if your Flask close needs extra fields
-      });
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][close]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
 
 
 
