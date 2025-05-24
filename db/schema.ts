@@ -45,7 +45,7 @@ export const flaskTrades = pgTable('flask_trades', {
   flaskTradeId: integer('flask_trade_id').notNull(),
   symbol: text('symbol').notNull(),
   direction: text('direction').notNull(),
-  volume: numeric('volume', { precision: 10, scale: 4 }).notNull(),
+  volume: decimal('volume', { precision: 10, scale: 4 }).notNull(),
   status: text('status').notNull().default('NEW'),
   metadata: text('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -54,7 +54,7 @@ export const flaskTrades = pgTable('flask_trades', {
 
 export const userRelations = relations(users, ({ many }) => ({
   hedges: many(hedges),
-  flaskTrades: many(flaskTrades),
+  trades: many(trades),
 }));
 
 export const hedgeRelations = relations(hedges, ({ one }) => ({
@@ -64,9 +64,9 @@ export const hedgeRelations = relations(hedges, ({ one }) => ({
   }),
 }));
 
-export const flaskTradeRelations = relations(flaskTrades, ({ one }) => ({
+export const tradeRelations = relations(trades, ({ one }) => ({
   user: one(users, {
-    fields:    [flaskTrades.userId],
+    fields:    [trades.userId],
     references:[users.id],
   }),
 }));
@@ -77,5 +77,5 @@ export type User     = typeof users.$inferSelect;
 export type NewUser  = typeof users.$inferInsert;
 export type Hedge    = typeof hedges.$inferSelect;
 export type NewHedge = typeof hedges.$inferInsert;
-export type FlaskTrade    = typeof flaskTrades.$inferSelect;
-export type NewFlaskTrade = typeof flaskTrades.$inferInsert;
+export type Trade    = typeof trades.$inferSelect;
+export type NewTrade = typeof trades.$inferInsert;

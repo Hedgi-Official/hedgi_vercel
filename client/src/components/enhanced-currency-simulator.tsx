@@ -174,50 +174,26 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   
   // This function is called after successful payment
   const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
-    if (!onOrdersUpdated) {
+    if (!onPlaceHedge || !onOrdersUpdated) {
       console.error('Missing required callbacks');
       return;
     }
 
-    console.log('[EnhancedCurrencySimulator] Payment successful, placing trade...');
+    console.log('[EnhancedCurrencySimulator] Payment successful, placing hedge...');
     setIsPlacingHedge(true);
     
     try {
-      // Create trade using new Flask-backed endpoint
-      const tradeData = {
-        symbol: `${hedgeData.baseCurrency}${hedgeData.targetCurrency}`,
-        direction: hedgeData.tradeDirection,
-        volume: Math.abs(Number(hedgeData.amount)),
-        metadata: {
-          hedgeData,
-          originalAmount: hedgeData.amount,
-          rate: hedgeData.rate,
-          duration: hedgeData.duration,
-          margin: hedgeData.margin
-        }
-      };
-
-      const response = await fetch('/api/trades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeData),
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create trade');
-      }
-
-      const result = await response.json();
-      console.log('[EnhancedCurrencySimulator] Trade created successfully:', result);
+      // Call the parent component's handler to place the hedge after payment
+      const result = await onPlaceHedge(hedgeData);
+      console.log('[EnhancedCurrencySimulator] Hedge placement result:', result);
 
       // Refresh the orders list in the dashboard
       onOrdersUpdated();
 
-      console.log('[EnhancedCurrencySimulator] Trade placement completed successfully');
+      console.log('[EnhancedCurrencySimulator] Hedge placement completed successfully');
     } catch (error) {
-      console.error('[EnhancedCurrencySimulator] Error placing trade:', error);
-      setHedgeError(error instanceof Error ? error.message : 'Failed to place trade');
+      console.error('[EnhancedCurrencySimulator] Error placing hedge:', error);
+      setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
     } finally {
       setIsPlacingHedge(false);
     }
