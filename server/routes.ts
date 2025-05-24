@@ -1,23 +1,49 @@
-import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
-import { db } from "@db";
-import { trades } from "@db/schema";
-import { eq, desc, inArray } from "drizzle-orm";
-import secondaryRateRouter from './routes/secondary-rate';
-import chatRouter from './routes/chat';
-import activtradesRouter from './routes/activtrades-rate';
-import tickmillRouter from './routes/tickmill-rate';
-import fbsRouter from './routes/fbs-rate';
-import paymentRouter from './routes/payment';
-import simulateRouter from './routes/simulate';
+import express, { Express, Request, Response } from 'express';
+import fetch from 'node-fetch';
+import { createServer, Server } from 'http';
+import { setupAuth } from './auth';
+import { db } from '@db';
+import { trades } from '@db/schema';
+import { eq, inArray, desc } from 'drizzle-orm';
+
+
+// Legacy routers
+import secondaryRateRouter   from './routes/secondary-rate';
+import chatRouter            from './routes/chat';
+import activtradesRouter     from './routes/activtrades-rate';
+import tickmillRouter        from './routes/tickmill-rate';
+import fbsRouter             from './routes/fbs-rate';
+import paymentRouter         from './routes/payment';
+import simulateRouter        from './routes/simulate';
 
 const FLASK = process.env.FLASK_URL || 'http://3.145.164.47';
 
+// 1. Define the JSON shapes
+interface FlaskTrade {
+  id:         number;
+  symbol:     string;
+  direction:  string;
+  volume:     number;
+  status:     'NEW'|'Executed'|'Closed'|'FAILED';
+  metadata:   Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ActivTradesRate {
+  bid: number;
+  ask: number;
+  swap_long: number;
+  swap_short: number;
+}
+
+
 export function registerRoutes(app: Express): Server {
+  // 1) Middleware
+  app.use(express.json());
   setupAuth(app);
 
-  // Register routes
+  // 2) Mount legacy routers
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(activtradesRouter);
@@ -25,296 +51,149 @@ export function registerRoutes(app: Express): Server {
   app.use(fbsRouter);
   app.use(paymentRouter);
   app.use(simulateRouter);
+  console.log(Object.keys(trades));
+  // ─── New /api/trades endpoints ────────────────────────────────────
 
-  // New Trades API - Flask Backend Integration
-  
-  // 1) Create a new trade → POST /api/trades
+  // 1) Create a new trade
   app.post('/api/trades', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const { symbol, direction, volume, metadata } = req.body;
-      
-      const tradeData = {
-        symbol,
-        direction,
-        volume,
-        status: 'NEW',
-        metadata: metadata || {}
-      };
-
-      const response = await fetch(`${FLASK}/trades`, {
+      const { symbol, direction, volume, metadata = {} } = req.body;
+      // Proxy to Flask
+      const resp = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeData)
+        body: JSON.stringify({ symbol, direction, volume, status: 'NEW', metadata })
       });
-
-      const flaskTrade = await response.json();
       
-      // Persist to local DB
-      const dbTrade = await db.insert(trades).values({
-        userId: req.user.id,
-        flaskTradeId: flaskTrade.id,
-        symbol: flaskTrade.symbol,
-        direction: flaskTrade.direction,
-        volume: flaskTrade.volume,
-        status: flaskTrade.status,
-        metadata: flaskTrade.metadata,
-        createdAt: new Date(flaskTrade.created_at),
-        updatedAt: new Date(flaskTrade.updated_at)
-      }).returning();
+      const ft = (await resp.json()) as FlaskTrade;
 
-      res.json(dbTrade[0]);
-    } catch (error) {
-      console.error('Error creating trade:', error);
-      res.status(500).json({ error: 'Failed to create trade' });
+      const [dbEntry] = await db
+      .insert(trades)
+      .values({
+        userId:       req.user.id,       // number
+        flaskTradeId: ft.id,             // number
+        symbol:       ft.symbol,         // string
+        direction:    ft.direction,      // string
+        volume:       ft.volume,         // number
+        status:       ft.status,         // string ('NEW')
+        metadata:     ft.metadata        // object for jsonb column
+      })
+      .returning();
+
+      return res.status(resp.status).json(dbEntry);
+    } catch (err) {
+      console.error('Error creating trade:', err);
+      return res.status(500).json({ error: 'Failed to create trade' });
     }
   });
 
-  // 2) Poll a trade's status → GET /api/trades/:id/status
+  // 2) Poll a trade’s status
   app.get('/api/trades/:id/status', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const trade = await db.query.trades.findFirst({
-        where: eq(trades.id, parseInt(req.params.id))
-      });
-
-      if (!trade || trade.userId !== req.user.id) {
+      const id = parseInt(req.params.id, 10);
+      const t = await db.query.trades.findFirst({ where: eq(trades.id, id) });
+      if (!t || t.userId !== req.user.id) {
         return res.status(404).json({ error: 'Trade not found' });
       }
 
-      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-      const { status } = await response.json();
+      const resp = await fetch(`${FLASK}/trades/${t.flaskTradeId}/status`);
+      const { status } = await resp.json();
 
-      // Map status to UI labels
-      const statusMap = {
-        'NEW': 'Order sent',
-        'Executed': 'Order placed',
-        'Closed': 'Closed',
-        'FAILED': 'Failed'
+      // Map to UI labels and persist
+      const labelMap: Record<string,string> = {
+        NEW:      'Order sent',
+        Executed: 'Order placed',
+        Closed:   'Closed',
+        FAILED:   'Failed'
       };
-
-      // Update local DB
       await db.update(trades)
         .set({ status, updatedAt: new Date() })
-        .where(eq(trades.id, trade.id));
+        .where(eq(trades.id, id));
 
-      res.json({ 
-        status, 
-        label: statusMap[status] || status 
-      });
-    } catch (error) {
-      console.error('Error checking trade status:', error);
-      res.status(500).json({ error: 'Failed to check status' });
+      return res.json({ status, label: labelMap[status] ?? status });
+    } catch (err) {
+      console.error('Error checking trade status:', err);
+      return res.status(500).json({ error: 'Failed to check status' });
     }
   });
 
-  // 3) Close a trade early → POST /api/trades/:id/close
+  // 3) Close a trade early
   app.post('/api/trades/:id/close', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const trade = await db.query.trades.findFirst({
-        where: eq(trades.id, parseInt(req.params.id))
-      });
-
-      if (!trade || trade.userId !== req.user.id) {
+      const id = parseInt(req.params.id, 10);
+      const t = await db.query.trades.findFirst({ where: eq(trades.id, id) });
+      if (!t || t.userId !== req.user.id) {
         return res.status(404).json({ error: 'Trade not found' });
       }
 
-      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await response.json();
-      res.json(result);
-    } catch (error) {
-      console.error('Error closing trade:', error);
-      res.status(500).json({ error: 'Failed to close trade' });
+      const resp = await fetch(`${FLASK}/trades/${t.flaskTradeId}/close`, { method: 'POST' });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (err) {
+      console.error('Error closing trade:', err);
+      return res.status(500).json({ error: 'Failed to close trade' });
     }
   });
 
-  // 4) History tab → GET /api/trades/history
-  app.get('/api/trades/history', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
+  // 4) History tab
+  app.get('/api/trades/history', async (_: Request, res: Response) => {
+    if (!res.req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const historyTrades = await db.query.trades.findMany({
-        where: inArray(trades.status, ['Closed', 'FAILED']),
+      const hist = await db.query.trades.findMany({
+        where: inArray(trades.status, ['Closed','FAILED']),
         orderBy: desc(trades.updatedAt)
       });
-
-      res.json(historyTrades);
-    } catch (error) {
-      console.error('Error fetching trade history:', error);
-      res.status(500).json({ error: 'Failed to fetch history' });
+      return res.json(hist);
+    } catch (err) {
+      console.error('Error fetching trade history:', err);
+      return res.status(500).json({ error: 'Failed to fetch history' });
     }
   });
 
-  // List of supported symbols for exchange rates
+  // ─── Exchange rates endpoint ────────────────────────────────────────
+
   const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
-
-  // Exchange rates endpoint that uses our new infrastructure
-  app.get("/api/xtb/rates", async (req, res) => {
+  app.get('/api/xtb/rates', async (req, res) => {
     res.header('Content-Type', 'application/json');
-    console.log('[Exchange Rates DEBUG] Request received for /api/xtb/rates');
-
-    try {
-      // Get real data for each symbol using our activtrades endpoint
-      const symbols = SUPPORTED_SYMBOLS;
-      const rates = [];
-      
-      console.log('[Exchange Rates DEBUG] Fetching rates for all symbols:', symbols);
-
-      for (const symbol of symbols) {
-        try {
-          console.log(`[Exchange Rates] Fetching rate for ${symbol}`);
-          // Use fetch with a timeout for safety
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
-          
-          // Fetch from the activtrades endpoint which returns real data
-          const response = await fetch(`http://localhost:${req.socket.localPort}/api/activtrades-rate?symbol=${symbol}`, {
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          console.log(`[Exchange Rates] Got data for ${symbol}:`, data);
-          
-          rates.push({
-            symbol,
-            bid: data.bid,
-            ask: data.ask,
-            timestamp: Date.now(),
-            swapLong: Math.abs(data.swap_long / 10000 || 0), // Convert to decimal
-            swapShort: Math.abs(data.swap_short / 10000 || 0), // Convert to decimal
-          });
-        } catch (error) {
-          console.error(`[Exchange Rates] Error fetching ${symbol}:`, error);
-          
-          // If a specific symbol fails, let's still return the others
-          // rather than failing the whole request
-          continue;
-        }
-      }
-
-      // If we have no rates, something went wrong with the service
-      if (rates.length === 0) {
-        console.error('[Exchange Rates] Failed to get any rates');
-        return res.status(503).json({ 
-          error: 'Exchange rate service temporarily unavailable' 
+    const rates = [];
+    for (const symbol of SUPPORTED_SYMBOLS) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const r = await fetch(`http://localhost:${req.socket.localPort}/api/activtrades-rate?symbol=${symbol}`, {
+          signal: controller.signal
         });
+        clearTimeout(timeout);
+        if (!r.ok) throw new Error(`Status ${r.status}`);
+        const d = (await r.json()) as ActivTradesRate;
+        rates.push({
+          symbol,
+          bid:        d.bid,
+          ask:        d.ask,
+          timestamp:  Date.now(),
+          swapLong:   Math.abs(d.swap_long/10000||0),
+          swapShort:  Math.abs(d.swap_short/10000||0)
+        });
+      } catch (e) {
+        console.error(`Error fetching ${symbol}:`, e);
       }
-
-      // Send the rates as a direct JSON string
-      console.log('[Exchange Rates] Returning rates:', rates);
-      return res.send(JSON.stringify(rates));
-    } catch (error) {
-      console.error('[Exchange Rates] Error in rates endpoint:', error);
-      return res.status(500).json({ 
-        error: 'Failed to retrieve exchange rates'
-      });
     }
+    if (!rates.length) {
+      return res.status(503).json({ error: 'Exchange rate service unavailable' });
+    }
+    return res.json(rates);
   });
 
-  // 1) Check status
-  app.get("/api/trades/:tradeId/status", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/status`);
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][status]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
-
-  // 2) Create (open) a new trade
-  app.post("/api/trades", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)
-      });
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][create]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
-
-  // 3) Close an existing trade
-  app.post("/api/trades/:tradeId/close", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
-    try {
-      const resp = await fetch(`${FLASK}/trades/${req.params.tradeId}/close`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body)  // if your Flask close needs extra fields
-      });
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (err: any) {
-      console.error("[Trades][close]", err);
-      return res.status(502).json({ error: "Trade-service unavailable" });
-    }
-  });
-
-
-
-  // API endpoint to get open trades
-  app.get("/api/trades/open", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const openTrades = await tradeService.getOpenTrades(req.user.id);
-      res.json(openTrades);
-    } catch (error) {
-      console.error("[Trades API] Error fetching open trades:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to fetch open trades" 
-      });
-    }
-  });
-
-  // API endpoint to get closed trades (history)
-  app.get("/api/trades/history", async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-
-    try {
-      const closedTrades = await tradeService.getClosedTrades(req.user.id);
-      res.json(closedTrades);
-    } catch (error) {
-      console.error("[Trades API] Error fetching trade history:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to fetch trade history" 
-      });
-    }
-  });
-
+  return createServer(app);
 }
- 
