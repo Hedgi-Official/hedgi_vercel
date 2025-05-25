@@ -412,15 +412,11 @@ export default function Dashboard() {
                       <p className="text-sm text-muted-foreground">
                         {trade.direction} {trade.volume}
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Status: {trade.status || 'open'}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => checkTradeStatusMutation.mutate(String(trade.id))}
-                      >
-                        <AlertCircle className="h-4 w-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
