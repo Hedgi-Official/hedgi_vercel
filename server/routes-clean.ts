@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { users, hedges } from "@db/schema";
+import { users, hedges, trades } from "@db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
@@ -17,7 +17,7 @@ const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Register existing routes
+  // Register existing routers
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(activtradesRouter);
@@ -26,122 +26,109 @@ export function registerRoutes(app: Express): Server {
   app.use(paymentRouter);
   app.use(simulateRouter);
 
-  // **SIMPLE FLASK PROXY ENDPOINTS**
-
-  // 1. Create a new trade → POST /api/trades (proxy to Flask)
-  app.post('/api/trades', async (req: Request, res: Response) => {
+  //
+  // 1) Create a new trade → proxy POST /api/trades
+  //
+  app.post('/api/trades', async (req, res) => {
     try {
-      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
-      
-      const response = await fetch(`${FLASK}/trades`, {
+      console.log('[Proxy] POST /api/trades →', req.body);
+      const flaskRes = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(req.body),
       });
-
-      console.log('[Express Proxy] Flask response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Express Proxy] Flask error:', errorText);
-        return res.status(response.status).json({ error: errorText });
+      const text = await flaskRes.text();
+      if (!flaskRes.ok) {
+        console.error('[Proxy] Flask error:', text);
+        return res.status(flaskRes.status).json({ error: text });
       }
-
-      const result = await response.json();
-      console.log('[Express Proxy] Flask success:', result);
+      const result = JSON.parse(text);
+      console.log('[Proxy] Flask success:', result);
       res.json(result);
-    } catch (error) {
-      console.error('[Express Proxy] Error:', error);
-      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    } catch (err) {
+      console.error('[Proxy] POST /api/trades failed:', err);
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  // 2. Poll a trade's status → GET /api/trades/:tradeId/status (proxy to Flask)
-  app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
+  //
+  // 2) Check status → proxy GET /api/trades/:tradeId/status
+  //
+  app.get('/api/trades/:tradeId/status', async (req, res) => {
     try {
       const tradeId = req.params.tradeId;
-      console.log('[Express Proxy] Checking trade status for ID:', tradeId);
-      
-      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Express Proxy] Flask status error:', errorText);
-        return res.status(response.status).json({ error: errorText });
+      console.log('[Proxy] GET /api/trades/:tradeId/status →', tradeId);
+
+      // 2a) ask Flask
+      const flaskRes = await fetch(`${FLASK}/trades/${tradeId}/status`);
+      const text = await flaskRes.text();
+      if (!flaskRes.ok) {
+        console.error('[Proxy] Flask status error:', text);
+        return res.status(flaskRes.status).json({ error: text });
       }
+      const { status } = JSON.parse(text);
+      console.log('[Proxy] Flask returned status:', status);
 
-      const result = await response.json();
-      console.log('[Express Proxy] Flask status response:', result);
-      res.json(result);
-    } catch (error) {
-      console.error('[Express Proxy] Status check error:', error);
-      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+      // 2b) update our own DB
+      await db.update(trades)
+              .set({ status, updatedAt: new Date() })
+              .where(eq(trades.id, parseInt(tradeId)));
+      console.log('[Proxy] Updated local trades table');
+
+      // 2c) respond
+      res.json({ status, label: statusMap[status] ?? status });
+    } catch (err) {
+      console.error('[Proxy] GET /api/trades/:tradeId/status failed:', err);
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-      // Update local DB
-      await db.update(flaskTrades)
-        .set({ status, updatedAt: new Date() })
-        .where(eq(flaskTrades.id, trade.id));
-
-      res.json({ 
-        status, 
-        label: statusMap[status] || status 
-      });
-    } catch (error) {
-      console.error('Error checking trade status:', error);
-      res.status(500).json({ error: 'Failed to check status' });
-    }
-  });
-
-  // 3. Close a trade early → POST /api/trades/:tradeId/close
-  app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+  //
+  // 3) Close early → proxy POST /api/trades/:tradeId/close
+  //
+  app.post('/api/trades/:tradeId/close', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const trade = await db.query.flaskTrades.findFirst({
-        where: eq(flaskTrades.id, parseInt(req.params.tradeId))
+      const id = parseInt(req.params.tradeId);
+      const trade = await db.query.trades.findFirst({
+        where: eq(trades.id, id),
       });
-
       if (!trade || trade.userId !== req.user.id) {
         return res.status(404).json({ error: 'Trade not found' });
       }
 
-      // Send close request to Flask
-      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
+      const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-
-      const result = await response.json();
+      const result = await flaskRes.json();
       res.json(result);
-    } catch (error) {
-      console.error('Error closing trade:', error);
-      res.status(500).json({ error: 'Failed to close trade' });
+    } catch (err) {
+      console.error('[Proxy] POST close failed:', err);
+      res.status(500).json({ error: (err as Error).message });
     }
   });
 
-  // 4. History tab → GET /api/trades/history
-  app.get('/api/trades/history', async (req: Request, res: Response) => {
+  //
+  // 4) History → GET /api/trades/history
+  //
+  app.get('/api/trades/history', async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     try {
-      const historyTrades = await db.query.flaskTrades.findMany({
-        where: inArray(flaskTrades.status, ['Closed', 'FAILED']),
-        orderBy: desc(flaskTrades.updatedAt)
+      const history = await db.query.trades.findMany({
+        where: inArray(trades.status, ['Closed','FAILED']),
+        orderBy: desc(trades.updatedAt),
       });
-
-      res.json(historyTrades);
-    } catch (error) {
-      console.error('Error fetching trade history:', error);
-      res.status(500).json({ error: 'Failed to fetch history' });
+      res.json(history);
+    } catch (err) {
+      console.error('[Proxy] GET history failed:', err);
+      res.status(500).json({ error: (err as Error).message });
     }
   });
-
   // Exchange rates endpoint (keeping this as it's unrelated to trades)
   const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
   
