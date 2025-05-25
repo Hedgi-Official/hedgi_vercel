@@ -52,14 +52,21 @@ export default function Dashboard() {
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
-  const { data: trades } = useQuery<Trade[]>({
+  const { data: trades = [] } = useQuery<Trade[]>({
     queryKey: ['/trades'],
-    queryFn: () => {
+    queryFn: async () => {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
-      return fetch(`${serverUrl}/api/trades/history`, { credentials: 'include' }).then(r => r.json());
+      const response = await fetch(`${serverUrl}/api/trades/history`, { credentials: 'include' });
+      if (!response.ok) {
+        return []; // Return empty array on error
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : []; // Ensure we always return an array
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const checkTradeStatusMutation = useMutation({
