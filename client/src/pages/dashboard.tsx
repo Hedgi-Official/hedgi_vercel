@@ -54,12 +54,20 @@ export default function Dashboard() {
 
   const { data: trades } = useQuery<Trade[]>({
     queryKey: ['/trades'],
-    queryFn: () => fetch(`/trades`, { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      return fetch(`${serverUrl}/api/trades/history`, { credentials: 'include' }).then(r => r.json());
+    },
   });
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: string) => {
-      const response = await fetch(`/trades/status/${tradeOrderNumber}`, {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const response = await fetch(`${serverUrl}/api/trades/${tradeOrderNumber}/status`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -172,7 +180,10 @@ export default function Dashboard() {
       // Use the broker-based API endpoint for closing trades
       console.log(`[Dashboard] Closing trade with broker: ${broker}, position: ${position}`);
       
-      const response = await fetch(`/trades/${position}/close`, {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const response = await fetch(`${serverUrl}/api/trades/${position}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -276,7 +287,10 @@ export default function Dashboard() {
       console.log('[Dashboard] Deleting hedge from database:', hedge);
 
       // Delete the hedge from our database
-      const response = await fetch(`/trades/${hedge.id}`, {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const response = await fetch(`${serverUrl}/api/trades/${hedge.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
