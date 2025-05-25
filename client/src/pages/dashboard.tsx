@@ -117,9 +117,9 @@ export default function Dashboard() {
       const payload = { symbol, direction, volume, metadata };
       
       console.log('[Dashboard] sending payload:', payload);
-      console.log('[Dashboard] sending to URL:', `/trades`);
+      console.log('[Dashboard] sending to URL:', `/api/trades`);
       console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
-      const res = await fetch(`/trades`, {
+      const res = await fetch(`/api/trades`, {
         method: 'POST',
         mode: 'cors',
         headers: { 
