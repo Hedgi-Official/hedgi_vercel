@@ -51,24 +51,24 @@ export function registerRoutes(app: Express): Server {
       console.log('[Express Proxy] Flask success:', result);
       
       // Save the Flask trade to our local database for history tracking
-      if (req.isAuthenticated() && req.user?.id) {
-        try {
-          await db.insert(trades).values({
-            userId: req.user.id,
-            symbol: result.symbol,
-            volume: result.volume.toString(),
-            status: 'open',
-            openTime: new Date(result.created_at),
-            durationDays: result.metadata?.days || 7,
-            broker: 'flask',
-            flaskTradeId: result.id,
-            metadata: result.metadata || {}
-          });
-          console.log('[Express Proxy] Saved trade to local database');
-        } catch (dbError) {
-          console.error('[Express Proxy] Failed to save to local database:', dbError);
-          // Don't fail the request if database save fails
-        }
+      try {
+        const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
+        await db.insert(trades).values({
+          userId: userId,
+          ticket: `FLASK-${result.id}`,
+          broker: 'flask',
+          volume: result.volume.toString(),
+          symbol: result.symbol,
+          openTime: new Date(result.created_at),
+          durationDays: result.metadata?.days || 7,
+          status: 'open',
+          flaskTradeId: result.id,
+          metadata: result.metadata || {}
+        });
+        console.log('[Express Proxy] Saved trade to local database - Flask ID:', result.id);
+      } catch (dbError) {
+        console.error('[Express Proxy] Failed to save to local database:', dbError);
+        // Don't fail the request if database save fails
       }
       
       res.json(result);
