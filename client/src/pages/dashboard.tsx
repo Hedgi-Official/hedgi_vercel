@@ -24,7 +24,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-const API_BASE = "http://3.145.164.47";
+const API_BASE = "/api";
 
 // Define the shape your Flask /trades endpoint returns:
 type Trade = {

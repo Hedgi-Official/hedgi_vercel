@@ -27,37 +27,33 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
   
 
-  // 1) Create a new trade
+  // 1) Create a new trade (Simple proxy to Flask)
   app.post('/api/trades', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
-      const { symbol, direction, volume, metadata = {} } = req.body;
+      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
+      
       const flaskRes = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, direction, volume, status: 'NEW', metadata })
+        body: JSON.stringify(req.body)
       });
-      const ft = await flaskRes.json();
 
-      const [dbEntry] = await db
-        .insert(trades)
-        .values({
-          userId:       req.user.id,
-          flaskTradeId: ft.id,
-          symbol:       ft.symbol,
-          direction:    ft.direction,
-          volume:       ft.volume.toString(),
-          status:       ft.status,
-          metadata:     ft.metadata
-        })
-        .returning();
+      console.log('[Express Proxy] Flask response status:', flaskRes.status);
 
-      return res.status(flaskRes.status).json(dbEntry);
-    } catch (err) {
-      console.error('Error creating trade:', err);
-      return res.status(500).json({ error: 'Failed to create trade' });
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error('[Express Proxy] Flask error:', errorText);
+        return res.status(flaskRes.status).json({ error: errorText });
+      }
+
+      const result = await flaskRes.json();
+      console.log('[Express Proxy] Flask success:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
-  });
+
 
   // 2) Poll status
   app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
