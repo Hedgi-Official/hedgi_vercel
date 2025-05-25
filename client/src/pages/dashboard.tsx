@@ -102,7 +102,7 @@ export default function Dashboard() {
       // parse numeric amount & derive direction
       const amountNum = parseFloat(h.amount);
       const volume    = Math.abs(amountNum) / 100000;
-      const direction = amountNum > 0 ? 'BUY' : 'SELL';
+      const direction = amountNum > 0 ? 'buy' : 'sell';
       const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
 
       // build the metadata you want to send
@@ -120,7 +120,6 @@ export default function Dashboard() {
       const res = await fetch(`${API_BASE}/trades`, {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body:        JSON.stringify(payload)
       });
       if (!res.ok) {
