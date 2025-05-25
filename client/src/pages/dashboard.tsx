@@ -115,7 +115,7 @@ export default function Dashboard() {
 
       // only these fields go on the wire
       const payload = { symbol, direction, volume, metadata };
-      const API_BASE = import.meta.env.VITE_API_BASE || "";
+      const API_BASE = "/api";
       console.log('[Dashboard] sending payload:', payload);
       console.log('[Dashboard] sending to URL:', `${API_BASE}/trades`);
       console.log('[Dashboard] payload JSON:', JSON.stringify(payload));

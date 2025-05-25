@@ -56,32 +56,28 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 2. Poll a trade's status → GET /api/trades/:tradeId/status
+  // 2. Poll a trade's status → GET /api/trades/:tradeId/status (proxy to Flask)
   app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
     try {
-      const trade = await db.query.flaskTrades.findFirst({
-        where: eq(flaskTrades.id, parseInt(req.params.tradeId))
-      });
-
-      if (!trade || trade.userId !== req.user.id) {
-        return res.status(404).json({ error: 'Trade not found' });
+      const tradeId = req.params.tradeId;
+      console.log('[Express Proxy] Checking trade status for ID:', tradeId);
+      
+      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask status error:', errorText);
+        return res.status(response.status).json({ error: errorText });
       }
 
-      // Get status from Flask
-      const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-      const { status } = await response.json();
-
-      // Map status to UI labels
-      const statusMap: Record<string, string> = {
-        'NEW': 'Order sent',
-        'Executed': 'Order placed',
-        'Closed': 'Closed',
-        'FAILED': 'Failed'
-      };
+      const result = await response.json();
+      console.log('[Express Proxy] Flask status response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Status check error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
 
       // Update local DB
       await db.update(flaskTrades)
