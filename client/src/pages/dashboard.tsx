@@ -24,7 +24,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-const API_BASE = "http://3.145.164.47";
+const API_BASE = "";
 
 // Define the shape your Flask /trades endpoint returns:
 type Trade = {
@@ -116,12 +116,17 @@ export default function Dashboard() {
       // only these fields go on the wire
       const payload = { symbol, direction, volume, metadata };
       console.log('[Dashboard] sending payload:', payload);
+      console.log('[Dashboard] sending to URL:', `${API_BASE}/trades`);
+      console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
 
       const res = await fetch(`${API_BASE}/trades`, {
-        method:      'POST',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify(payload)
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+      
+      console.log('[Dashboard] Response status:', res.status);
+      console.log('[Dashboard] Response headers:', Object.fromEntries(res.headers.entries()));
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || 'Failed to create trade');
