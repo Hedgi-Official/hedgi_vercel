@@ -54,6 +54,7 @@ export function registerRoutes(app: Express): Server {
       try {
         const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
         await db.insert(trades).values({
+          id: result.id, // Use Flask ID as the database ID
           userId: userId,
           ticket: `FLASK-${result.id}`,
           broker: 'flask',
