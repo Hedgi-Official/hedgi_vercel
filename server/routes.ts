@@ -110,11 +110,59 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
-      const history = await db.query.trades.findMany({
-        where: inArray(trades.status, ['Closed', 'FAILED']),
+      console.log('[Express Proxy] Getting trade history from database');
+      
+      // Get all trades for this user
+      const allTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, req.user.id),
         orderBy: desc(trades.updatedAt),
       });
-      return res.json(history);
+      
+      console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
+      
+      // For Flask trades, check their live status and include completed ones
+      const historyTrades = [];
+      
+      for (const trade of allTrades) {
+        if (trade.broker === 'flask' && trade.flaskTradeId) {
+          try {
+            // Check Flask status
+            const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+            if (flaskResponse.ok) {
+              const flaskStatus = await flaskResponse.json();
+              if (['FAILED', 'CLOSED', 'EXECUTED'].includes(flaskStatus.status?.toUpperCase())) {
+                // Include this trade in history with Flask status
+                historyTrades.push({
+                  ...trade,
+                  status: flaskStatus.status,
+                  ticket: `FLASK-${trade.flaskTradeId}`,
+                  symbol: trade.symbol || 'UNKNOWN',
+                  volume: trade.volume?.toString() || '0.01',
+                  openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
+                  closedAt: trade.updatedAt?.toISOString() || new Date().toISOString()
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`[Express Proxy] Error checking Flask status for trade ${trade.flaskTradeId}:`, error);
+          }
+        } else {
+          // For non-Flask trades, use database status
+          if (['Closed', 'FAILED', 'closed', 'failed'].includes(trade.status || '')) {
+            historyTrades.push({
+              ...trade,
+              ticket: trade.tradeOrderNumber || `DB-${trade.id}`,
+              symbol: trade.symbol || 'UNKNOWN',
+              volume: trade.volume?.toString() || '0.01',
+              openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
+              closedAt: trade.updatedAt?.toISOString() || new Date().toISOString()
+            });
+          }
+        }
+      }
+      
+      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
+      return res.json(historyTrades);
     } catch (err) {
       console.error('Error fetching trade history:', err);
       return res.status(500).json({ error: 'Failed to fetch history' });
