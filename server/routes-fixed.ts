@@ -1,0 +1,133 @@
+import { db } from "@db";
+import { users, hedges } from "@db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { setupAuth } from "./auth";
+import secondaryRateRouter from "./routes/secondary-rate";
+import chatRouter from "./routes/chat";
+import activtradesRouter from "./routes/activtrades-rate";
+import tickmillRouter from "./routes/tickmill-rate";
+import fbsRouter from "./routes/fbs-rate";
+import paymentRouter from "./routes/payment";
+import simulateRouter from "./routes/simulate";
+
+const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
+
+export function registerRoutes(app: Express): Server {
+  setupAuth(app);
+
+  // Register existing routes
+  app.use(secondaryRateRouter);
+  app.use(chatRouter);
+  app.use(activtradesRouter);
+  app.use(tickmillRouter);
+  app.use(fbsRouter);
+  app.use(paymentRouter);
+  app.use(simulateRouter);
+
+  // **SIMPLE FLASK PROXY ENDPOINTS**
+
+  // 1. Create a new trade → POST /api/trades (proxy to Flask)
+  app.post('/api/trades', async (req: Request, res: Response) => {
+    try {
+      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
+      
+      const response = await fetch(`${FLASK}/trades`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+      });
+
+      console.log('[Express Proxy] Flask response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask success:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
+
+  // 2. Poll a trade's status → GET /api/trades/:tradeId/status (proxy to Flask)
+  app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
+    try {
+      const tradeId = req.params.tradeId;
+      console.log('[Express Proxy] Checking trade status for ID:', tradeId);
+      
+      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask status error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask status response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Status check error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
+
+  // 3. Close a trade early → POST /api/trades/:tradeId/close (proxy to Flask)
+  app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+    try {
+      const tradeId = req.params.tradeId;
+      console.log('[Express Proxy] Closing trade ID:', tradeId);
+      
+      const response = await fetch(`${FLASK}/trades/${tradeId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask close error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask close response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Close error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
+
+  // 4. Get trade history → GET /api/trades/history (proxy to Flask)
+  app.get('/api/trades/history', async (req: Request, res: Response) => {
+    try {
+      console.log('[Express Proxy] Getting trade history');
+      
+      const response = await fetch(`${FLASK}/trades/history`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask history error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask history response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] History error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
