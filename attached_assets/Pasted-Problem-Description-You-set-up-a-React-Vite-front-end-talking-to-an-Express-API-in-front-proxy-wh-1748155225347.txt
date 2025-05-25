@@ -1,0 +1,91 @@
+Problem Description
+You set up a React/Vite front-end talking to an Express “API-in-front” proxy, which itself forwards requests to your Flask backend. But in development you weren’t actually hitting your Express proxy at all—instead Vite’s dev server was serving your index.html (the single-page-app fallback) on every POST/GET, so your fetch(...) calls kept getting back HTML rather than JSON. In production you hit the correct Express routes, but in dev your calls to e.g. /api/trades were never forwarded, so they “worked” only when you directly pointed at your Flask server.
+
+Root Causes
+Wrong fetch URL: your React code was calling /trades (or templated ${API_BASE}) instead of /api/trades, so Vite dev server treated it as a static asset route and fell back to serving index.html.
+
+No Vite proxy configured: by default Vite only serves your React code. Without a proxy rule, any /api/* request in development never reaches your Express backend.
+
+Express catch-all ordering: if—in your deployed server—you mount your SPA fallback (app.get('*', …)) before your /api/... routes, then Express will also serve the client HTML instead of your JSON endpoints.
+
+Solution
+Standardize your React calls
+In all of your React code, always call the proxy path:
+
+ts
+Copy
+Edit
+// Dashboard.tsx (and elsewhere)
+await fetch('/api/trades', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body:   JSON.stringify(payload),
+  credentials: 'include',
+})
+Never call /trades directly from the client.
+
+Configure a Vite proxy (for local development)
+In your vite.config.ts add:
+
+ts
+Copy
+Edit
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',  // your Express server
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+})
+Now when Vite sees fetch('/api/trades'), it will forward that request to localhost:3000/api/trades instead of serving your React app’s HTML.
+
+Ensure Express mounts /api before your SPA fallback
+In your Express setup, do something like:
+
+ts
+Copy
+Edit
+import express from 'express'
+import path from 'path'
+import tradesRouter from './routes/trades'  // contains POST /api/trades proxy
+
+const app = express()
+app.use(express.json())
+
+// 1) API routes first
+app.use('/api/trades', tradesRouter)
+// ... any other /api routes ...
+
+// 2) Static build files (in production)
+app.use(express.static(path.join(__dirname, '../client/dist')))
+
+// 3) Client-side router fallback
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'))
+})
+
+app.listen(3000)
+That ordering guarantees /api/trades hits your proxy logic, not the SPA fallback.
+
+With those three steps in place:
+
+In development, Vite will proxy /api/* requests to Express → Flask and return JSON.
+
+In production, your bundled client and Express will serve static assets and still route /api/* correctly.
+
+You’ll finally see proper JSON (including your “market closed” error) instead of HTML.
+
+
+
+
+
+
+

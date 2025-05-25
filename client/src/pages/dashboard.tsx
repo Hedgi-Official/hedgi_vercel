@@ -117,9 +117,15 @@ export default function Dashboard() {
       const payload = { symbol, direction, volume, metadata };
       
       console.log('[Dashboard] sending payload:', payload);
-      console.log('[Dashboard] sending to URL:', `/api/trades`);
+      // Use direct server URL in development to bypass Vite routing issues
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const fullUrl = `${serverUrl}/api/trades`;
+      
+      console.log('[Dashboard] sending to URL:', fullUrl);
       console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
-      const res = await fetch(`/api/trades`, {
+      const res = await fetch(fullUrl, {
         method: 'POST',
         mode: 'cors',
         headers: { 
