@@ -1,0 +1,46 @@
+What you’re seeing—the full HTML of your app—means Vite’s proxy only works in your local “dev” server, not in the production build that Replit is serving. In production (or when running npm run build + static hosting), there is no proxy sitting in front of your frontend, so a request to /trades is being handled by the same static‐file server that delivers your React app’s index.html (SPA fallback).
+
+Why you get HTML instead of your Flask JSON
+Dev mode (npm run dev): Vite’s dev server intercepts /trades and forwards to http://3.145.164.47/trades
+
+Production build (npm run build + replit “Run”): There is no Vite proxy. Your static‐file server sees /trades, doesn’t find a real file, and returns index.html → your React app shell.
+
+The easy fix
+You need your production frontend to explicitly call your real Flask endpoint by its full URL, not rely on a dev‐only proxy.
+
+Introduce an environment variable for your API base URL.
+In your .env (and replit secrets) define:
+
+ini
+Copy
+Edit
+VITE_API_BASE=https://3.145.164.47
+Use it in your code (only works with backticks and import.meta.env):
+
+ts
+Copy
+Edit
+// Dashboard.tsx (or wherever you fetch)
+const API_BASE = import.meta.env.VITE_API_BASE;
+
+// then:
+const res = await fetch(`${API_BASE}/trades`, {
+  method:      "POST",
+  headers:     { "Content-Type": "application/json" },
+  credentials: "include",
+  body:        JSON.stringify(payload),
+});
+Rebuild & redeploy (npm run build) on Replit.
+Now in production, your app will do a direct POST https://3.145.164.47/trades and get real JSON back.
+
+Why this works
+Dev: you can still use the VITE_API_BASE or fall back to /trades + proxy.
+
+Prod: the absolute URL (https://3.145.164.47) always points at your Flask, bypassing the static‐file server.
+
+Recap
+Vite proxy is only for local development (npm run dev).
+
+In production builds, you must call your backend by its real address.
+
+Use a VITE_… env var so you can switch between dev ("" or "/api") and prod ("https://3.145.164.47") without rewriting code.

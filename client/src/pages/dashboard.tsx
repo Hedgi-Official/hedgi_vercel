@@ -24,7 +24,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-const API_BASE = "/api";
+
 
 // Define the shape your Flask /trades endpoint returns:
 type Trade = {
@@ -54,12 +54,12 @@ export default function Dashboard() {
 
   const { data: trades } = useQuery<Trade[]>({
     queryKey: ['/trades'],
-    queryFn: () => fetch(`${API_BASE}/trades`, { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch(`/trades`, { credentials: 'include' }).then(r => r.json()),
   });
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: string) => {
-      const response = await fetch(`${API_BASE}/trades/status/${tradeOrderNumber}`, {
+      const response = await fetch(`/trades/status/${tradeOrderNumber}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -115,10 +115,10 @@ export default function Dashboard() {
 
       // only these fields go on the wire
       const payload = { symbol, direction, volume, metadata };
+      const API_BASE = import.meta.env.VITE_API_BASE || "";
       console.log('[Dashboard] sending payload:', payload);
       console.log('[Dashboard] sending to URL:', `${API_BASE}/trades`);
       console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
-
       const res = await fetch(`${API_BASE}/trades`, {
         method: 'POST',
         mode: 'cors',
@@ -166,7 +166,7 @@ export default function Dashboard() {
       // Use the broker-based API endpoint for closing trades
       console.log(`[Dashboard] Closing trade with broker: ${broker}, position: ${position}`);
       
-      const response = await fetch(`${API_BASE}/trades/${position}/close`, {
+      const response = await fetch(`/trades/${position}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -270,7 +270,7 @@ export default function Dashboard() {
       console.log('[Dashboard] Deleting hedge from database:', hedge);
 
       // Delete the hedge from our database
-      const response = await fetch(`${API_BASE}/trades/${hedge.id}`, {
+      const response = await fetch(`/trades/${hedge.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
