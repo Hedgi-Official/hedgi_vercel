@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { users, hedges } from "@db/schema";
+import { users, hedges, trades } from "@db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
@@ -109,22 +109,19 @@ export function registerRoutes(app: Express): Server {
   // 4. Get trade history → GET /api/trades/history (proxy to Flask)
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     try {
-      console.log('[Express Proxy] Getting trade history');
+      console.log('[Express Proxy] Getting trade history from database');
       
-      const response = await fetch(`${FLASK}/trades/history`);
+      // Get trade history from local database instead of Flask
+      const tradeHistory = await db.query.trades.findMany({
+        orderBy: desc(trades.createdAt),
+        limit: 50
+      });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Express Proxy] Flask history error:', errorText);
-        return res.status(response.status).json({ error: errorText });
-      }
-
-      const result = await response.json();
-      console.log('[Express Proxy] Flask history response:', result);
-      res.json(result);
+      console.log('[Express Proxy] Found trades in database:', tradeHistory.length);
+      res.json(tradeHistory);
     } catch (error) {
       console.error('[Express Proxy] History error:', error);
-      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+      res.status(500).json({ error: 'Failed to fetch trade history' });
     }
   });
 

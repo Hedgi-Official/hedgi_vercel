@@ -1,0 +1,64 @@
+Now it is placing trades but I get this:
+https://35c05a00-6fbd-44d8-a2ac-2b5c64a984be-00-1ox8el35dt93h.janeway.replit.dev/api/trades/history
+Request Method
+GET
+Status Code
+404 Not Found
+Remote Address
+34.148.134.19:443
+Referrer Policy
+strict-origin-when-cross-origin
+    "error": "<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n"
+
+This makes sense since that endpoint don't exist. Should it be @app.route('/trades/<int:trade_id>/status', methods=['GET']) instead? 
+
+
+ChatGPT said:
+That 404 is exactly what you’d expect — there is no /api/trades/history endpoint on your proxy (or in Flask), so Express dutifully returns “Not Found,” which your browser shows as HTML.
+
+What you do have
+Create a trade
+
+Client → POST /api/trades
+
+Express → proxies to POST http://<FLASK>/trades
+
+Check a trade status
+
+Client → GET /api/trades/:tradeId/status
+
+Express → proxies to GET http://<FLASK>/trades/:tradeId/status
+
+What you don’t have
+There is no /trades/history in your Flask app, and you haven’t defined an Express route for /api/trades/history, so GET /api/trades/history 404s.
+
+How to fix
+A) If you just want to poll a single trade’s status
+Use the status endpoint you already built:
+
+ts
+Copy
+Edit
+// from your dashboard code:
+fetch(`/api/trades/${tradeId}/status`)  
+  .then(r => r.json())
+  .then(data => console.log("Status:", data.status))
+B) If you really need a “history” list of all closed/failed trades
+Add it to your Express proxy (in server/index.ts or wherever):
+
+ts
+Copy
+Edit
+// after your other /api/trades routes:
+app.get('/api/trades/history', async (req, res) => {
+  try {
+    const history = await db.query.trades.findMany({
+      where: inArray(trades.status, ['Closed','FAILED']),
+      orderBy: desc(trades.updatedAt)
+    });
+    res.json(history);
+  } catch (err) {
+    console.error("History error:", err);
+    res.status(500).json({ error: "Could not fetch history" });
+  }
+});
