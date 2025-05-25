@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { users, hedges, flaskTrades } from "@db/schema";
+import { users, hedges } from "@db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
@@ -26,49 +26,33 @@ export function registerRoutes(app: Express): Server {
   app.use(paymentRouter);
   app.use(simulateRouter);
 
-  // **NEW FLASK-BACKED TRADE ENDPOINTS ONLY**
+  // **SIMPLE FLASK PROXY ENDPOINTS**
 
-  // 1. Create a new trade → POST /api/trades
+  // 1. Create a new trade → POST /api/trades (proxy to Flask)
   app.post('/api/trades', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
     try {
-      const { symbol, direction, volume, metadata } = req.body;
+      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
       
-      const tradeData = {
-        symbol,
-        direction,
-        volume,
-        status: 'NEW',
-        metadata: metadata || {}
-      };
-
-      // Send to Flask
       const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tradeData)
+        body: JSON.stringify(req.body)
       });
 
-      const flaskTrade = await response.json();
-      
-      // Store in local DB
-      const dbTrade = await db.insert(flaskTrades).values({
-        userId: req.user.id,
-        flaskTradeId: flaskTrade.id,
-        symbol: flaskTrade.symbol,
-        direction: flaskTrade.direction,
-        volume: flaskTrade.volume.toString(),
-        status: flaskTrade.status,
-        metadata: JSON.stringify(flaskTrade.metadata || {}),
-      }).returning();
+      console.log('[Express Proxy] Flask response status:', response.status);
 
-      res.json(dbTrade[0]);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask success:', result);
+      res.json(result);
     } catch (error) {
-      console.error('Error creating trade:', error);
-      res.status(500).json({ error: 'Failed to create trade' });
+      console.error('[Express Proxy] Error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
     }
   });
 
