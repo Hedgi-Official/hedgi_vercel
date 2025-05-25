@@ -343,6 +343,29 @@ export default function Dashboard() {
     }
   };
 
+  // Hook to fetch live Flask trade status
+  const useFlaskTradeStatus = (flaskTradeId: number | null) => {
+    return useQuery({
+      queryKey: ["flask-status", flaskTradeId],
+      queryFn: async () => {
+        if (!flaskTradeId) return null;
+        
+        const serverUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000'
+          : '';
+        
+        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/status`);
+        if (!response.ok) {
+          throw new Error('Status fetch failed');
+        }
+        return response.json();
+      },
+      enabled: !!flaskTradeId,
+      refetchInterval: 10000, // Refresh every 10 seconds
+      retry: false // Don't show error toasts for failed status checks
+    });
+  };
+
   // Close Flask trade using the Flask trade ID
   const closeFlaskTrade = async (flaskTradeId: number, dbTradeId: number) => {
     try {
@@ -402,39 +425,54 @@ export default function Dashboard() {
               {trades?.length === 0 ? (
                 <p>{t('No active trades')}</p>
               ) : (
-                trades?.map((trade) => (
-                  <div
-                    key={trade.id}
-                    className="p-4 border rounded flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-medium">{trade.symbol}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {trade.direction} {trade.volume}
-                      </p>
+                trades?.map((trade) => {
+                  // Component to display live Flask status
+                  const TradeStatusDisplay = () => {
+                    const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
+                    
+                    const displayStatus = trade.broker === 'flask' 
+                      ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
+                      : (trade.status || 'open');
+                    
+                    return (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Status: {trade.status || 'open'}
+                        Status: {displayStatus}
                       </p>
+                    );
+                  };
+
+                  return (
+                    <div
+                      key={trade.id}
+                      className="p-4 border rounded flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-medium">{trade.symbol}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {trade.direction} {trade.volume}
+                        </p>
+                        <TradeStatusDisplay />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive/90"
+                          onClick={() => {
+                            // Handle Flask trades vs regular broker trades differently
+                            if (trade.broker === 'flask' && trade.flaskTradeId) {
+                              closeFlaskTrade(trade.flaskTradeId, trade.id);
+                            } else {
+                              initiateHedgeClose(trade as unknown as Hedge);
+                            }
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive/90"
-                        onClick={() => {
-                          // Handle Flask trades vs regular broker trades differently
-                          if (trade.broker === 'flask' && trade.flaskTradeId) {
-                            closeFlaskTrade(trade.flaskTradeId, trade.id);
-                          } else {
-                            initiateHedgeClose(trade as unknown as Hedge);
-                          }
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CardContent>
           </Card>
