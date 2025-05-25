@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 
 // Interface for closed trades returned from API
 interface ClosedTrade {
+  id?: number;
+  ticket?: string;
   symbol: string;
   volume: string;
   openTime: string;
@@ -88,26 +90,38 @@ export function TradeHistory() {
             <p className="text-muted-foreground text-sm">No past trades found.</p>
           ) : (
             <div className="space-y-3">
-              {tradeHistory.map((trade: ClosedTrade, index: number) => (
-                <div
-                  key={`history-${index}`}
-                  className="p-3 bg-secondary/20 rounded-md"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="font-medium">{trade.symbol}</div>
-                    <div className="text-xs px-2 py-0.5 rounded bg-secondary">
-                      {trade.status}
+              {tradeHistory.map((trade: ClosedTrade, index: number) => {
+                // Extract ID from ticket (FLASK-XX format) or use regular id
+                const displayId = trade.ticket?.startsWith('FLASK-') 
+                  ? trade.ticket.replace('FLASK-', '') 
+                  : (trade.id || index + 1);
+                
+                return (
+                  <div
+                    key={`history-${index}`}
+                    className="p-4 border rounded flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">{trade.symbol} (ID: {displayId})</p>
+                      <p className="text-sm text-muted-foreground">
+                        {trade.volume}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Status: {trade.status}
+                      </p>
+                    </div>
+                    <div className="text-sm text-muted-foreground text-right">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>Closed</span>
+                      </div>
+                      <div className="text-xs mt-1">
+                        {formatDate(trade.closedAt)}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>
-                      {formatDate(trade.openTime)} → {formatDate(trade.closedAt)}
-                    </span>
-                  </div>
-                  <div className="text-sm mt-1">{trade.volume}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
