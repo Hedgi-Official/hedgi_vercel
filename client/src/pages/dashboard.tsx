@@ -24,6 +24,23 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
+const API_BASE = "http://3.145.164.47";
+
+// Define the shape your Flask /trades endpoint returns:
+type Trade = {
+  id: number;
+  symbol: string;               // e.g. "USDMXN"
+  direction: 'BUY' | 'SELL';
+  volume: number;
+  status: string;
+  metadata?: {
+    days: number;
+    deviation: number;
+    magic: number;
+    comment: string;
+  };
+};
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
@@ -35,13 +52,14 @@ export default function Dashboard() {
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
-  const { data: hedges } = useQuery<Hedge[]>({
-    queryKey: ["/api/hedges"],
+  const { data: trades } = useQuery<Trade[]>({
+    queryKey: ['/trades'],
+    queryFn: () => fetch(`${API_BASE}/trades`, { credentials: 'include' }).then(r => r.json()),
   });
 
   const checkTradeStatusMutation = useMutation({
     mutationFn: async (tradeOrderNumber: string) => {
-      const response = await fetch(`/api/hedges/status/${tradeOrderNumber}`, {
+      const response = await fetch(`${API_BASE}/trades/status/${tradeOrderNumber}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -73,76 +91,55 @@ export default function Dashboard() {
     }
   });
 
-  const createHedgeMutation = useMutation({
-    mutationFn: async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
-      console.log('[Dashboard] Creating hedge with data:', hedgeData);
+  const createHedgeMutation = useMutation<
+    Trade, 
+    Error, 
+    Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+  >({
+    mutationFn: async (h) => {
+      // h is now the exact object your simulator gives you
 
-      try {
-        // Ensure all data is properly formatted for the server
-        const formattedData = {
-          ...hedgeData,
-          amount: String(hedgeData.amount), // Ensure amount is a string
-          rate: String(hedgeData.rate),    // Ensure rate is a string
-          duration: Number(hedgeData.duration) // Ensure duration is a number
-        };
-        
-        console.log('[Dashboard] Sending formatted hedge data:', formattedData);
+      // parse numeric amount & derive direction
+      const amountNum = parseFloat(h.amount);
+      const volume    = Math.abs(amountNum) / 100000;
+      const direction = amountNum > 0 ? 'BUY' : 'SELL';
+      const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
 
-        const response = await fetch('/api/hedges', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formattedData),
-          credentials: 'include'
-        });
+      // build the metadata you want to send
+      const metadata = {
+        days:      h.duration,
+        deviation: 5,
+        magic:     123456,
+        comment:   'Hedgi test trade'
+      };
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[Dashboard] Server error response:', errorText);
-          throw new Error(errorText || 'Failed to create hedge');
-        }
+      // only these fields go on the wire
+      const payload = { symbol, direction, volume, metadata };
+      console.log('[Dashboard] sending payload:', payload);
 
-        const data = await response.json();
-        console.log('[Dashboard] Server response:', data);
-        
-        // Return the entire response to handle in onSuccess
-        return data;
-      } catch (error) {
-        console.error('[Dashboard] Error in mutation:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      console.log('[Dashboard] Hedge created successfully:', data);
-      
-      // Always invalidate the hedges query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
-      
-      toast({
-        title: t('simulator.notifications.hedgeCreated'),
-        description: t('simulator.notifications.hedgeCreatedDesc'),
+      const res = await fetch(`${API_BASE}/trades`, {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body:        JSON.stringify(payload)
       });
-
-      // Check if we have a valid trade order number in the response
-      if (data.returnData?.order) {
-        console.log('[Dashboard] Trade created with order number:', data.returnData.order);
-        // Convert to string to ensure compatibility with our updated mutate function
-        checkTradeStatusMutation.mutate(String(data.returnData.order));
-      } else {
-        console.warn('[Dashboard] Missing order number in response:', data);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to create trade');
       }
+      return res.json() as Promise<Trade>;
     },
-    onError: (error) => {
-      console.error('[Dashboard] Hedge creation error:', error);
-      
-      toast({
-        variant: "destructive",
-        title: t('simulator.notifications.error'),
-        description: error instanceof Error ? error.message : 'Failed to create hedge',
-      });
+    onSuccess(data) {
+      queryClient.invalidateQueries({ queryKey: ['/trades'] });
+      toast({ title: t('Trade Created'), description: `#${data.id}` });
+      checkTradeStatusMutation.mutate(data.id.toString());
+    },
+    onError(err) {
+      toast({ variant: 'destructive', title: t('Error'), description: err.message });
     }
   });
 
-  // Handle initiating the hedge close process
+  // 3) Close trade
   const initiateHedgeClose = async (hedge: Hedge) => {
     console.log('[Dashboard] Initiating hedge close process for:', hedge);
     
@@ -162,7 +159,7 @@ export default function Dashboard() {
       // Use the broker-based API endpoint for closing trades
       console.log(`[Dashboard] Closing trade with broker: ${broker}, position: ${position}`);
       
-      const response = await fetch(`/api/trades/close`, {
+      const response = await fetch(`${API_BASE}/trades/${position}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -266,7 +263,7 @@ export default function Dashboard() {
       console.log('[Dashboard] Deleting hedge from database:', hedge);
 
       // Delete the hedge from our database
-      const response = await fetch(`/api/hedges/${hedge.id}`, {
+      const response = await fetch(`${API_BASE}/trades/${hedge.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -276,7 +273,7 @@ export default function Dashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hedges"] });
+      queryClient.invalidateQueries({ queryKey: ["/trades"] });
       toast({
         title: t('simulator.notifications.hedgeDeleted'),
         description: t('simulator.notifications.hedgeDeletedDesc'),
@@ -323,65 +320,42 @@ export default function Dashboard() {
 
           <Card className="bg-white shadow-lg">
             <CardHeader>
-              <CardTitle>{t('Active Hedges')}</CardTitle>
+              <CardTitle>{t('Active Trades')}</CardTitle>
             </CardHeader>
             <CardContent>
-              {hedges?.length === 0 ? (
-                <p>{t('No active hedges')}</p>
+              {trades?.length === 0 ? (
+                <p>{t('No active trades')}</p>
               ) : (
-                <div className="space-y-4">
-                  {hedges?.map((hedge) => {
-                    const amount = Number(hedge.amount);
-                    const rate = Number(hedge.rate);
-                    const isBuy = amount > 0;
-
-                    return (
-                      <div
-                        key={hedge.id}
-                        className="p-4 border rounded flex justify-between items-center"
+                trades?.map((trade) => (
+                  <div
+                    key={trade.id}
+                    className="p-4 border rounded flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">{trade.symbol}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {trade.direction} {trade.volume}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => checkTradeStatusMutation.mutate(String(trade.id))}
                       >
-                        <div>
-                          <p className="font-medium">
-                            {t(`simulator.hedgeTitles.${isBuy ? 'bought' : 'sold'}`)} {hedge.targetCurrency}/{hedge.baseCurrency}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {t('simulator.amountField')}: {Math.abs(amount).toLocaleString('en-US', {
-                              style: 'decimal',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                            {' '}{hedge.baseCurrency}
-                            • {t('simulator.currentRate')}: {rate.toFixed(4)}
-                            {hedge.tradeOrderNumber && (
-                              <> • {t('simulator.tradeOrderNumber')}: #{hedge.tradeOrderNumber}</>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge>{t(`simulator.status.${hedge.status}`)}</Badge>
-                          {hedge.tradeOrderNumber && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => checkTradeStatusMutation.mutate(hedge.tradeOrderNumber!.toString())}
-                            >
-                              <AlertCircle className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive/90"
-                            onClick={() => initiateHedgeClose(hedge)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        <AlertCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive/90"
+                        onClick={() => initiateHedgeClose(trade as unknown as Hedge)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
@@ -391,12 +365,14 @@ export default function Dashboard() {
               <CardTitle>{t('New Hedge')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <CurrencySimulator 
+              <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={(hedgeData) => createHedgeMutation.mutate(hedgeData)}
-                onOrdersUpdated={() => queryClient.invalidateQueries({ queryKey: ["/api/hedges"] })}
+                onPlaceHedge={(d) => {
+                  console.log('[Dashboard] onPlaceHedge got:', d);
+                  createHedgeMutation.mutate(d);
+                }}
+                onOrdersUpdated={() => queryClient.invalidateQueries({ queryKey: ['/trades'] })}
               />
-              
               {/* Trade History Component */}
               <TradeHistory />
             </CardContent>

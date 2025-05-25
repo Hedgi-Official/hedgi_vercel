@@ -29,8 +29,10 @@ export interface TradeResponse {
 
 interface Props {
   showGraph?: boolean;
-  onPlaceHedge?: (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => Promise<TradeResponse> | void;
-  onOrdersUpdated?: () => void; // Added callback for refreshing orders list
+  onPlaceHedge?: (
+    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+  ) => Promise<TradeResponse> | void;
+  onOrdersUpdated?: () => void;
 }
 
 export interface SimulationResult {
@@ -43,13 +45,14 @@ export interface SimulationResult {
     hedgeCost: number;
   };
   businessDays: number;
-  historicalRates: Array<{
-    date: string;
-    rate: number;
-  }>;
+  historicalRates: Array<{ date: string; rate: number }>;
 }
 
-export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
+export function CurrencySimulator({
+  showGraph = true,
+  onPlaceHedge,
+  onOrdersUpdated
+}: Props) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
@@ -60,32 +63,23 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
   const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
-  
-  // Payment modal state
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
-  // Get rates from ActivTrades API
-  const { data: activTradesRate} = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
+  // Payment modal
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [pendingHedgeData, setPendingHedgeData] = useState<
+    Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null
+  >(null);
+
+  const { data: activTradesRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
-    let currentRate;
-    let swapValues;
-    
-    // Use the rates from ActivTrades API
+    let currentRate, swapValues;
     if (activTradesRate) {
-      currentRate = {
-        bid: activTradesRate.bid,
-        ask: activTradesRate.ask
-      };
-      swapValues = {
-        swapLong: activTradesRate.swap_long,
-        swapShort: activTradesRate.swap_short
-      };
-      console.log('[CurrencySimulator] Using ActivTrades rates:', currentRate);
-      console.log('[CurrencySimulator] Using ActivTrades swap values:', swapValues);
+      currentRate = { bid: activTradesRate.bid, ask: activTradesRate.ask };
+      swapValues = { swapLong: activTradesRate.swap_long, swapShort: activTradesRate.swap_short };
     }
 
+    // run your existing simulateHedge (fallback if no live rates)
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -96,150 +90,77 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
 
     const businessDays = calculateBusinessDays(new Date(), duration);
 
+    // compute hedge cost
     let hedgeCost = 0;
     if (currentRate && swapValues) {
-      const { bid, ask } = currentRate;
-      const { swapLong, swapShort } = swapValues;
-      const spreadCost = (ask - bid) * amount;
-      
-      // Volume in lots (standard lot is 100,000 units)
+      const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
-      
-      // Using the formula: Cost = abs(Volume × swap_rate × Days)
-      if (tradeDirection === 'buy') {
-        hedgeCost = Math.abs(volumeInLots * swapLong * businessDays) + spreadCost;
-      } else {
-        hedgeCost = Math.abs(volumeInLots * swapShort * businessDays) + spreadCost;
-      }
-      
-      console.log('[CurrencySimulator] Calculated hedge cost:', {
-        volumeInLots,
-        businessDays,
-        swapRate: tradeDirection === 'buy' ? swapLong : swapShort,
-        spreadCost,
-        totalCost: hedgeCost
-      });
+      hedgeCost =
+        Math.abs(
+          volumeInLots *
+            (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
+            businessDays
+        ) + spreadCost;
     }
 
-    const costPercentage = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
+    // break-even
+    const costPct = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
+    const breakEvenRate =
+      tradeDirection === 'buy'
+        ? (currentRate ? currentRate.ask : result.rate) * (1 + costPct / 100)
+        : (currentRate ? currentRate.bid : result.rate) * (1 - costPct / 100);
 
-    const breakEvenRate = tradeDirection === 'buy' ?
-      currentRate ? currentRate.ask * (1 + costPercentage / 100) :
-      result.rate * (1 + costPercentage / 100) :
-      currentRate ? currentRate.bid * (1 - costPercentage / 100) :
-      result.rate * (1 - costPercentage / 100);
+    // default margin 2x hedgeCost
+    setMargin(Math.round(hedgeCost * 2));
 
-    const simulationResult = {
+    setSimulation({
       ...result,
       businessDays,
-      costDetails: {
-        ...result.costDetails,
-        hedgeCost
-      },
-      rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
+      costDetails: { ...result.costDetails, hedgeCost },
+      rate: currentRate
+        ? tradeDirection === 'buy'
+          ? currentRate.ask
+          : currentRate.bid
+        : result.rate,
       breakEvenRate
-    };
-    
-    // Set default margin as 2x the hedge cost
-    const defaultMargin = Math.round(hedgeCost * 2);
-    setMargin(defaultMargin);
-    
-    setSimulation(simulationResult);
+    });
   };
 
-  // Handle the initial place hedge button click to open payment modal
+  // open payment modal
   const handlePlaceHedge = () => {
-    if (!onPlaceHedge || !simulation || !onOrdersUpdated) {
-      console.error('Missing required callbacks or simulation data');
-      return;
-    }
-
+    if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
     setHedgeError(null);
 
-    // Prepare the hedge data
-    const hedgeData = {
+    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
       baseCurrency,
       targetCurrency,
-      amount: amount.toString(), // String for consistent DB handling
+      amount: amount.toString(),
       rate: simulation.rate.toString(),
       duration,
-      margin: margin ? margin.toString() : null, // Include margin field
-      tradeDirection, // 'buy' or 'sell'
+      margin: margin?.toString() ?? null,
+      tradeDirection,
       tradeOrderNumber: null,
       tradeStatus: null,
-      broker: 'activtrades', // Default broker
-      status: 'pending' // Initial status
+      broker: 'activtrades',
+      status: 'pending'
     };
 
-    console.log('[CurrencySimulator] Opening payment modal with hedge data:', hedgeData);
-    
-    // Store the hedge data and open the payment modal
     setPendingHedgeData(hedgeData);
     setIsPaymentModalOpen(true);
   };
 
-  const saveHedgeData = async (hedgeDataToStore: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
-    try {
-      const response = await fetch('/api/hedges', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(hedgeDataToStore),
-        credentials: 'include', // Include credentials for session management
-      });
-      const result = await response.json();
-      if (response.ok) {
-        console.log('Hedge data stored successfully:', result);
-      } else {
-        console.error('Error storing hedge data:', result.error);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-    }
-  };
-  
-  // This function is called after successful payment
-  const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
-    if (!onPlaceHedge || !onOrdersUpdated) {
-      console.error('Missing required callbacks');
-      return;
-    }
-    
-    console.log('[CurrencySimulator] Payment successful, placing hedge...');
+  // after payment, call Dashboard’s onPlaceHedge
+  const handlePaymentSuccess = async (
+    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+  ) => {
+    if (!onPlaceHedge || !onOrdersUpdated) return;
     setIsPlacingHedge(true);
-    
     try {
-      // Call the parent component's handler to place the hedge after payment
-      const result = await onPlaceHedge(hedgeData);
-      console.log('[CurrencySimulator] Hedge placement result:', result);
-  
-      // Extract broker from comment if possible, otherwise default to 'activtrades'
-      let broker = 'activtrades';
-      if (result && result.comment) {
-        const brokerMatch = result.comment.match(/broker\s+(\w+)/i);
-        if (brokerMatch && brokerMatch[1]) {
-          broker = brokerMatch[1];
-        }
-      }
-      
-      // Create hedge data that matches our schema
-      const hedgeDataToStore = {
-        ...hedgeData,
-        broker: broker,
-        status: 'active',
-        tradeOrderNumber: result && result.order ? String(result.order) : String(Date.now()),
-        tradeStatus: 'open'
-      };
-
-      saveHedgeData(hedgeDataToStore);
-
-    
-      // Refresh the orders list in the dashboard
+      await onPlaceHedge(hedgeData);
       onOrdersUpdated();
-
-      console.log('[CurrencySimulator] Hedge placement completed successfully');
-    } catch (error) {
-      console.error('[CurrencySimulator] Error placing hedge:', error);
-      setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
+      setIsPaymentModalOpen(false);
+    } catch (err) {
+      setHedgeError(err instanceof Error ? err.message : 'Failed to place hedge');
     } finally {
       setIsPlacingHedge(false);
     }
@@ -255,7 +176,9 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Currency selectors */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Target */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Globe className="mr-2 h-4 w-4 text-primary" />
@@ -263,25 +186,19 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
               </label>
               <Select
                 value={targetCurrency}
-                onValueChange={(value) => setTargetCurrency(value as SupportedCurrency)}
+                onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue/></SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <SelectItem
-                      key={currency}
-                      value={currency}
-                      disabled={currency === baseCurrency}
-                    >
-                      {currency}
+                  {SUPPORTED_CURRENCIES.map(c => (
+                    <SelectItem key={c} value={c} disabled={c === baseCurrency}>
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
+            {/* Base */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Briefcase className="mr-2 h-4 w-4 text-primary" />
@@ -289,19 +206,13 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
               </label>
               <Select
                 value={baseCurrency}
-                onValueChange={(value) => setBaseCurrency(value as SupportedCurrency)}
+                onValueChange={v => setBaseCurrency(v as SupportedCurrency)}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue/></SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <SelectItem
-                      key={currency}
-                      value={currency}
-                      disabled={currency === targetCurrency}
-                    >
-                      {currency}
+                  {SUPPORTED_CURRENCIES.map(c => (
+                    <SelectItem key={c} value={c} disabled={c === targetCurrency}>
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -309,6 +220,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             </div>
           </div>
 
+          {/* Direction */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
@@ -330,6 +242,7 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             </div>
           </div>
 
+          {/* Amount */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <DollarSign className="mr-2 h-4 w-4 text-primary" />
@@ -337,24 +250,15 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             </label>
             <Input
               type="text"
-              value={amount ? amount.toLocaleString('en-US', {
-                maximumFractionDigits: 0,
-                useGrouping: true
-              }) : ''}
-              onChange={(e) => {
-                // Remove all non-numeric characters
-                const numericValue = e.target.value.replace(/[^\d]/g, '');
-                // Convert to number or default to 0 if no input
-                const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-                // Update state
-                setAmount(numValue);
+              value={amount.toLocaleString('en-US')}
+              onChange={e => {
+                const v = parseInt(e.target.value.replace(/[^\d]/g, ''), 10) || 0;
+                setAmount(v);
               }}
-              min={1000}
-              max={1000000}
-              placeholder={t('simulator.amountField')}
             />
           </div>
 
+          {/* Duration */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <Clock className="mr-2 h-4 w-4 text-primary" />
@@ -362,48 +266,22 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
             </label>
             <Slider
               value={[duration]}
-              onValueChange={([value]) => setDuration(value)}
+              onValueChange={([v]) => setDuration(v)}
               max={30}
               step={1}
             />
           </div>
-          
-          {/* No margin field here - we'll show it after simulation */}
 
+          {/* Simulate */}
           <Button onClick={handleSimulate} className="w-full">
             {t('simulator.calculateCost')}
           </Button>
 
+          {/* Results & Place Hedge */}
           {simulation && (
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tradeDirection === 'buy' ?
-                      `Buy ${targetCurrency} with ${baseCurrency}` :
-                      `Sell ${targetCurrency} for ${baseCurrency}`}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                  <p className="text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
+            <>
+              {/* Hedge cost display */}
+              <div className="space-y-2 pt-4">
                 <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <div className="flex justify-between font-medium">
@@ -418,35 +296,21 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                   </div>
                 </div>
               </div>
-              
-              {onPlaceHedge && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                    Margin ({baseCurrency})
-                  </label>
-                  <Input
-                    type="text"
-                    value={margin !== null ? margin.toFixed(2) : (simulation.costDetails.hedgeCost * 2).toFixed(2)}
-                    onChange={(e) => {
-                      // Remove all non-numeric characters except decimal point
-                      const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
-                      // Parse the value
-                      const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
-                      setMargin(numValue);
-                    }}
-                    min={0}
-                    step={0.01}
-                    placeholder={`Default: ${(simulation.costDetails.hedgeCost * 2).toFixed(2)}`}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Default margin is set to 2x the hedge cost ({(simulation.costDetails.hedgeCost * 2).toFixed(2)} {baseCurrency}). 
-                    This amount will be added to the fees ({simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}) for a total 
-                    payment of {(simulation.costDetails.hedgeCost + (margin !== null ? margin : simulation.costDetails.hedgeCost * 2)).toFixed(2)} {baseCurrency}.
-                  </p>
-                </div>
-              )}
 
+              {/* Margin input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                  Margin ({baseCurrency})
+                </label>
+                <Input
+                  type="text"
+                  value={(margin ?? simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                  onChange={e => setMargin(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+
+              {/* Place Hedge */}
               {onPlaceHedge && (
                 <Button
                   onClick={handlePlaceHedge}
@@ -454,20 +318,17 @@ export function CurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpda
                   variant="outline"
                   disabled={isPlacingHedge}
                 >
-                  {isPlacingHedge ? t('common.placingHedge') : t('simulator.placeHedge')}
-                  {hedgeError && (
-                    <span className="ml-2 text-red-500">
-                      {hedgeError}
-                    </span>
-                  )}
+                  {isPlacingHedge
+                    ? t('common.placingHedge')
+                    : t('simulator.placeHedge')}
+                  {hedgeError && <span className="ml-2 text-red-500">{hedgeError}</span>}
                 </Button>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
-      
-      {/* Payment Modal */}
+
       <MercadoPayoSDKModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
