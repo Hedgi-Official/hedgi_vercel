@@ -343,6 +343,48 @@ export default function Dashboard() {
     }
   };
 
+  // Close Flask trade using the Flask trade ID
+  const closeFlaskTrade = async (flaskTradeId: number, dbTradeId: number) => {
+    try {
+      console.log('[Dashboard] Closing Flask trade ID:', flaskTradeId);
+      
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      
+      const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Dashboard] Flask close error:', errorText);
+        throw new Error(`Failed to close Flask trade: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('[Dashboard] Flask trade closed successfully:', result);
+      
+      toast({
+        title: "Trade Closed",
+        description: "Your Flask trade has been successfully closed.",
+      });
+
+      // Refresh the trades list
+      queryClient.invalidateQueries({ queryKey: ["/trades"] });
+      
+    } catch (error) {
+      console.error('[Dashboard] Error closing Flask trade:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to close trade: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header username={user?.username} onLogout={handleLogout} />
@@ -383,7 +425,14 @@ export default function Dashboard() {
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive/90"
-                        onClick={() => initiateHedgeClose(trade as unknown as Hedge)}
+                        onClick={() => {
+                          // Handle Flask trades vs regular broker trades differently
+                          if (trade.broker === 'flask' && trade.flaskTradeId) {
+                            closeFlaskTrade(trade.flaskTradeId, trade.id);
+                          } else {
+                            initiateHedgeClose(trade as unknown as Hedge);
+                          }
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
