@@ -370,6 +370,51 @@ export default function Dashboard() {
     });
   };
 
+  // TradeItem component that properly uses hooks
+  const TradeItem = ({ trade, onClose }: { trade: any, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
+    const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
+    
+    const displayStatus = trade.broker === 'flask' 
+      ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
+      : (trade.status || 'open');
+
+    // Hide completed trades from active section
+    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
+    
+    if (isCompleted) {
+      return null; // Don't render completed trades in active section
+    }
+
+    return (
+      <div className="p-4 border rounded flex justify-between items-center">
+        <div>
+          <p className="font-medium">{trade.symbol} (ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})</p>
+          <p className="text-sm text-muted-foreground">
+            {trade.direction} {trade.volume}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Status: {displayStatus}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive/90"
+            onClick={() => {
+              onClose(
+                trade.broker === 'flask' ? trade.flaskTradeId : null,
+                trade.id
+              );
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   // Close Flask trade using the Flask trade ID
   const closeFlaskTrade = async (flaskTradeId: number, dbTradeId: number) => {
     try {
@@ -426,84 +471,33 @@ export default function Dashboard() {
               <CardTitle>{t('Active Trades')}</CardTitle>
             </CardHeader>
             <CardContent>
-              {trades?.filter((trade: any) => {
-                // For Flask trades, we need to check their live status
-                // For now, show all trades and let the status component handle filtering
-                return true;
-              }).length === 0 ? (
-                <p>{t('No active trades')}</p>
-              ) : (
-                trades?.filter((trade: any) => {
-                  // Show all trades for now - we'll filter by status in the component
+              {(() => {
+                // Filter out completed trades
+                const activeTrades = trades?.filter((trade: any) => {
+                  // For now, show all trades - we'll filter by status in the component
                   return true;
-                }).map((trade) => {
-                  // Component to display live Flask status
-                  const TradeStatusDisplay = () => {
-                    const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
-                    
-                    const displayStatus = trade.broker === 'flask' 
-                      ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
-                      : (trade.status || 'open');
+                }) || [];
 
-                    // Hide this trade if it's completed (failed or closed)
-                    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
-                    
-                    if (isCompleted) {
-                      return null; // Don't render completed trades in active section
-                    }
-                    
-                    return (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Status: {displayStatus}
-                      </p>
-                    );
-                  };
+                if (activeTrades.length === 0) {
+                  return <p>{t('No active trades')}</p>;
+                }
 
-                  // Check if trade should be hidden from active trades
-                  const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
-                  const currentStatus = trade.broker === 'flask' 
-                    ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
-                    : (trade.status || 'open');
-                  
-                  const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(currentStatus.toUpperCase());
-                  
-                  if (isCompleted) {
-                    return null; // Don't render completed trades
-                  }
-
+                return activeTrades.map((trade) => {
                   return (
-                    <div
-                      key={trade.id}
-                      className="p-4 border rounded flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="font-medium">{trade.symbol} (ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})</p>
-                        <p className="text-sm text-muted-foreground">
-                          {trade.direction} {trade.volume}
-                        </p>
-                        <TradeStatusDisplay />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive/90"
-                          onClick={() => {
-                            // Handle Flask trades vs regular broker trades differently
-                            if (trade.broker === 'flask' && trade.flaskTradeId) {
-                              closeFlaskTrade(trade.flaskTradeId, trade.id);
-                            } else {
-                              initiateHedgeClose(trade as unknown as Hedge);
-                            }
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <TradeItem 
+                      key={trade.id} 
+                      trade={trade} 
+                      onClose={(flaskTradeId, dbTradeId) => {
+                        if (flaskTradeId) {
+                          closeFlaskTrade(flaskTradeId, dbTradeId);
+                        } else {
+                          initiateHedgeClose(trade as unknown as Hedge);
+                        }
+                      }}
+                    />
                   );
-                }).filter(Boolean) // Remove null entries
-              )}
+                }).filter(Boolean);
+              })()}
             </CardContent>
           </Card>
 
