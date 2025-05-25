@@ -356,13 +356,17 @@ export default function Dashboard() {
         
         const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/status`);
         if (!response.ok) {
-          throw new Error('Status fetch failed');
+          return { status: 'checking...' }; // Return fallback instead of throwing
         }
         return response.json();
       },
       enabled: !!flaskTradeId,
       refetchInterval: 10000, // Refresh every 10 seconds
-      retry: false // Don't show error toasts for failed status checks
+      retry: false, // Don't retry failed requests
+      staleTime: 5000, // Consider data fresh for 5 seconds
+      meta: {
+        errorPolicy: 'none' // Suppress error notifications
+      }
     });
   };
 
@@ -447,7 +451,7 @@ export default function Dashboard() {
                       className="p-4 border rounded flex justify-between items-center"
                     >
                       <div>
-                        <p className="font-medium">{trade.symbol}</p>
+                        <p className="font-medium">{trade.symbol} #{trade.broker === 'flask' ? trade.flaskTradeId : trade.id}</p>
                         <p className="text-sm text-muted-foreground">
                           {trade.direction} {trade.volume}
                         </p>
