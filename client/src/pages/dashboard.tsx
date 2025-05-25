@@ -24,7 +24,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-const API_BASE = "";
+const API_BASE = "http://3.145.164.47";
 
 // Define the shape your Flask /trades endpoint returns:
 type Trade = {
@@ -121,7 +121,10 @@ export default function Dashboard() {
 
       const res = await fetch(`${API_BASE}/trades`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload)
       });
       
