@@ -24,21 +24,15 @@ export function TradeHistory() {
     isLoading: historyLoading,
     error: historyError
   } = useQuery({
-    queryKey: ["trades", "history", Date.now()], // Force fresh fetch each time
+    queryKey: ["trades", "history"],
     queryFn: async () => {
-      const response = await fetch("/api/trades/history", {
-        cache: 'no-cache' // Disable caching
-      });
+      const response = await fetch("/api/trades/history");
       if (!response.ok) {
         throw new Error("Failed to fetch trade history");
       }
-      const data = await response.json();
-      console.log('Raw trade history response:', data);
-      return data;
+      return response.json();
     },
-    enabled: expanded, // Only fetch when expanded
-    staleTime: 0, // Data is immediately stale
-    cacheTime: 0 // Don't cache
+    enabled: expanded // Only fetch when expanded
   });
 
   // Format date for display
@@ -108,9 +102,6 @@ export function TradeHistory() {
             <div className="space-y-3">
               {tradeHistory.map((trade: ClosedTrade, index: number) => {
                 console.log('Trade data:', trade); // Debug log
-                console.log('Trade status:', trade.status);
-                console.log('Trade closedAt:', trade.closedAt);
-                
                 // Extract ID from ticket (FLASK-XX format) or use regular id
                 const displayId = trade.ticket?.startsWith('FLASK-') 
                   ? trade.ticket.replace('FLASK-', '') 
@@ -140,12 +131,12 @@ export function TradeHistory() {
                         })()}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Status: {trade.status || 'Unknown'} {/* This should show CLOSED from Flask */}
+                        Status: {trade.status || 'Unknown'}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
                       <div className="text-xs mt-1">
-                        {trade.closedAt ? formatDate(trade.closedAt) : 'No date available'} {/* This should show Flask date */}
+                        {trade.closedAt ? formatDate(trade.closedAt) : 'No date available'}
                       </div>
                     </div>
                   </div>
