@@ -32,7 +32,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
-
+      
       const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +49,7 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask success:', result);
-
+      
       // Save the Flask trade to our local database for history tracking
       try {
         const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
@@ -71,7 +71,7 @@ export function registerRoutes(app: Express): Server {
         console.error('[Express Proxy] Failed to save to local database:', dbError);
         // Don't fail the request if database save fails
       }
-
+      
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
@@ -84,9 +84,9 @@ export function registerRoutes(app: Express): Server {
     try {
       const tradeId = req.params.tradeId;
       console.log('[Express Proxy] Checking trade status for ID:', tradeId);
-
+      
       const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
-
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[Express Proxy] Flask status error:', errorText);
@@ -95,7 +95,7 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask status response:', result);
-
+      
       // Update the local database with the latest status from Flask
       try {
         const updateData: any = { 
@@ -117,7 +117,7 @@ export function registerRoutes(app: Express): Server {
         console.error('[Express Proxy] Failed to update database:', dbError);
         // Don't fail the request if database update fails
       }
-
+      
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Status check error:', error);
@@ -130,7 +130,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const tradeId = req.params.tradeId;
       console.log('[Express Proxy] Closing trade ID:', tradeId);
-
+      
       const response = await fetch(`${FLASK}/trades/${tradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,93 +153,18 @@ export function registerRoutes(app: Express): Server {
   });
 
   // 4. Get trade history → GET /api/trades/history (proxy to Flask)
-  // Get active trades only
-  app.get('/api/trades', async (req: Request, res: Response) => {
-    try {
-      console.log('[Express Proxy] Getting active trades from database');
-
-      // Get all trades and filter to only show active ones
-      const allTrades = await db.query.trades.findMany({
-        orderBy: desc(trades.createdAt),
-        limit: 100
-      });
-
-      const activeTrades = [];
-
-      for (const trade of allTrades) {
-        if (!trade.flaskTradeId) continue;
-
-        try {
-          // Get current status from Flask
-          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!response.ok) continue;
-
-          const flaskData = await response.json();
-
-          // Only include trades that are NOT completed
-          if (!['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
-            activeTrades.push({
-              ...trade,
-              status: flaskData.status,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-        }
-
-        // Limit to 50 active trades
-        if (activeTrades.length >= 50) break;
-      }
-
-      console.log('[Express Proxy] Found active trades:', activeTrades.length);
-      res.json(activeTrades);
-    } catch (error) {
-      console.error('[Express Proxy] Active trades error:', error);
-      res.status(500).json({ error: 'Failed to fetch active trades' });
-    }
-  });
-
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Getting trade history from database');
-
-      // Get all trades and filter based on Flask status to ensure accuracy
-      const allTrades = await db.query.trades.findMany({
+      
+      // Get trade history from local database instead of Flask
+      const tradeHistory = await db.query.trades.findMany({
         orderBy: desc(trades.createdAt),
-        limit: 100 // Get more to account for filtering
+        limit: 50
       });
-
-      const completedTrades = [];
-
-      for (const trade of allTrades) {
-        if (!trade.flaskTradeId) continue;
-
-        try {
-          // Get current status from Flask
-          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!response.ok) continue;
-
-          const flaskData = await response.json();
-
-          // Only include trades that are truly completed (CLOSED or FAILED)
-          if (['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
-            completedTrades.push({
-              ...trade,
-              status: flaskData.status,
-              closedAt: flaskData.closedAt || trade.closedAt
-            });
-          }
-        } catch (error) {
-          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-        }
-
-        // Limit to 50 completed trades
-        if (completedTrades.length >= 50) break;
-      }
-
-      console.log('[Express Proxy] Found completed trades:', completedTrades.length);
-      res.json(completedTrades);
+      
+      console.log('[Express Proxy] Found trades in database:', tradeHistory.length);
+      res.json(tradeHistory);
     } catch (error) {
       console.error('[Express Proxy] History error:', error);
       res.status(500).json({ error: 'Failed to fetch trade history' });
