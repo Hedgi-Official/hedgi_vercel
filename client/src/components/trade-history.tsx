@@ -30,7 +30,14 @@ export function TradeHistory() {
       if (!response.ok) {
         throw new Error("Failed to fetch trade history");
       }
-      return response.json();
+      const data = await response.json();
+      console.log('Trade history received from backend:', data);
+      console.log('Sample trade data:', data[0]);
+      if (data[0]) {
+        console.log('First trade status:', data[0].status);
+        console.log('First trade closedAt:', data[0].closedAt);
+      }
+      return data;
     },
     enabled: expanded // Only fetch when expanded
   });
@@ -101,7 +108,12 @@ export function TradeHistory() {
           ) : (
             <div className="space-y-3">
               {tradeHistory.map((trade: ClosedTrade, index: number) => {
-                console.log('Trade data:', trade); // Debug log
+                console.log(`=== TRADE ${index} DEBUG ===`);
+                console.log('Individual trade data received:', trade);
+                console.log('Trade status:', trade.status, typeof trade.status);
+                console.log('Trade closedAt:', trade.closedAt, typeof trade.closedAt);
+                console.log('Raw trade object keys:', Object.keys(trade));
+                console.log('================================');
                 // Extract ID from ticket (FLASK-XX format) or use regular id
                 const displayId = trade.ticket?.startsWith('FLASK-') 
                   ? trade.ticket.replace('FLASK-', '') 

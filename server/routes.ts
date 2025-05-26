@@ -168,37 +168,44 @@ export function registerRoutes(app: Express): Server {
         try {
           // 1) Fetch the real status from Flask
           const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!flaskRes.ok) continue;
-          const { status, closedAt: flaskClosedAt } = await flaskRes.json() as {
+          if (!flaskRes.ok) {
+            console.log(`[Express Proxy] Failed to fetch Flask status for trade ${trade.id}`);
+            continue;
+          }
+
+          const flaskData = await flaskRes.json() as {
             status: string;
             closedAt?: string; // ISO string
           };
 
+          console.log(`[Express Proxy] Flask data for trade ${trade.id}:`, flaskData);
+
           // 2) Only include truly completed trades
           const isDone = ['failed','closed','executed','cancelled','completed']
-            .includes(status.toLowerCase());
+            .includes(flaskData.status.toLowerCase());
           if (!isDone) {
-            console.log(`[Express Proxy] Skipping trade ${trade.id} with status: ${status}`);
+            console.log(`[Express Proxy] Skipping trade ${trade.id} with status: ${flaskData.status}`);
             continue;
           }
 
-          // 3) Build your history‐trade object directly from Flask
+          // 3) Build your history trade object using ONLY Flask data for status and closedAt
           const historyTrade: any = {
             id:       trade.id,
             ticket:   `FLASK-${trade.flaskTradeId}`,
             symbol:   trade.symbol,
             volume:   trade.volume?.toString() || '0.01',
             openTime: trade.createdAt.toISOString(),
-            status,                                   // fresh from Flask
-            closedAt: flaskClosedAt                   // guaranteed ISO string
-              ?? trade.updatedAt.toISOString(),       // fallback if Flask didn't send it
+            status:   flaskData.status,                    // ALWAYS use Flask status
+            closedAt: flaskData.closedAt                   // ALWAYS use Flask closedAt
+              ? flaskData.closedAt                         // Use Flask date if provided
+              : new Date().toISOString(),                  // Current timestamp as fallback
           };
 
-          console.log(`[Express Proxy] Adding completed trade to history:`, {
-            id: trade.id,
-            flaskTradeId: trade.flaskTradeId,
-            status,
-            closedAt: flaskClosedAt
+          console.log(`[Express Proxy] Adding completed trade to history with Flask data:`, {
+            id: historyTrade.id,
+            status: historyTrade.status,
+            closedAt: historyTrade.closedAt,
+            source: 'Flask'
           });
 
           historyTrades.push(historyTrade);
