@@ -47,10 +47,6 @@ export function TradeHistory() {
     if (!dateString) return 'No date available';
     try {
       const date = new Date(dateString);
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
       return date.toLocaleString();
     } catch (error) {
       console.error('Error formatting date:', error);

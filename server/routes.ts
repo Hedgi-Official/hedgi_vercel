@@ -187,6 +187,13 @@ export function registerRoutes(app: Express): Server {
             console.log(`[Express Proxy] Skipping active trade ${trade.id} with status: ${flaskData.status}`);
             continue;
           }
+          await db.update(trades)
+          .set({
+              status: flaskData.status, 
+              closedAt: flaskData.closedAt ? new Date(flaskData.closedAt) : null,
+              updatedAt: new Date() // Update the timestamp
+          })
+          .where(eq(trades.id, trade.id));
 
           // 3) Create clean ClosedTrade object with ONLY required fields
           const closedTrade: ClosedTrade = {
