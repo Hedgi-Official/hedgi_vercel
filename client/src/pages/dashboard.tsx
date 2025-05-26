@@ -379,7 +379,7 @@ export default function Dashboard() {
       : (trade.status || 'open');
 
     // Hide completed trades from active section
-    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
+    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed', 'EXECUTED', 'executed', 'CANCELLED', 'cancelled', 'COMPLETED', 'completed'].includes(displayStatus.toUpperCase());
 
     if (isCompleted) {
       return null; // Don't render completed trades in active section
@@ -486,11 +486,8 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {(() => {
-                // Filter out completed trades
-                const activeTrades = trades?.filter((trade: any) => {
-                  // For now, show all trades - we'll filter by status in the component
-                  return true;
-                }) || [];
+                // Show all trades but let TradeItem component filter out completed ones
+                const activeTrades = trades || [];
 
                 if (activeTrades.length === 0) {
                   return <p>{t('No active trades')}</p>;
