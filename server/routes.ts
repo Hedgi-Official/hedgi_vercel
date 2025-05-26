@@ -53,6 +53,7 @@ export function registerRoutes(app: Express): Server {
       console.error('[Express Proxy] Error:', error);
       res.status(500).json({ error: 'Proxy error: ' + error.message });
     }
+  });
 
 
   // 2) Poll status
@@ -65,7 +66,7 @@ export function registerRoutes(app: Express): Server {
       if (!t || t.userId !== req.user.id) return res.status(404).json({ error: 'Trade not found' });
 
       const flaskRes = await fetch(`${FLASK}/trades/${t.flaskTradeId}/status`);
-      const { status } = (await flaskRes.json()) as { status: string };
+      const flaskStatus = (await flaskRes.json()) as { status: string, comment?: string };
 
       const statusMap: Record<string,string> = {
         NEW:       'Order sent',
@@ -75,8 +76,13 @@ export function registerRoutes(app: Express): Server {
       };
 
       // Update the database with the new status and set closedAt for completed trades
-      const updateData: any = { status, updatedAt: new Date() };
-      if (['Closed', 'FAILED', 'closed', 'failed'].includes(status)) {
+      const updateData: any = { 
+        status: flaskStatus.status, 
+        updatedAt: new Date() 
+      };
+
+      // Set closedAt timestamp for completed trades
+      if (['Closed', 'FAILED', 'closed', 'failed'].includes(flaskStatus.status)) {
         updateData.closedAt = new Date();
       }
 
@@ -84,9 +90,19 @@ export function registerRoutes(app: Express): Server {
         .set(updateData)
         .where(eq(trades.id, t.id));
 
-      console.log(`[Trade Status] Updated trade ${t.id} status to: ${status}`);
+      console.log(`[Trade Status] Updated trade ${t.id} status to: ${flaskStatus.status}`);
 
-      return res.json({ status, label: statusMap[status] ?? status });
+      const response: any = { 
+        status: flaskStatus.status, 
+        label: statusMap[flaskStatus.status] ?? flaskStatus.status
+      };
+
+      // Only include closedAt if Flask provided it
+      if (updateData.closedAt) {
+        response.closedAt = updateData.closedAt.toISOString();
+      }
+
+      return res.json(response);
     } catch (err) {
       console.error('Error checking trade status:', err);
       return res.status(500).json({ error: 'Failed to check status' });
@@ -128,9 +144,6 @@ export function registerRoutes(app: Express): Server {
 
       console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
 
-      // For Flask trades, check their live status and include completed ones
-      const historyTrades = [];
-
       for (const trade of allTrades) {
         if (trade.broker === 'flask' && trade.flaskTradeId) {
           try {
@@ -138,39 +151,47 @@ export function registerRoutes(app: Express): Server {
             const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
             if (flaskResponse.ok) {
               const flaskStatus = await flaskResponse.json();
-
-              // Update database with current Flask status and set closedAt for completed trades
               const statusLower = flaskStatus.status?.toLowerCase() || '';
               const isCompleted = ['failed', 'closed', 'executed', 'cancelled', 'completed'].includes(statusLower);
 
-              const updateData: any = { 
-                status: flaskStatus.status, 
-                updatedAt: new Date() 
-              };
-
-              // Set closedAt timestamp for completed trades
-              if (isCompleted && !trade.closedAt) {
-                updateData.closedAt = new Date();
-              }
-
-              await db.update(trades)
-                .set(updateData)
-                .where(eq(trades.id, trade.id));
-
-              console.log(`[Trade History] Updated trade ${trade.id} from ${trade.status} to ${flaskStatus.status}${isCompleted ? ' (COMPLETED)' : ''}`);
+              console.log(`[Trade History] Trade ${trade.id} has Flask status: ${flaskStatus.status}${isCompleted ? ' (COMPLETED)' : ''}`);
 
               // Include completed trades in history
               if (isCompleted) {
                 console.log(`[Trade History] Including completed trade ${trade.id} with status ${flaskStatus.status}`);
-                historyTrades.push({
+
+                // Parse closedAt from Flask's comment field if available
+                let closedAtTimestamp;
+                if (flaskStatus.comment && flaskStatus.comment.includes('closed at:')) {
+                  const closedAtMatch = flaskStatus.comment.match(/closed at:\s*(.+)/);
+                  if (closedAtMatch && closedAtMatch[1]) {
+                    try {
+                      closedAtTimestamp = new Date(closedAtMatch[1].trim()).toISOString();
+                    } catch (err) {
+                      console.warn(`[Trade History] Could not parse closedAt from comment: ${flaskStatus.comment}`);
+                    }
+                  }
+                } else if (trade.closedAt) {
+                  // Use previously stored closedAt timestamp
+                  closedAtTimestamp = trade.closedAt.toISOString();
+                }
+                // If no closedAt available, leave it undefined for failed/incomplete trades
+
+                const historyTrade: any = {
                   ...trade,
                   status: flaskStatus.status,
                   ticket: `FLASK-${trade.flaskTradeId}`,
                   symbol: trade.symbol || 'UNKNOWN',
                   volume: trade.volume?.toString() || '0.01',
-                  openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
-                  closedAt: updateData.closedAt?.toISOString() || trade.updatedAt?.toISOString() || new Date().toISOString()
-                });
+                  openTime: trade.createdAt?.toISOString() || new Date().toISOString()
+                };
+
+                // Only include closedAt if we have a valid timestamp
+                if (closedAtTimestamp) {
+                  historyTrade.closedAt = closedAtTimestamp;
+                }
+
+                historyTrades.push(historyTrade);
               }
             }
           } catch (error) {
@@ -179,14 +200,20 @@ export function registerRoutes(app: Express): Server {
         } else {
           // For non-Flask trades, use database status - include all completed trades
           if (['Closed', 'FAILED', 'closed', 'failed', 'completed', 'cancelled'].includes(trade.status || '')) {
-            historyTrades.push({
+            const historyTrade: any = {
               ...trade,
               ticket: trade.tradeOrderNumber || `DB-${trade.id}`,
               symbol: trade.symbol || 'UNKNOWN',
               volume: trade.volume?.toString() || '0.01',
-              openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
-              closedAt: trade.closedAt?.toISOString() || trade.updatedAt?.toISOString() || new Date().toISOString()
-            });
+              openTime: trade.createdAt?.toISOString() || new Date().toISOString()
+            };
+
+            // Only include closedAt if we have a valid timestamp from the database
+            if (trade.closedAt) {
+              historyTrade.closedAt = trade.closedAt.toISOString();
+            }
+
+            historyTrades.push(historyTrade);
           }
         }
       }
