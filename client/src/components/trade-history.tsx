@@ -37,8 +37,18 @@ export function TradeHistory() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+    if (!dateString) return 'No date available';
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   if (!expanded) {
@@ -91,6 +101,7 @@ export function TradeHistory() {
           ) : (
             <div className="space-y-3">
               {tradeHistory.map((trade: ClosedTrade, index: number) => {
+                console.log('Trade data:', trade); // Debug log
                 // Extract ID from ticket (FLASK-XX format) or use regular id
                 const displayId = trade.ticket?.startsWith('FLASK-') 
                   ? trade.ticket.replace('FLASK-', '') 
@@ -120,12 +131,12 @@ export function TradeHistory() {
                         })()}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Status: {trade.status}
+                        Status: {trade.status || 'Unknown'}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
                       <div className="text-xs mt-1">
-                        {formatDate(trade.closedAt)}
+                        {trade.closedAt ? formatDate(trade.closedAt) : 'No date available'}
                       </div>
                     </div>
                   </div>
