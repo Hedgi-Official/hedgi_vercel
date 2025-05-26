@@ -52,8 +52,27 @@ export default function Dashboard() {
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
+  // Fetch active trades
+  const { data: activeTrades = [] } = useQuery<Trade[]>({
+    queryKey: ['/api/trades'],
+    queryFn: async () => {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const response = await fetch(`${serverUrl}/api/trades`, { credentials: 'include' });
+      if (!response.ok) {
+        return []; // Return empty array on error
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : []; // Ensure we always return an array
+    },
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch trade history
   const { data: trades = [] } = useQuery<Trade[]>({
-    queryKey: ['/trades'],
+    queryKey: ['/api/trades/history'],
     queryFn: async () => {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
@@ -158,7 +177,8 @@ export default function Dashboard() {
       return res.json() as Promise<Trade>;
     },
     onSuccess(data) {
-      queryClient.invalidateQueries({ queryKey: ['/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
       toast({ title: t('Trade Created'), description: `#${data.id}` });
       checkTradeStatusMutation.mutate(data.id.toString());
     },
@@ -307,7 +327,8 @@ export default function Dashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades/history"] });
       toast({
         title: t('simulator.notifications.hedgeDeleted'),
         description: t('simulator.notifications.hedgeDeletedDesc'),
@@ -459,7 +480,8 @@ export default function Dashboard() {
       });
 
       // Refresh the trades list
-      queryClient.invalidateQueries({ queryKey: ["/trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades/history"] });
 
     } catch (error) {
       console.error('[Dashboard] Error closing Flask trade:', error);
@@ -486,9 +508,6 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {(() => {
-                // Show all trades but let TradeItem component filter out completed ones
-                const activeTrades = trades || [];
-
                 if (activeTrades.length === 0) {
                   return <p>{t('No active trades')}</p>;
                 }
@@ -507,7 +526,7 @@ export default function Dashboard() {
                       }}
                     />
                   );
-                }).filter(Boolean);
+                });
               })()}
             </CardContent>
           </Card>
@@ -523,7 +542,10 @@ export default function Dashboard() {
                   console.log('[Dashboard] onPlaceHedge got:', d);
                   createHedgeMutation.mutate(d);
                 }}
-                onOrdersUpdated={() => queryClient.invalidateQueries({ queryKey: ['/trades'] })}
+                onOrdersUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+                }}
               />
               {/* Trade History Component */}
               <TradeHistory />
