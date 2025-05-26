@@ -149,8 +149,8 @@ export function registerRoutes(app: Express): Server {
                 .set(updateData)
                 .where(eq(trades.id, trade.id));
               
-              if (['FAILED', 'CLOSED', 'EXECUTED'].includes(flaskStatus.status?.toUpperCase())) {
-                // Include this trade in history with Flask status
+              // Include completed trades in history (broader status check)
+              if (['FAILED', 'CLOSED', 'EXECUTED', 'failed', 'closed', 'executed'].includes(flaskStatus.status?.toLowerCase())) {
                 historyTrades.push({
                   ...trade,
                   status: flaskStatus.status,
@@ -166,15 +166,15 @@ export function registerRoutes(app: Express): Server {
             console.error(`[Express Proxy] Error checking Flask status for trade ${trade.flaskTradeId}:`, error);
           }
         } else {
-          // For non-Flask trades, use database status
-          if (['Closed', 'FAILED', 'closed', 'failed'].includes(trade.status || '')) {
+          // For non-Flask trades, use database status - include all completed trades
+          if (['Closed', 'FAILED', 'closed', 'failed', 'completed', 'cancelled'].includes(trade.status || '')) {
             historyTrades.push({
               ...trade,
               ticket: trade.tradeOrderNumber || `DB-${trade.id}`,
               symbol: trade.symbol || 'UNKNOWN',
               volume: trade.volume?.toString() || '0.01',
               openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
-              closedAt: trade.updatedAt?.toISOString() || new Date().toISOString()
+              closedAt: trade.closedAt?.toISOString() || trade.updatedAt?.toISOString() || new Date().toISOString()
             });
           }
         }
