@@ -25,13 +25,13 @@ interface BrokerRate {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
-  
+
 
   // 1) Create a new trade (Simple proxy to Flask)
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
-      
+
       const flaskRes = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,18 +119,18 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
       console.log('[Express Proxy] Getting trade history from database');
-      
+
       // Get all trades for this user
       const allTrades = await db.query.trades.findMany({
         where: eq(trades.userId, req.user.id),
         orderBy: desc(trades.updatedAt),
       });
-      
+
       console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
-      
+
       // For Flask trades, check their live status and include completed ones
       const historyTrades = [];
-      
+
       for (const trade of allTrades) {
         if (trade.broker === 'flask' && trade.flaskTradeId) {
           try {
@@ -138,19 +138,30 @@ export function registerRoutes(app: Express): Server {
             const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
             if (flaskResponse.ok) {
               const flaskStatus = await flaskResponse.json();
-              
-              // Update database with current Flask status
-              const updateData: any = { status: flaskStatus.status, updatedAt: new Date() };
-              if (['FAILED', 'CLOSED', 'failed', 'closed'].includes(flaskStatus.status?.toLowerCase())) {
+
+              // Update database with current Flask status and set closedAt for completed trades
+              const statusLower = flaskStatus.status?.toLowerCase() || '';
+              const isCompleted = ['failed', 'closed', 'executed', 'cancelled', 'completed'].includes(statusLower);
+
+              const updateData: any = { 
+                status: flaskStatus.status, 
+                updatedAt: new Date() 
+              };
+
+              // Set closedAt timestamp for completed trades
+              if (isCompleted && !trade.closedAt) {
                 updateData.closedAt = new Date();
               }
-              
+
               await db.update(trades)
                 .set(updateData)
                 .where(eq(trades.id, trade.id));
-              
-              // Include completed trades in history (broader status check)
-              if (['FAILED', 'CLOSED', 'EXECUTED', 'failed', 'closed', 'executed'].includes(flaskStatus.status?.toLowerCase())) {
+
+              console.log(`[Trade History] Updated trade ${trade.id} from ${trade.status} to ${flaskStatus.status}${isCompleted ? ' (COMPLETED)' : ''}`);
+
+              // Include completed trades in history
+              if (isCompleted) {
+                console.log(`[Trade History] Including completed trade ${trade.id} with status ${flaskStatus.status}`);
                 historyTrades.push({
                   ...trade,
                   status: flaskStatus.status,
@@ -179,7 +190,7 @@ export function registerRoutes(app: Express): Server {
           }
         }
       }
-      
+
       console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
       return res.json(historyTrades);
     } catch (err) {
