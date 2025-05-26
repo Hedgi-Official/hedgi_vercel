@@ -157,13 +157,14 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('[Express Proxy] Getting trade history from database');
       
-      // Get trade history from local database instead of Flask
+      // Get only completed trades from local database (CLOSED or FAILED status)
       const tradeHistory = await db.query.trades.findMany({
+        where: inArray(trades.status, ['CLOSED', 'FAILED', 'closed', 'failed']),
         orderBy: desc(trades.createdAt),
         limit: 50
       });
       
-      console.log('[Express Proxy] Found trades in database:', tradeHistory.length);
+      console.log('[Express Proxy] Found completed trades in database:', tradeHistory.length);
       res.json(tradeHistory);
     } catch (error) {
       console.error('[Express Proxy] History error:', error);
