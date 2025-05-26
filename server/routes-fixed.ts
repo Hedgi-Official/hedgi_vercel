@@ -153,6 +153,53 @@ export function registerRoutes(app: Express): Server {
   });
 
   // 4. Get trade history → GET /api/trades/history (proxy to Flask)
+  // Get active trades only
+  app.get('/api/trades', async (req: Request, res: Response) => {
+    try {
+      console.log('[Express Proxy] Getting active trades from database');
+
+      // Get all trades and filter to only show active ones
+      const allTrades = await db.query.trades.findMany({
+        orderBy: desc(trades.createdAt),
+        limit: 100
+      });
+
+      const activeTrades = [];
+
+      for (const trade of allTrades) {
+        if (!trade.flaskTradeId) continue;
+
+        try {
+          // Get current status from Flask
+          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+          if (!response.ok) continue;
+
+          const flaskData = await response.json();
+
+          // Only include trades that are NOT completed
+          if (!['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+            activeTrades.push({
+              ...trade,
+              status: flaskData.status,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+        }
+
+        // Limit to 50 active trades
+        if (activeTrades.length >= 50) break;
+      }
+
+      console.log('[Express Proxy] Found active trades:', activeTrades.length);
+      res.json(activeTrades);
+    } catch (error) {
+      console.error('[Express Proxy] Active trades error:', error);
+      res.status(500).json({ error: 'Failed to fetch active trades' });
+    }
+  });
+
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Getting trade history from database');
