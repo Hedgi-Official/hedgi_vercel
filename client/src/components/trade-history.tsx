@@ -124,7 +124,6 @@ export function TradeHistory() {
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
-            
                       <div className="text-xs mt-1">
                         {formatDate(trade.closedAt)}
                       </div>

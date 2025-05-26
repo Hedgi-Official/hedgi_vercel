@@ -146,7 +146,24 @@ export function registerRoutes(app: Express): Server {
       const historyTrades: any[] = [];
 
       for (const trade of allTrades) {
-        if (!trade.flaskTradeId) continue;
+        // Handle trades without Flask IDs that are completed in the database
+        if (!trade.flaskTradeId) {
+          const isDone = ['failed','closed','executed','cancelled','completed']
+            .includes((trade.status || '').toLowerCase());
+          if (isDone && trade.closedAt) {
+            const historyTrade: any = {
+              id:       trade.id,
+              ticket:   trade.ticket || `DB-${trade.id}`,
+              symbol:   trade.symbol,
+              volume:   trade.volume?.toString() || '0.01',
+              openTime: trade.createdAt.toISOString(),
+              status:   trade.status,
+              closedAt: trade.closedAt.toISOString(),
+            };
+            historyTrades.push(historyTrade);
+          }
+          continue;
+        }
 
         try {
           // 1) Fetch the real status from Flask
@@ -160,7 +177,10 @@ export function registerRoutes(app: Express): Server {
           // 2) Only include truly completed trades
           const isDone = ['failed','closed','executed','cancelled','completed']
             .includes(status.toLowerCase());
-          if (!isDone) continue;
+          if (!isDone) {
+            console.log(`[Express Proxy] Skipping trade ${trade.id} with status: ${status}`);
+            continue;
+          }
 
           // 3) Build your history‐trade object directly from Flask
           const historyTrade: any = {
@@ -173,6 +193,13 @@ export function registerRoutes(app: Express): Server {
             closedAt: flaskClosedAt                   // guaranteed ISO string
               ?? trade.updatedAt.toISOString(),       // fallback if Flask didn't send it
           };
+
+          console.log(`[Express Proxy] Adding completed trade to history:`, {
+            id: trade.id,
+            flaskTradeId: trade.flaskTradeId,
+            status,
+            closedAt: flaskClosedAt
+          });
 
           historyTrades.push(historyTrade);
         } catch (err) {
