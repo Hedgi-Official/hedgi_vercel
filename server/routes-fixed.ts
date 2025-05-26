@@ -156,15 +156,44 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Getting trade history from database');
-      
-      // Get trade history from local database instead of Flask
-      const tradeHistory = await db.query.trades.findMany({
+
+      // Get all trades and filter to only show completed ones
+      const allTrades = await db.query.trades.findMany({
         orderBy: desc(trades.createdAt),
-        limit: 50
+        limit: 100
       });
-      
-      console.log('[Express Proxy] Found trades in database:', tradeHistory.length);
-      res.json(tradeHistory);
+
+      const completedTrades = [];
+
+      for (const trade of allTrades) {
+        if (!trade.flaskTradeId) continue;
+
+        try {
+          // Get current status from Flask
+          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+          if (!response.ok) continue;
+
+          const flaskData = await response.json();
+
+          // Only include trades that are CLOSED or FAILED
+          if (['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+            completedTrades.push({
+              ...trade,
+              status: flaskData.status,
+              closedAt: flaskData.closedAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+        }
+
+        // Limit to 50 completed trades
+        if (completedTrades.length >= 50) break;
+      }
+
+      console.log('[Express Proxy] Found completed trades:', completedTrades.length);
+      res.json(completedTrades);
     } catch (error) {
       console.error('[Express Proxy] History error:', error);
       res.status(500).json({ error: 'Failed to fetch trade history' });
