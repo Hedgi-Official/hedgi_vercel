@@ -95,7 +95,7 @@ export function TradeHistory() {
                 const displayId = trade.ticket?.startsWith('FLASK-') 
                   ? trade.ticket.replace('FLASK-', '') 
                   : (trade.id || index + 1);
-                
+
                 return (
                   <div
                     key={`history-${index}`}
@@ -104,7 +104,20 @@ export function TradeHistory() {
                     <div>
                       <p className="font-medium">{trade.symbol} (ID: {displayId})</p>
                       <p className="text-sm text-muted-foreground">
-                        {trade.volume}
+                        {(() => {
+                          // Convert volume back to amount (volume * 100,000)
+                          const volume = parseFloat(trade.volume || '0');
+                          const amount = volume * 100000;
+
+                          // Extract base currency from symbol (e.g., USDBRL -> USD)
+                          const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
+                          const currencySymbol = baseCurrency === 'USD' ? '$' : 
+                                               baseCurrency === 'EUR' ? '€' : 
+                                               baseCurrency === 'BRL' ? 'R$' : 
+                                               baseCurrency === 'MXN' ? '$' : '';
+
+                          return `${currencySymbol}${amount.toLocaleString('en-US')} ${baseCurrency}`;
+                        })()}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Status: {trade.status}

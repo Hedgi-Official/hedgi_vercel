@@ -47,7 +47,7 @@ export default function Dashboard() {
   const { user, logout } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
@@ -88,7 +88,7 @@ export default function Dashboard() {
     onSuccess: (data, tradeOrderNumber) => {
       // For the new API implementation, we have a different response format
       // The hedge status endpoint simply returns if the order exists in our database
-      
+
       toast({
         title: t('Trade Status'),
         description: data.message || (data.found 
@@ -130,14 +130,14 @@ export default function Dashboard() {
 
       // only these fields go on the wire
       const payload = { symbol, direction, volume, metadata };
-      
+
       console.log('[Dashboard] sending payload:', payload);
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
       const fullUrl = `${serverUrl}/api/trades`;
-      
+
       console.log('[Dashboard] sending to URL:', fullUrl);
       console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
       const res = await fetch(fullUrl, {
@@ -148,7 +148,7 @@ export default function Dashboard() {
         },
         body: JSON.stringify(payload)
       });
-      
+
       console.log('[Dashboard] Response status:', res.status);
       console.log('[Dashboard] Response headers:', Object.fromEntries(res.headers.entries()));
       if (!res.ok) {
@@ -170,7 +170,7 @@ export default function Dashboard() {
   // 3) Close trade
   const initiateHedgeClose = async (hedge: Hedge) => {
     console.log('[Dashboard] Initiating hedge close process for:', hedge);
-    
+
     // If there's no trade order number, just delete the hedge directly
     if (!hedge.tradeOrderNumber) {
       deleteHedgeMutation.mutate(hedge);
@@ -182,11 +182,11 @@ export default function Dashboard() {
     const broker = hedge.broker || 'tickmill';
     // Use the stored tradeOrderNumber as the position to close
     const position = Number(hedge.tradeOrderNumber);
-    
+
     try {
       // Use the broker-based API endpoint for closing trades
       console.log(`[Dashboard] Closing trade with broker: ${broker}, position: ${position}`);
-      
+
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
@@ -204,7 +204,7 @@ export default function Dashboard() {
       // Enhanced error handling - handle both HTTP and API errors
       const responseText = await response.text();
       let data;
-      
+
       try {
         // Attempt to parse as JSON
         data = JSON.parse(responseText);
@@ -219,7 +219,7 @@ export default function Dashboard() {
           throw new Error(`Invalid response format: ${responseText.substring(0, 100)}...`);
         }
       }
-      
+
       // HTTP status wasn't OK
       if (!response.ok) {
         console.error('[Dashboard] Error closing trade:', data);
@@ -231,12 +231,12 @@ export default function Dashboard() {
         console.error('[Dashboard] API error closing trade:', data);
         throw new Error(data.error || data.message || 'Failed to close trade');
       }
-      
+
       // Position not found is a special case that requires confirmation
       if (data && data.returnData && data.returnData.error && 
           data.returnData.error.includes('not found')) {
         console.warn(`[Dashboard] Position ${position} not found at broker ${broker}.`);
-        
+
         // Show confirmation dialog instead of auto-deleting
         setHedgeToDelete(hedge);
         setConfirmDialogOpen(true);
@@ -273,7 +273,7 @@ export default function Dashboard() {
       deleteHedgeMutation.mutate(hedge);
     }
   };
-  
+
   // Confirm deletion of a hedge that wasn't found on the broker
   const confirmHedgeDeletion = () => {
     if (hedgeToDelete) {
@@ -282,7 +282,7 @@ export default function Dashboard() {
     }
     setConfirmDialogOpen(false);
   };
-  
+
   // Cancel deletion of a hedge
   const cancelHedgeDeletion = () => {
     setHedgeToDelete(null);
@@ -349,11 +349,11 @@ export default function Dashboard() {
       queryKey: ["flask-status", flaskTradeId],
       queryFn: async () => {
         if (!flaskTradeId) return null;
-        
+
         const serverUrl = window.location.hostname === 'localhost' 
           ? 'http://localhost:5000'
           : '';
-        
+
         const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/status`);
         if (!response.ok) {
           return { status: 'checking...' }; // Return fallback instead of throwing
@@ -373,14 +373,14 @@ export default function Dashboard() {
   // TradeItem component that properly uses hooks
   const TradeItem = ({ trade, onClose }: { trade: any, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
     const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
-    
+
     const displayStatus = trade.broker === 'flask' 
       ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
       : (trade.status || 'open');
 
     // Hide completed trades from active section
     const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
-    
+
     if (isCompleted) {
       return null; // Don't render completed trades in active section
     }
@@ -419,11 +419,11 @@ export default function Dashboard() {
   const closeFlaskTrade = async (flaskTradeId: number, dbTradeId: number) => {
     try {
       console.log('[Dashboard] Closing Flask trade ID:', flaskTradeId);
-      
+
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
-      
+
       const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -438,7 +438,7 @@ export default function Dashboard() {
 
       const result = await response.json();
       console.log('[Dashboard] Flask trade closed successfully:', result);
-      
+
       toast({
         title: "Trade Closed",
         description: "Your Flask trade has been successfully closed.",
@@ -446,7 +446,7 @@ export default function Dashboard() {
 
       // Refresh the trades list
       queryClient.invalidateQueries({ queryKey: ["/trades"] });
-      
+
     } catch (error) {
       console.error('[Dashboard] Error closing Flask trade:', error);
       toast({
