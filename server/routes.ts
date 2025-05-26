@@ -171,7 +171,7 @@ export function registerRoutes(app: Express): Server {
             openTime: trade.createdAt.toISOString(),
             status,                                   // fresh from Flask
             closedAt: flaskClosedAt                   // guaranteed ISO string
-              ?? trade.updatedAt.toISOString(),       // fallback if Flask didn’t send it
+              ?? trade.updatedAt.toISOString(),       // fallback if Flask didn't send it
           };
 
           historyTrades.push(historyTrade);
@@ -180,6 +180,7 @@ export function registerRoutes(app: Express): Server {
         }
       }
 
+      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
       return res.json(historyTrades);
     } catch (err) {
       console.error('Error fetching trade history:', err);
