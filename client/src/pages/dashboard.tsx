@@ -399,8 +399,8 @@ export default function Dashboard() {
       ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
       : (trade.status || 'open');
 
-    // Hide completed trades from active section
-    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed', 'EXECUTED', 'executed', 'CANCELLED', 'cancelled', 'COMPLETED', 'completed'].includes(displayStatus.toUpperCase());
+    // Hide only CLOSED and FAILED trades from active section
+    const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
 
     if (isCompleted) {
       return null; // Don't render completed trades in active section

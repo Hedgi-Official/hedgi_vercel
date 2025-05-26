@@ -175,7 +175,7 @@ export function registerRoutes(app: Express): Server {
 
           const flaskData = await response.json();
 
-          // Only include trades that are NOT completed
+          // Only include trades that are NOT completed (only CLOSED and FAILED go to past trades)
           if (!['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
             activeTrades.push({
               ...trade,
