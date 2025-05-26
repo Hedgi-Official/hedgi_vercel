@@ -95,6 +95,29 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask status response:', result);
+      
+      // Update the local database with the latest status from Flask
+      try {
+        const updateData: any = { 
+          status: result.status, 
+          updatedAt: new Date()
+        };
+
+        // Use closedAt from Flask if provided
+        if (result.closedAt) {
+          updateData.closedAt = new Date(result.closedAt);
+        }
+
+        await db.update(trades)
+          .set(updateData)
+          .where(eq(trades.id, Number(tradeId)));
+
+        console.log(`[Express Proxy] Updated trade ${tradeId} status in database to: ${result.status}`);
+      } catch (dbError) {
+        console.error('[Express Proxy] Failed to update database:', dbError);
+        // Don't fail the request if database update fails
+      }
+      
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Status check error:', error);
