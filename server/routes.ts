@@ -74,9 +74,17 @@ export function registerRoutes(app: Express): Server {
         FAILED:    'Failed',
       };
 
+      // Update the database with the new status and set closedAt for completed trades
+      const updateData: any = { status, updatedAt: new Date() };
+      if (['Closed', 'FAILED', 'closed', 'failed'].includes(status)) {
+        updateData.closedAt = new Date();
+      }
+
       await db.update(trades)
-        .set({ status, updatedAt: new Date() })
+        .set(updateData)
         .where(eq(trades.id, t.id));
+
+      console.log(`[Trade Status] Updated trade ${t.id} status to: ${status}`);
 
       return res.json({ status, label: statusMap[status] ?? status });
     } catch (err) {
@@ -130,6 +138,17 @@ export function registerRoutes(app: Express): Server {
             const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
             if (flaskResponse.ok) {
               const flaskStatus = await flaskResponse.json();
+              
+              // Update database with current Flask status
+              const updateData: any = { status: flaskStatus.status, updatedAt: new Date() };
+              if (['FAILED', 'CLOSED', 'failed', 'closed'].includes(flaskStatus.status?.toLowerCase())) {
+                updateData.closedAt = new Date();
+              }
+              
+              await db.update(trades)
+                .set(updateData)
+                .where(eq(trades.id, trade.id));
+              
               if (['FAILED', 'CLOSED', 'EXECUTED'].includes(flaskStatus.status?.toUpperCase())) {
                 // Include this trade in history with Flask status
                 historyTrades.push({
@@ -139,7 +158,7 @@ export function registerRoutes(app: Express): Server {
                   symbol: trade.symbol || 'UNKNOWN',
                   volume: trade.volume?.toString() || '0.01',
                   openTime: trade.createdAt?.toISOString() || new Date().toISOString(),
-                  closedAt: trade.updatedAt?.toISOString() || new Date().toISOString()
+                  closedAt: updateData.closedAt?.toISOString() || trade.updatedAt?.toISOString() || new Date().toISOString()
                 });
               }
             }
