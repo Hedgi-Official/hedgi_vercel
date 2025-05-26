@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-// Interface for closed trades returned from API
-interface ClosedTrade {
-  id?: number;
-  ticket?: string;
+// Interface for trade basic info from history endpoint
+interface TradeBasicInfo {
+  id: number;
+  flaskTradeId?: number;
+  ticket: string;
   symbol: string;
   volume: string;
   openTime: string;
+}
+
+// Interface for completed trades with status
+interface ClosedTrade extends TradeBasicInfo {
   closedAt: string;
   status: string;
 }
@@ -18,26 +23,67 @@ interface ClosedTrade {
 export function TradeHistory() {
   const [expanded, setExpanded] = useState(false);
 
-  // Fetch trade history when expanded
+  // Fetch all trades and their individual statuses when expanded
   const {
     data: tradeHistory = [],
     isLoading: historyLoading,
     error: historyError
   } = useQuery({
-    queryKey: ["trades", "history"],
+    queryKey: ["trades", "history", "completed"],
     queryFn: async () => {
+      console.log('=== FETCHING TRADE HISTORY ===');
+      
+      // 1. Get basic trade info from history endpoint (NO status fetching here)
       const response = await fetch("/api/trades/history");
       if (!response.ok) {
         throw new Error("Failed to fetch trade history");
       }
-      const data = await response.json();
-      console.log('Trade history received from backend:', data);
-      console.log('Sample trade data:', data[0]);
-      if (data[0]) {
-        console.log('First trade status:', data[0].status);
-        console.log('First trade closedAt:', data[0].closedAt);
+      const allTrades: TradeBasicInfo[] = await response.json();
+      console.log(`Got ${allTrades.length} trades from history endpoint`, allTrades);
+
+      // 2. Check status of each trade individually to find completed ones
+      const completedTrades: ClosedTrade[] = [];
+
+      for (const trade of allTrades) {
+        try {
+          console.log(`Checking status for trade ${trade.id}`);
+          
+          // Only check status for trades with Flask IDs
+          if (!trade.flaskTradeId) {
+            console.log(`Skipping trade ${trade.id} - no Flask ID`);
+            continue;
+          }
+
+          const statusResponse = await fetch(`/api/trades/${trade.id}/status`);
+          if (!statusResponse.ok) {
+            console.log(`Failed to get status for trade ${trade.id}`);
+            continue;
+          }
+
+          const statusData = await statusResponse.json();
+          console.log(`Trade ${trade.id} status:`, statusData);
+
+          // Only include completed trades
+          const isCompleted = ['closed', 'failed', 'executed', 'cancelled', 'completed']
+            .includes(statusData.status.toLowerCase());
+
+          if (isCompleted && statusData.closedAt) {
+            completedTrades.push({
+              ...trade,
+              status: statusData.status,
+              closedAt: statusData.closedAt
+            });
+            console.log(`Added completed trade ${trade.id} to history`);
+          } else {
+            console.log(`Trade ${trade.id} not completed - status: ${statusData.status}`);
+          }
+        } catch (error) {
+          console.error(`Error checking trade ${trade.id}:`, error);
+        }
       }
-      return data;
+
+      console.log(`=== COMPLETED TRADES: ${completedTrades.length} ===`);
+      return completedTrades;
     },
     enabled: expanded // Only fetch when expanded
   });
@@ -108,12 +154,6 @@ export function TradeHistory() {
           ) : (
             <div className="space-y-3">
               {tradeHistory.map((trade: ClosedTrade, index: number) => {
-                console.log(`=== TRADE ${index} DEBUG ===`);
-                console.log('Individual trade data received:', trade);
-                console.log('Trade status:', trade.status, typeof trade.status);
-                console.log('Trade closedAt:', trade.closedAt, typeof trade.closedAt);
-                console.log('Raw trade object keys:', Object.keys(trade));
-                console.log('================================');
                 // Extract ID from ticket (FLASK-XX format) or use regular id
                 const displayId = trade.ticket?.startsWith('FLASK-') 
                   ? trade.ticket.replace('FLASK-', '') 
