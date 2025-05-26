@@ -143,67 +143,43 @@ export function registerRoutes(app: Express): Server {
       });
 
       console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
+      const historyTrades: any[] = [];
 
       for (const trade of allTrades) {
-        if (trade.flaskTradeId) {
-          try {
-            // Check Flask status
-            const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-            if (flaskResponse.ok) {
-              const flaskStatus = await flaskResponse.json();
-              const statusLower = flaskStatus.status?.toLowerCase() || '';
-              const isCompleted = ['failed', 'closed', 'executed', 'cancelled', 'completed'].includes(statusLower);
+        if (!trade.flaskTradeId) continue;
 
-              console.log(`[Trade History] Trade ${trade.id} has Flask status: ${flaskStatus.status}${isCompleted ? ' (COMPLETED)' : ''}`);
+        try {
+          // 1) Fetch the real status from Flask
+          const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+          if (!flaskRes.ok) continue;
+          const { status, closedAt: flaskClosedAt } = await flaskRes.json() as {
+            status: string;
+            closedAt?: string; // ISO string
+          };
 
-              // Include completed trades in history
-              if (isCompleted) {
-                console.log(`[Trade History] Including completed trade ${trade.id} with status ${flaskStatus.status}`);
+          // 2) Only include truly completed trades
+          const isDone = ['failed','closed','executed','cancelled','completed']
+            .includes(status.toLowerCase());
+          if (!isDone) continue;
 
-                const historyTrade: any = {
-                  ...trade,
-                  status: flaskStatus.status,
-                  ticket: `FLASK-${trade.flaskTradeId}`,
-                  symbol: trade.symbol || 'UNKNOWN',
-                  volume: trade.volume?.toString() || '0.01',
-                  openTime: trade.createdAt?.toISOString() || new Date().toISOString()
-                };
+          // 3) Build your history‐trade object directly from Flask
+          const historyTrade: any = {
+            id:       trade.id,
+            ticket:   `FLASK-${trade.flaskTradeId}`,
+            symbol:   trade.symbol,
+            volume:   trade.volume?.toString() || '0.01',
+            openTime: trade.createdAt.toISOString(),
+            status,                                   // fresh from Flask
+            closedAt: flaskClosedAt                   // guaranteed ISO string
+              ?? trade.updatedAt.toISOString(),       // fallback if Flask didn’t send it
+          };
 
-                // Use closedAt from Flask if available, otherwise use database closedAt
-                if (flaskStatus.closedAt) {
-                  historyTrade.closedAt = flaskStatus.closedAt;
-                } else if (trade.closedAt) {
-                  historyTrade.closedAt = trade.closedAt.toISOString();
-                }
-
-                historyTrades.push(historyTrade);
-              }
-            }
-          } catch (error) {
-            console.error(`[Express Proxy] Error checking Flask status for trade ${trade.flaskTradeId}:`, error);
-          }
-        } else {
-          // For non-Flask trades, use database status - include all completed trades
-          if (['Closed', 'FAILED', 'closed', 'failed', 'completed', 'cancelled'].includes(trade.status || '')) {
-            const historyTrade: any = {
-              ...trade,
-              ticket: trade.tradeOrderNumber || `DB-${trade.id}`,
-              symbol: trade.symbol || 'UNKNOWN',
-              volume: trade.volume?.toString() || '0.01',
-              openTime: trade.createdAt?.toISOString() || new Date().toISOString()
-            };
-
-            // Only include closedAt if we have a valid timestamp from the database
-            if (trade.closedAt) {
-              historyTrade.closedAt = trade.closedAt.toISOString();
-            }
-
-            historyTrades.push(historyTrade);
-          }
+          historyTrades.push(historyTrade);
+        } catch (err) {
+          console.error(`Error including trade ${trade.id} in history:`, err);
         }
       }
 
-      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
       return res.json(historyTrades);
     } catch (err) {
       console.error('Error fetching trade history:', err);

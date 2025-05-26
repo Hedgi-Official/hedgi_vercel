@@ -1,0 +1,81 @@
+What’s happening here is that your frontend is rendering exactly what your history endpoint is returning—and that payload is still full of “open” trades, because your endpoint is accidentally returning the unfiltered list instead of the filtered/updated one.
+
+If you look at your handler:
+
+ts
+Copy
+Edit
+// …
+const allTrades = await db.query.trades.findMany({ /* … */ });
+
+// You build up historyTrades inside the loop…
+for (const trade of allTrades) {
+  if (trade.flaskTradeId) {
+    // fetch Flask status
+    // if completed: historyTrades.push(...)
+  }
+  else {
+    // if DB-row indicates completed: historyTrades.push(...)
+  }
+}
+
+// … but then you do:
+return res.json(allTrades);
+(Or you never actually return historyTrades.) That means your JSON response is allTrades—which, for every live trade, still has "status": "open" and closedAt: null. That’s exactly what you pasted.
+
+How to fix
+Make sure you collect results into a fresh array
+At the top of your handler, before the loop:
+
+ts
+Copy
+Edit
+const historyTrades: any[] = [];
+In your loop, only push the completed ones
+
+ts
+Copy
+Edit
+for (const trade of allTrades) {
+  if (!trade.flaskTradeId) {
+    if (['closed','failed',…].includes(trade.status.toLowerCase())) {
+      historyTrades.push({
+        … // build from DB trade
+      });
+    }
+    continue;
+  }
+
+  const flaskRes = await fetch(/* … */);
+  if (!flaskRes.ok) continue;
+  const { status, closedAt } = await flaskRes.json();
+  if (!['closed','failed',…].includes(status.toLowerCase())) continue;
+
+  historyTrades.push({
+    id:       trade.id,
+    ticket:   `FLASK-${trade.flaskTradeId}`,
+    symbol:   trade.symbol,
+    volume:   trade.volume.toString(),
+    openTime: trade.createdAt.toISOString(),
+    status,              // fresh from Flask
+    closedAt: closedAt   // ISO string
+      ?? trade.updatedAt.toISOString(),
+  });
+}
+Return that filtered array
+At the end of your handler, do:
+
+ts
+Copy
+Edit
+console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
+return res.json(historyTrades);
+That way your UI only ever sees genuinely completed trades (with status: "CLOSED" or "FAILED") and a real closedAt timestamp. You’ll no longer be given a list of open trades with null dates.
+
+
+
+
+
+
+
+
