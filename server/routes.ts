@@ -130,43 +130,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 4) History tab
+  // 4) History tab - returns ONLY ClosedTrade interface fields
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
       console.log('[Express Proxy] Getting trade history from database');
 
-      // Get all trades for this user
+      // Get all trades for this user that have Flask IDs
       const allTrades = await db.query.trades.findMany({
         where: eq(trades.userId, req.user.id),
         orderBy: desc(trades.updatedAt),
       });
 
-      console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
-      const historyTrades: any[] = [];
+      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${req.user.id}`);
+
+      // Interface matching exactly what React expects
+      interface ClosedTrade {
+        id: number;
+        ticket: string;
+        symbol: string;
+        volume: string;
+        openTime: string;
+        closedAt: string;
+        status: string;
+      }
+
+      const historyTrades: ClosedTrade[] = [];
 
       for (const trade of allTrades) {
-        // Handle trades without Flask IDs that are completed in the database
+        // Skip trades without Flask IDs - we only get status from Flask
         if (!trade.flaskTradeId) {
-          const isDone = ['failed','closed','executed','cancelled','completed']
-            .includes((trade.status || '').toLowerCase());
-          if (isDone && trade.closedAt) {
-            const historyTrade: any = {
-              id:       trade.id,
-              ticket:   trade.ticket || `DB-${trade.id}`,
-              symbol:   trade.symbol,
-              volume:   trade.volume?.toString() || '0.01',
-              openTime: trade.createdAt.toISOString(),
-              status:   trade.status,
-              closedAt: trade.closedAt.toISOString(),
-            };
-            historyTrades.push(historyTrade);
-          }
+          console.log(`[Express Proxy] Skipping trade ${trade.id} - no Flask ID`);
           continue;
         }
 
         try {
-          // 1) Fetch the real status from Flask
+          // 1) Get current status from Flask (NEVER use database status)
           const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
           if (!flaskRes.ok) {
             console.log(`[Express Proxy] Failed to fetch Flask status for trade ${trade.id}`);
@@ -175,46 +174,40 @@ export function registerRoutes(app: Express): Server {
 
           const flaskData = await flaskRes.json() as {
             status: string;
-            closedAt?: string; // ISO string
+            closedAt?: string;
           };
 
-          console.log(`[Express Proxy] Flask data for trade ${trade.id}:`, flaskData);
+          console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
 
-          // 2) Only include truly completed trades
-          const isDone = ['failed','closed','executed','cancelled','completed']
+          // 2) Only include completed trades in history
+          const isCompleted = ['failed','closed','executed','cancelled','completed']
             .includes(flaskData.status.toLowerCase());
-          if (!isDone) {
-            console.log(`[Express Proxy] Skipping trade ${trade.id} with status: ${flaskData.status}`);
+          
+          if (!isCompleted) {
+            console.log(`[Express Proxy] Skipping active trade ${trade.id} with status: ${flaskData.status}`);
             continue;
           }
 
-          // 3) Build your history trade object using ONLY Flask data for status and closedAt
-          const historyTrade: any = {
-            id:       trade.id,
-            ticket:   `FLASK-${trade.flaskTradeId}`,
-            symbol:   trade.symbol,
-            volume:   trade.volume?.toString() || '0.01',
+          // 3) Create clean ClosedTrade object with ONLY required fields
+          const closedTrade: ClosedTrade = {
+            id: trade.id,
+            ticket: `FLASK-${trade.flaskTradeId}`,
+            symbol: trade.symbol,
+            volume: trade.volume?.toString() || '0.01',
             openTime: trade.createdAt.toISOString(),
-            status:   flaskData.status,                    // ALWAYS use Flask status
-            closedAt: flaskData.closedAt                   // ALWAYS use Flask closedAt
-              ? flaskData.closedAt                         // Use Flask date if provided
-              : new Date().toISOString(),                  // Current timestamp as fallback
+            status: flaskData.status,  // Always from Flask
+            closedAt: flaskData.closedAt || new Date().toISOString()  // Flask date or current time
           };
 
-          console.log(`[Express Proxy] Adding completed trade to history with Flask data:`, {
-            id: historyTrade.id,
-            status: historyTrade.status,
-            closedAt: historyTrade.closedAt,
-            source: 'Flask'
-          });
+          historyTrades.push(closedTrade);
+          console.log(`[Express Proxy] Added completed trade ${trade.id} to history`);
 
-          historyTrades.push(historyTrade);
         } catch (err) {
-          console.error(`Error including trade ${trade.id} in history:`, err);
+          console.error(`[Express Proxy] Error processing trade ${trade.id}:`, err);
         }
       }
 
-      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades`);
+      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades for history`);
       return res.json(historyTrades);
     } catch (err) {
       console.error('Error fetching trade history:', err);
