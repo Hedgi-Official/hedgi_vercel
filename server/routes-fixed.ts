@@ -86,103 +86,48 @@ export function registerRoutes(app: Express): Server {
       console.log('[Express Proxy] Checking trade status for ID:', tradeId);
       
       const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[Express Proxy] Flask status error:', errorText);
         return res.status(response.status).json({ error: errorText });
       }
 
-  const result = (await flaskRes.json()) as {
-        status:   string;
-        closedAt?: string;
-      };
-      console.log('[Express] Flask status response:', result);
-
-      // 2) Prepare what to update
-      const updateData: any = {
-        status:    result.status.toUpperCase(),
-        updatedAt: new Date()
-      };
-      if (result.closedAt) {
-        updateData.closedAt = new Date(result.closedAt);
-      }
-
-      // 3) Persist it
-      await db.update(trades)
-        .set(updateData)
-        .where(eq(trades.id, tradeId));
-      console.log(`[Express] Updated trade ${tradeId} in DB:`, updateData);
-
-      // 4) Build the response payload
-      const payload: any = { status: updateData.status };
-      if (updateData.closedAt) {
-        // send back the ISO string so the client can format it
-        payload.closedAt = updateData.closedAt.toISOString();
-      }
-
-      return res.json(payload);
-    } catch (err) {
-      console.error('[Express] Status check error:', err);
-      return res.status(500).json({ error: 'Proxy error: ' + (err as Error).message });
+      const result = await response.json();
+      console.log('[Express Proxy] Flask status response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Status check error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
     }
   });
 
   // 3. Close a trade early → POST /api/trades/:tradeId/close (proxy to Flask)
-  app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
+  app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
     try {
-      // 1) Parse the tradeId as a number
-      const tradeId = Number(req.params.tradeId);
-      console.log('[Express] Checking trade status for ID:', tradeId);
+      const tradeId = req.params.tradeId;
+      console.log('[Express Proxy] Closing trade ID:', tradeId);
+      
+      const response = await fetch(`${FLASK}/trades/${tradeId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+      });
 
-      // 2) Fetch from Flask
-      const flaskRes = await fetch(`${FLASK}/trades/${tradeId}/status`);
-      if (!flaskRes.ok) {
-        const errorText = await flaskRes.text();
-        console.error('[Express] Flask status error:', errorText);
-        return res.status(flaskRes.status).json({ error: errorText });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask close error:', errorText);
+        return res.status(response.status).json({ error: errorText });
       }
 
-      // 3) Parse the JSON from flaskRes (not `response`)
-      const result = (await flaskRes.json()) as {
-        status:   string;
-        closedAt?: string;
-      };
-      console.log('[Express] Flask status response:', result);
-
-      // 4) Build the update object, only setting closedAt if Flask gave us one
-      const updateData: Partial<{
-        status: string;
-        closedAt: Date;
-        updatedAt: Date;
-      }> = {
-        status:    result.status.toUpperCase(),
-        updatedAt: new Date()
-      };
-      if (result.closedAt) {
-        updateData.closedAt = new Date(result.closedAt);
-      }
-
-      // 5) Write it back into *this* server’s DB
-      await db.update(trades)
-        .set(updateData)
-        .where(eq(trades.id, tradeId));
-      console.log(`[Express] Updated trade ${tradeId} in DB:`, updateData);
-
-      // 6) Return exactly what the client expects
-      const payload: { status: string; closedAt?: string } = {
-        status: updateData.status!
-      };
-      if (updateData.closedAt) {
-        payload.closedAt = updateData.closedAt.toISOString();
-      }
-      return res.json(payload);
-
-    } catch (err) {
-      console.error('[Express] Status check error:', err);
-      return res.status(500).json({ error: 'Proxy error: ' + (err as Error).message });
+      const result = await response.json();
+      console.log('[Express Proxy] Flask close response:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Close error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
     }
   });
-
 
   // 4. Get trade history → GET /api/trades/history (proxy to Flask)
   app.get('/api/trades/history', async (req: Request, res: Response) => {
