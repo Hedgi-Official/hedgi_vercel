@@ -124,10 +124,7 @@ export function TradeHistory() {
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Closed</span>
-                      </div>
+            
                       <div className="text-xs mt-1">
                         {formatDate(trade.closedAt)}
                       </div>
