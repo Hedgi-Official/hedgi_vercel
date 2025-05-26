@@ -78,12 +78,12 @@ export function registerRoutes(app: Express): Server {
       // Update the database with the new status and set closedAt for completed trades
       const updateData: any = { 
         status: flaskStatus.status, 
-        updatedAt: new Date() 
+        closedAt: new Date() 
       };
 
       // Set closedAt timestamp for completed trades
       if (['Closed', 'FAILED', 'closed', 'failed'].includes(flaskStatus.status)) {
-        updateData.closedAt = new Date();
+        updateData.closedAt = flaskStatus.closedAt
       }
 
       await db.update(trades)
@@ -99,7 +99,7 @@ export function registerRoutes(app: Express): Server {
 
       // Only include closedAt if Flask provided it
       if (updateData.closedAt) {
-        response.closedAt = updateData.closedAt.toISOString();
+        response.closedAt = updateData.closedAt.toLocaleString()
       }
 
       return res.json(response);
@@ -145,7 +145,7 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Express Proxy] Found trades in database: ${allTrades.length}`);
 
       for (const trade of allTrades) {
-        if (trade.broker === 'flask' && trade.flaskTradeId) {
+        if (trade.flaskTradeId) {
           try {
             // Check Flask status
             const flaskResponse = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
