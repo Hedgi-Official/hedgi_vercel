@@ -20,6 +20,8 @@ export const users = pgTable('users', {
   fullName:     text('full_name').notNull(),
   phoneNumber:  text('phone_number'),
   createdAt:    timestamp('created_at').defaultNow().notNull(),
+  googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
+  googleRefreshToken: text('google_refresh_token'),
 });
 
 export const hedges = pgTable('hedges', {

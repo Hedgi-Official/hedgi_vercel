@@ -136,22 +136,25 @@ export function setupAuth(app: Express) {
       // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
 
-      // Create user with direct database approach that works
-      const userResult = await db.execute(sql`
-        INSERT INTO users (username, email, full_name, phone_number, password, created_at) 
-        VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, ${result.data.phoneNumber || null}, ${hashedPassword}, NOW()) 
-        RETURNING id, username, email, full_name, phone_number, created_at
-      `);
+      // Create user using raw SQL to avoid ORM conflicts
+      const insertResult = await db.execute(
+        sql`INSERT INTO users (username, email, full_name, phone_number, password) 
+            VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, 
+                   ${result.data.phoneNumber || null}, ${hashedPassword}) 
+            RETURNING id, username, email, full_name as fullName, phone_number as phoneNumber, created_at as createdAt`
+      );
       
-      const userData = userResult.rows[0] as any;
+      const userData = insertResult.rows[0] as any;
       const newUser = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        fullName: userData.full_name,
-        phoneNumber: userData.phone_number,
-        createdAt: userData.created_at,
-        password: hashedPassword
+        fullName: userData.fullname,
+        phoneNumber: userData.phonenumber,
+        createdAt: userData.createdat,
+        password: hashedPassword,
+        googleCalendarEnabled: false,
+        googleRefreshToken: null
       };
 
       // Log the user in after registration
