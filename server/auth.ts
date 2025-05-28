@@ -136,14 +136,14 @@ export function setupAuth(app: Express) {
       // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
 
-      // Create the new user with all fields
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          ...result.data,
-          password: hashedPassword,
-        })
-        .returning();
+      // Create the new user using SQL to avoid schema conflicts
+      const insertResult = await db.execute(sql`
+        INSERT INTO users (username, email, full_name, phone_number, password, created_at)
+        VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, ${result.data.phoneNumber || null}, ${hashedPassword}, NOW())
+        RETURNING id, username, email, full_name as "fullName", phone_number as "phoneNumber", created_at as "createdAt"
+      `);
+      
+      const newUser = insertResult.rows[0];
 
       // Log the user in after registration
       req.login(newUser, (err) => {
