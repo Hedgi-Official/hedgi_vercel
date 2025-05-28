@@ -15,13 +15,6 @@ const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 const registerSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
-  dateOfBirth: z.string().refine((date) => {
-    const birthDate = new Date(date);
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    return age >= 18;
-  }, "You must be at least 18 years old"),
-  cpf: z.string().regex(cpfRegex, "Invalid CPF format (e.g., 123.456.789-00)"),
   phoneNumber: z.string().optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -48,8 +41,6 @@ export default function AuthPage() {
   const [registerData, setRegisterData] = useState({
     fullName: "",
     email: "",
-    dateOfBirth: "",
-    cpf: "",
     phoneNumber: "",
     username: "",
     password: "",
@@ -161,7 +152,7 @@ export default function AuthPage() {
                   </p>
                 </div>
                 <Input
-                  placeholder={t('auth.Enter username')}
+                  placeholder={t('auth.Enter your full name')}
                   value={registerData.fullName}
                   onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
                 />
@@ -171,34 +162,16 @@ export default function AuthPage() {
                   value={registerData.email}
                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                 />
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground">
-                    {t('auth.Select your birth date')}
-                  </label>
-                  <Input
-                    type="date"
-                    value={registerData.dateOfBirth}
-                    onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
-                  />
-                </div>
                 <Input
-                  placeholder="CPF (e.g., 123.456.789-00)"
-                  value={registerData.cpf}
-                  onChange={(e) => setRegisterData({ 
-                    ...registerData, 
-                    cpf: formatCPF(e.target.value)
-                  })}
+                  placeholder={t('auth.Enter your username')}
+                  value={registerData.username}
+                  onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
                 />
                 <Input
                   placeholder={t('auth.Phone Number (Optional)')}
                   type="tel"
                   value={registerData.phoneNumber}
                   onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
-                />
-                <Input
-                  placeholder={t('auth.Enter your username')}
-                  value={registerData.username}
-                  onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
                 />
                 <Input
                   type="password"
