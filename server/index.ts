@@ -50,9 +50,7 @@ app.use((req, res, next) => {
 (async () => {
   log("Starting server initialization...");
 
-  // Initialize simple authentication for account creation BEFORE other routes
-  setupSimpleAuth(app);
-  log("Simple authentication setup completed");
+  // Simple authentication is now handled in the main routes file
 
   // Initialize routes first to ensure API endpoints are ready
   const server = registerRoutes(app);

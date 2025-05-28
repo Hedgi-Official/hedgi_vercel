@@ -35,7 +35,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Simple registration endpoint that works around database conflicts
-  app.post("/api/simple-register", async (req: Request, res: Response) => {
+  app.post("/api/register-user", async (req: Request, res: Response) => {
     try {
       const { fullName, email, username, password, phoneNumber } = req.body;
 
