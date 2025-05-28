@@ -50,21 +50,13 @@ app.use((req, res, next) => {
 (async () => {
   log("Starting server initialization...");
 
-  // Initialize simple authentication for account creation
+  // Initialize simple authentication for account creation BEFORE other routes
   setupSimpleAuth(app);
   log("Simple authentication setup completed");
 
   // Initialize routes first to ensure API endpoints are ready
   const server = registerRoutes(app);
   log("Routes registered successfully");
-
-  // Enhanced error handling middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    log(`Error: ${message}`);
-    res.status(status).json({ message });
-  });
 
   // Setup Vite or static serving based on environment
   if (app.get("env") === "development") {
@@ -76,6 +68,14 @@ app.use((req, res, next) => {
     serveStatic(app);
     log("Static serving setup completed");
   }
+
+  // Enhanced error handling middleware (after all routes)
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    log(`Error: ${message}`);
+    res.status(status).json({ message });
+  });
 
   // Bind server to port with better error handling and logging
   const PORT = parseInt(process.env.PORT || '5000', 10);
