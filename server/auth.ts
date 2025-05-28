@@ -138,10 +138,10 @@ export function setupAuth(app: Express) {
 
       // Create user using raw SQL to avoid ORM conflicts
       const insertResult = await db.execute(
-        sql`INSERT INTO users (username, email, full_name, phone_number, password) 
+        sql`INSERT INTO users (username, email, full_name, phone_number, password, google_calendar_enabled, google_refresh_token) 
             VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, 
-                   ${result.data.phoneNumber || null}, ${hashedPassword}) 
-            RETURNING id, username, email, full_name as fullName, phone_number as phoneNumber, created_at as createdAt`
+                   ${result.data.phoneNumber || null}, ${hashedPassword}, false, null) 
+            RETURNING id, username, email, full_name, phone_number, created_at, google_calendar_enabled, google_refresh_token`
       );
       
       const userData = insertResult.rows[0] as any;
@@ -149,12 +149,12 @@ export function setupAuth(app: Express) {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        fullName: userData.fullname,
-        phoneNumber: userData.phonenumber,
-        createdAt: userData.createdat,
+        fullName: userData.full_name,
+        phoneNumber: userData.phone_number,
+        createdAt: userData.created_at,
         password: hashedPassword,
-        googleCalendarEnabled: false,
-        googleRefreshToken: null
+        googleCalendarEnabled: userData.google_calendar_enabled,
+        googleRefreshToken: userData.google_refresh_token
       };
 
       // Log the user in after registration
