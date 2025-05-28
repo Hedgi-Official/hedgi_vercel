@@ -81,9 +81,13 @@ export function registerRoutes(app: Express): Server {
 
   // 2. Poll a trade's status → GET /api/trades/:tradeId/status (proxy to Flask)
   app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     try {
       const tradeId = req.params.tradeId;
-      console.log('[Express Proxy] Checking trade status for ID:', tradeId);
+      console.log(`[Express Proxy] Checking trade status for ID: ${tradeId}, user: ${req.user.id}`);
 
       // Find the trade record by ID and ensure it belongs to the current user
       const trade = await db.query.trades.findFirst({
@@ -94,6 +98,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (!trade) {
+        console.log(`[Express Proxy] Trade ${tradeId} not found for user ${req.user.id}`);
         return res.status(404).json({ error: 'Trade not found' });
       }
 
@@ -139,9 +144,13 @@ export function registerRoutes(app: Express): Server {
 
   // 3. Close a trade early → POST /api/trades/:tradeId/close (proxy to Flask)
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     try {
       const tradeId = req.params.tradeId;
-      console.log('[Express Proxy] Closing trade ID:', tradeId);
+      console.log(`[Express Proxy] Closing trade ID: ${tradeId} for user: ${req.user.id}`);
 
       const trade = await db.query.trades.findFirst({
         where: (t, { eq, and }) => and(
@@ -149,7 +158,9 @@ export function registerRoutes(app: Express): Server {
           eq(t.userId, req.user.id)
         )
       });
+      
       if (!trade) {
+        console.log(`[Express Proxy] Trade ${tradeId} not found for user ${req.user.id}`);
         return res.status(404).json({ error: 'Trade not found' });
       }
 
@@ -174,20 +185,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 4. Get active trades → GET /api/trades (returns non-CLOSED/FAILED trades)
+  // 4. Get active trades → GET /api/trades (returns non-CLOSED/FAILED trades for current user only)
   app.get('/api/trades', async (req: Request, res: Response) => {
-    try {
-      console.log('[Express Proxy] Getting active trades from database');
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
-      // Get all trades and filter to only show active ones
-      const allTrades = await db.query.trades.findMany({
+    try {
+      console.log(`[Express Proxy] Getting active trades for user ${req.user.id}`);
+
+      // Get only trades for the current authenticated user
+      const userTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, req.user.id),
         orderBy: desc(trades.createdAt),
         limit: 100
       });
 
+      console.log(`[Express Proxy] Found ${userTrades.length} trades for user ${req.user.id}`);
+
       const activeTrades = [];
 
-      for (const trade of allTrades) {
+      for (const trade of userTrades) {
         if (!trade.flaskTradeId) continue;
 
         try {
@@ -213,7 +231,7 @@ export function registerRoutes(app: Express): Server {
         if (activeTrades.length >= 50) break;
       }
 
-      console.log('[Express Proxy] Found active trades:', activeTrades.length);
+      console.log(`[Express Proxy] Found ${activeTrades.length} active trades for user ${req.user.id}`);
       res.json(activeTrades);
     } catch (error) {
       console.error('[Express Proxy] Active trades error:', error);
