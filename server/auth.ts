@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "@db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -136,14 +136,24 @@ export function setupAuth(app: Express) {
       // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
 
-      // Create the new user using SQL to avoid schema conflicts
-      const insertResult = await db.execute(sql`
-        INSERT INTO users (username, email, full_name, phone_number, password, created_at)
-        VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, ${result.data.phoneNumber || null}, ${hashedPassword}, NOW())
-        RETURNING id, username, email, full_name as "fullName", phone_number as "phoneNumber", created_at as "createdAt"
-      `);
-      
-      const newUser = insertResult.rows[0];
+      // Create user with only the core required fields that work
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username: result.data.username,
+          email: result.data.email,
+          password: hashedPassword,
+          fullName: result.data.fullName,
+          phoneNumber: result.data.phoneNumber || null,
+        })
+        .returning({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          phoneNumber: users.phoneNumber,
+          createdAt: users.createdAt,
+        });
 
       // Log the user in after registration
       req.login(newUser, (err) => {
