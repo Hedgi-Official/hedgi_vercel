@@ -136,29 +136,22 @@ export function setupAuth(app: Express) {
       // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
 
-      // Create user using raw SQL to avoid ORM conflicts
-      const insertResult = await db.execute(
-        sql`INSERT INTO users (username, email, full_name, phone_number, password, google_calendar_enabled, google_refresh_token) 
-            VALUES (${result.data.username}, ${result.data.email}, ${result.data.fullName}, 
-                   ${result.data.phoneNumber || null}, ${hashedPassword}, false, null) 
-            RETURNING id, username, email, full_name, phone_number, created_at, google_calendar_enabled, google_refresh_token`
-      );
-      
-      const userData = insertResult.rows[0] as any;
-      const newUser = {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        fullName: userData.full_name,
-        phoneNumber: userData.phone_number,
-        createdAt: userData.created_at,
-        password: hashedPassword,
-        googleCalendarEnabled: userData.google_calendar_enabled,
-        googleRefreshToken: userData.google_refresh_token
-      };
+      // Create user using the Drizzle ORM
+      const [createdUser] = await db
+        .insert(users)
+        .values({
+          username: result.data.username,
+          email: result.data.email,
+          fullName: result.data.fullName,
+          phoneNumber: result.data.phoneNumber || null,
+          password: hashedPassword,
+          googleCalendarEnabled: false,
+          googleRefreshToken: null
+        })
+        .returning();
 
       // Log the user in after registration
-      req.login(newUser, (err) => {
+      req.login(createdUser, (err) => {
         if (err) {
           return next(err);
         }

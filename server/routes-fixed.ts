@@ -34,8 +34,8 @@ const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Simple registration endpoint that works around database conflicts
-  app.post("/api/register-user", async (req: Request, res: Response) => {
+  // Working registration endpoint that bypasses schema conflicts
+  app.post("/api/create-account", async (req: Request, res: Response) => {
     try {
       const { fullName, email, username, password, phoneNumber } = req.body;
 
@@ -67,12 +67,12 @@ export function registerRoutes(app: Express): Server {
           return res.status(400).json({ message: "Username or email already exists" });
         }
 
-        // Insert new user
+        // Insert new user with proper SQL syntax
         const result = await client.query(
-          `INSERT INTO users (username, email, full_name, phone_number, password, created_at) 
-           VALUES ($1, $2, $3, $4, $5, NOW()) 
+          `INSERT INTO users (username, email, full_name, phone_number, password, google_calendar_enabled, google_refresh_token, created_at) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
            RETURNING id, username, email, full_name, phone_number, created_at`,
-          [username, email, fullName, phoneNumber || null, hashedPassword]
+          [username, email, fullName, phoneNumber || null, hashedPassword, false, null]
         );
 
         await client.end();
@@ -95,7 +95,7 @@ export function registerRoutes(app: Express): Server {
       }
 
     } catch (error: any) {
-      console.error("Simple registration error:", error);
+      console.error("Account creation error:", error);
       res.status(500).json({ message: "Registration failed: " + error.message });
     }
   });
