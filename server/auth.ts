@@ -107,7 +107,7 @@ export function setupAuth(app: Express) {
           .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
       }
 
-      const { username, email, cpf } = result.data;
+      const { username, email } = result.data;
 
       // Check if user already exists
       const [existingUser] = await db
@@ -131,16 +131,7 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Email already exists");
       }
 
-      // Check if CPF already exists
-      const [existingCpf] = await db
-        .select()
-        .from(users)
-        .where(eq(users.cpf, cpf))
-        .limit(1);
 
-      if (existingCpf) {
-        return res.status(400).send("CPF already exists");
-      }
 
       // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
@@ -166,8 +157,7 @@ export function setupAuth(app: Express) {
             username: newUser.username,
             email: newUser.email,
             fullName: newUser.fullName,
-            dateOfBirth: newUser.dateOfBirth,
-            cpf: newUser.cpf
+            phoneNumber: newUser.phoneNumber
           },
         });
       });
@@ -199,8 +189,7 @@ export function setupAuth(app: Express) {
             username: user.username,
             email: user.email,
             fullName: user.fullName,
-            dateOfBirth: user.dateOfBirth,
-            cpf: user.cpf
+            phoneNumber: user.phoneNumber
           },
         });
       });
