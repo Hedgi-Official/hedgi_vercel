@@ -63,7 +63,21 @@ export default function AuthPage() {
         }
       }
 
-      const result = await (action === "login" ? login : register)(data);
+      let result;
+      if (action === "login") {
+        result = await login(data);
+      } else {
+        // Use the working simple registration endpoint
+        const response = await fetch('/api/simple-register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        const responseData = await response.json();
+        result = { ok: response.ok, message: responseData.message };
+      }
 
       if (result.ok) {
         navigate("/dashboard");

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupSimpleAuth } from "./simple-auth";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -48,6 +49,10 @@ app.use((req, res, next) => {
 
 (async () => {
   log("Starting server initialization...");
+
+  // Initialize simple authentication for account creation
+  setupSimpleAuth(app);
+  log("Simple authentication setup completed");
 
   // Initialize routes first to ensure API endpoints are ready
   const server = registerRoutes(app);
