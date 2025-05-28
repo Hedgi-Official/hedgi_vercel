@@ -35,7 +35,7 @@ export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Working registration endpoint that bypasses schema conflicts
-  app.post("/api/create-account", async (req: Request, res: Response) => {
+  app.post("/signup", async (req: Request, res: Response) => {
     try {
       const { fullName, email, username, password, phoneNumber } = req.body;
 

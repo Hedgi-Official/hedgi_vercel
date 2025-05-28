@@ -67,8 +67,8 @@ export default function AuthPage() {
       if (action === "login") {
         result = await login(data);
       } else {
-        // Use the new working account creation endpoint
-        const response = await fetch('/api/create-account', {
+        // Use the working signup endpoint
+        const response = await fetch('/signup', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
