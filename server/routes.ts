@@ -182,7 +182,7 @@ export function registerRoutes(app: Express): Server {
           // 2) Only include completed trades in history
           const isCompleted = ['failed','closed','executed','cancelled','completed']
             .includes(flaskData.status.toLowerCase());
-          
+
           if (!isCompleted) {
             console.log(`[Express Proxy] Skipping active trade ${trade.id} with status: ${flaskData.status}`);
             continue;
@@ -219,6 +219,20 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error fetching trade history:', err);
       return res.status(500).json({ error: 'Failed to fetch history' });
+    }
+  });
+
+  // 1) Open trades → returns the simplified OpenTrade interface
+  app.get('/api/trades/open', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
+    try {
+      console.log(`[Express Proxy] Getting open trades for user ${req.user.id}`);
+      const openTrades = await tradeService.getOpenTrades(req.user.id);
+      console.log(`[Express Proxy] Found ${openTrades.length} open trades for user ${req.user.id}`);
+      return res.json(openTrades);
+    } catch (err) {
+      console.error('Error fetching open trades:', err);
+      return res.status(500).json({ error: 'Failed to fetch open trades' });
     }
   });
 

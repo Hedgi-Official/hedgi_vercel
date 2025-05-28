@@ -32,7 +32,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
-      
+
       const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +49,7 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask success:', result);
-      
+
       // Save the Flask trade to our local database for history tracking
       try {
         const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
@@ -71,7 +71,7 @@ export function registerRoutes(app: Express): Server {
         console.error('[Express Proxy] Failed to save to local database:', dbError);
         // Don't fail the request if database save fails
       }
-      
+
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
@@ -84,9 +84,21 @@ export function registerRoutes(app: Express): Server {
     try {
       const tradeId = req.params.tradeId;
       console.log('[Express Proxy] Checking trade status for ID:', tradeId);
-      
+
+      // Find the trade record by ID and ensure it belongs to the current user
+      const trade = await db.query.trades.findFirst({
+        where: (t, { eq, and }) => and(
+          eq(t.id, Number(tradeId)),
+          eq(t.userId, req.user.id)
+        )
+      });
+
+      if (!trade) {
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+
       const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[Express Proxy] Flask status error:', errorText);
@@ -95,7 +107,7 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask status response:', result);
-      
+
       // Update the local database with the latest status from Flask
       try {
         const updateData: any = { 
@@ -117,7 +129,7 @@ export function registerRoutes(app: Express): Server {
         console.error('[Express Proxy] Failed to update database:', dbError);
         // Don't fail the request if database update fails
       }
-      
+
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Status check error:', error);
@@ -130,7 +142,17 @@ export function registerRoutes(app: Express): Server {
     try {
       const tradeId = req.params.tradeId;
       console.log('[Express Proxy] Closing trade ID:', tradeId);
-      
+
+      const trade = await db.query.trades.findFirst({
+        where: (t, { eq, and }) => and(
+          eq(t.id, parseInt(tradeId)),
+          eq(t.userId, req.user.id)
+        )
+      });
+      if (!trade) {
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+
       const response = await fetch(`${FLASK}/trades/${tradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,11 +226,12 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('[Express Proxy] Getting trade history from database');
 
-      // Get all trades and filter to only show completed ones
+      // Get only trades for the current authenticated user
       const allTrades = await db.query.trades.findMany({
-        orderBy: desc(trades.createdAt),
-        limit: 100
+        where: eq(trades.userId, req.user.id)
       });
+
+      console.log(`[Express Proxy] Found ${allTrades.length} trades for user ${req.user.id}`);
 
       const completedTrades = [];
 
