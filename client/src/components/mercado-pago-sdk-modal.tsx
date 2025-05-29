@@ -51,7 +51,7 @@ export function MercadoPayoSDKModal({
   const locale = isPortuguese ? 'pt-BR' : 'en-US'
 
   // ─── Dev‐mode switch ────────────────────────────────────────────────────
-  const SKIP_PAYMENTS = true
+  const SKIP_PAYMENTS = false
   // └─────────────────────────────────────────────────────────────────────
 
   // ─── Compute amount ───────────────────────────────────────────────────
