@@ -1,3 +1,4 @@
+// client/src/components/mercado-pago-sdk-modal.tsx
 import { useState, useEffect } from 'react'
 import {
   Dialog,
@@ -101,75 +102,51 @@ export function MercadoPayoSDKModal({
 
   // ─── Submission handler ────────────────────────────────────────────────
   const onSubmit = async (formData: any) => {
-    console.log('Processing payment with form data:', formData)
+    if (SKIP_PAYMENTS) {
+      // **DEV: skip all networking, generate a mock payment token**
+      const mockPaymentToken = `dev_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      onSuccess(hedgeData!, mockPaymentToken)
+      toast({
+        title: isPortuguese ? 'Modo Dev: Proteção OK' : 'Dev mode: Hedge OK',
+      })
+      onClose()
+      return
+    }
+
     setLoading(true)
-
     try {
-      // Extract payment information from form data
-      const paymentData = {
-        preferenceId,
-        currency,
-        formData,
-        // Extract key payment identifiers
-        paymentMethodId: formData?.payment_method_id,
-        token: formData?.token,
-        issuerId: formData?.issuer_id,
-        installments: formData?.installments
-      }
-
-      console.log('Sending payment data to server:', paymentData)
-
       const res = await fetch('/api/payment/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentData),
+        body: JSON.stringify({ preferenceId, currency, formData }),
       })
-
       let result: any
       try {
         result = await res.json()
       } catch {
         // HTML fallback - generate a fallback payment token
         const fallbackPaymentToken = `fallback_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        console.log('Using fallback payment token:', fallbackPaymentToken)
         onSuccess(hedgeData!, fallbackPaymentToken)
         onClose()
         return
       }
 
-      console.log('Payment process result:', result)
-
-      if (['approved', 'in_process', 'pending'].includes(result.status)) {
-        // Extract payment token from various possible sources with priority order
-        const paymentToken = 
-          result.payment?.id ||           // Actual payment ID from MercadoPago
-          result.transactionId || 
-          result.paymentId || 
-          result.payment_id ||
-          result.id || 
-          formData?.token ||              // Token from payment form
-          formData?.payment_id ||
-          result.transaction_id ||
-          preferenceId ||                 // Fallback to preference ID
-          `mp_token_${Date.now()}`        // Final fallback
-
-        console.log('Extracted payment token:', paymentToken)
-        console.log('Payment token will be sent to Flask trades endpoint')
-
+      if (['approved', 'in_process'].includes(result.status)) {
+        // Extract payment token from result (transactionId, paymentId, or preference)
+        const paymentToken = result.transactionId || result.paymentId || result.id || preferenceId || `token_${Date.now()}`
         onSuccess(hedgeData!, paymentToken)
         toast({
           title: isPortuguese ? 'Sucesso' : 'Success',
           description: isPortuguese
-            ? 'Pagamento processado e hedge registrado'
-            : 'Payment processed and hedge placed',
+            ? 'Hedge registrado'
+            : 'Your hedge was placed',
         })
         onClose()
       } else {
-        throw new Error(result.statusDetail || result.status || 'Payment failed')
+        throw new Error(result.statusDetail || result.status)
       }
     } catch (err: any) {
-      console.error('Payment submission error:', err)
-      setError(err.message || 'Payment processing failed')
+      setError(err.message || 'Unknown error')
       setLoading(false)
     }
   }
