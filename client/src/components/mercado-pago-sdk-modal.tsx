@@ -58,11 +58,23 @@ export function MercadoPayoSDKModal({
 
   // Compute amount
   const paymentAmount = (() => {
-    if (!hedgeData) return 0
+    if (!hedgeData) {
+      console.log('[PaymentModal] No hedge data for amount calculation')
+      return 0
+    }
     const amt = Math.abs(Number(hedgeData.amount))
     const cost = simulation?.costDetails.hedgeCost ?? amt * 0.0025
     const margin = hedgeData.margin ? +hedgeData.margin : cost * 2
-    return Number((cost + margin).toFixed(2))
+    const finalAmount = Number((cost + margin).toFixed(2))
+    
+    console.log('[PaymentModal] Amount calculation breakdown:')
+    console.log('  - hedgeData.amount:', hedgeData.amount)
+    console.log('  - amt (absolute):', amt)
+    console.log('  - cost:', cost)
+    console.log('  - margin:', margin)
+    console.log('  - finalAmount:', finalAmount)
+    
+    return finalAmount
   })()
 
   // Load Mercado Pago SDK

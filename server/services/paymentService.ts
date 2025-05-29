@@ -128,6 +128,18 @@ class PaymentService {
       const absoluteBaseUrl = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
       console.log(`[PaymentService] Using base URL: ${absoluteBaseUrl}`);
       
+      // Log the incoming amount for debugging
+      console.log(`[PaymentService] Creating preference with amount: ${amount}, currency: ${currency}`);
+      
+      // Ensure amount is a valid number and not zero
+      if (!amount || amount <= 0) {
+        console.error(`[PaymentService] Invalid amount received: ${amount}`);
+        return res.status(400).json({
+          code: 'bad_request',
+          message: 'Amount cannot be zero or less than zero'
+        });
+      }
+
       // Create preference object according to MercadoPago v2.3.0 API
       const preferenceData: any = {
         items: [
@@ -135,7 +147,7 @@ class PaymentService {
             id: `item_${Date.now()}`,
             title: description,
             quantity: 1,
-            unit_price: amount,
+            unit_price: Number(amount), // Ensure it's a number
             currency_id: currency
           }
         ],
