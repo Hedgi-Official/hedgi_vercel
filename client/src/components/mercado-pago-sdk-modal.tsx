@@ -32,6 +32,12 @@ interface PaymentModalProps {
   simulation?: SimulationResult | null
 }
 
+declare global {
+  interface Window {
+    MercadoPago: any;
+  }
+}
+
 export function MercadoPayoSDKModal({
   isOpen,
   onClose,
@@ -40,20 +46,18 @@ export function MercadoPayoSDKModal({
   currency,
   simulation,
 }: PaymentModalProps) {
-  // ─── Hooks (always run) ────────────────────────────────────────────────
   const { i18n } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [paymentWindow, setPaymentWindow] = useState<Window | null>(null)
-  // ──────────────────────────────────────────────────────────────────────
+  const [mp, setMp] = useState<any>(null)
+  const [preferenceId, setPreferenceId] = useState<string | null>(null)
 
   const isPortuguese = i18n.language === 'pt-BR'
 
-  // ─── Dev‐mode switch ────────────────────────────────────────────────────
+  // Dev mode switch
   const SKIP_PAYMENTS = false
-  // └─────────────────────────────────────────────────────────────────────
 
-  // ─── Compute amount ───────────────────────────────────────────────────
+  // Compute amount
   const paymentAmount = (() => {
     if (!hedgeData) return 0
     const amt = Math.abs(Number(hedgeData.amount))
@@ -61,119 +65,171 @@ export function MercadoPayoSDKModal({
     const margin = hedgeData.margin ? +hedgeData.margin : cost * 2
     return Number((cost + margin).toFixed(2))
   })()
-  // └─────────────────────────────────────────────────────────────────────
 
-  // ─── Listen for payment completion messages ──────────────────────────
+  // Load Mercado Pago SDK
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'PAYMENT_SUCCESS') {
-        console.log('Payment success message received:', event.data)
-        
-        // Close the payment window
-        if (paymentWindow && !paymentWindow.closed) {
-          paymentWindow.close()
+    if (!isOpen || !hedgeData) return
+
+    const loadMercadoPagoSDK = () => {
+      return new Promise((resolve, reject) => {
+        if (window.MercadoPago) {
+          resolve(window.MercadoPago)
+          return
         }
-        
-        // Generate payment token and call success callback
-        const paymentToken = `window_payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        onSuccess(hedgeData!, paymentToken)
-        
-        toast({
-          title: isPortuguese ? 'Sucesso' : 'Success',
-          description: isPortuguese
-            ? 'Hedge registrado'
-            : 'Your hedge was placed',
-        })
-        
-        onClose()
-      }
+
+        const script = document.createElement('script')
+        script.src = 'https://sdk.mercadopago.com/js/v2'
+        script.onload = () => resolve(window.MercadoPago)
+        script.onerror = reject
+        document.head.appendChild(script)
+      })
     }
 
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [paymentWindow, hedgeData, onSuccess, onClose, isPortuguese])
+    loadMercadoPagoSDK()
+      .then(() => {
+        createPreference()
+      })
+      .catch((err) => {
+        console.error('Error loading MercadoPago SDK:', err)
+        setError('Failed to load payment system')
+        setLoading(false)
+      })
+  }, [isOpen, hedgeData])
 
-  // ─── Open payment window ──────────────────────────────────────────────
-  const openPaymentWindow = () => {
+  const createPreference = async () => {
     if (!hedgeData) return
 
-    // Determine which payment page to use based on currency
-    const paymentPage = currency === 'MXN' ? '/payment-mxn.html' : '/payment-brl.html'
-    
-    // Build the URL with hedge data as query parameters
-    const params = new URLSearchParams({
-      amount: hedgeData.amount,
-      baseCurrency: hedgeData.baseCurrency,
-      targetCurrency: hedgeData.targetCurrency,
-      rate: hedgeData.rate,
-      duration: hedgeData.duration.toString(),
-      tradeDirection: hedgeData.tradeDirection,
-      margin: hedgeData.margin || '0'
-    })
+    try {
+      setLoading(true)
+      setError(null)
 
-    const paymentUrl = `${paymentPage}?${params.toString()}`
-    console.log('Opening payment window with URL:', paymentUrl)
+      const response = await fetch('/api/payment/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: paymentAmount, 
+          currency,
+          description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
+          payer: {
+            email: 'user@hedgi.com',
+            name: 'Hedgi User',
+            identification: {
+              type: currency === 'BRL' ? 'CPF' : 'CURP',
+              number: currency === 'BRL' ? '11111111111' : '123456789'
+            }
+          }
+        }),
+      })
 
-    // Open the payment window
-    const newWindow = window.open(
-      paymentUrl,
-      'payment',
-      'width=600,height=700,scrollbars=yes,resizable=yes'
-    )
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create payment preference')
+      }
 
-    if (newWindow) {
-      setPaymentWindow(newWindow)
-      setLoading(false)
+      const data = await response.json()
       
-      // Check if window was closed without completing payment
-      const checkClosed = setInterval(() => {
-        if (newWindow.closed) {
-          clearInterval(checkClosed)
-          setPaymentWindow(null)
-          // Don't automatically close the modal - let user try again
-        }
-      }, 1000)
-    } else {
-      setError(isPortuguese ? 'Falha ao abrir janela de pagamento' : 'Failed to open payment window')
+      if (data.enabled === false) {
+        setError('Payments are currently disabled. The hedge cannot be placed at this time.')
+        setLoading(false)
+        return
+      }
+      
+      if (!data.id || !data.public_key) {
+        throw new Error('Missing preference ID or public key')
+      }
+
+      setPreferenceId(data.id)
+      initializeMercadoPago(data.public_key, data.id)
+    } catch (error) {
+      console.error('Error creating payment preference:', error)
+      setError(`Failed to initialize payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setLoading(false)
     }
   }
 
-  // ─── Dev mode submission handler ───────────────────────────────────────
-  const handleDevModeSubmit = () => {
+  const initializeMercadoPago = async (publicKey: string, prefId: string) => {
+    try {
+      const mercadoPago = new window.MercadoPago(publicKey, {
+        locale: isPortuguese ? 'pt-BR' : 'en-US'
+      })
+      setMp(mercadoPago)
+
+      const brickSettings = {
+        initialization: {
+          preferenceId: prefId
+        },
+        callbacks: {
+          onReady: () => {
+            console.log('Payment brick ready')
+            setLoading(false)
+          },
+          onError: (error: any) => {
+            console.error('Brick error:', error)
+            setError(`Payment error: ${error.message || 'Unknown error'}`)
+            setLoading(false)
+          },
+          onSubmit: async (cardFormData: any) => {
+            console.log('Payment submitted:', cardFormData)
+            return false // Let Mercado Pago handle the submission
+          },
+          onPaymentCompleted: (paymentData: any) => {
+            console.log('Payment completed:', paymentData)
+            handlePaymentSuccess(paymentData)
+          }
+        },
+        customization: {
+          visual: {
+            hidePaymentButton: false,
+            style: {
+              theme: 'default'
+            }
+          },
+          paymentMethods: {
+            creditCard: 'all',
+            bankTransfer: 'all',
+            maxInstallments: 1
+          }
+        }
+      }
+
+      // Create the payment brick
+      const paymentBrick = mercadoPago.bricks().create('payment', 'payment-brick-container', brickSettings)
+      
+    } catch (error) {
+      console.error('Error initializing MercadoPago:', error)
+      setError(`Failed to initialize payment system: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = (paymentData: any) => {
+    const paymentToken = paymentData?.payment?.id || paymentData?.transactionId || `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    toast({
+      title: isPortuguese ? 'Pagamento realizado com sucesso!' : 'Payment successful!',
+      description: isPortuguese ? 'Sua proteção foi registrada.' : 'Your hedge has been placed.',
+    })
+
+    onSuccess(hedgeData!, paymentToken)
+    onClose()
+  }
+
+  const handleTestPayment = () => {
     if (!hedgeData) return
     
     const mockPaymentToken = `dev_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     onSuccess(hedgeData, mockPaymentToken)
     
     toast({
-      title: isPortuguese ? 'Modo Dev: Proteção OK' : 'Dev mode: Hedge OK',
+      title: isPortuguese ? 'Modo Dev: Proteção registrada' : 'Dev mode: Hedge placed',
     })
     
     onClose()
   }
 
-  // ─── Initialize when modal opens ──────────────────────────────────────
-  useEffect(() => {
-    if (isOpen && hedgeData) {
-      setLoading(true)
-      setError(null)
-      
-      if (SKIP_PAYMENTS) {
-        setLoading(false)
-      } else {
-        // Small delay to ensure modal is fully rendered
-        setTimeout(() => {
-          openPaymentWindow()
-        }, 500)
-      }
-    }
-  }, [isOpen, hedgeData])
-
-  // ─── Render ───────────────────────────────────────────────────────────
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isPortuguese
@@ -182,10 +238,26 @@ export function MercadoPayoSDKModal({
           </DialogTitle>
         </DialogHeader>
 
-        {loading && (
+        {/* Payment Details */}
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="font-semibold mb-2">
+            {isPortuguese ? 'Detalhes do Pagamento:' : 'Payment Details:'}
+          </h3>
+          {hedgeData && (
+            <div className="text-sm space-y-1">
+              <p>{isPortuguese ? 'Moeda:' : 'Currency:'} {currency}</p>
+              <p>{isPortuguese ? 'Valor da Proteção:' : 'Hedge Amount:'} {hedgeData.amount}</p>
+              <p>{isPortuguese ? 'Taxa:' : 'Fees:'} {(simulation?.costDetails.hedgeCost ?? Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
+              <p>{isPortuguese ? 'Margem:' : 'Margin:'} {(hedgeData.margin ? +hedgeData.margin : (simulation?.costDetails.hedgeCost ?? Math.abs(Number(hedgeData.amount)) * 0.0025) * 2).toFixed(2)} {currency}</p>
+              <p className="font-semibold">{isPortuguese ? 'Total a Pagar:' : 'Total Payment:'} {paymentAmount} {currency}</p>
+            </div>
+          )}
+        </div>
+
+        {loading && !SKIP_PAYMENTS && (
           <div className="flex flex-col items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin mb-4" />
-            <p>{isPortuguese ? 'Abrindo pagamento...' : 'Opening payment...'}</p>
+            <p>{isPortuguese ? 'Carregando sistema de pagamento...' : 'Loading payment system...'}</p>
           </div>
         )}
 
@@ -195,34 +267,36 @@ export function MercadoPayoSDKModal({
               {isPortuguese ? 'Erro' : 'Error'}
             </p>
             <p>{error}</p>
-            <Button className="mt-2" onClick={() => openPaymentWindow()}>
+            <Button className="mt-2" onClick={() => createPreference()}>
               {isPortuguese ? 'Tentar Novamente' : 'Try Again'}
             </Button>
           </div>
         )}
 
+        {/* Payment Brick Container */}
         {!loading && !error && !SKIP_PAYMENTS && (
-          <div className="py-4 text-center">
-            <p className="mb-4">
-              {isPortuguese 
-                ? 'Uma janela de pagamento foi aberta. Complete seu pagamento na nova janela.'
-                : 'A payment window has been opened. Complete your payment in the new window.'}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              {isPortuguese
-                ? `Valor a pagar: ${paymentAmount} ${currency}`
-                : `Amount to pay: ${paymentAmount} ${currency}`}
-            </p>
-            <Button variant="outline" onClick={() => openPaymentWindow()}>
-              {isPortuguese ? 'Reabrir Pagamento' : 'Reopen Payment'}
-            </Button>
+          <div className="my-4">
+            <div id="payment-brick-container"></div>
           </div>
         )}
 
-        {SKIP_PAYMENTS && !loading && (
+        {/* Test Payment Button - Always visible for development */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleTestPayment}
+          >
+            {isPortuguese
+              ? 'Usar Pagamento de Teste (Desenvolvimento)'
+              : 'Use Test Payment (Development)'}
+          </Button>
+        </div>
+
+        {SKIP_PAYMENTS && (
           <Button
             className="mt-4 w-full"
-            onClick={handleDevModeSubmit}
+            onClick={handleTestPayment}
           >
             {isPortuguese
               ? 'Modo Dev: Continuar'
