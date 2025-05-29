@@ -39,7 +39,9 @@ export function TradeHistory() {
       }
       return data;
     },
-    enabled: expanded // Only fetch when expanded
+    enabled: expanded, // Only fetch when expanded
+    refetchInterval: expanded ? 10000 : false, // Refresh every 10 seconds when expanded
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   // Format date for display

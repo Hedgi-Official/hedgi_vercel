@@ -52,7 +52,7 @@ export default function Dashboard() {
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
-  // Fetch active trades
+  // Fetch active trades with 10-second polling
   const { data: activeTrades = [] } = useQuery<Trade[]>({
     queryKey: ['/api/trades'],
     queryFn: async () => {
@@ -68,9 +68,11 @@ export default function Dashboard() {
     },
     retry: false,
     refetchOnWindowFocus: false,
+    refetchInterval: 10000, // Refresh every 10 seconds
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
-  // Fetch trade history
+  // Fetch trade history with 10-second polling
   const { data: trades = [] } = useQuery<Trade[]>({
     queryKey: ['/api/trades/history'],
     queryFn: async () => {
@@ -86,6 +88,8 @@ export default function Dashboard() {
     },
     retry: false,
     refetchOnWindowFocus: false,
+    refetchInterval: 10000, // Refresh every 10 seconds
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   const checkTradeStatusMutation = useMutation({
@@ -382,40 +386,10 @@ export default function Dashboard() {
     }
   };
 
-  // Hook to fetch live Flask trade status
-  const useFlaskTradeStatus = (flaskTradeId: number | null) => {
-    return useQuery({
-      queryKey: ["flask-status", flaskTradeId],
-      queryFn: async () => {
-        if (!flaskTradeId) return null;
-
-        const serverUrl = window.location.hostname === 'localhost' 
-          ? 'http://localhost:5000'
-          : '';
-
-        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/status`);
-        if (!response.ok) {
-          return { status: 'checking...' }; // Return fallback instead of throwing
-        }
-        return response.json();
-      },
-      enabled: !!flaskTradeId,
-      refetchInterval: 10000, // Refresh every 10 seconds
-      retry: false, // Don't retry failed requests
-      staleTime: 5000, // Consider data fresh for 5 seconds
-      meta: {
-        errorPolicy: 'none' // Suppress error notifications
-      }
-    });
-  };
-
-  // TradeItem component that properly uses hooks
+  // TradeItem component - simplified without individual status queries
   const TradeItem = ({ trade, onClose }: { trade: any, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
-    const flaskStatusQuery = useFlaskTradeStatus(trade.broker === 'flask' ? trade.flaskTradeId : null);
-
-    const displayStatus = trade.broker === 'flask' 
-      ? (flaskStatusQuery.data?.status || trade.status || 'loading...')
-      : (trade.status || 'open');
+    // Use the status from the main trades query (which already fetches from Flask)
+    const displayStatus = trade.status || 'open';
 
     // Hide only CLOSED and FAILED trades from active section
     const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());

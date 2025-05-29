@@ -287,32 +287,38 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Express Proxy] Found ${userTrades.length} trades for user ${req.user.id}`);
 
       const activeTrades = [];
+      const flaskPromises = [];
 
+      // Batch Flask status requests for efficiency
       for (const trade of userTrades) {
         if (!trade.flaskTradeId) continue;
 
-        try {
-          // Get current status from Flask
-          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!response.ok) continue;
+        flaskPromises.push(
+          fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
+            .then(response => response.ok ? response.json() : null)
+            .then(flaskData => {
+              if (flaskData && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+                return {
+                  ...trade,
+                  status: flaskData.status,
+                  updatedAt: new Date().toISOString()
+                };
+              }
+              return null;
+            })
+            .catch(error => {
+              console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+              return null;
+            })
+        );
 
-          const flaskData = await response.json();
-
-          // Only include trades that are NOT completed (only CLOSED and FAILED go to past trades)
-          if (!['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
-            activeTrades.push({
-              ...trade,
-              status: flaskData.status,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-        }
-
-        // Limit to 50 active trades
-        if (activeTrades.length >= 50) break;
+        // Limit Flask requests to 50
+        if (flaskPromises.length >= 50) break;
       }
+
+      // Wait for all Flask requests to complete
+      const results = await Promise.all(flaskPromises);
+      activeTrades.push(...results.filter(result => result !== null));
 
       console.log(`[Express Proxy] Found ${activeTrades.length} active trades for user ${req.user.id}`);
       res.json(activeTrades);
@@ -335,33 +341,39 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Express Proxy] Found ${allTrades.length} trades for user ${req.user.id}`);
 
       const completedTrades = [];
+      const flaskPromises = [];
 
+      // Batch Flask status requests for efficiency
       for (const trade of allTrades) {
         if (!trade.flaskTradeId) continue;
 
-        try {
-          // Get current status from Flask
-          const response = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!response.ok) continue;
+        flaskPromises.push(
+          fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
+            .then(response => response.ok ? response.json() : null)
+            .then(flaskData => {
+              if (flaskData && ['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+                return {
+                  ...trade,
+                  status: flaskData.status,
+                  closedAt: flaskData.closedAt || new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+              }
+              return null;
+            })
+            .catch(error => {
+              console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+              return null;
+            })
+        );
 
-          const flaskData = await response.json();
-
-          // Only include trades that are CLOSED or FAILED
-          if (['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
-            completedTrades.push({
-              ...trade,
-              status: flaskData.status,
-              closedAt: flaskData.closedAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-        }
-
-        // Limit to 50 completed trades
-        if (completedTrades.length >= 50) break;
+        // Limit Flask requests to 50
+        if (flaskPromises.length >= 50) break;
       }
+
+      // Wait for all Flask requests to complete
+      const results = await Promise.all(flaskPromises);
+      completedTrades.push(...results.filter(result => result !== null));
 
       console.log('[Express Proxy] Found completed trades:', completedTrades.length);
       res.json(completedTrades);
