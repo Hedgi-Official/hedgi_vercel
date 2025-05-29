@@ -128,9 +128,9 @@ export default function Dashboard() {
   const createHedgeMutation = useMutation<
     Trade, 
     Error, 
-    Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+    { hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">, paymentToken?: string }
   >({
-    mutationFn: async (h) => {
+    mutationFn: async ({ hedgeData: h, paymentToken }) => {
       // h is now the exact object your simulator gives you
 
       // parse numeric amount & derive direction
@@ -144,13 +144,22 @@ export default function Dashboard() {
         days:      h.duration,
         deviation: 5,
         magic:     123456,
-        comment:   'Hedgi test trade'
+        comment:   'Hedgi test trade',
+        paymentToken: paymentToken // Include payment token in metadata
       };
 
-      // only these fields go on the wire
-      const payload = { symbol, direction, volume, metadata };
+      // only these fields go on the wire - now including payment token
+      const payload = { 
+        symbol, 
+        direction, 
+        volume, 
+        metadata,
+        paymentToken // Also include at top level for easy access
+      };
 
       console.log('[Dashboard] sending payload:', payload);
+      console.log('[Dashboard] payment token:', paymentToken);
+      
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
@@ -186,6 +195,15 @@ export default function Dashboard() {
       toast({ variant: 'destructive', title: t('Error'), description: err.message });
     }
   });
+
+  // Update the onPlaceHedge function to handle payment token
+  const handlePlaceHedge = async (
+    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
+    paymentToken?: string
+  ) => {
+    console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
+    return createHedgeMutation.mutate({ hedgeData, paymentToken });
+  };
 
   // 3) Close trade
   const initiateHedgeClose = async (hedge: Hedge) => {
@@ -538,10 +556,7 @@ export default function Dashboard() {
             <CardContent>
               <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={(d) => {
-                  console.log('[Dashboard] onPlaceHedge got:', d);
-                  createHedgeMutation.mutate(d);
-                }}
+                onPlaceHedge={handlePlaceHedge}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
                   queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });

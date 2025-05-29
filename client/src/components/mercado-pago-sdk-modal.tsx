@@ -21,7 +21,8 @@ interface PaymentModalProps {
     hedgeData: Omit<
       Hedge,
       'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'
-    >
+    >,
+    paymentToken?: string
   ) => void
   hedgeData: Omit<
     Hedge,
@@ -102,8 +103,9 @@ export function MercadoPayoSDKModal({
   // ─── Submission handler ────────────────────────────────────────────────
   const onSubmit = async (formData: any) => {
     if (SKIP_PAYMENTS) {
-      // **DEV: skip all networking**
-      onSuccess(hedgeData!)
+      // **DEV: skip all networking, generate a mock payment token**
+      const mockPaymentToken = `dev_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      onSuccess(hedgeData!, mockPaymentToken)
       toast({
         title: isPortuguese ? 'Modo Dev: Proteção OK' : 'Dev mode: Hedge OK',
       })
@@ -122,14 +124,17 @@ export function MercadoPayoSDKModal({
       try {
         result = await res.json()
       } catch {
-        // HTML fallback
-        onSuccess(hedgeData!)
+        // HTML fallback - generate a fallback payment token
+        const fallbackPaymentToken = `fallback_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        onSuccess(hedgeData!, fallbackPaymentToken)
         onClose()
         return
       }
 
       if (['approved', 'in_process'].includes(result.status)) {
-        onSuccess(hedgeData!)
+        // Extract payment token from result (transactionId, paymentId, or preference)
+        const paymentToken = result.transactionId || result.paymentId || result.id || preferenceId || `token_${Date.now()}`
+        onSuccess(hedgeData!, paymentToken)
         toast({
           title: isPortuguese ? 'Sucesso' : 'Success',
           description: isPortuguese

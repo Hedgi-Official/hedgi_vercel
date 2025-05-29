@@ -30,7 +30,8 @@ export interface TradeResponse {
 interface Props {
   showGraph?: boolean;
   onPlaceHedge?: (
-    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
+    paymentToken?: string
   ) => Promise<TradeResponse> | void;
   onOrdersUpdated?: () => void;
 }
@@ -151,12 +152,13 @@ export function CurrencySimulator({
 
   // after payment, call Dashboard’s onPlaceHedge
   const handlePaymentSuccess = async (
-    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">
+    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
+    paymentToken?: string
   ) => {
     if (!onPlaceHedge || !onOrdersUpdated) return;
     setIsPlacingHedge(true);
     try {
-      await onPlaceHedge(hedgeData);
+      await onPlaceHedge(hedgeData, paymentToken);
       onOrdersUpdated();
       setIsPaymentModalOpen(false);
     } catch (err) {
