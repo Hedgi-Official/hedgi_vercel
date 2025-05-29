@@ -148,6 +148,18 @@ export function MercadoPayoSDKModal({
 
   const initializeMercadoPago = async (publicKey: string, prefId: string) => {
     try {
+      // Wait a bit for the DOM to be ready
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Check if container exists
+      const container = document.getElementById('payment-brick-container')
+      if (!container) {
+        console.error('Payment container not found')
+        setError('Payment container not ready. Please try the test payment option.')
+        setLoading(false)
+        return
+      }
+
       const mercadoPago = new window.MercadoPago(publicKey, {
         locale: isPortuguese ? 'pt-BR' : 'en-US'
       })
@@ -158,7 +170,7 @@ export function MercadoPayoSDKModal({
         console.warn('Payment brick taking too long to load, showing fallback')
         setLoading(false)
         setError('Payment system is taking longer than expected to load. Please try the test payment option.')
-      }, 10000) // 10 second timeout
+      }, 15000) // 15 second timeout
 
       const brickSettings = {
         initialization: {
@@ -173,22 +185,15 @@ export function MercadoPayoSDKModal({
           onError: (error: any) => {
             console.error('Brick error:', error)
             clearTimeout(loadingTimeout)
-            setError(`Payment error: ${error.message || 'Unknown error'}`)
+            setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
           },
           onSubmit: async (cardFormData: any) => {
             console.log('Payment submitted:', cardFormData)
-            // Handle the payment submission
             try {
-              // For preference-based payments, we don't need to do anything here
-              // Mercado Pago will handle the redirect flow
-              return new Promise((resolve) => {
-                // Short delay to allow MP to process
-                setTimeout(() => {
-                  handlePaymentSuccess({ payment: { id: `mp_${Date.now()}` } })
-                  resolve()
-                }, 1000)
-              })
+              // For preference-based payments, MP handles the flow
+              handlePaymentSuccess({ payment: { id: `mp_${Date.now()}` } })
+              return true
             } catch (submitError) {
               console.error('Submit error:', submitError)
               return false
@@ -210,10 +215,12 @@ export function MercadoPayoSDKModal({
         }
       }
 
-      // Create the payment brick
+      // Create the payment brick with better error handling
       try {
-        const paymentBrick = await mercadoPago.bricks().create('payment', 'payment-brick-container', brickSettings)
-        console.log('Payment brick created successfully')
+        console.log('Creating payment brick with settings:', brickSettings)
+        const bricks = mercadoPago.bricks()
+        const paymentBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
+        console.log('Payment brick created successfully:', paymentBrick)
       } catch (brickError) {
         console.error('Error creating payment brick:', brickError)
         clearTimeout(loadingTimeout)
@@ -223,7 +230,7 @@ export function MercadoPayoSDKModal({
 
     } catch (error) {
       console.error('Error initializing MercadoPago:', error)
-      setError(`Failed to initialize payment system: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setError('Failed to initialize payment system. Please use the test payment option.')
       setLoading(false)
     }
   }
@@ -300,9 +307,16 @@ export function MercadoPayoSDKModal({
         )}
 
         {/* Payment Brick Container */}
-        {!loading && !error && !SKIP_PAYMENTS && (
+        {!SKIP_PAYMENTS && (
           <div className="my-4">
-            <div id="payment-brick-container" style={{ minHeight: '400px' }}></div>
+            <div 
+              id="payment-brick-container" 
+              style={{ 
+                minHeight: '400px',
+                width: '100%',
+                display: loading ? 'none' : 'block'
+              }}
+            ></div>
           </div>
         )}
 
