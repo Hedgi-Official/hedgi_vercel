@@ -131,7 +131,7 @@ export function CurrencySimulator({
     if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
     setHedgeError(null);
 
-    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
+    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { status: 'pending' }= {
       baseCurrency,
       targetCurrency,
       amount: amount.toString(),

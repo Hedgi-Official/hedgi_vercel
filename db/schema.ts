@@ -39,6 +39,7 @@ export const hedges = pgTable('hedges', {
   tradeStatus:      text('trade_status'),                   // open, closed, etc
   createdAt:        timestamp('created_at').defaultNow().notNull(),
   completedAt:      timestamp('completed_at'),
+  tradeDirection:        text('tradeDirection').notNull(),
 });
 
 export const trades = pgTable('trades', {
