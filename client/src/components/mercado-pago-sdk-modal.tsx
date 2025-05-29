@@ -252,7 +252,9 @@ export function MercadoPayoSDKModal({
 
       const brickSettings = {
         initialization: {
-          preferenceId: prefId
+          preferenceId: prefId,
+          amount: paymentAmount,     // Must be > 0
+          currencyId: currency       // e.g. "BRL" or "USD"
         },
         callbacks: {
           onReady: () => {
