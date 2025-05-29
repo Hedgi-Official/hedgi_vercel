@@ -67,8 +67,13 @@ export function MercadoPayoSDKModal({
 
   // Load Mercado Pago SDK
   useEffect(() => {
-    if (!isOpen || !hedgeData) return
+    console.log('[PaymentModal] useEffect triggered - isOpen:', isOpen, 'hedgeData:', hedgeData)
+    if (!isOpen || !hedgeData) {
+      console.log('[PaymentModal] Skipping SDK load - modal closed or no hedge data')
+      return
+    }
 
+    console.log('[PaymentModal] Starting SDK load process...')
     const loadMercadoPagoSDK = () => {
       return new Promise((resolve, reject) => {
         if (window.MercadoPago) {
@@ -96,8 +101,15 @@ export function MercadoPayoSDKModal({
   }, [isOpen, hedgeData])
 
   const createPreference = async (retryCount = 0) => {
-    if (!hedgeData) return
+    console.log('[PaymentModal] createPreference called - retryCount:', retryCount)
+    if (!hedgeData) {
+      console.log('[PaymentModal] No hedge data, returning early')
+      return
+    }
 
+    console.log('[PaymentModal] hedgeData:', hedgeData)
+    console.log('[PaymentModal] paymentAmount calculated:', paymentAmount)
+    
     try {
       setLoading(true)
       setError(null)
