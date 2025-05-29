@@ -45,6 +45,14 @@ export function MercadoPayoSDKModal({
   currency,
   simulation,
 }: PaymentModalProps) {
+  console.log('[PaymentModal] render – props:', {
+    isOpen,
+    onClose,
+    onSuccess,
+    hedgeData,
+    currency,
+    simulation,
+  })
   const { i18n } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
