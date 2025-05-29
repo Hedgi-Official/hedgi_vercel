@@ -95,12 +95,14 @@ export function MercadoPayoSDKModal({
       })
   }, [isOpen, hedgeData])
 
-  const createPreference = async () => {
+  const createPreference = async (retryCount = 0) => {
     if (!hedgeData) return
 
     try {
       setLoading(true)
       setError(null)
+
+      console.log(`Creating payment preference (attempt ${retryCount + 1})...`)
 
       const response = await fetch('/api/payment/preference', {
         method: 'POST',
@@ -121,56 +123,98 @@ export function MercadoPayoSDKModal({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create payment preference')
+        const errorData = await response.json().catch(() => ({ error: 'Network error' }))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
+      console.log('Preference response:', data)
 
       if (data.enabled === false) {
-        setError('Payments are currently disabled. The hedge cannot be placed at this time.')
+        setError('Payments are currently disabled. Please use the test payment option.')
         setLoading(false)
         return
       }
 
       if (!data.id || !data.public_key) {
-        throw new Error('Missing preference ID or public key')
+        throw new Error('Invalid response: missing preference ID or public key')
       }
 
       setPreferenceId(data.id)
+      
+      // Add a small delay before initializing MP
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       initializeMercadoPago(data.public_key, data.id)
     } catch (error) {
       console.error('Error creating payment preference:', error)
-      setError(`Failed to initialize payment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      // Retry logic for network errors
+      if (retryCount < 2 && (error instanceof Error && error.message.includes('Network'))) {
+        console.log(`Retrying preference creation in 2 seconds...`)
+        setTimeout(() => createPreference(retryCount + 1), 2000)
+        return
+      }
+      
+      setError('Failed to initialize payment. Please use the test payment option.')
       setLoading(false)
     }
   }
 
   const initializeMercadoPago = async (publicKey: string, prefId: string) => {
     try {
-      // Wait a bit for the DOM to be ready
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      // Check if container exists
-      const container = document.getElementById('payment-brick-container')
+      console.log('Initializing MercadoPago with public key:', publicKey.substring(0, 20) + '...')
+      console.log('Preference ID:', prefId)
+
+      // Wait for DOM to be ready and check container multiple times
+      let container = null
+      let attempts = 0
+      const maxAttempts = 10
+
+      while (!container && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        container = document.getElementById('payment-brick-container')
+        attempts++
+      }
+
       if (!container) {
-        console.error('Payment container not found')
+        console.error('Payment container not found after', maxAttempts, 'attempts')
         setError('Payment container not ready. Please try the test payment option.')
         setLoading(false)
         return
       }
 
-      const mercadoPago = new window.MercadoPago(publicKey, {
-        locale: isPortuguese ? 'pt-BR' : 'en-US'
-      })
-      setMp(mercadoPago)
+      // Clear any existing content in the container
+      container.innerHTML = ''
+
+      // Validate the public key format
+      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY' || !publicKey.startsWith('TEST-') && !publicKey.startsWith('APP_USR-')) {
+        console.error('Invalid public key format:', publicKey)
+        setError('Invalid payment configuration. Please use the test payment option.')
+        setLoading(false)
+        return
+      }
+
+      // Initialize MercadoPago with proper error handling
+      let mercadoPago
+      try {
+        mercadoPago = new window.MercadoPago(publicKey, {
+          locale: isPortuguese ? 'pt-BR' : 'en-US'
+        })
+        setMp(mercadoPago)
+      } catch (mpError) {
+        console.error('Error creating MercadoPago instance:', mpError)
+        setError('Failed to initialize payment system. Please use the test payment option.')
+        setLoading(false)
+        return
+      }
 
       // Set a timeout to prevent infinite loading
       const loadingTimeout = setTimeout(() => {
-        console.warn('Payment brick taking too long to load, showing fallback')
+        console.warn('Payment brick taking too long to load')
         setLoading(false)
-        setError('Payment system is taking longer than expected to load. Please try the test payment option.')
-      }, 15000) // 15 second timeout
+        setError('Payment system is taking longer than expected to load. Please use the test payment option.')
+      }, 20000) // 20 second timeout
 
       const brickSettings = {
         initialization: {
@@ -181,6 +225,7 @@ export function MercadoPayoSDKModal({
             console.log('Payment brick ready')
             clearTimeout(loadingTimeout)
             setLoading(false)
+            setError(null) // Clear any previous errors
           },
           onError: (error: any) => {
             console.error('Brick error:', error)
@@ -191,7 +236,6 @@ export function MercadoPayoSDKModal({
           onSubmit: async (cardFormData: any) => {
             console.log('Payment submitted:', cardFormData)
             try {
-              // For preference-based payments, MP handles the flow
               handlePaymentSuccess({ payment: { id: `mp_${Date.now()}` } })
               return true
             } catch (submitError) {
@@ -215,12 +259,23 @@ export function MercadoPayoSDKModal({
         }
       }
 
-      // Create the payment brick with better error handling
+      // Create the payment brick with comprehensive error handling
       try {
-        console.log('Creating payment brick with settings:', brickSettings)
+        console.log('Creating payment brick...')
         const bricks = mercadoPago.bricks()
+        
+        if (!bricks) {
+          throw new Error('Failed to get bricks instance')
+        }
+
         const paymentBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
-        console.log('Payment brick created successfully:', paymentBrick)
+        console.log('Payment brick created successfully')
+        
+        // Additional check to ensure the brick was actually created
+        if (!paymentBrick) {
+          throw new Error('Payment brick creation returned null')
+        }
+
       } catch (brickError) {
         console.error('Error creating payment brick:', brickError)
         clearTimeout(loadingTimeout)
@@ -314,9 +369,19 @@ export function MercadoPayoSDKModal({
               style={{ 
                 minHeight: '400px',
                 width: '100%',
-                display: loading ? 'none' : 'block'
+                border: error ? '2px dashed #ccc' : 'none',
+                borderRadius: '8px',
+                padding: error ? '20px' : '0',
+                textAlign: error ? 'center' : 'left',
+                color: error ? '#666' : 'inherit'
               }}
-            ></div>
+            >
+              {error && (
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>
+                  Payment interface will appear here when ready
+                </div>
+              )}
+            </div>
           </div>
         )}
 
