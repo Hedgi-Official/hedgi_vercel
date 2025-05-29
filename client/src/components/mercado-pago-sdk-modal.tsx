@@ -51,7 +51,7 @@ export function MercadoPayoSDKModal({
   const locale = isPortuguese ? 'pt-BR' : 'en-US'
 
   // ─── Dev‐mode switch ────────────────────────────────────────────────────
-  const SKIP_PAYMENTS = false
+  const SKIP_PAYMENTS = true
   // └─────────────────────────────────────────────────────────────────────
 
   // ─── Compute amount ───────────────────────────────────────────────────
@@ -77,19 +77,7 @@ export function MercadoPayoSDKModal({
     fetch('/api/payment/preference', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        amount: paymentAmount, 
-        currency,
-        description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-        payer: {
-          email: 'user@hedgi.com', // You may want to get this from user context
-          name: 'Hedgi User',
-          identification: {
-            type: currency === 'BRL' ? 'CPF' : 'CURP',
-            number: currency === 'BRL' ? '11111111111' : '123456789'
-          }
-        }
-      }),
+      body: JSON.stringify({ amount: paymentAmount, currency }),
     })
       .then((r) => r.json())
       .then((d) => {
