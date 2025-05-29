@@ -272,7 +272,14 @@ export function MercadoPayoSDKModal({
           onSubmit: async (cardFormData: any) => {
             console.log('Payment submitted:', cardFormData)
             try {
-              handlePaymentSuccess({ payment: { id: `mp_${Date.now()}` } })
+              // Extract payment token from MercadoPago response
+              const paymentToken = cardFormData?.token || 
+                                 cardFormData?.payment?.id || 
+                                 cardFormData?.id || 
+                                 `mp_${Date.now()}`
+              
+              console.log('Payment token captured:', paymentToken)
+              handlePaymentSuccess({ payment: { id: paymentToken } })
               return true
             } catch (submitError) {
               console.error('Submit error:', submitError)
@@ -341,7 +348,7 @@ export function MercadoPayoSDKModal({
   const handleTestPayment = () => {
     if (!hedgeData) return
 
-    const mockPaymentToken = `dev_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const mockPaymentToken = "Dev_Mode"
     onSuccess(hedgeData, mockPaymentToken)
 
     toast({

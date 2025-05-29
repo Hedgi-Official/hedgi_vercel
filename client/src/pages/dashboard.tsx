@@ -162,7 +162,9 @@ export default function Dashboard() {
       };
 
       console.log('[Dashboard] sending payload:', payload);
-      console.log('[Dashboard] payment token:', paymentToken);
+      console.log('[Dashboard] payment token received:', paymentToken);
+      console.log('[Dashboard] payment token in payload:', payload.paymentToken);
+      console.log('[Dashboard] payment token in metadata:', payload.metadata.paymentToken);
       
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
@@ -206,6 +208,9 @@ export default function Dashboard() {
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
+    if (!paymentToken) {
+      console.warn('[Dashboard] No payment token provided to handlePlaceHedge');
+    }
     return createHedgeMutation.mutate({ hedgeData, paymentToken });
   };
 
