@@ -103,6 +103,8 @@ export function MercadoPayoSDKModal({
       setError(null)
 
       console.log(`Creating payment preference (attempt ${retryCount + 1})...`)
+      console.log('[PaymentModal] Payment amount being sent:', paymentAmount)
+      console.log('[PaymentModal] Currency:', currency)
 
       const response = await fetch('/api/payment/preference', {
         method: 'POST',
@@ -141,21 +143,21 @@ export function MercadoPayoSDKModal({
       }
 
       setPreferenceId(data.id)
-      
+
       // Add a small delay before initializing MP
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       initializeMercadoPago(data.public_key, data.id)
     } catch (error) {
       console.error('Error creating payment preference:', error)
-      
+
       // Retry logic for network errors
       if (retryCount < 2 && (error instanceof Error && error.message.includes('Network'))) {
         console.log(`Retrying preference creation in 2 seconds...`)
         setTimeout(() => createPreference(retryCount + 1), 2000)
         return
       }
-      
+
       setError('Failed to initialize payment. Please use the test payment option.')
       setLoading(false)
     }
@@ -263,14 +265,14 @@ export function MercadoPayoSDKModal({
       try {
         console.log('Creating payment brick...')
         const bricks = mercadoPago.bricks()
-        
+
         if (!bricks) {
           throw new Error('Failed to get bricks instance')
         }
 
         const paymentBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
         console.log('Payment brick created successfully')
-        
+
         // Additional check to ensure the brick was actually created
         if (!paymentBrick) {
           throw new Error('Payment brick creation returned null')
