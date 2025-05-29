@@ -1,4 +1,3 @@
-
 // client/src/components/mercado-pago-sdk-modal.tsx
 import { useState, useEffect } from 'react'
 import {
@@ -127,13 +126,13 @@ export function MercadoPayoSDKModal({
       }
 
       const data = await response.json()
-      
+
       if (data.enabled === false) {
         setError('Payments are currently disabled. The hedge cannot be placed at this time.')
         setLoading(false)
         return
       }
-      
+
       if (!data.id || !data.public_key) {
         throw new Error('Missing preference ID or public key')
       }
@@ -221,7 +220,7 @@ export function MercadoPayoSDKModal({
         setError('Failed to create payment interface. Please use the test payment option.')
         setLoading(false)
       }
-      
+
     } catch (error) {
       console.error('Error initializing MercadoPago:', error)
       setError(`Failed to initialize payment system: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -231,7 +230,7 @@ export function MercadoPayoSDKModal({
 
   const handlePaymentSuccess = (paymentData: any) => {
     const paymentToken = paymentData?.payment?.id || paymentData?.transactionId || `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     toast({
       title: isPortuguese ? 'Pagamento realizado com sucesso!' : 'Payment successful!',
       description: isPortuguese ? 'Sua proteção foi registrada.' : 'Your hedge has been placed.',
@@ -243,14 +242,14 @@ export function MercadoPayoSDKModal({
 
   const handleTestPayment = () => {
     if (!hedgeData) return
-    
+
     const mockPaymentToken = `dev_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     onSuccess(hedgeData, mockPaymentToken)
-    
+
     toast({
       title: isPortuguese ? 'Modo Dev: Proteção registrada' : 'Dev mode: Hedge placed',
     })
-    
+
     onClose()
   }
 
@@ -303,7 +302,7 @@ export function MercadoPayoSDKModal({
         {/* Payment Brick Container */}
         {!loading && !error && !SKIP_PAYMENTS && (
           <div className="my-4">
-            <div id="payment-brick-container"></div>
+            <div id="payment-brick-container" style={{ minHeight: '400px' }}></div>
           </div>
         )}
 
