@@ -37,9 +37,6 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
             <Link href="/about-us">
               <Button variant="ghost">{t('About Us')}</Button>
             </Link>
-            <Link href="/faq">
-              <Button variant="ghost">{t('FAQ')}</Button>
-            </Link>
           </div>
         </div>
         <div className="flex items-center gap-4">

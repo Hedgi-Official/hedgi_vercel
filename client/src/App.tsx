@@ -14,7 +14,6 @@ import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
 import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
-import FAQ from "@/pages/faq";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 
@@ -45,7 +44,6 @@ function Router() {
         {currentLanguage === "pt-BR" ? <UsingHedgiPTBR /> : <UsingHedgi />}
       </Route>
       <Route path="/about-us" component={AboutUs} />
-      <Route path="/faq" component={FAQ} />
       <Route component={NotFound} />
     </Switch>
   );
