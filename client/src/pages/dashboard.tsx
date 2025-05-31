@@ -150,7 +150,7 @@ export default function Dashboard() {
         magic:     123456,
         comment:   'Hedgi test trade',
         paymentToken: paymentToken, // Include payment token in metadata
-        margin:    h.hedgeCost || 500 // Include margin cost from hedge calculation
+        margin:    h.margin || 500 // Include margin from hedge calculation
       };
 
       // only these fields go on the wire - now including payment token
