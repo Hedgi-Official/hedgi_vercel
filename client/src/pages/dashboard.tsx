@@ -149,7 +149,8 @@ export default function Dashboard() {
         deviation: 5,
         magic:     123456,
         comment:   'Hedgi test trade',
-        paymentToken: paymentToken // Include payment token in metadata
+        paymentToken: paymentToken, // Include payment token in metadata
+        margin:    h.hedgeCost || 500 // Include margin cost from hedge calculation
       };
 
       // only these fields go on the wire - now including payment token
@@ -165,6 +166,7 @@ export default function Dashboard() {
       console.log('[Dashboard] payment token received:', paymentToken);
       console.log('[Dashboard] payment token in payload:', payload.paymentToken);
       console.log('[Dashboard] payment token in metadata:', payload.metadata.paymentToken);
+      console.log('[Dashboard] margin in metadata:', payload.metadata.margin);
       
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
