@@ -282,8 +282,36 @@ export function CurrencySimulator({
           {/* Results & Place Hedge */}
           {simulation && (
             <>
+              {/* Current Rate and Break-Even Rate Display */}
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tradeDirection === 'buy' ?
+                      `Buy ${targetCurrency} with ${baseCurrency}` :
+                      `Sell ${targetCurrency} for ${baseCurrency}`}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                  <p className="text-2xl font-bold">
+                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {(() => {
+                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+
               {/* Hedge cost display */}
-              <div className="space-y-2 pt-4">
+              <div className="space-y-2">
                 <h3 className="font-medium">{t('simulator.hedgeDetails')}</h3>
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <div className="flex justify-between font-medium">
