@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
@@ -33,6 +34,7 @@ export default function AuthPage() {
   const { login, register } = useUser();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("login");
 
   // Login form state
@@ -93,7 +95,13 @@ export default function AuthPage() {
       }
 
       if (result.ok) {
-        navigate("/dashboard");
+        // Invalidate user query to refresh authentication state
+        await queryClient.invalidateQueries({ queryKey: ['user'] });
+        
+        // Small delay to ensure state updates
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 100);
       } else {
         toast({
           variant: "destructive",
