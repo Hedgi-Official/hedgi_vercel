@@ -47,54 +47,60 @@ export function registerRoutes(app: Express): Server {
       // Hash the password
       const hashedPassword = await crypto.hash(password);
 
-      // Use direct database connection to create user
-      const { Client } = require('pg');
-      const client = new Client({
-        connectionString: process.env.DATABASE_URL,
-      });
+      // Use Drizzle ORM for database operations
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
 
-      await client.connect();
+      // Check if user already exists
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
 
-      try {
-        // Check if user already exists
-        const existingUser = await client.query(
-          'SELECT id FROM users WHERE username = $1 OR email = $2',
-          [username, email]
-        );
-
-        if (existingUser.rows.length > 0) {
-          await client.end();
-          return res.status(400).json({ message: "Username or email already exists" });
-        }
-
-        // Insert new user with proper SQL syntax
-        const result = await client.query(
-          `INSERT INTO users (username, email, full_name, phone_number, password, nation, payment_identifier, google_calendar_enabled, google_refresh_token, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
-           RETURNING id, username, email, full_name, phone_number, nation, payment_identifier, created_at`,
-          [username, email, fullName, phoneNumber || null, hashedPassword, nation, paymentIdentifier, false, null]
-        );
-
-        await client.end();
-
-        const newUser = result.rows[0];
-        return res.json({
-          message: "Registration successful",
-          user: {
-            id: newUser.id,
-            username: newUser.username,
-            email: newUser.email,
-            fullName: newUser.full_name,
-            phoneNumber: newUser.phone_number,
-            nation: newUser.nation,
-            paymentIdentifier: newUser.payment_identifier,
-          },
-        });
-
-      } catch (dbError: any) {
-        await client.end();
-        throw dbError;
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: "Username already exists" });
       }
+
+      const existingEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Insert new user using Drizzle ORM
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username,
+          email,
+          fullName,
+          phoneNumber: phoneNumber || null,
+          password: hashedPassword,
+          nation,
+          paymentIdentifier,
+          googleCalendarEnabled: false,
+          googleRefreshToken: null,
+        })
+        .returning();
+
+      return res.json({
+        message: "Registration successful",
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          fullName: newUser.fullName,
+          phoneNumber: newUser.phoneNumber,
+          nation: newUser.nation,
+          paymentIdentifier: newUser.paymentIdentifier,
+        },
+      });
 
     } catch (error: any) {
       console.error("Account creation error:", error);
