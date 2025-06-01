@@ -50,7 +50,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
             </>
           ) : showAuthButton && (
             <Button variant="outline" asChild>
-              <Link href="/auth">{t('Get Started')}</Link>
+              <Link href="/under-construction">{t('Get Started')}</Link>
             </Button>
           )}
         </div>
