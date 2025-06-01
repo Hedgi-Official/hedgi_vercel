@@ -37,10 +37,10 @@ export function registerRoutes(app: Express): Server {
   // Working registration endpoint that bypasses schema conflicts
   app.post("/signup", async (req: Request, res: Response) => {
     try {
-      const { fullName, email, username, password, phoneNumber } = req.body;
+      const { fullName, email, username, password, phoneNumber, nation, paymentIdentifier } = req.body;
 
       // Basic validation
-      if (!fullName || !email || !username || !password) {
+      if (!fullName || !email || !username || !password || !nation || !paymentIdentifier) {
         return res.status(400).json({ message: "All required fields must be provided" });
       }
 
@@ -69,10 +69,10 @@ export function registerRoutes(app: Express): Server {
 
         // Insert new user with proper SQL syntax
         const result = await client.query(
-          `INSERT INTO users (username, email, full_name, phone_number, password, google_calendar_enabled, google_refresh_token, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
-           RETURNING id, username, email, full_name, phone_number, created_at`,
-          [username, email, fullName, phoneNumber || null, hashedPassword, false, null]
+          `INSERT INTO users (username, email, full_name, phone_number, password, nation, payment_identifier, google_calendar_enabled, google_refresh_token, created_at) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
+           RETURNING id, username, email, full_name, phone_number, nation, payment_identifier, created_at`,
+          [username, email, fullName, phoneNumber || null, hashedPassword, nation, paymentIdentifier, false, null]
         );
 
         await client.end();
@@ -86,6 +86,8 @@ export function registerRoutes(app: Express): Server {
             email: newUser.email,
             fullName: newUser.full_name,
             phoneNumber: newUser.phone_number,
+            nation: newUser.nation,
+            paymentIdentifier: newUser.payment_identifier,
           },
         });
 

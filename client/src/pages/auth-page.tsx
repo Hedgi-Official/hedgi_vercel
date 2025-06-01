@@ -55,10 +55,8 @@ export default function AuthPage() {
 
   const handleSubmit = async (action: "login" | "register") => {
     try {
-      const data = action === "login" ? loginData : registerData;
-
       if (action === "register") {
-        const validationResult = registerSchema.safeParse(data);
+        const validationResult = registerSchema.safeParse(registerData);
         if (!validationResult.success) {
           toast({
             variant: "destructive",
@@ -71,7 +69,16 @@ export default function AuthPage() {
 
       let result;
       if (action === "login") {
-        result = await login(data);
+        // Use direct fetch for login since the hook expects different format
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(loginData),
+        });
+        const responseData = await response.json();
+        result = { ok: response.ok, message: responseData.message };
       } else {
         // Use the working signup endpoint
         const response = await fetch('/signup', {
@@ -79,7 +86,7 @@ export default function AuthPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify(registerData),
         });
         const responseData = await response.json();
         result = { ok: response.ok, message: responseData.message };
