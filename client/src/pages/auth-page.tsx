@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
+import { Flag } from "lucide-react";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
@@ -18,7 +20,9 @@ const registerSchema = z.object({
   phoneNumber: z.string().optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+  nation: z.string().min(1, "Please select your country"),
+  paymentIdentifier: z.string().min(1, "Payment identifier is required")
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -45,6 +49,8 @@ export default function AuthPage() {
     username: "",
     password: "",
     confirmPassword: "",
+    nation: "",
+    paymentIdentifier: "",
   });
 
   const handleSubmit = async (action: "login" | "register") => {
@@ -165,6 +171,33 @@ export default function AuthPage() {
                     {t('auth.Start protecting your currency today')}
                   </p>
                 </div>
+
+                {/* Country Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Flag className="h-4 w-4" />
+                    Select your country
+                  </label>
+                  <Select
+                    value={registerData.nation}
+                    onValueChange={(value) => {
+                      setRegisterData({ 
+                        ...registerData, 
+                        nation: value,
+                        paymentIdentifier: "" // Reset payment identifier when country changes
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                      <SelectItem value="US">🇺🇸 United States</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <Input
                   placeholder={t('auth.Enter your full name')}
                   value={registerData.fullName}
@@ -187,6 +220,31 @@ export default function AuthPage() {
                   value={registerData.phoneNumber}
                   onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
                 />
+
+                {/* Payment Identifier Field - Changes based on country */}
+                {registerData.nation && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {registerData.nation === "BR" ? "PIX Key/Account" : "Zelle Username"}
+                    </label>
+                    <Input
+                      placeholder={
+                        registerData.nation === "BR" 
+                          ? "Enter your PIX key (email, phone, or CPF)"
+                          : "Enter your Zelle username or email"
+                      }
+                      value={registerData.paymentIdentifier}
+                      onChange={(e) => setRegisterData({ ...registerData, paymentIdentifier: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {registerData.nation === "BR" 
+                        ? "This will be used for payments and transfers in Brazil"
+                        : "This will be used for payments and transfers in the US"
+                      }
+                    </p>
+                  </div>
+                )}
+
                 <Input
                   type="password"
                   placeholder={t('auth.Enter your password')}
@@ -202,6 +260,7 @@ export default function AuthPage() {
                 <Button
                   className="w-full"
                   onClick={() => handleSubmit("register")}
+                  disabled={!registerData.nation}
                 >
                   {t('auth.Sign Up')}
                 </Button>

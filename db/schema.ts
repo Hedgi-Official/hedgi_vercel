@@ -19,6 +19,8 @@ export const users = pgTable('users', {
   email:        text('email').unique().notNull(),
   fullName:     text('full_name').notNull(),
   phoneNumber:  text('phone_number'),
+  nation:       text('nation'),
+  paymentIdentifier: text('payment_identifier'),
   createdAt:    timestamp('created_at').defaultNow().notNull(),
   googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
   googleRefreshToken: text('google_refresh_token'),
