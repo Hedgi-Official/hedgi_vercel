@@ -16,6 +16,7 @@ import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
+import { UnderConstruction } from "@/components/under-construction";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -44,6 +45,12 @@ function Router() {
         {currentLanguage === "pt-BR" ? <UsingHedgiPTBR /> : <UsingHedgi />}
       </Route>
       <Route path="/about-us" component={AboutUs} />
+      <Route path="/under-construction" component={() => (
+        <>
+          <Header showAuthButton />
+          <UnderConstruction title="Coming Soon" />
+        </>
+      )} />
       <Route component={NotFound} />
     </Switch>
   );
