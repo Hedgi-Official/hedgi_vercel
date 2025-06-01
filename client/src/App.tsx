@@ -17,6 +17,7 @@ import AboutUs from "@/pages/about-us";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 import { UnderConstruction } from "@/components/under-construction";
+import { Header } from "@/components/header";
 
 function Router() {
   const { user, isLoading } = useUser();
