@@ -120,7 +120,7 @@
     <div class="header">
       <h2>Complete Your Payment</h2>
     </div>
-    
+
     <div id="payment-details" class="payment-details" style="display: none;">
       <h3>Transaction Summary</h3>
       <div class="detail-row">
@@ -136,23 +136,23 @@
         <span id="payment-amount" class="detail-value"></span>
       </div>
     </div>
-    
+
     <div id="loading" class="loading">
       <div class="loading-spinner"></div>
       <p>Loading payment interface...</p>
     </div>
-    
+
     <div id="error-message" class="error" style="display: none;"></div>
     <div id="success-message" class="success" style="display: none;"></div>
-    
+
     <div id="currency-warning" class="warning" style="display: none;">
       <p>MXN payments may require the test payment option below due to regional processing limitations.</p>
     </div>
-    
+
     <div id="payment-brick-container"></div>
-    
+
     <div class="divider"></div>
-    
+
     <div id="test-payment" class="sticky-bottom" style="display: none;">
       <p style="text-align: center; margin-top: 20px; color: #6b7280;">
         If you're having trouble with the payment system, you can use the test option:
@@ -161,7 +161,7 @@
         Test: Continue without payment
       </button>
     </div>
-    
+
     <button id="close-button" class="button secondary" style="display: none;">
       Close Window
     </button>
@@ -176,13 +176,13 @@
     const closeButtonEl = document.getElementById('close-button');
     const paymentBrickContainer = document.getElementById('payment-brick-container');
     const currencyWarningEl = document.getElementById('currency-warning');
-    
+
     // Store all hedge data from URL parameters
     const hedgeData = {};
-    
+
     // Extract and parse URL parameters
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     // Get payment-specific parameters
     const amount = urlParams.get('amount');
     const baseCurrency = urlParams.get('baseCurrency');
@@ -191,7 +191,7 @@
     const duration = urlParams.get('duration');
     const tradeDirection = urlParams.get('tradeDirection');
     const margin = urlParams.get('margin');
-    
+
     // Validate required parameters
     if (!amount || !baseCurrency || !targetCurrency || !rate || !duration || !tradeDirection) {
       showError('Missing required hedge parameters. Please try again.');
@@ -210,30 +210,30 @@
       hedgeData.tradeStatus = null;
       hedgeData.broker = 'activtrades';
       hedgeData.status = 'pending';
-      
+
       // Display payment details
       document.getElementById('currency-pair').textContent = `${targetCurrency}/${baseCurrency}`;
       document.getElementById('hedge-amount').textContent = `${amount} ${baseCurrency}`;
-      
+
       // Calculate payment amount
       const hedgeAmount = Math.abs(Number(amount));
       const hedgeCost = hedgeAmount * 0.0025;
       const paymentAmount = Number(hedgeCost.toFixed(2));
       document.getElementById('payment-amount').textContent = `${paymentAmount} ${baseCurrency}`;
-      
+
       // Show payment details section
       document.getElementById('payment-details').style.display = 'block';
-      
+
       // Check if this is MXN currency and show the currency warning and test payment button
       if (baseCurrency === 'MXN') {
         currencyWarningEl.style.display = 'block';
         testPaymentEl.style.display = 'block'; // Always show test payment for MXN
       }
-      
+
       // Initialize payment creation
       createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, baseCurrency);
     }
-    
+
     // Show error and test payment option
     function showError(message) {
       loadingEl.style.display = 'none';
@@ -241,7 +241,7 @@
       errorMessageEl.textContent = message;
       testPaymentEl.style.display = 'block';
     }
-    
+
     // Show success message
     function showSuccess(message) {
       loadingEl.style.display = 'none';
@@ -251,12 +251,12 @@
       successMessageEl.textContent = message;
       closeButtonEl.style.display = 'block';
     }
-    
+
     // Create payment preference
     async function createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, currency) {
       try {
         console.log('Creating payment preference...');
-        
+
         const response = await fetch('/api/payment/preference', {
           method: 'POST',
           headers: {
@@ -276,18 +276,18 @@
             },
           }),
         });
-        
+
         const data = await response.json();
-        
+
         if (data.enabled === false) {
           showError('Payments are currently disabled. The hedge cannot be placed at this time.');
           return;
         }
-        
+
         if (!data.id || !data.public_key) {
           throw new Error('Missing preference ID or public key');
         }
-        
+
         // Initialize Mercado Pago with the public key and preference ID
         initializeMercadoPago(data.public_key, data.id);
       } catch (error) {
@@ -297,12 +297,12 @@
         testPaymentEl.style.display = 'block';
       }
     }
-    
+
     // Initialize Mercado Pago
     async function initializeMercadoPago(publicKey, preferenceId) {
       try {
         const mp = new MercadoPago(publicKey);
-        
+
         const brickSettings = {
           initialization: {
             preferenceId: preferenceId
@@ -311,7 +311,7 @@
             onReady: () => {
               // Hide loading when brick is ready
               loadingEl.style.display = 'none';
-              
+
               // For MXN, always ensure the test payment button is visible
               if (baseCurrency === 'MXN') {
                 testPaymentEl.style.display = 'block';
@@ -340,7 +340,7 @@
             }
           }
         };
-        
+
         // Create the brick
         const paymentBrick = mp.bricks().create('payment', 'payment-brick-container', brickSettings);
       } catch (error) {
@@ -350,35 +350,25 @@
         testPaymentEl.style.display = 'block';
       }
     }
-    
-    // Handle test payment
-    async function handleTestPayment() {
-      try {
-        const response = await fetch('/api/payment/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            isTest: true,
-            hedgeData: hedgeData
-          }),
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          showSuccess('Test payment processed successfully.');
-          processSuccessfulPayment();
-        } else {
-          showError('Test payment failed: ' + (data.message || 'Unknown error'));
-        }
-      } catch (error) {
-        console.error('Error processing test payment:', error);
-        showError('Test payment failed: ' + (error.message || 'Network error'));
+
+    // Real payment validation - removed test bypass
+    function validatePaymentCompletion() {
+      // This function would be called after Mercado Pago payment completion
+      // Only process successful payment if actual payment was completed
+      console.log('Validating payment completion...');
+
+      // Check if we have a valid payment ID from Mercado Pago
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentId = urlParams.get('payment_id');
+      const status = urlParams.get('status');
+
+      if (paymentId && status === 'approved') {
+        processSuccessfulPayment();
+      } else {
+        showError('Payment validation failed. Please try again.');
       }
     }
-    
+
     // Process successful payment (notify parent window and prepare for close)
     function processSuccessfulPayment() {
       // For any successful payment, notify the parent window
@@ -388,15 +378,14 @@
           hedgeData: hedgeData
         }, '*');
       }
-      
+
       // Show success message and close button
       showSuccess('Payment processed successfully. You can close this window now.');
     }
-    
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       // Set up event listeners
-      document.getElementById('test-payment-button').addEventListener('click', handleTestPayment);
       closeButtonEl.addEventListener('click', () => {
         // Close this window
         window.close();

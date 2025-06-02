@@ -164,18 +164,15 @@
     const paymentBrickContainer = document.getElementById('payment-brick-container');
     const mxnWarningEl = document.getElementById('mxn-warning');
     
-    // Always show test payment button for MXN payments and hide loading immediately
+    // MXN payments require proper validation - no test bypass
     loadingEl.style.display = 'none';
-    testPaymentEl.style.display = 'block';
-    testPaymentEl.style.cssText = 'display: block !important; visibility: visible !important;';
     mxnWarningEl.style.display = 'block';
     
-    // Ensure the test button is visible
-    const testPaymentButton = document.getElementById('test-payment-button');
-    if (testPaymentButton) {
-      testPaymentButton.style.display = 'block';
-      testPaymentButton.style.cssText = 'display: block !important; margin: 0 auto;';
-    }
+    // Show message that MXN payments need proper setup
+    const messageEl = document.createElement('div');
+    messageEl.style.cssText = 'text-align: center; padding: 20px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; margin: 20px;';
+    messageEl.innerHTML = '<strong>MXN Payment Setup Required</strong><br>Please contact support to enable MXN payments with proper validation.';
+    document.body.appendChild(messageEl);
     
     console.log('MXN payment page loaded - test payment button displayed');
     

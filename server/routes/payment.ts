@@ -204,6 +204,37 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
 });
 
 /**
+ * Payment webhook endpoint
+ * Mercado Pago sends payment notifications here
+ */
+router.post('/api/payment/webhook', async (req: Request, res: Response) => {
+  try {
+    const { id, topic } = req.body;
+    
+    if (topic === 'payment') {
+      // Process the payment notification
+      console.log(`[Payment Webhook] Received payment notification for ID: ${id}`);
+      
+      // Verify the payment status with Mercado Pago
+      const paymentStatus = await paymentService.verifyPayment(id);
+      
+      if (paymentStatus.status === 'approved') {
+        // Payment was successful - you can now safely process the trade
+        console.log(`[Payment Webhook] Payment ${id} approved`);
+        // TODO: Process the hedge/trade creation here
+      } else {
+        console.log(`[Payment Webhook] Payment ${id} status: ${paymentStatus.status}`);
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('[Payment Webhook] Error processing webhook:', error);
+    res.status(500).send('Error');
+  }
+});
+
+/**
  * Payment pending callback endpoint
  * Mercado Pago redirects here when the payment is pending
  */

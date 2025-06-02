@@ -210,10 +210,48 @@ export default function Dashboard() {
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
+    
+    // Validate payment token before proceeding
     if (!paymentToken) {
-      console.warn('[Dashboard] No payment token provided to handlePlaceHedge');
+      toast({
+        variant: "destructive",
+        title: "Payment Required",
+        description: "Payment validation is required before placing a hedge.",
+      });
+      return;
     }
-    return createHedgeMutation.mutate({ hedgeData, paymentToken });
+
+    // Verify payment status before creating trade
+    try {
+      const verificationResponse = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: paymentToken,
+          currency: hedgeData.baseCurrency
+        })
+      });
+
+      const verificationResult = await verificationResponse.json();
+
+      if (verificationResult.status !== 'approved') {
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Failed",
+          description: "Payment must be completed before placing the hedge.",
+        });
+        return;
+      }
+
+      // Only proceed with trade creation if payment is verified
+      return createHedgeMutation.mutate({ hedgeData, paymentToken });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Payment Verification Error",
+        description: "Unable to verify payment status. Please try again.",
+      });
+    }
   };
 
   // 3) Close trade

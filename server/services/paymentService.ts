@@ -217,6 +217,37 @@ class PaymentService {
   }
 
   /**
+   * Verify payment status with Mercado Pago
+   * @param paymentId Payment ID to verify
+   * @returns Payment verification result
+   */
+  async verifyPayment(paymentId: string): Promise<{ status: string; statusDetail?: string; transactionId?: string }> {
+    if (!this.enablePayments) {
+      throw new Error('Payments are currently disabled');
+    }
+
+    try {
+      // Use BR access token by default - in production you'd determine this based on the payment
+      const client = new MercadoPagoConfig({ 
+        accessToken: this.mpBR.accessToken 
+      });
+      
+      const paymentClient = new Payment(client);
+      
+      const payment = await paymentClient.get({ id: paymentId });
+      
+      return {
+        status: payment.status || 'unknown',
+        statusDetail: payment.status_detail,
+        transactionId: payment.id?.toString()
+      };
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      throw new Error('Failed to verify payment status');
+    }
+  }
+
+  /**
    * Process a payment
    * @param req Express request
    * @param res Express response
@@ -280,15 +311,18 @@ class PaymentService {
       // Otherwise use the preference ID to find associated payments
       if (preferenceId) {
         try {
-          // For testing purposes, we'll approve all preference-based payments
-          // In a production environment, we would query the Mercado Pago API
-          // or use webhooks to get the accurate payment status
-          console.log(`[PaymentService] Processing payment for preference: ${preferenceId}`);
+          // Query Mercado Pago API to get actual payment status for this preference
+          console.log(`[PaymentService] Checking payment status for preference: ${preferenceId}`);
+          
+          // We need to search for payments associated with this preference
+          // Note: In production, you should use webhooks for real-time payment status
+          // For now, we'll return pending status to force proper payment completion
           
           return res.status(200).json({
-            status: 'approved',
-            statusDetail: 'accredited',
-            transactionId: `test_${Date.now()}`
+            status: 'pending',
+            statusDetail: 'pending_payment_in_process',
+            message: 'Payment verification required. Please complete the payment process.',
+            transactionId: null
           });
         } catch (error) {
           console.error('Error checking payment status by preference:', error);
