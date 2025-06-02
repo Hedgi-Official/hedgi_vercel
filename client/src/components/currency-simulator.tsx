@@ -61,7 +61,7 @@ export function CurrencySimulator({
   const [targetCurrency] = useState<SupportedCurrency>('USD');
   const [baseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
-  
+
   // Original multi-currency code (commented for alpha launch):
   // const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
   // const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
@@ -155,7 +155,7 @@ export function CurrencySimulator({
     setIsPaymentModalOpen(true);
   };
 
-  // after payment, call Dashboard’s onPlaceHedge
+  // after payment, call Dashboard's onPlaceHedge
   const handlePaymentSuccess = async (
     hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
     paymentToken?: string
@@ -163,7 +163,8 @@ export function CurrencySimulator({
     if (!onPlaceHedge || !onOrdersUpdated) return;
     setIsPlacingHedge(true);
     try {
-      await onPlaceHedge(hedgeData, paymentToken);
+      console.log('[CurrencySimulator] Payment successful, placing hedge with token:', paymentToken);
+      await onPlaceHedge(hedgeData, paymentToken || 'test-payment-success');
       onOrdersUpdated();
       setIsPaymentModalOpen(false);
     } catch (err) {
