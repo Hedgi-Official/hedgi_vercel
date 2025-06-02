@@ -60,6 +60,7 @@ export function MercadoPayoSDKModal({
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
   const [paymentBrick, setPaymentBrick] = useState<any>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const isPortuguese = i18n.language === 'pt-BR'
 
@@ -273,9 +274,7 @@ export function MercadoPayoSDKModal({
 
       const brickSettings = {
         initialization: {
-          preferenceId: prefId,
-          amount: paymentAmount,     // Must be > 0
-          currencyId: currency       // e.g. "BRL" or "USD"
+          preferenceId: prefId
         },
         callbacks: {
           onReady: () => {
@@ -291,68 +290,49 @@ export function MercadoPayoSDKModal({
             setLoading(false)
           },
           onSubmit: async (formData: any) => {
-              console.log('Payment submitted - formData:', JSON.stringify(formData, null, 2))
-              
-              if (!hedgeData) {
-                setError('Missing hedge data for payment processing.')
-                return false
-              }
-              
-              try {
-                const response = await fetch('/api/payment/process', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    formData: formData,
-                    amount: paymentAmount,
-                    currency: currency,
-                    description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-                  }),
-                });
-
-                const result = await response.json();
-                console.log('Payment processing result:', result);
-
-                // Handle different payment statuses
-                if (response.ok) {
-                  if (result.status === 'approved') {
-                    console.log('Payment approved with ID:', result.payment_id);
-                    handlePaymentSuccess({ payment: { id: result.payment_id } });
-                    return true;
-                  } else if (result.status === 'pending') {
-                    // PIX payments are often pending initially
-                    console.log('Payment pending (PIX) with ID:', result.payment_id);
-                    
-                    if (formData.payment_method_id === 'pix') {
-                      toast({
-                        title: isPortuguese ? 'Pagamento PIX Iniciado' : 'PIX Payment Started',
-                        description: isPortuguese 
-                          ? 'Verifique seu email ou app do banco para completar o pagamento PIX.'
-                          : 'Check your email or banking app to complete the PIX payment.',
-                      });
-                    }
-                    
-                    // For pending payments, we can still proceed but mark as pending
-                    handlePaymentSuccess({ payment: { id: result.payment_id } });
-                    return true;
-                  } else {
-                    console.error('Payment not approved:', result);
-                    setError(result.error || result.details || 'Payment was not approved. Please try again.');
-                    return false;
-                  }
-                } else {
-                  console.error('Payment request failed:', result);
-                  setError(result.error || result.details || 'Payment processing failed. Please try again.');
-                  return false;
-                }
-              } catch (submitError) {
-                console.error('Payment submit error:', submitError);
-                setError('Payment processing error. Please try again.');
-                return false;
-              }
+            console.log('Payment form submitted - formData:', JSON.stringify(formData, null, 2))
+            
+            // In Bricks v2, we can optionally save the card token here for future use
+            if (formData.token) {
+              console.log('Card token available for saving:', formData.token.substring(0, 10) + '...')
+              // Optional: Save token to backend for future payments
             }
+            
+            // Bricks will handle the payment creation automatically
+            // We just need to indicate that we're processing
+            return true
+          },
+          onSuccess: async (paymentInfo: any) => {
+            console.log('Payment SUCCESS - paymentInfo:', JSON.stringify(paymentInfo, null, 2))
+            setIsProcessing(false)
+            
+            if (!hedgeData) {
+              setError('Missing hedge data for payment processing.')
+              return
+            }
+
+            // Payment was approved by Mercado Pago!
+            // Now we can safely proceed with our business logic
+            try {
+              const paymentId = paymentInfo.id || paymentInfo.payment_id
+              
+              if (paymentInfo.payment_method_id === 'pix') {
+                toast({
+                  title: isPortuguese ? 'Pagamento PIX Aprovado' : 'PIX Payment Approved',
+                  description: isPortuguese 
+                    ? 'Seu pagamento PIX foi processado com sucesso.'
+                    : 'Your PIX payment was processed successfully.',
+                });
+              }
+              
+              console.log('Payment approved with ID:', paymentId)
+              handlePaymentSuccess({ payment: { id: paymentId } })
+              
+            } catch (successError) {
+              console.error('Error in payment success handler:', successError)
+              setError('Payment was successful but there was an error processing your order.')
+            }
+          }
         },
         customization: {
           visual: {
@@ -378,7 +358,7 @@ export function MercadoPayoSDKModal({
           throw new Error('Failed to get bricks instance')
         }
 
-        const createdBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
+        const createdBrick = await bricks.create('card', 'payment-brick-container', brickSettings)
         console.log('Payment brick created successfully')
         setPaymentBrick(createdBrick)
 
