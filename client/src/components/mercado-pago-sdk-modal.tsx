@@ -413,6 +413,7 @@ export function MercadoPayoSDKModal({
       setPreferenceId(null)
       setLoading(true)
       setError(null)
+      setPaymentTrackingToken(null)
     } catch (error) {
       console.warn('Error cleaning up payment brick:', error)
     }
