@@ -357,7 +357,7 @@ export function MercadoPayoSDKModal({
           throw new Error('Failed to get bricks instance')
         }
 
-        const createdBrick = await bricks.create('card', 'payment-brick-container', brickSettings)
+        const createdBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
         console.log('Payment brick created successfully')
         setPaymentBrick(createdBrick)
 
