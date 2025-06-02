@@ -187,69 +187,71 @@ export default function AuthPage() {
                   </p>
                 </div>
 
-                {/* Alpha launch: Brazil only country selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Flag className="h-4 w-4" />
-                    {t('auth.Select your country')}
-                  </label>
-                  <Select
-                    value={registerData.nation}
-                    onValueChange={(value) => {
-                      setRegisterData({ 
-                        ...registerData, 
-                        nation: value,
-                        paymentIdentifier: "" // Reset payment identifier when country changes
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('auth.Choose your country')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  {/* Alpha launch: Brazil only country selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      {t('auth.Select your country')}
+                    </label>
+                    <Select
+                      value={registerData.nation}
+                      onValueChange={(value) => {
+                        setRegisterData({ 
+                          ...registerData, 
+                          nation: value,
+                          paymentIdentifier: "" // Reset payment identifier when country changes
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('auth.Choose your country')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Original multi-country selection (commented for future expansion):
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Flag className="h-4 w-4" />
-                    {t('auth.Select your country')}
-                  </label>
-                  <Select
-                    value={registerData.nation}
-                    onValueChange={(value) => {
-                      setRegisterData({ 
-                        ...registerData, 
-                        nation: value,
-                        paymentIdentifier: "" // Reset payment identifier when country changes
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('auth.Choose your country')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
-                      <SelectItem value="US">🇺🇸 United States</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                */
+                  {/* Original multi-country selection (commented for future expansion):
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      {t('auth.Select your country')}
+                    </label>
+                    <Select
+                      value={registerData.nation}
+                      onValueChange={(value) => {
+                        setRegisterData({ 
+                          ...registerData, 
+                          nation: value,
+                          paymentIdentifier: "" // Reset payment identifier when country changes
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('auth.Choose your country')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                        <SelectItem value="US">🇺🇸 United States</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  */}
 
-                <Input
-                  placeholder={t('auth.Enter your full name')}
-                  value={registerData.fullName}
-                  onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
-                />
-                <Input
-                  placeholder={t('auth.Enter your email')}
-                  type="email"
-                  value={registerData.email}
-                  onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                />
+                  <Input
+                    placeholder={t('auth.Enter your full name')}
+                    value={registerData.fullName}
+                    onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
+                  />
+                  <Input
+                    placeholder={t('auth.Enter your email')}
+                    type="email"
+                    value={registerData.email}
+                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                  />
+                </>
                 <Input
                   placeholder={t('auth.Enter your username')}
                   value={registerData.username}
