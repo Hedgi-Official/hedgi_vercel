@@ -301,15 +301,43 @@ export function MercadoPayoSDKModal({
             }
             
             // Extract payment data according to Mercado Pago Bricks structure
+            // Try multiple possible locations for payment_method_id
+            let paymentMethodId = formData.paymentMethod?.id || 
+                                 formData.payment_method_id || 
+                                 formData.selectedPaymentMethod?.id ||
+                                 formData.selectedPaymentMethod;
+
+            let token = formData.token;
+            let installments = formData.installments || 1;
+            let issuerId = formData.issuer?.id || formData.issuer_id;
+            let payer = formData.payer || {};
+
+            // If payment_method_id is still missing, try to extract from different structure
+            if (!paymentMethodId && formData.selectedPaymentMethod) {
+              if (typeof formData.selectedPaymentMethod === 'string') {
+                paymentMethodId = formData.selectedPaymentMethod;
+              } else if (formData.selectedPaymentMethod.type || formData.selectedPaymentMethod.name) {
+                paymentMethodId = formData.selectedPaymentMethod.type || formData.selectedPaymentMethod.name;
+              }
+            }
+
+            console.log('Extracted payment data:', {
+              paymentMethodId,
+              token,
+              installments,
+              issuerId,
+              payer
+            });
+
             const paymentPayload = {
-              token: formData.token,
+              token: token,
               transaction_amount: Number(paymentAmount),
-              installments: Number(formData.installments) || 1,
-              payment_method_id: formData.paymentMethod?.id,
-              issuer_id: formData.issuer?.id || null,
+              installments: Number(installments),
+              payment_method_id: paymentMethodId,
+              issuer_id: issuerId,
               payer: {
-                email: formData.payer?.email || 'user@hedgi.com',
-                identification: formData.payer?.identification
+                email: payer.email || 'user@hedgi.com',
+                identification: payer.identification
               },
               description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
               currency: currency

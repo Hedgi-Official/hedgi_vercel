@@ -262,28 +262,26 @@ class PaymentService {
     }
 
     try {
-      const { token, transaction_amount, installments, payment_method_id, issuer_id, payer, description, currency, paymentId } = req.body;
+      // Handle both old structure (with formData) and new structure (direct)
+      const { formData, amount, currency, description, paymentId, token, transaction_amount, installments, payment_method_id, issuer_id, payer } = req.body;
       
-      console.log(`[PaymentService] Processing payment with data:`, {
-        hasToken: !!token,
-        transaction_amount,
-        installments,
-        payment_method_id,
-        issuer_id,
-        hasPayer: !!payer,
-        description,
-        currency,
-        paymentId
-      });
-
-      // Handle payment verification if paymentId is provided (for webhook/callback verification)
-      if (paymentId && !token) {
-        return this.verifyExistingPayment(paymentId, currency, res);
-      }
-
-      // Handle payment creation if token and payment_method_id are provided (from Bricks onSubmit)
-      if (token && payment_method_id) {
-        return this.createPaymentFromBricksData({
+      // Extract payment data from either structure
+      let paymentInfo;
+      if (formData) {
+        // Old structure with nested formData
+        paymentInfo = {
+          token: formData.token,
+          transaction_amount: amount || transaction_amount,
+          installments: formData.installments,
+          payment_method_id: formData.payment_method_id,
+          issuer_id: formData.issuer_id,
+          payer: formData.payer,
+          description: description,
+          currency: currency
+        };
+      } else {
+        // New structure with direct fields
+        paymentInfo = {
           token,
           transaction_amount,
           installments,
@@ -292,12 +290,40 @@ class PaymentService {
           payer,
           description,
           currency
-        }, res);
+        };
+      }
+      
+      console.log(`[PaymentService] Processing payment with data:`, {
+        hasToken: !!paymentInfo.token,
+        transaction_amount: paymentInfo.transaction_amount,
+        installments: paymentInfo.installments,
+        payment_method_id: paymentInfo.payment_method_id,
+        issuer_id: paymentInfo.issuer_id,
+        hasPayer: !!paymentInfo.payer,
+        description: paymentInfo.description,
+        currency: paymentInfo.currency,
+        paymentId,
+        structureUsed: formData ? 'formData' : 'direct'
+      });
+
+      // Handle payment verification if paymentId is provided (for webhook/callback verification)
+      if (paymentId && !paymentInfo.token) {
+        return this.verifyExistingPayment(paymentId, paymentInfo.currency, res);
+      }
+
+      // Handle payment creation if token and payment_method_id are provided (from Bricks onSubmit)
+      if (paymentInfo.token && paymentInfo.payment_method_id) {
+        return this.createPaymentFromBricksData(paymentInfo, res);
       }
 
       return res.status(400).json({
         error: 'Missing payment data. Token and payment_method_id are required.',
-        status: 'rejected'
+        status: 'rejected',
+        debug: {
+          hasToken: !!paymentInfo.token,
+          hasPaymentMethodId: !!paymentInfo.payment_method_id,
+          receivedStructure: formData ? 'formData' : 'direct'
+        }
       });
       
     } catch (error) {
