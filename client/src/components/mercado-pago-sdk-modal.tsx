@@ -290,15 +290,14 @@ export function MercadoPayoSDKModal({
             setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
           },
-          onSubmit: async (cardFormData: any) => {
-              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
+          onSubmit: async (formData: any) => {
+              console.log('Payment submitted - formData:', JSON.stringify(formData, null, 2))
               
               if (!hedgeData) {
                 setError('Missing hedge data for payment processing.')
                 return false
               }
               
-              // Make a server request to process the payment with MercadoPago
               try {
                 const response = await fetch('/api/payment/process', {
                   method: 'POST',
@@ -306,7 +305,7 @@ export function MercadoPayoSDKModal({
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    formData: cardFormData,
+                    formData: formData,
                     amount: paymentAmount,
                     currency: currency,
                     description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
@@ -316,13 +315,36 @@ export function MercadoPayoSDKModal({
                 const result = await response.json();
                 console.log('Payment processing result:', result);
 
-                if (response.ok && result.status === 'approved') {
-                  console.log('Payment approved with ID:', result.payment_id);
-                  handlePaymentSuccess({ payment: { id: result.payment_id } });
-                  return true;
+                // Handle different payment statuses
+                if (response.ok) {
+                  if (result.status === 'approved') {
+                    console.log('Payment approved with ID:', result.payment_id);
+                    handlePaymentSuccess({ payment: { id: result.payment_id } });
+                    return true;
+                  } else if (result.status === 'pending') {
+                    // PIX payments are often pending initially
+                    console.log('Payment pending (PIX) with ID:', result.payment_id);
+                    
+                    if (formData.payment_method_id === 'pix') {
+                      toast({
+                        title: isPortuguese ? 'Pagamento PIX Iniciado' : 'PIX Payment Started',
+                        description: isPortuguese 
+                          ? 'Verifique seu email ou app do banco para completar o pagamento PIX.'
+                          : 'Check your email or banking app to complete the PIX payment.',
+                      });
+                    }
+                    
+                    // For pending payments, we can still proceed but mark as pending
+                    handlePaymentSuccess({ payment: { id: result.payment_id } });
+                    return true;
+                  } else {
+                    console.error('Payment not approved:', result);
+                    setError(result.error || result.details || 'Payment was not approved. Please try again.');
+                    return false;
+                  }
                 } else {
-                  console.error('Payment not approved:', result);
-                  setError(result.message || 'Payment was not approved. Please try again.');
+                  console.error('Payment request failed:', result);
+                  setError(result.error || result.details || 'Payment processing failed. Please try again.');
                   return false;
                 }
               } catch (submitError) {
@@ -402,16 +424,16 @@ export function MercadoPayoSDKModal({
         setPaymentBrick(null)
       }
       
-      // Clear the container
-      const container = document.getElementById('payment-brick-container')
-      if (container) {
-        container.innerHTML = ''
-      }
+      // Clear both possible container IDs
+      const container1 = document.getElementById('payment-brick-container')
+      const container2 = document.getElementById('paymentBrick')
+      if (container1) container1.innerHTML = ''
+      if (container2) container2.innerHTML = ''
       
-      // Reset all state
+      // Reset all state properly
       setMp(null)
       setPreferenceId(null)
-      setLoading(true)
+      setLoading(false) // Set to false to prevent infinite loading
       setError(null)
       setPaymentTrackingToken(null)
     } catch (error) {
