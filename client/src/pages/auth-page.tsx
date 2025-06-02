@@ -187,11 +187,11 @@ export default function AuthPage() {
                   </p>
                 </div>
 
-                {/* Country Selection */}
+                {/* Alpha launch: Brazil only country selection */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <Flag className="h-4 w-4" />
-                    Select your country
+                    {t('auth.Select your country')}
                   </label>
                   <Select
                     value={registerData.nation}
@@ -204,7 +204,32 @@ export default function AuthPage() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose your country" />
+                      <SelectValue placeholder={t('auth.Choose your country')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Original multi-country selection (commented for future expansion):
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Flag className="h-4 w-4" />
+                    {t('auth.Select your country')}
+                  </label>
+                  <Select
+                    value={registerData.nation}
+                    onValueChange={(value) => {
+                      setRegisterData({ 
+                        ...registerData, 
+                        nation: value,
+                        paymentIdentifier: "" // Reset payment identifier when country changes
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('auth.Choose your country')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
@@ -212,6 +237,7 @@ export default function AuthPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                */
 
                 <Input
                   placeholder={t('auth.Enter your full name')}

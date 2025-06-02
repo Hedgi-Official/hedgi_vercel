@@ -39,7 +39,9 @@ const enUS = {
       'Phone Number (Optional)': 'Phone Number (Optional)',
       'Confirm Password': 'Confirm Password',
       'Enter username': 'Enter username',
-      'Select your birth date': 'Select your birth date'
+      'Select your birth date': 'Select your birth date',
+      'Select your country': 'Select your country',
+      'Choose your country': 'Choose your country'
     },
     simulator: {
       title: 'Currency Hedge Simulator',
@@ -152,7 +154,9 @@ const ptBR = {
       'Phone Number (Optional)': 'Telefone (Opcional)',
       'Confirm Password': 'Confirmar Senha',
       'Enter username': 'Digite seu nome de usuário',
-      'Select your birth date': 'Selecione sua data de nascimento'
+      'Select your birth date': 'Selecione sua data de nascimento',
+      'Select your country': 'Selecione seu país',
+      'Choose your country': 'Escolha seu país',
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
