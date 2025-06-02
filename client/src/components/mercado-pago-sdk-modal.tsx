@@ -278,22 +278,53 @@ export function MercadoPayoSDKModal({
           onSubmit: async (cardFormData: any) => {
             console.log('Payment submitted:', cardFormData)
             try {
-              // Use our pre-generated tracking token along with MP response
-              const mpToken = cardFormData?.token || 
-                             cardFormData?.payment?.id || 
-                             cardFormData?.id || 
-                             'mp_submitted'
+              // Extract the actual Mercado Pago payment ID
+              const mpPaymentId = cardFormData?.payment?.id || 
+                                 cardFormData?.id || 
+                                 cardFormData?.token || 
+                                 null
               
-              console.log('Mercado Pago token:', mpToken)
-              console.log('Using tracking token:', paymentTrackingToken)
+              if (!mpPaymentId) {
+                console.error('No payment ID received from Mercado Pago')
+                setError('Payment processing failed. Please try again.')
+                return false
+              }
               
-              // Create a combined token that includes both our tracking and MP info
-              const finalToken = `${paymentTrackingToken}_${mpToken}`
+              console.log('Mercado Pago payment ID:', mpPaymentId)
               
-              handlePaymentSuccess({ payment: { id: finalToken } })
-              return true
+              // Verify the payment with our backend before proceeding
+              const verificationResponse = await fetch('/api/payment/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  paymentId: mpPaymentId,
+                  currency: currency
+                })
+              })
+              
+              if (!verificationResponse.ok) {
+                console.error('Payment verification failed')
+                setError('Payment verification failed. Please try again.')
+                return false
+              }
+              
+              const verificationResult = await verificationResponse.json()
+              console.log('Payment verification result:', verificationResult)
+              
+              // Only proceed if payment is approved
+              if (verificationResult.status === 'approved' || verificationResult.status === 'success') {
+                // Create a combined token that includes both our tracking and verified MP payment ID
+                const finalToken = `${paymentTrackingToken}_${mpPaymentId}`
+                handlePaymentSuccess({ payment: { id: finalToken } })
+                return true
+              } else {
+                console.error('Payment not approved:', verificationResult.status)
+                setError(`Payment not approved: ${verificationResult.status}. Please try again.`)
+                return false
+              }
             } catch (submitError) {
               console.error('Submit error:', submitError)
+              setError('Payment processing error. Please try again.')
               return false
             }
           }

@@ -222,35 +222,72 @@ export default function Dashboard() {
         return createHedgeMutation.mutate({ hedgeData, paymentToken: 'disabled' });
       }
 
-      // Check if we have any payment token (including valid credit card tokens)
+      // Check if we have any payment token
       console.log('[Dashboard] Payment token type:', typeof paymentToken);
       console.log('[Dashboard] Payment token value:', paymentToken);
 
-      // For test payments or dev mode, proceed directly
-      if (paymentToken === 'test-payment-success' || paymentToken === 'Dev_Mode' || paymentToken?.startsWith('test_payment_')) {
-        console.log('[Dashboard] Test/dev payment token received, proceeding with trade creation');
+      // For test payments in development, allow bypass
+      if (paymentToken === 'test-payment-success' || paymentToken?.startsWith('test_payment_')) {
+        console.log('[Dashboard] Test payment token received, proceeding with trade creation');
         return createHedgeMutation.mutate({ hedgeData, paymentToken });
       }
 
-      // For payment tracking tokens (real payments), proceed
-      if (paymentToken && paymentToken.startsWith('payment_') && paymentToken.length > 0 && paymentToken !== 'undefined') {
-        console.log('[Dashboard] Valid payment tracking token received, proceeding with trade creation');
-        return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      // For real payment tokens, we need to verify with Mercado Pago
+      if (!paymentToken || paymentToken === 'undefined' || paymentToken === 'null') {
+        toast({
+          variant: "destructive",
+          title: "Payment Required",
+          description: "Please complete the payment process before placing the hedge.",
+        });
+        return;
       }
 
-      // For any other non-empty payment token, proceed (fallback)
-      if (paymentToken && paymentToken.length > 0 && paymentToken !== 'undefined') {
-        console.log('[Dashboard] Other valid payment token received, proceeding with trade creation');
-        return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      // Extract the actual Mercado Pago token from our tracking token
+      let mpPaymentId = paymentToken;
+      if (paymentToken.includes('_')) {
+        // If it's our combined token format, extract the MP part
+        const parts = paymentToken.split('_');
+        mpPaymentId = parts[parts.length - 1]; // Get the last part which should be the MP token
       }
 
-      // If we reach here, no valid payment token was provided
-      toast({
-        variant: "destructive",
-        title: "Payment Required",
-        description: "Please complete the payment process before placing the hedge.",
+      console.log('[Dashboard] Verifying payment with Mercado Pago, payment ID:', mpPaymentId);
+
+      // Verify the payment with Mercado Pago
+      const verificationResponse = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: mpPaymentId,
+          currency: hedgeData.baseCurrency
+        })
       });
-      return;
+
+      if (!verificationResponse.ok) {
+        console.error('[Dashboard] Payment verification failed:', verificationResponse.status);
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Failed",
+          description: "Unable to verify payment. Please ensure payment was completed successfully.",
+        });
+        return;
+      }
+
+      const verificationResult = await verificationResponse.json();
+      console.log('[Dashboard] Payment verification result:', verificationResult);
+
+      // Only proceed if payment is approved
+      if (verificationResult.status === 'approved' || verificationResult.status === 'success') {
+        console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
+        return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      } else {
+        console.log('[Dashboard] Payment not approved, status:', verificationResult.status);
+        toast({
+          variant: "destructive",
+          title: "Payment Not Completed",
+          description: `Payment status: ${verificationResult.status}. Please complete the payment before placing the hedge.`,
+        });
+        return;
+      }
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
       toast({

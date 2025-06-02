@@ -293,17 +293,31 @@ class PaymentService {
       // If we have a payment ID, check that directly
       if (paymentId) {
         try {
+          console.log(`[PaymentService] Verifying payment ID: ${paymentId}`);
           const payment = await paymentClient.get({ id: paymentId });
-          return res.status(200).json({
+          
+          console.log(`[PaymentService] Payment status from Mercado Pago:`, {
+            id: payment.id,
             status: payment.status,
+            status_detail: payment.status_detail
+          });
+          
+          // Only return success for actually approved payments
+          const isApproved = payment.status === 'approved';
+          const responseStatus = isApproved ? 'approved' : payment.status;
+          
+          return res.status(200).json({
+            status: responseStatus,
             statusDetail: payment.status_detail,
-            transactionId: payment.id
+            transactionId: payment.id,
+            verified: isApproved
           });
         } catch (paymentError) {
           console.error('Error getting payment:', paymentError);
           return res.status(404).json({
-            error: 'Payment not found',
-            details: paymentError instanceof Error ? paymentError.message : String(paymentError)
+            error: 'Payment not found or invalid',
+            details: paymentError instanceof Error ? paymentError.message : String(paymentError),
+            status: 'rejected'
           });
         }
       }
