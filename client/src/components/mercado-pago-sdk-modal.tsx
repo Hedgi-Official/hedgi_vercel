@@ -287,9 +287,12 @@ export function MercadoPayoSDKModal({
             console.log('- formData.paymentMethodId:', formData.paymentMethodId);
             console.log('- formData.selectedPaymentMethod:', formData.selectedPaymentMethod);
             console.log('- formData.paymentMethod:', formData.paymentMethod);
+            console.log('- formData.paymentMethod?.id:', formData.paymentMethod?.id);
             console.log('- formData.token:', formData.token);
             console.log('- formData.issuer_id:', formData.issuer_id);
+            console.log('- formData.issuer?.id:', formData.issuer?.id);
             console.log('- formData.installments:', formData.installments);
+            console.log('- formData.payer:', formData.payer);
             console.log('=== END DEBUG ===');
             
             if (!hedgeData) {
@@ -297,20 +300,30 @@ export function MercadoPayoSDKModal({
               return false
             }
             
-            // When using preferenceId, the payment is processed by Mercado Pago
-            // We need to create the payment directly using the SDK
+            // Extract payment data according to Mercado Pago Bricks structure
+            const paymentPayload = {
+              token: formData.token,
+              transaction_amount: Number(paymentAmount),
+              installments: Number(formData.installments) || 1,
+              payment_method_id: formData.paymentMethod?.id,
+              issuer_id: formData.issuer?.id || null,
+              payer: {
+                email: formData.payer?.email || 'user@hedgi.com',
+                identification: formData.payer?.identification
+              },
+              description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
+              currency: currency
+            };
+
+            console.log('Prepared payment payload:', JSON.stringify(paymentPayload, null, 2));
+            
             try {
               const response = await fetch('/api/payment/process', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                  formData: formData,
-                  amount: paymentAmount,
-                  currency: currency,
-                  description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-                }),
+                body: JSON.stringify(paymentPayload),
               });
 
               const result = await response.json();

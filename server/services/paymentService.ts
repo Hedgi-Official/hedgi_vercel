@@ -262,28 +262,41 @@ class PaymentService {
     }
 
     try {
-      const { formData, amount, currency, description, paymentId } = req.body;
+      const { token, transaction_amount, installments, payment_method_id, issuer_id, payer, description, currency, paymentId } = req.body;
       
       console.log(`[PaymentService] Processing payment with data:`, {
-        hasFormData: !!formData,
-        amount,
-        currency,
+        hasToken: !!token,
+        transaction_amount,
+        installments,
+        payment_method_id,
+        issuer_id,
+        hasPayer: !!payer,
         description,
+        currency,
         paymentId
       });
 
       // Handle payment verification if paymentId is provided (for webhook/callback verification)
-      if (paymentId && !formData) {
+      if (paymentId && !token) {
         return this.verifyExistingPayment(paymentId, currency, res);
       }
 
-      // Handle payment creation if formData is provided (from Bricks onSubmit)
-      if (formData) {
-        return this.createPaymentFromFormData(formData, amount, currency, description, res);
+      // Handle payment creation if token and payment_method_id are provided (from Bricks onSubmit)
+      if (token && payment_method_id) {
+        return this.createPaymentFromBricksData({
+          token,
+          transaction_amount,
+          installments,
+          payment_method_id,
+          issuer_id,
+          payer,
+          description,
+          currency
+        }, res);
       }
 
       return res.status(400).json({
-        error: 'Missing payment data. Either formData or paymentId is required.',
+        error: 'Missing payment data. Token and payment_method_id are required.',
         status: 'rejected'
       });
       
@@ -298,16 +311,20 @@ class PaymentService {
   }
 
   /**
-   * Create a payment from Bricks form data
+   * Create a payment from Bricks data
    */
-  private async createPaymentFromFormData(formData: any, amount: number, currency: string, description: string, res: Response): Promise<Response> {
+  private async createPaymentFromBricksData(paymentData: any, res: Response): Promise<Response> {
     try {
-      console.log(`[PaymentService] Creating payment from form data:`, {
-        amount,
+      const { token, transaction_amount, installments, payment_method_id, issuer_id, payer, description, currency } = paymentData;
+
+      console.log(`[PaymentService] Creating payment from Bricks data:`, {
+        transaction_amount,
+        payment_method_id,
+        installments,
         currency,
-        description,
-        formDataKeys: Object.keys(formData || {}),
-        fullFormData: JSON.stringify(formData, null, 2)
+        hasToken: !!token,
+        hasIssuer: !!issuer_id,
+        hasPayer: !!payer
       });
 
       // Determine which Mercado Pago instance to use based on currency
@@ -336,76 +353,64 @@ class PaymentService {
       // Initialize the Payment resource
       const paymentClient = new Payment(client);
 
-      // Extract payment data from the Bricks form data structure
-      // The structure may vary depending on the payment method (credit card, Pix, etc.)
-      let paymentData: any = {
-        transaction_amount: Number(amount),
+      // Prepare payment data according to MercadoPago API structure
+      const mpPaymentData: any = {
+        transaction_amount: Number(transaction_amount),
+        token: token,
         description: description,
+        installments: Number(installments) || 1,
+        payment_method_id: payment_method_id,
         payer: {
-          email: formData.payer?.email || 'user@hedgi.com'
+          email: payer?.email || 'user@hedgi.com'
         }
       };
 
-      // Handle different payment method structures from Bricks
-      if (formData.token) {
-        // Credit card payment
-        paymentData.token = formData.token;
-        paymentData.installments = Number(formData.installments) || 1;
-        paymentData.payment_method_id = formData.payment_method_id;
-        paymentData.issuer_id = formData.issuer_id;
-      } else if (formData.payment_method_id) {
-        // Other payment methods (like Pix)
-        paymentData.payment_method_id = formData.payment_method_id;
-      } else {
-        // Try to extract from nested structure
-        console.log('[PaymentService] Trying to extract payment method from nested structure...');
-        
-        // Check if data is nested differently
-        const nestedData = formData.selectedPaymentMethod || formData.paymentMethod || formData;
-        if (nestedData && nestedData.id) {
-          paymentData.payment_method_id = nestedData.id;
-        } else {
-          console.error('[PaymentService] Could not find payment_method_id in form data');
-          return res.status(400).json({
-            error: 'Invalid payment data: missing payment method',
-            status: 'rejected',
-            details: 'payment_method_id is required but not found in form data'
-          });
-        }
+      // Add issuer_id if provided (required for some payment methods)
+      if (issuer_id) {
+        mpPaymentData.issuer_id = issuer_id;
       }
 
       // Add identification if provided
-      if (formData.payer?.identification) {
-        paymentData.payer.identification = formData.payer.identification;
+      if (payer?.identification) {
+        mpPaymentData.payer.identification = payer.identification;
       } else {
         // Use default identification based on currency
-        paymentData.payer.identification = {
+        mpPaymentData.payer.identification = {
           type: currency === 'BRL' ? 'CPF' : 'CURP',
           number: currency === 'BRL' ? '11111111111' : '123456789'
         };
       }
 
-      console.log(`[PaymentService] Prepared payment data:`, {
-        ...paymentData,
-        token: paymentData.token ? '[TOKEN_PROVIDED]' : '[NO_TOKEN]',
+      console.log(`[PaymentService] Sending payment data to MercadoPago:`, {
+        ...mpPaymentData,
+        token: mpPaymentData.token ? '[TOKEN_PROVIDED]' : '[NO_TOKEN]',
         payer: {
-          ...paymentData.payer,
-          identification: paymentData.payer.identification ? '[IDENTIFICATION_PROVIDED]' : '[NO_IDENTIFICATION]'
+          ...mpPaymentData.payer,
+          identification: mpPaymentData.payer.identification ? '[IDENTIFICATION_PROVIDED]' : '[NO_IDENTIFICATION]'
         }
       });
 
       // Validate required fields
-      if (!paymentData.payment_method_id) {
-        console.error('[PaymentService] payment_method_id is still missing after processing');
+      if (!mpPaymentData.payment_method_id) {
+        console.error('[PaymentService] payment_method_id is missing');
         return res.status(400).json({
           error: 'Invalid payment data: payment_method_id is required',
           status: 'rejected',
-          details: 'Could not extract payment_method_id from form data'
+          details: 'payment_method_id field cannot be null'
+        });
+      }
+
+      if (!mpPaymentData.token) {
+        console.error('[PaymentService] token is missing');
+        return res.status(400).json({
+          error: 'Invalid payment data: token is required',
+          status: 'rejected',
+          details: 'payment token field cannot be null'
         });
       }
 
       // Create the payment
-      const payment = await paymentClient.create({ body: paymentData });
+      const payment = await paymentClient.create({ body: mpPaymentData });
       
       console.log(`[PaymentService] Payment creation response:`, {
         id: payment.id,
