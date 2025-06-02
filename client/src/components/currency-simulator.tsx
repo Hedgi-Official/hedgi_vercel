@@ -183,22 +183,45 @@ export function CurrencySimulator({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Alpha launch: Fixed currency pair BRL->USD */}
-          <div className="bg-muted p-4 rounded-lg">
-            <div className="flex items-center justify-center space-x-4">
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Base Currency</div>
-                <div className="text-lg font-semibold">BRL</div>
-              </div>
-              <div className="text-2xl">→</div>
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground">Target Currency</div>
-                <div className="text-lg font-semibold">USD</div>
-              </div>
+          {/* Alpha launch: BRL/USD currency selectors only */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Globe className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.targetCurrency')}
+              </label>
+              <Select
+                value={targetCurrency}
+                onValueChange={() => {}} // Disabled for alpha launch
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.baseCurrency')}
+              </label>
+              <Select
+                value={baseCurrency}
+                onValueChange={() => {}} // Disabled for alpha launch
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">BRL</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Original currency selectors (commented for alpha launch):
+          {/* Original multi-currency selectors (commented for future expansion):
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
