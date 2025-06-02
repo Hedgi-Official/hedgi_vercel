@@ -31,7 +31,7 @@ export default function LandingPage() {
             </p>
             <Button 
               size="lg" 
-              onClick={() => navigate('/under-construction')}
+              onClick={() => navigate('/auth')}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {t('Start Hedging Now')}
