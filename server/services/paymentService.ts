@@ -275,7 +275,9 @@ class PaymentService {
       
       // Handle test payments in development only - be more restrictive
       if (process.env.NODE_ENV === 'development' && 
-          (paymentId.startsWith('test_payment_') || paymentId.startsWith('test_mp_'))) {
+          (paymentId.startsWith('test_payment_') || 
+           paymentId.startsWith('test_mp_') || 
+           paymentId.startsWith('test_'))) {
         console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
         return res.status(200).json({
           status: 'approved',
@@ -283,6 +285,17 @@ class PaymentService {
           transactionId: paymentId,
           verified: true,
           test: true
+        });
+      }
+      
+      // Validate payment ID format before making API call
+      const paymentIdStr = String(paymentId).trim();
+      if (!paymentIdStr || paymentIdStr.length < 8) {
+        console.error(`[PaymentService] Invalid payment ID format: ${paymentIdStr}`);
+        return res.status(400).json({
+          error: 'Invalid payment ID format',
+          status: 'rejected',
+          details: 'Payment ID must be at least 8 characters long'
         });
       }
       

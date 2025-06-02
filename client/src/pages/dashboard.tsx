@@ -255,6 +255,28 @@ export default function Dashboard() {
         })
       });
 
+      console.log('[Dashboard] Payment verification response status:', verificationResponse.status);
+
+      if (!verificationResponse.ok) {
+        let errorMessage = 'Payment verification failed';
+        try {
+          const errorData = await verificationResponse.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+          console.error('[Dashboard] Payment verification failed with data:', errorData);
+        } catch {
+          const errorText = await verificationResponse.text();
+          console.error('[Dashboard] Payment verification failed with text:', errorText);
+          errorMessage = errorText || errorMessage;
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Failed",
+          description: errorMessage,
+        });
+        return;
+      }
+
       let verificationResult;
       try {
         verificationResult = await verificationResponse.json();
