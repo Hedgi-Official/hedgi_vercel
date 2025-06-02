@@ -262,163 +262,31 @@ class PaymentService {
     }
 
     try {
-      const { formData, amount, currency, description } = req.body;
-      
-      console.log('[PaymentService] Processing payment with data:', {
-        formData: formData ? Object.keys(formData) : 'null',
-        amount,
-        currency,
-        description: description ? description.substring(0, 50) + '...' : 'null'
-      });
-
-      // For credit card payments, we need to create the payment using the token
-      if (formData && formData.token && formData.payment_method_id) {
-        console.log('[PaymentService] Processing credit card payment with token:', formData.token.substring(0, 10) + '...');
-        
-        // Call real Mercado Pago API for all valid tokens
-        // Determine which Mercado Pago instance to use based on currency
-        let accessToken = '';
-        if (currency === 'BRL') {
-          accessToken = this.mpBR.accessToken;
-        } else if (currency === 'MXN') {
-          accessToken = this.mpMX.accessToken;
-        } else {
-          accessToken = this.mpBR.accessToken; // Default to BR
-        }
-        
-        if (!accessToken) {
-          console.error('[PaymentService] No access token available for payment creation');
-          return res.status(500).json({
-            error: 'Payment service configuration error',
-            status: 'rejected'
-          });
-        }
-
-        // Initialize the client with MercadoPago API
-        const client = new MercadoPagoConfig({ 
-          accessToken: accessToken 
-        });
-        
-        const paymentClient = new Payment(client);
-        
-        // Create payment body for Mercado Pago following the correct structure
-        const paymentBody = {
-          transaction_amount: parseFloat(amount),
-          token: formData.token,
-          description: description || 'Hedgi Currency Hedge',
-          installments: parseInt(formData.installments) || 1,
-          payment_method_id: formData.payment_method_id,
-          issuer_id: formData.issuer_id ? parseInt(formData.issuer_id) : undefined,
-          payer: {
-            email: formData.payer?.email || 'user@hedgi.com',
-            identification: formData.payer?.identification || {
-              type: 'CPF',
-              number: '12345678909'
-            },
-            first_name: formData.payer?.first_name || 'Hedgi User'
-          }
-        };
-
-        // Add idempotency key header for payment creation
-        const requestOptions = {
-          idempotencyKey: `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        };
-
-        console.log('[PaymentService] Creating payment with body:', {
-          transaction_amount: paymentBody.transaction_amount,
-          payment_method_id: paymentBody.payment_method_id,
-          installments: paymentBody.installments,
-          payer_email: paymentBody.payer.email
-        });
-
-        try {
-          const payment = await paymentClient.create({ 
-            body: paymentBody,
-            requestOptions: requestOptions
-          });
-          
-          console.log('[PaymentService] Payment created successfully:', {
-            id: payment.id,
-            status: payment.status,
-            status_detail: payment.status_detail,
-            amount: payment.transaction_amount,
-            payment_method_id: payment.payment_method_id
-          });
-
-          return res.status(200).json({
-            status: payment.status || 'unknown',
-            statusDetail: payment.status_detail,
-            payment_id: payment.id,
-            verified: payment.status === 'approved',
-            test: false,
-            date_approved: payment.date_approved,
-            payment_method_id: payment.payment_method_id
-          });
-
-        } catch (createError) {
-          console.error('[PaymentService] Error creating payment:', createError);
-          
-          // Log more detailed error information
-          if (createError && typeof createError === 'object') {
-            console.error('[PaymentService] Error details:', {
-              message: (createError as any).message,
-              status: (createError as any).status,
-              cause: (createError as any).cause
-            });
-          }
-          
-          return res.status(500).json({
-            error: 'Failed to create payment',
-            status: 'rejected',
-            details: createError instanceof Error ? createError.message : String(createError)
-          });
-        }
-      }
-
-      // If we don't have the required credit card data, look for an existing payment ID
-      let paymentId = null;
-      
-      if (formData) {
-        // Try multiple ways to extract payment ID from Mercado Pago response
-        paymentId = formData.id || 
-                   formData.payment_id || 
-                   formData.payment?.id || 
-                   formData.transaction_id;
-      }
+      const { paymentId, currency } = req.body;
       
       if (!paymentId) {
-        console.error('[PaymentService] No payment token or ID found in form data:', {
-          hasToken: !!formData?.token,
-          hasPaymentMethodId: !!formData?.payment_method_id,
-          hasId: !!formData?.id,
-          formDataKeys: formData ? Object.keys(formData) : []
-        });
         return res.status(400).json({
-          error: 'No payment token or ID received from Mercado Pago',
+          error: 'Missing payment ID',
           status: 'rejected'
         });
       }
       
-      console.log(`[PaymentService] Extracted payment ID: ${paymentId}`);
+      console.log(`[PaymentService] Verifying payment ID: ${paymentId}`);
       
       // Handle test payments in development only - be more restrictive
       if (process.env.NODE_ENV === 'development' && 
-          (String(paymentId).startsWith('test_payment_') || 
-           String(paymentId).startsWith('test_mp_') || 
-           String(paymentId).startsWith('test_'))) {
+          (paymentId.startsWith('test_payment_') || 
+           paymentId.startsWith('test_mp_') || 
+           paymentId.startsWith('test_'))) {
         console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
         return res.status(200).json({
           status: 'approved',
           statusDetail: 'test_payment_dev',
-          payment_id: paymentId,
+          transactionId: paymentId,
           verified: true,
           test: true
         });
       }
-
-
-
-
       
       // Validate payment ID format before making API call
       const paymentIdStr = String(paymentId).trim();
@@ -489,7 +357,7 @@ class PaymentService {
         return res.status(200).json({
           status: 'approved',
           statusDetail: payment.status_detail,
-          payment_id: payment.id,
+          transactionId: payment.id,
           verified: true,
           amount: payment.transaction_amount,
           currency: payment.currency_id

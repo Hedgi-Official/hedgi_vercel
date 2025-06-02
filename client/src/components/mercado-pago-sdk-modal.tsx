@@ -60,7 +60,6 @@ export function MercadoPayoSDKModal({
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
   const [paymentBrick, setPaymentBrick] = useState<any>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
 
   const isPortuguese = i18n.language === 'pt-BR'
 
@@ -96,13 +95,6 @@ export function MercadoPayoSDKModal({
       return
     }
 
-    // Reset state when modal opens
-    setLoading(true)
-    setError(null)
-    setMp(null)
-    setPreferenceId(null)
-    setPaymentBrick(null)
-
     // Generate unique payment tracking token when modal opens
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     setPaymentTrackingToken(trackingToken)
@@ -134,13 +126,6 @@ export function MercadoPayoSDKModal({
         setLoading(false)
       })
   }, [isOpen, hedgeData])
-
-  // Cleanup effect when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      cleanupPaymentBrick()
-    }
-  }, [isOpen])
 
   const createPreference = async (retryCount = 0) => {
     console.log('[PaymentModal] createPreference called - retryCount:', retryCount)
@@ -244,7 +229,7 @@ export function MercadoPayoSDKModal({
       container.innerHTML = ''
 
       // Validate the public key format
-      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY') {
+      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY' || !publicKey.startsWith('TEST-') && !publicKey.startsWith('APP_USR-')) {
         console.error('Invalid public key format:', publicKey)
         setError('Invalid payment configuration. Please use the test payment option.')
         setLoading(false)
@@ -274,7 +259,9 @@ export function MercadoPayoSDKModal({
 
       const brickSettings = {
         initialization: {
-          preferenceId: prefId
+          preferenceId: prefId,
+          amount: paymentAmount,     // Must be > 0
+          currencyId: currency       // e.g. "BRL" or "USD"
         },
         callbacks: {
           onReady: () => {
@@ -289,49 +276,47 @@ export function MercadoPayoSDKModal({
             setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
           },
-          onSubmit: async (formData: any) => {
-            console.log('Payment form submitted - formData:', JSON.stringify(formData, null, 2))
-            
-            // In Bricks v2, we can optionally save the card token here for future use
-            if (formData.token) {
-              console.log('Card token available for saving:', formData.token.substring(0, 10) + '...')
-              // Optional: Save token to backend for future payments
-            }
-            
-            // Bricks will handle the payment creation automatically
-            // We just need to indicate that we're processing
-            return true
-          },
-          onSuccess: async (paymentInfo: any) => {
-            console.log('Payment SUCCESS - paymentInfo:', JSON.stringify(paymentInfo, null, 2))
-            
-            if (!hedgeData) {
-              setError('Missing hedge data for payment processing.')
-              return
-            }
-
-            // Payment was approved by Mercado Pago!
-            // Now we can safely proceed with our business logic
-            try {
-              const paymentId = paymentInfo.id || paymentInfo.payment_id
+          onSubmit: async (cardFormData: any) => {
+              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
               
-              if (paymentInfo.payment_method_id === 'pix') {
-                toast({
-                  title: isPortuguese ? 'Pagamento PIX Aprovado' : 'PIX Payment Approved',
-                  description: isPortuguese 
-                    ? 'Seu pagamento PIX foi processado com sucesso.'
-                    : 'Your PIX payment was processed successfully.',
-                });
+              if (!hedgeData) {
+                setError('Missing hedge data for payment processing.')
+                return false
               }
               
-              console.log('Payment approved with ID:', paymentId)
-              handlePaymentSuccess({ payment: { id: paymentId } })
-              
-            } catch (successError) {
-              console.error('Error in payment success handler:', successError)
-              setError('Payment was successful but there was an error processing your order.')
+              // Make a server request to process the payment with MercadoPago
+              try {
+                const response = await fetch('/api/payment/process', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    formData: cardFormData,
+                    amount: paymentAmount,
+                    currency: currency,
+                    description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
+                  }),
+                });
+
+                const result = await response.json();
+                console.log('Payment processing result:', result);
+
+                if (response.ok && result.status === 'approved') {
+                  console.log('Payment approved with ID:', result.payment_id);
+                  handlePaymentSuccess({ payment: { id: result.payment_id } });
+                  return true;
+                } else {
+                  console.error('Payment not approved:', result);
+                  setError(result.message || 'Payment was not approved. Please try again.');
+                  return false;
+                }
+              } catch (submitError) {
+                console.error('Payment submit error:', submitError);
+                setError('Payment processing error. Please try again.');
+                return false;
+              }
             }
-          }
         },
         customization: {
           visual: {
@@ -403,18 +388,17 @@ export function MercadoPayoSDKModal({
         setPaymentBrick(null)
       }
       
-      // Clear both possible container IDs
-      const container1 = document.getElementById('payment-brick-container')
-      const container2 = document.getElementById('paymentBrick')
-      if (container1) container1.innerHTML = ''
-      if (container2) container2.innerHTML = ''
+      // Clear the container
+      const container = document.getElementById('payment-brick-container')
+      if (container) {
+        container.innerHTML = ''
+      }
       
-      // Reset all state properly
+      // Reset all state
       setMp(null)
       setPreferenceId(null)
-      setLoading(false) // Set to false to prevent infinite loading
+      setLoading(true)
       setError(null)
-      setPaymentTrackingToken(null)
     } catch (error) {
       console.warn('Error cleaning up payment brick:', error)
     }
