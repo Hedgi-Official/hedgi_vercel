@@ -244,7 +244,7 @@ export function MercadoPayoSDKModal({
       container.innerHTML = ''
 
       // Validate the public key format
-      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY' || !publicKey.startsWith('TEST-') && !publicKey.startsWith('APP_USR-')) {
+      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY') {
         console.error('Invalid public key format:', publicKey)
         setError('Invalid payment configuration. Please use the test payment option.')
         setLoading(false)
