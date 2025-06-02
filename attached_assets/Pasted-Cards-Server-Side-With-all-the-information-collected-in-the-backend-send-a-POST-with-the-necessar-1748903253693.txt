@@ -1,0 +1,59 @@
+Cards
+Server-Side
+
+With all the information collected in the backend , send a POST with the necessary attributes to the /v1/payments endpoint and execute the request or, if you prefer, send the information using our SDKs.
+
+Important
+Additionally, you must send the attribute X-Idempotency-Key. Filling it out is important to ensure the execution and re-execution of requests safely, without the risk of performing the same action more than once by mistake. To do so, update our SDK library or generate a V4 UUID and send it in the header of your calls.
+          
+const mercadopago = require('mercadopago');
+import { MercadoPagoConfig, Payment } from '@src/index';
+
+const client = new MercadoPagoConfig({ accessToken: '<ACCESS_TOKEN>', options: { timeout: 5000 } });
+
+const payment = new Payment(client);
+
+payment
+  .create({
+    body: {
+      transaction_amount: 100,
+      token: '<TOKEN>',
+      description: '<DESCRIPTION>',
+      installments: 1,
+      payment_method_id: '<PAYMENT_METHOD_ID>',
+      issuer_id: 310,
+      payer: {
+        email: '<EMAIL>',
+        identification: {
+          number: '12345678909',
+          type: 'CPF',
+        },
+      },
+    },
+  }).then(console.log).catch(console.log);
+
+        
+Response
+{
+    "status": "approved",
+    "status_detail": "accredited",
+    "id": 3055677,
+    "date_approved": "2019-02-23T00:01:10.000-04:00",
+    "payer": {
+        ...
+    },
+    "payment_method_id": "visa",
+    "payment_type_id": "credit_card",
+    "refunds": [],
+    ...
+}
+Brick's onSubmit callback contains all the data needed to create a payment, but if you wish, you can include additional details, which can make it easier for the buyer to recognize the purchase and increase the payment approval rate.
+
+To do this, add relevant fields to the submitted object, which comes in the response from Brick's onSubmit callback . Some of these fields are: (this field can be displayed on issued invoices) and (purchase ID on your website, which allows for easier recognition of the purchase). You can also add additional data about the buyer.descriptionexternal_reference
+
+Important
+We recommend adopting the 3DS 2.0 protocol, in order to increase the probability of approval of your payments, which can be done as described here.
+Learn about all the fields available to make a complete payment in the API References .
+
+Test your integration
+Once the integration is complete, you can test receiving payments. For more information, visit the Make a test purchase section .

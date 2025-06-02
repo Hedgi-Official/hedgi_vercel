@@ -276,8 +276,22 @@ export function MercadoPayoSDKModal({
             setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
           },
-          onSubmit: async (cardFormData: any) => {
-              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
+          onSubmit: async (formData: any) => {
+              console.log('=== PAYMENT SUBMIT DEBUG ===');
+              console.log('Raw formData received from Bricks onSubmit:', JSON.stringify(formData, null, 2));
+              console.log('FormData keys:', Object.keys(formData || {}));
+              console.log('FormData type:', typeof formData);
+              
+              // Log specific fields we're looking for
+              console.log('Checking for payment_method_id in various locations:');
+              console.log('- formData.payment_method_id:', formData.payment_method_id);
+              console.log('- formData.paymentMethodId:', formData.paymentMethodId);
+              console.log('- formData.selectedPaymentMethod:', formData.selectedPaymentMethod);
+              console.log('- formData.paymentMethod:', formData.paymentMethod);
+              console.log('- formData.token:', formData.token);
+              console.log('- formData.issuer_id:', formData.issuer_id);
+              console.log('- formData.installments:', formData.installments);
+              console.log('=== END DEBUG ===');
               
               if (!hedgeData) {
                 setError('Missing hedge data for payment processing.')
@@ -292,7 +306,7 @@ export function MercadoPayoSDKModal({
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    formData: cardFormData,
+                    formData: formData,
                     amount: paymentAmount,
                     currency: currency,
                     description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
@@ -308,7 +322,7 @@ export function MercadoPayoSDKModal({
                   return true;
                 } else {
                   console.error('Payment not approved:', result);
-                  setError(result.message || 'Payment was not approved. Please try again.');
+                  setError(result.error || result.details || 'Payment was not approved. Please try again.');
                   return false;
                 }
               } catch (submitError) {
