@@ -306,7 +306,8 @@ class PaymentService {
         amount,
         currency,
         description,
-        paymentMethod: formData.payment_method_id
+        formDataKeys: Object.keys(formData || {}),
+        fullFormData: JSON.stringify(formData, null, 2)
       });
 
       // Determine which Mercado Pago instance to use based on currency
@@ -335,27 +336,73 @@ class PaymentService {
       // Initialize the Payment resource
       const paymentClient = new Payment(client);
 
-      // Prepare payment data according to MercadoPago API
-      const paymentData: any = {
+      // Extract payment data from the Bricks form data structure
+      // The structure may vary depending on the payment method (credit card, Pix, etc.)
+      let paymentData: any = {
         transaction_amount: Number(amount),
-        token: formData.token,
         description: description,
-        installments: Number(formData.installments) || 1,
-        payment_method_id: formData.payment_method_id,
-        issuer_id: formData.issuer_id,
         payer: {
-          email: formData.payer?.email || 'user@hedgi.com',
-          identification: formData.payer?.identification || {
-            type: currency === 'BRL' ? 'CPF' : 'CURP',
-            number: currency === 'BRL' ? '11111111111' : '123456789'
-          }
+          email: formData.payer?.email || 'user@hedgi.com'
         }
       };
 
-      console.log(`[PaymentService] Sending payment data to MercadoPago:`, {
+      // Handle different payment method structures from Bricks
+      if (formData.token) {
+        // Credit card payment
+        paymentData.token = formData.token;
+        paymentData.installments = Number(formData.installments) || 1;
+        paymentData.payment_method_id = formData.payment_method_id;
+        paymentData.issuer_id = formData.issuer_id;
+      } else if (formData.payment_method_id) {
+        // Other payment methods (like Pix)
+        paymentData.payment_method_id = formData.payment_method_id;
+      } else {
+        // Try to extract from nested structure
+        console.log('[PaymentService] Trying to extract payment method from nested structure...');
+        
+        // Check if data is nested differently
+        const nestedData = formData.selectedPaymentMethod || formData.paymentMethod || formData;
+        if (nestedData && nestedData.id) {
+          paymentData.payment_method_id = nestedData.id;
+        } else {
+          console.error('[PaymentService] Could not find payment_method_id in form data');
+          return res.status(400).json({
+            error: 'Invalid payment data: missing payment method',
+            status: 'rejected',
+            details: 'payment_method_id is required but not found in form data'
+          });
+        }
+      }
+
+      // Add identification if provided
+      if (formData.payer?.identification) {
+        paymentData.payer.identification = formData.payer.identification;
+      } else {
+        // Use default identification based on currency
+        paymentData.payer.identification = {
+          type: currency === 'BRL' ? 'CPF' : 'CURP',
+          number: currency === 'BRL' ? '11111111111' : '123456789'
+        };
+      }
+
+      console.log(`[PaymentService] Prepared payment data:`, {
         ...paymentData,
-        token: formData.token ? '[TOKEN_PROVIDED]' : '[NO_TOKEN]'
+        token: paymentData.token ? '[TOKEN_PROVIDED]' : '[NO_TOKEN]',
+        payer: {
+          ...paymentData.payer,
+          identification: paymentData.payer.identification ? '[IDENTIFICATION_PROVIDED]' : '[NO_IDENTIFICATION]'
+        }
       });
+
+      // Validate required fields
+      if (!paymentData.payment_method_id) {
+        console.error('[PaymentService] payment_method_id is still missing after processing');
+        return res.status(400).json({
+          error: 'Invalid payment data: payment_method_id is required',
+          status: 'rejected',
+          details: 'Could not extract payment_method_id from form data'
+        });
+      }
 
       // Create the payment
       const payment = await paymentClient.create({ body: paymentData });
