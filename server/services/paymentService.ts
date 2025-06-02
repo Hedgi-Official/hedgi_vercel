@@ -313,7 +313,7 @@ class PaymentService {
         
         const paymentClient = new Payment(client);
         
-        // Create payment body for Mercado Pago
+        // Create payment body for Mercado Pago following the correct structure
         const paymentBody = {
           transaction_amount: parseFloat(amount),
           token: formData.token,
@@ -323,8 +323,17 @@ class PaymentService {
           issuer_id: formData.issuer_id ? parseInt(formData.issuer_id) : undefined,
           payer: {
             email: formData.payer?.email || 'user@hedgi.com',
-            identification: formData.payer?.identification
+            identification: formData.payer?.identification || {
+              type: 'CPF',
+              number: '12345678909'
+            },
+            first_name: formData.payer?.first_name || 'Hedgi User'
           }
+        };
+
+        // Add idempotency key header for payment creation
+        const requestOptions = {
+          idempotencyKey: `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
 
         console.log('[PaymentService] Creating payment with body:', {
@@ -335,12 +344,17 @@ class PaymentService {
         });
 
         try {
-          const payment = await paymentClient.create({ body: paymentBody });
+          const payment = await paymentClient.create({ 
+            body: paymentBody,
+            requestOptions: requestOptions
+          });
+          
           console.log('[PaymentService] Payment created successfully:', {
             id: payment.id,
             status: payment.status,
             status_detail: payment.status_detail,
-            amount: payment.transaction_amount
+            amount: payment.transaction_amount,
+            payment_method_id: payment.payment_method_id
           });
 
           return res.status(200).json({
@@ -348,11 +362,23 @@ class PaymentService {
             statusDetail: payment.status_detail,
             payment_id: payment.id,
             verified: payment.status === 'approved',
-            test: false
+            test: false,
+            date_approved: payment.date_approved,
+            payment_method_id: payment.payment_method_id
           });
 
         } catch (createError) {
           console.error('[PaymentService] Error creating payment:', createError);
+          
+          // Log more detailed error information
+          if (createError && typeof createError === 'object') {
+            console.error('[PaymentService] Error details:', {
+              message: createError.message,
+              status: createError.status,
+              cause: createError.cause
+            });
+          }
+          
           return res.status(500).json({
             error: 'Failed to create payment',
             status: 'rejected',
