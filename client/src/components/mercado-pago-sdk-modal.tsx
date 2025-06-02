@@ -266,9 +266,6 @@ export function MercadoPayoSDKModal({
           paymentMethods: {
             creditCard: "all",
             debitCard: "all",
-            ticket: "off",
-            bankTransfer: "off", 
-            atm: "off",
             maxInstallments: 12
           }
         },
