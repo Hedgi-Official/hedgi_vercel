@@ -1,0 +1,440 @@
+Below is a minimal end-to-end example of how you can use Mercado Pago’s Bricks (v2) integration to (1) create a preference on your backend and (2) render a “card” checkout form on the frontend, waiting for the payment to be approved before you trigger any subsequent action.
+
+1. Backend: Create a /api/create_preference endpoint
+On your server (e.g. Next.js API route, Express.js, etc.), install the Mercado Pago SDK and expose a small endpoint that returns a preferenceId. We will then use that preferenceId on the frontend to instantiate Bricks.
+
+bash
+Copy
+Edit
+npm install mercadopago
+js
+Copy
+Edit
+// /pages/api/create_preference.ts   (Next.js) 
+// OR  server/routes/payment.ts      (Express/Node)
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+import mercadopago from 'mercadopago'
+
+// 1) Configure your Mercado Pago access token (do NOT hard-code in production)
+mercadopago.configure({
+  access_token: process.env.MP_ACCESS_TOKEN, 
+})
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<{ preferenceId?: string; error?: string }>
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    // 2) Build a preference object. Customize items, back_urls, etc. as needed:
+    const preferenceData = {
+      items: [
+        {
+          title: 'My Awesome Product',
+          quantity: 1,
+          unit_price: 100.0,
+          currency_id: 'USD', // or 'ARS', 'BRL', etc.
+        },
+      ],
+      // If you want to redirect automatically to your front-end on approval:
+      back_urls: {
+        success: 'https://your-frontend.com/payment/success',
+        failure: 'https://your-frontend.com/payment/failure',
+        pending: 'https://your-frontend.com/payment/pending',
+      },
+      auto_return: 'approved',
+      // You can also add webhook_url or notification_url if you want server-side confirmations
+    }
+
+    // 3) Create the preference
+    const mpResponse = await mercadopago.preferences.create(preferenceData)
+    const preferenceId = mpResponse.body.id
+
+    // 4) Return only the preference ID to the front end
+    return res.status(200).json({ preferenceId })
+  } catch (err: any) {
+    console.error('MP Preference error:', err)
+    return res.status(500).json({ error: 'Could not create preference' })
+  }
+}
+Notes:
+
+Environment variable:
+
+Set MP_ACCESS_TOKEN (your Mercado Pago Access Token) in your .env or hosting environment.
+
+Customize items:
+
+In items, you decide the product name, price, currency, quantity, etc.
+
+back_urls & auto_return:
+
+If you configure auto_return: 'approved', Mercado Pago will redirect the user to your success URL as soon as the payment is approved.
+
+Alternatively, you can listen for webhooks to verify server‐side, but for a simple flow, auto_return is often enough.
+
+2. Frontend: Load Mercado Pago Bricks and render the card form
+Below is a React + TypeScript example (e.g. in Next.js or Create React App). The idea is:
+
+On component mount, do a POST /api/create_preference to get preferenceId.
+
+Dynamically inject the Bricks SDK (https://sdk.mercadopago.com/js/v2).
+
+Initialize MercadoPago with your public key.
+
+Call mp.bricks().create('card', ...) with the returned preferenceId.
+
+In the callbacks, wait for onSuccess (payment approved) before proceeding.
+
+tsx
+Copy
+Edit
+// components/MercadoPagoCardForm.tsx
+import React, { useEffect, useState } from 'react'
+
+// 1) Make sure you have your PUBLIC KEY in an env var (exposed to the browser).
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY!;
+
+type PreferenceResponse = {
+  preferenceId: string
+}
+
+export const MercadoPagoCardForm: React.FC = () => {
+  const [preferenceId, setPreferenceId] = useState<string | null>(null)
+  const [didLoadScript, setDidLoadScript] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState<boolean>(false)
+
+  // 2) Step 1: Create the preference on mount
+  useEffect(() => {
+    fetch('/api/create_preference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Could not fetch preference')
+        const data = (await res.json()) as PreferenceResponse
+        setPreferenceId(data.preferenceId)
+      })
+      .catch((err) => {
+        console.error(err)
+        setErrorMessage('Error creating Mercado Pago preference.')
+      })
+  }, [])
+
+  // 3) Step 2: Dynamically load the Bricks SDK only once we have a preferenceId
+  useEffect(() => {
+    if (!preferenceId || didLoadScript) return
+
+    const script = document.createElement('script')
+    script.src = 'https://sdk.mercadopago.com/js/v2'
+    script.type = 'text/javascript'
+    script.async = true
+
+    script.onload = () => {
+      setDidLoadScript(true)
+    }
+    script.onerror = () => {
+      console.error('Failed to load Mercado Pago SDK')
+      setErrorMessage('Could not load Mercado Pago SDK.')
+    }
+
+    document.body.appendChild(script)
+  }, [preferenceId, didLoadScript])
+
+  // 4) Step 3: Once SDK is loaded, initialize Bricks & render the card form
+  useEffect(() => {
+    if (!didLoadScript || !preferenceId) return
+    if (!window.MercadoPago) {
+      console.error('window.MercadoPago not found')
+      return
+    }
+
+    // @ts-ignore
+    const mp = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'en-US' })
+
+    mp.bricks()
+      .create('card', 'mp-card-container', {
+        initialization: {
+          // Instead of specifying `amount`, we pass preferenceId directly:
+          preferenceId,
+        },
+        callbacks: {
+          // The user typed card data and clicked “Pagar”. Mercado Pago will try to create the payment.
+          onSubmit: (cardFormData: any) => {
+            setIsProcessing(true)
+            // Here cardFormData has all the card fields (token, installments, payer info, etc.)
+            // But ⚠️ Bricks v2 automatically does the payment request for you. 
+            //
+            // So you do NOT need to hit your backend again to create the payment. 
+            // The onSuccess callback below will give you full PAYMENT info.
+          },
+          onReady: () => {
+            // The form is ready to be used. You can remove any “Loading…” indicator.
+            setIsProcessing(false)
+          },
+          onError: (error: any) => {
+            console.error('Bricks error:', error)
+            setErrorMessage('There was an error processing your payment. Please try again.')
+            setIsProcessing(false)
+          },
+          onSuccess: (paymentInfo: any) => {
+            // ✅ Payment was approved! 
+            //    `paymentInfo` contains e.g. payment id, status, etc.
+            console.log('Payment info:', paymentInfo)
+
+            // 5) At this point, you can safely trigger any subsequent action,
+            //    because the payment is already approved.
+            //    For example: create your order in the database, redirect to “thank you” page, etc.
+            //
+            //    Example:
+            //    fetch('/api/order_complete', {
+            //      method: 'POST',
+            //      headers: { 'Content-Type': 'application/json' },
+            //      body: JSON.stringify({ paymentId: paymentInfo.id }),
+            //    }).then(...)
+            //
+            //    Or simply:
+            //    router.push('/thank-you')
+          },
+        },
+        customization: {
+          // You can customize fonts, colors, placeholders, etc.
+          // By default, Mercado Pago styles the card inputs
+          paymentTypes: ['card'], // in case you want to allow only 'card'
+          visual: {
+            style: {
+              // e.g. 'style': { buttonBackgroundColor: '#008F39', // green… }
+            },
+          },
+        },
+      })
+      .catch((err: any) => {
+        console.error('Bricks.create error:', err)
+        setErrorMessage('Failed to render Mercado Pago form.')
+      })
+  }, [didLoadScript, preferenceId])
+
+  return (
+    <div>
+      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+
+      {/* 4) Where Bricks will inject the card form */}
+      <div id="mp-card-container" style={{ minHeight: '400px' }}>
+        {isProcessing && <p>Loading payment form…</p>}
+      </div>
+    </div>
+  )
+}
+Explanation of key points
+/api/create_preference (backend)
+
+We use mercadopago.preferences.create(...) to generate a preferenceId.
+
+We return only preferenceId to the client.
+
+Keep your MP_ACCESS_TOKEN private (only on server).
+
+Loading <script src="https://sdk.mercadopago.com/js/v2">
+
+We wait until we have the preferenceId and then inject the Bricks SDK tag.
+
+Once it’s loaded (onload), we call new window.MercadoPago(...).
+
+mp.bricks().create('card', 'mp-card-container', {...})
+
+We pass initialization: { preferenceId }. Bricks will display a secure card‐entry form.
+
+Callbacks:
+
+onReady → the form is ready (you can remove any spinner).
+
+onSubmit → the user clicked “Pay”—you can show a “processing” state if you like.
+
+onError → anything went wrong (e.g. invalid card, network error).
+
+onSuccess → the payment was actually approved by Mercado Pago.
+‣ At this point, you know for certain that the payment is done.
+‣ You can then safely run your “subsequent actions”: create your Order in your DB, redirect to a thank‐you page, email a receipt, etc.
+
+Why this ensures “confirm payment before any subsequent actions”
+
+Bricks v2 automatically calls Mercado Pago’s /payments endpoint under‐the‐hood when you do create('card', …).
+
+The onSuccess(paymentInfo) callback is only invoked if the payment status is approved.
+
+You do not trigger your business logic (e.g. “grant access,” “mark order as paid,” etc.) until you land in onSuccess. At that moment, you have a valid paymentInfo.id and status: 'approved'.
+
+Environment Variables
+
+MP_ACCESS_TOKEN on the server (used by mercadopago.preferences.create(...)).
+
+NEXT_PUBLIC_MP_PUBLIC_KEY on the client (exposed to the browser for new MercadoPago(...)).
+
+3. (Optional) Verifying server‐side via Webhook or /v1/payments/{id}
+If you want an extra layer of security (in case the user closes the page right after paying), you can:
+
+Create a webhook in Mercado Pago settings (e.g. a /api/mp_webhook endpoint).
+
+Configure your preference with notification_url: 'https://your-domain.com/api/mp_webhook'.
+
+When Mercado Pago calls that webhook, you double‐check the payload’s data.id → call mercadopago.payment.get(data.id) on your server → ensure status === 'approved'.
+
+Mark the order as paid server‐side.
+
+This is not strictly required if you trust the front‐end callback, but it’s highly recommended for production.
+
+Summary
+Backend
+
+Create preference → return preferenceId.
+
+Frontend
+
+Load Bricks SDK → initialize with your PUBLIC_KEY and preferenceId.
+
+Render the card form in a <div id="mp-card-container" />.
+
+Use onSuccess to know exactly when the payment is approved → only then run your “next steps.”
+
+With this pattern, you will always “confirm the payment before any subsequent actions happen.”
+
+
+
+
+
+
+You said:
+Does this also ensure I save they payment token?
+
+
+ChatGPT said:
+
+Thought for 9 seconds
+You’ll need to explicitly grab the card token out of Bricks and send it to your server—Bricks won’t persist that for you automatically. In practice, that means:
+
+In your mp.bricks().create('card', …) call, use the onSubmit callback to grab cardFormData.token (plus any other card‐related fields you care about) and POST it to your own backend.
+
+After you’ve stored the token server‐side (e.g. in your user’s profile), let Bricks continue with the normal “create payment” flow. When Bricks eventually calls onSuccess(paymentInfo), you know the payment is approved and the token is already saved.
+
+Below is a quick “diff” of the relevant part of the client code, showing where to capture and save the token before Bricks sends the payment request:
+
+diff
+Copy
+Edit
+  // …inside your useEffect where you do mp.bricks().create('card', …):
+
+    mp.bricks()
+      .create('card', 'mp-card-container', {
+        initialization: {
+          preferenceId,
+        },
+        callbacks: {
+-         onSubmit: (cardFormData: any) => {
+-           // Bricks will automatically create the payment for us.
+-         },
++         onSubmit: async (cardFormData: any) => {
++           // 1) Grab the token out of the Bricks form payload:
++           const { token, installments, issuerId, paymentMethodId, payer } = cardFormData;
++
++           // 2) Send it immediately to your backend to persist it under the logged‐in user:
++           try {
++             await fetch('/api/save_mp_token', {
++               method: 'POST',
++               headers: { 'Content-Type': 'application/json' },
++               body: JSON.stringify({ token, paymentMethodId, issuerId, installments, payer }),
++             });
++             // Now that the token is stored, Bricks can continue creating the payment…
++           } catch (err) {
++             console.error('Failed to save Mercado Pago token:', err);
++             // Optionally show an error and prevent Bricks from proceeding.
++             return;
++           }
++           // Bricks will automatically call /v1/payments with this token and finish the flow.
++         },
+          onReady: () => {
+            setIsProcessing(false);
+          },
+          onError: (error: any) => {
+            console.error('Bricks error:', error);
+            setErrorMessage('There was an error processing your payment. Please try again.')
+            setIsProcessing(false)
+          },
+          onSuccess: (paymentInfo: any) => {
+            // At this point, the payment is APPROVED and the token was already saved.
+            console.log('Payment approved:', paymentInfo);
+            // …run any follow-up action (e.g. create order, redirect to “thank you,” etc.)
+          },
+        },
+        customization: { /* … */ },
+      })
+      .catch((err: any) => {
+        console.error('Bricks.create error:', err);
+        setErrorMessage('Failed to render Mercado Pago form.')
+      });
+  }, [didLoadScript, preferenceId]);
+What you need on the backend
+In the snippet above, we assume you have an endpoint like /api/save_mp_token that looks roughly like this (for example, Next.js or Express):
+
+ts
+Copy
+Edit
+// /api/save_mp_token.ts (Next.js) or routes/payment.ts (Express)
+
+import type { NextApiRequest, NextApiResponse } from 'next';
+import mercadopago from 'mercadopago';
+
+// (1) Configure Mercado Pago if you plan to use the token later
+mercadopago.configure({
+  access_token: process.env.MP_ACCESS_TOKEN,
+});
+
+// (2) Persist the token to your database—associate it with the logged-in user.
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<{ success: boolean; error?: string }>
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  const { token, paymentMethodId, issuerId, installments, payer } = req.body;
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Missing token' });
+  }
+
+  try {
+    // e.g. using Prisma, Mongoose, or any ORM you prefer:
+    // await db.user.update({
+    //   where: { id: req.userId },
+    //   data: {
+    //     mpToken: token,
+    //     mpPaymentMethodId: paymentMethodId,
+    //     mpIssuerId: issuerId,
+    //     payerInfo: payer, 
+    //     // …etc.
+    //   },
+    // });
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('Error saving MP token:', err);
+    return res.status(500).json({ success: false, error: 'Could not save token' });
+  }
+}
+In this handler, you would save the token (and any other metadata) to your own database under the current user.
+
+Later, if you want to create a future payment or refund, you can use that saved token (via Mercadopago’s /v1/payments endpoint or Vault API) without asking the user to re-enter card details.
+
+Key takeaways
+Bricks doesn’t store card tokens for you—you must capture and persist them in onSubmit.
+
+Once onSubmit returns (and your backend confirms the token is saved), Bricks will go ahead and call the Mercado Pago payment endpoint.
+
+The onSuccess(paymentInfo) callback only fires after an approved payment, so by that point you know both “the payment succeeded” and “you have already stored the token.”
+
+That way, you’re guaranteed that before any “subsequent actions” run, you also have a copy of the MP token in your database.
