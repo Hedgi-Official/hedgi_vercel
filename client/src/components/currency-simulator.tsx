@@ -57,9 +57,14 @@ export function CurrencySimulator({
   const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
   const [duration, setDuration] = useState(7);
-  const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
-  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
+  // Alpha launch: simplified to BRL->USD only
+  const [targetCurrency] = useState<SupportedCurrency>('USD');
+  const [baseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
+  
+  // Original multi-currency code (commented for alpha launch):
+  // const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
+  // const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
@@ -178,9 +183,23 @@ export function CurrencySimulator({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Currency selectors */}
+          {/* Alpha launch: Fixed currency pair BRL->USD */}
+          <div className="bg-muted p-4 rounded-lg">
+            <div className="flex items-center justify-center space-x-4">
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Base Currency</div>
+                <div className="text-lg font-semibold">BRL</div>
+              </div>
+              <div className="text-2xl">→</div>
+              <div className="text-center">
+                <div className="text-sm text-muted-foreground">Target Currency</div>
+                <div className="text-lg font-semibold">USD</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Original currency selectors (commented for alpha launch):
           <div className="grid grid-cols-2 gap-4">
-            {/* Target */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Globe className="mr-2 h-4 w-4 text-primary" />
@@ -200,7 +219,6 @@ export function CurrencySimulator({
                 </SelectContent>
               </Select>
             </div>
-            {/* Base */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Briefcase className="mr-2 h-4 w-4 text-primary" />
@@ -221,6 +239,7 @@ export function CurrencySimulator({
               </Select>
             </div>
           </div>
+          */}
 
           {/* Direction */}
           <div className="space-y-2">

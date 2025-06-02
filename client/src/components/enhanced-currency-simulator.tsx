@@ -52,7 +52,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [margin, setMargin] = useState<number | null>(null);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
-  
+
   // Payment modal state
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
@@ -65,7 +65,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
     let currentRate;
     let swapValues;
-    
+
     // Use the rates from ActivTrades API
     if (activTradesRate) {
       currentRate = {
@@ -95,17 +95,17 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       const { bid, ask } = currentRate;
       const { swapLong, swapShort } = swapValues;
       const spreadCost = (ask - bid) * amount;
-      
+
       // Volume in lots (standard lot is 100,000 units)
       const volumeInLots = amount / 100000;
-      
+
       // Using the formula: Cost = abs(Volume × swap_rate × Days)
       if (tradeDirection === 'buy') {
         hedgeCost = Math.abs(volumeInLots * swapLong * businessDays) + spreadCost;
       } else {
         hedgeCost = Math.abs(volumeInLots * swapShort * businessDays) + spreadCost;
       }
-      
+
       console.log('[EnhancedCurrencySimulator] Calculated hedge cost:', {
         volumeInLots,
         businessDays,
@@ -133,11 +133,11 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       rate: currentRate ? (tradeDirection === 'buy' ? currentRate.ask : currentRate.bid) : result.rate,
       breakEvenRate
     };
-    
+
     // Set default margin as 2x the hedge cost
     const defaultMargin = Math.round(hedgeCost * 2);
     setMargin(defaultMargin);
-    
+
     setSimulation(simulationResult);
   };
 
@@ -166,12 +166,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     };
 
     console.log('[EnhancedCurrencySimulator] Opening payment modal with hedge data:', hedgeData);
-    
+
     // Store the hedge data and open the payment modal
     setPendingHedgeData(hedgeData);
     setIsPaymentModalOpen(true);
   };
-  
+
   // This function is called after successful payment
   const handlePaymentSuccess = async (hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">) => {
     if (!onPlaceHedge || !onOrdersUpdated) {
@@ -181,7 +181,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
     console.log('[EnhancedCurrencySimulator] Payment successful, placing hedge...');
     setIsPlacingHedge(true);
-    
+
     try {
       // Call the parent component's handler to place the hedge after payment
       const result = await onPlaceHedge(hedgeData);
@@ -210,7 +210,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       .split('\n\n')[1]
       .replace('Sell USD:', '')
       .replace('USD', targetCurrency);
-    
+
     return (
       <>
         <p className="text-sm text-foreground mb-2">
@@ -234,6 +234,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/*
             <div className="grid grid-cols-2 gap-4">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -317,6 +318,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 </TooltipContent>
               </Tooltip>
             </div>
+            */}
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -485,7 +487,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     breakEvenRate: simulation.breakEvenRate
                   }} />
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
@@ -528,7 +530,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Update margin based on simulation results */}
                 {simulation && (() => {
                   // Set margin to 2x hedge cost if we have a simulation result
@@ -558,7 +560,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
           </CardContent>
         </Card>
       </TooltipProvider>
-      
+
       {/* Payment Modal - Using StandaloneWindowPayment for complete isolation from React refresh cycles */}
       {isPaymentModalOpen && pendingHedgeData && (
         <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
@@ -572,7 +574,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                    'A new window will open for payment processing. Keep it open until you complete the payment.')}
               </p>
             </DialogHeader>
-            
+
             {/* Always use StandaloneWindowPayment for consistency */}
             <StandaloneWindowPayment
               hedgeData={pendingHedgeData}
