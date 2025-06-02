@@ -232,29 +232,35 @@ export default function Dashboard() {
         return;
       }
 
-      // Check if we have any payment token (including valid credit card tokens)
-      console.log('[Dashboard] Payment token type:', typeof paymentToken);
-      console.log('[Dashboard] Payment token value:', paymentToken);
-
-      // For test payments, proceed directly
-      if (paymentToken === 'test-payment-success') {
-        console.log('[Dashboard] Test payment token received, proceeding with trade creation');
-        return createHedgeMutation.mutate({ hedgeData, paymentToken });
-      }
-
-      // For any other non-empty payment token (including credit card payments), proceed
-      if (paymentToken && paymentToken.length > 0 && paymentToken !== 'undefined') {
+      // For valid test tokens or successful payments, proceed directly
+      if (paymentToken === 'test-payment-success' || paymentToken.startsWith('mp-')) {
         console.log('[Dashboard] Valid payment token received, proceeding with trade creation');
         return createHedgeMutation.mutate({ hedgeData, paymentToken });
       }
 
-      // If we reach here, no valid payment token was provided
-      toast({
-        variant: "destructive",
-        title: "Payment Required",
-        description: "Please complete the payment process before placing the hedge.",
+      // For other payment tokens, verify with Mercado Pago
+      const verificationResponse = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: paymentToken,
+          currency: hedgeData.baseCurrency
+        })
       });
-      return;
+
+      const verificationResult = await verificationResponse.json();
+
+      if (verificationResult.status === 'approved' || verificationResult.status === 'success') {
+        console.log('[Dashboard] Payment verified, proceeding with trade creation');
+        return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Failed",
+          description: `Payment status: ${verificationResult.status}. Please complete the payment first.`,
+        });
+        return;
+      }
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
       toast({
