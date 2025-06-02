@@ -226,10 +226,6 @@ export default function Dashboard() {
       console.log('[Dashboard] Payment token type:', typeof paymentToken);
       console.log('[Dashboard] Payment token value:', paymentToken);
 
-      // Check if we have a valid payment token
-      console.log('[Dashboard] Payment token received:', paymentToken);
-      console.log('[Dashboard] Payment token type:', typeof paymentToken);
-
       if (!paymentToken || paymentToken === 'undefined' || paymentToken === 'null' || paymentToken === '') {
         toast({
           variant: "destructive",
@@ -247,10 +243,47 @@ export default function Dashboard() {
         return createHedgeMutation.mutate({ hedgeData, paymentToken });
       }
 
-      // For real payments, proceed directly since payment was already verified in the modal
-      // The modal's onSubmit callback only calls handlePaymentSuccess for verified payments
-      console.log('[Dashboard] Real payment token received, proceeding with trade creation');
-      return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      // For real payments, verify with Mercado Pago before proceeding
+      console.log('[Dashboard] Verifying real payment with token:', paymentToken);
+      
+      const verificationResponse = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: paymentToken,
+          currency: hedgeData.baseCurrency
+        })
+      });
+
+      if (!verificationResponse.ok) {
+        const errorText = await verificationResponse.text();
+        console.error('[Dashboard] Payment verification failed:', errorText);
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Failed",
+          description: "Unable to verify payment. Please try again.",
+        });
+        return;
+      }
+
+      const verificationResult = await verificationResponse.json();
+      console.log('[Dashboard] Payment verification result:', verificationResult);
+
+      // Only proceed if payment is approved
+      if (verificationResult.status === 'approved' || 
+          verificationResult.status === 'success' || 
+          verificationResult.verified === true) {
+        console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
+        return createHedgeMutation.mutate({ hedgeData, paymentToken });
+      } else {
+        console.error('[Dashboard] Payment not approved:', verificationResult);
+        toast({
+          variant: "destructive",
+          title: "Payment Not Approved",
+          description: `Payment status: ${verificationResult.status}. Please complete the payment first.`,
+        });
+        return;
+      }
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
       toast({

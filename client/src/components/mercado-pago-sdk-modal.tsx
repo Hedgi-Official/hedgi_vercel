@@ -320,49 +320,12 @@ export function MercadoPayoSDKModal({
                 return false
               }
               
-              console.log('Verifying payment with ID:', mpPaymentId)
+              console.log('Payment ID extracted, passing to dashboard for verification:', mpPaymentId)
               
-              // Verify the payment with our backend
-              const verificationResponse = await fetch('/api/payment/process', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  paymentId: mpPaymentId,
-                  currency: currency,
-                  cardFormData: cardFormData // Send full data for debugging
-                })
-              })
-              
-              if (!verificationResponse.ok) {
-                const errorText = await verificationResponse.text()
-                console.error('Payment verification failed:', errorText)
-                
-                // For development, allow test payments to proceed
-                if (process.env.NODE_ENV === 'development' && mpPaymentId.includes('test_')) {
-                  console.log('Development mode: allowing test payment to proceed')
-                  handlePaymentSuccess({ payment: { id: mpPaymentId } })
-                  return true
-                }
-                
-                setError('Payment verification failed. Please try again.')
-                return false
-              }
-              
-              const verificationResult = await verificationResponse.json()
-              console.log('Payment verification result:', verificationResult)
-              
-              // Check for approved status
-              if (verificationResult.status === 'approved' || 
-                  verificationResult.status === 'success' || 
-                  verificationResult.verified === true) {
-                console.log('Payment verified successfully')
-                handlePaymentSuccess({ payment: { id: mpPaymentId } })
-                return true
-              } else {
-                console.error('Payment not approved:', verificationResult)
-                setError(`Payment status: ${verificationResult.status}. Please complete the payment.`)
-                return false
-              }
+              // Don't verify here - pass the payment token to dashboard for verification
+              // The dashboard will verify the payment before placing the trade
+              handlePaymentSuccess({ payment: { id: mpPaymentId } })
+              return true
             } catch (submitError) {
               console.error('Payment submit error:', submitError)
               setError('Payment processing error. Please try again.')
