@@ -271,47 +271,9 @@ class PaymentService {
         description: description ? description.substring(0, 50) + '...' : 'null'
       });
 
-      // Extract payment ID from the Mercado Pago form data
-      let paymentId = null;
-      
-      if (formData) {
-        // Try multiple ways to extract payment ID from Mercado Pago response
-        paymentId = formData.id || 
-                   formData.payment_id || 
-                   formData.payment?.id || 
-                   formData.transaction_id ||
-                   formData.token;
-      }
-      
-      if (!paymentId) {
-        console.error('[PaymentService] No payment ID found in form data:', formData);
-        return res.status(400).json({
-          error: 'No payment ID received from Mercado Pago',
-          status: 'rejected'
-        });
-      }
-      
-      console.log(`[PaymentService] Extracted payment ID: ${paymentId}`);
-      
-      // Handle test payments in development only - be more restrictive
-      if (process.env.NODE_ENV === 'development' && 
-          (paymentId.startsWith('test_payment_') || 
-           paymentId.startsWith('test_mp_') || 
-           paymentId.startsWith('test_'))) {
-        console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
-        return res.status(200).json({
-          status: 'approved',
-          statusDetail: 'test_payment_dev',
-          payment_id: paymentId,
-          verified: true,
-          test: true
-        });
-      }
-
-      // For Mercado Pago payments, we need to create the payment first, then verify it
-      // If we have a token or card form data, create the payment
-      if (formData && (formData.token || formData.payment_method_id)) {
-        console.log('[PaymentService] Creating payment from card form data...');
+      // For credit card payments, we need to create the payment using the token
+      if (formData && formData.token && formData.payment_method_id) {
+        console.log('[PaymentService] Creating credit card payment with token:', formData.token.substring(0, 10) + '...');
         
         // Determine which Mercado Pago instance to use based on currency
         let accessToken = '';
@@ -343,20 +305,29 @@ class PaymentService {
           transaction_amount: parseFloat(amount),
           token: formData.token,
           description: description || 'Hedgi Currency Hedge',
-          installments: 1,
-          payment_method_id: formData.payment_method_id || 'visa',
-          issuer_id: formData.issuer_id,
+          installments: parseInt(formData.installments) || 1,
+          payment_method_id: formData.payment_method_id,
+          issuer_id: formData.issuer_id ? parseInt(formData.issuer_id) : undefined,
           payer: {
-            email: 'user@hedgi.com'
+            email: formData.payer?.email || 'user@hedgi.com',
+            identification: formData.payer?.identification
           }
         };
 
+        console.log('[PaymentService] Creating payment with body:', {
+          transaction_amount: paymentBody.transaction_amount,
+          payment_method_id: paymentBody.payment_method_id,
+          installments: paymentBody.installments,
+          payer_email: paymentBody.payer.email
+        });
+
         try {
           const payment = await paymentClient.create({ body: paymentBody });
-          console.log('[PaymentService] Payment created:', {
+          console.log('[PaymentService] Payment created successfully:', {
             id: payment.id,
             status: payment.status,
-            status_detail: payment.status_detail
+            status_detail: payment.status_detail,
+            amount: payment.transaction_amount
           });
 
           return res.status(200).json({
@@ -376,6 +347,49 @@ class PaymentService {
           });
         }
       }
+
+      // If we don't have the required credit card data, look for an existing payment ID
+      let paymentId = null;
+      
+      if (formData) {
+        // Try multiple ways to extract payment ID from Mercado Pago response
+        paymentId = formData.id || 
+                   formData.payment_id || 
+                   formData.payment?.id || 
+                   formData.transaction_id;
+      }
+      
+      if (!paymentId) {
+        console.error('[PaymentService] No payment token or ID found in form data:', {
+          hasToken: !!formData?.token,
+          hasPaymentMethodId: !!formData?.payment_method_id,
+          hasId: !!formData?.id,
+          formDataKeys: formData ? Object.keys(formData) : []
+        });
+        return res.status(400).json({
+          error: 'No payment token or ID received from Mercado Pago',
+          status: 'rejected'
+        });
+      }
+      
+      console.log(`[PaymentService] Extracted payment ID: ${paymentId}`);
+      
+      // Handle test payments in development only - be more restrictive
+      if (process.env.NODE_ENV === 'development' && 
+          (paymentId.startsWith('test_payment_') || 
+           paymentId.startsWith('test_mp_') || 
+           paymentId.startsWith('test_'))) {
+        console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
+        return res.status(200).json({
+          status: 'approved',
+          statusDetail: 'test_payment_dev',
+          payment_id: paymentId,
+          verified: true,
+          test: true
+        });
+      }
+
+
       
       // Validate payment ID format before making API call
       const paymentIdStr = String(paymentId).trim();

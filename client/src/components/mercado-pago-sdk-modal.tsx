@@ -95,6 +95,13 @@ export function MercadoPayoSDKModal({
       return
     }
 
+    // Reset state when modal opens
+    setLoading(true)
+    setError(null)
+    setMp(null)
+    setPreferenceId(null)
+    setPaymentBrick(null)
+
     // Generate unique payment tracking token when modal opens
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     setPaymentTrackingToken(trackingToken)
@@ -126,6 +133,13 @@ export function MercadoPayoSDKModal({
         setLoading(false)
       })
   }, [isOpen, hedgeData])
+
+  // Cleanup effect when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      cleanupPaymentBrick()
+    }
+  }, [isOpen])
 
   const createPreference = async (retryCount = 0) => {
     console.log('[PaymentModal] createPreference called - retryCount:', retryCount)
