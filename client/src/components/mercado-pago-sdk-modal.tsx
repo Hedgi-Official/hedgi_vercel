@@ -304,7 +304,6 @@ export function MercadoPayoSDKModal({
           },
           onSuccess: async (paymentInfo: any) => {
             console.log('Payment SUCCESS - paymentInfo:', JSON.stringify(paymentInfo, null, 2))
-            setIsProcessing(false)
             
             if (!hedgeData) {
               setError('Missing hedge data for payment processing.')
