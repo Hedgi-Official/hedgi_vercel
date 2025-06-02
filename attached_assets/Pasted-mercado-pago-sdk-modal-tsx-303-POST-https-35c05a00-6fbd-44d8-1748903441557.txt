@@ -1,0 +1,68 @@
+mercado-pago-sdk-modal.tsx:303 
+            
+            
+           POST https://35c05a00-6fbd-44d8-a2ac-2b5c64a984be-00-1ox8el35dt93h.janeway.replit.dev/api/payment/process 400 (Bad Request)
+onSubmit @ mercado-pago-sdk-modal.tsx:303
+(anonymous) @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+(anonymous) @ payment.js:1
+ue @ payment.js:1
+Ce.r.onSubmitCallback @ payment.js:1
+(anonymous) @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+(anonymous) @ payment.js:1
+ue @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+setTimeout
+(anonymous) @ payment.js:1
+Ce.re @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ 660.660.js:1
+(anonymous) @ 660.660.js:1
+(anonymous) @ payment.js:1
+c @ payment.js:1
+(anonymous) @ 601.601.js:1Understand this error
+mercado-pago-sdk-modal.tsx:317 Payment processing result: {error: 'Invalid payment data: missing payment method', status: 'rejected', details: 'payment_method_id is required but not found in form data'}
+mercado-pago-sdk-modal.tsx:324 Payment not approved: {error: 'Invalid payment data: missing payment method', status: 'rejected', details: 'payment_method_id is required but not found in form data'}details: "payment_method_id is required but not found in form data"error: "Invalid payment data: missing payment method"status: "rejected"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
+onSubmit @ mercado-pago-sdk-modal.tsx:324
+await in onSubmit
+(anonymous) @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+(anonymous) @ payment.js:1
+ue @ payment.js:1
+Ce.r.onSubmitCallback @ payment.js:1
+(anonymous) @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+a @ payment.js:1
+Promise.then
+d @ payment.js:1
+(anonymous) @ payment.js:1
+ue @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+setTimeout
+(anonymous) @ payment.js:1
+Ce.re @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ payment.js:1
+(anonymous) @ 660.660.js:1
+(anonymous) @ 660.660.js:1
+(anonymous) @ payment.js:1
+c @ payment.js:1
+(anonymous) @ 601.601.js:1Understand this error
+mercado-pago-sdk-modal.tsx:48 [PaymentModal] render – props: 

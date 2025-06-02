@@ -260,15 +260,14 @@ export function MercadoPayoSDKModal({
       const brickSettings = {
         initialization: {
           preferenceId: prefId,
-          amount: paymentAmount,     // Must be > 0
-          currencyId: currency       // e.g. "BRL" or "USD"
+          amount: paymentAmount,
         },
         callbacks: {
           onReady: () => {
             console.log('Payment brick ready')
             clearTimeout(loadingTimeout)
             setLoading(false)
-            setError(null) // Clear any previous errors
+            setError(null)
           },
           onError: (error: any) => {
             console.error('Brick error:', error)
@@ -277,60 +276,61 @@ export function MercadoPayoSDKModal({
             setLoading(false)
           },
           onSubmit: async (formData: any) => {
-              console.log('=== PAYMENT SUBMIT DEBUG ===');
-              console.log('Raw formData received from Bricks onSubmit:', JSON.stringify(formData, null, 2));
-              console.log('FormData keys:', Object.keys(formData || {}));
-              console.log('FormData type:', typeof formData);
-              
-              // Log specific fields we're looking for
-              console.log('Checking for payment_method_id in various locations:');
-              console.log('- formData.payment_method_id:', formData.payment_method_id);
-              console.log('- formData.paymentMethodId:', formData.paymentMethodId);
-              console.log('- formData.selectedPaymentMethod:', formData.selectedPaymentMethod);
-              console.log('- formData.paymentMethod:', formData.paymentMethod);
-              console.log('- formData.token:', formData.token);
-              console.log('- formData.issuer_id:', formData.issuer_id);
-              console.log('- formData.installments:', formData.installments);
-              console.log('=== END DEBUG ===');
-              
-              if (!hedgeData) {
-                setError('Missing hedge data for payment processing.')
-                return false
-              }
-              
-              // Make a server request to process the payment with MercadoPago
-              try {
-                const response = await fetch('/api/payment/process', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    formData: formData,
-                    amount: paymentAmount,
-                    currency: currency,
-                    description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-                  }),
-                });
+            console.log('=== PAYMENT SUBMIT DEBUG ===');
+            console.log('Raw formData received from Bricks onSubmit:', JSON.stringify(formData, null, 2));
+            console.log('FormData keys:', Object.keys(formData || {}));
+            console.log('FormData type:', typeof formData);
+            
+            // Log specific fields we're looking for
+            console.log('Checking for payment_method_id in various locations:');
+            console.log('- formData.payment_method_id:', formData.payment_method_id);
+            console.log('- formData.paymentMethodId:', formData.paymentMethodId);
+            console.log('- formData.selectedPaymentMethod:', formData.selectedPaymentMethod);
+            console.log('- formData.paymentMethod:', formData.paymentMethod);
+            console.log('- formData.token:', formData.token);
+            console.log('- formData.issuer_id:', formData.issuer_id);
+            console.log('- formData.installments:', formData.installments);
+            console.log('=== END DEBUG ===');
+            
+            if (!hedgeData) {
+              setError('Missing hedge data for payment processing.')
+              return false
+            }
+            
+            // When using preferenceId, the payment is processed by Mercado Pago
+            // We need to create the payment directly using the SDK
+            try {
+              const response = await fetch('/api/payment/process', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  formData: formData,
+                  amount: paymentAmount,
+                  currency: currency,
+                  description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
+                }),
+              });
 
-                const result = await response.json();
-                console.log('Payment processing result:', result);
+              const result = await response.json();
+              console.log('Payment processing result:', result);
 
-                if (response.ok && result.status === 'approved') {
-                  console.log('Payment approved with ID:', result.payment_id);
-                  handlePaymentSuccess({ payment: { id: result.payment_id } });
-                  return true;
-                } else {
-                  console.error('Payment not approved:', result);
-                  setError(result.error || result.details || 'Payment was not approved. Please try again.');
-                  return false;
-                }
-              } catch (submitError) {
-                console.error('Payment submit error:', submitError);
-                setError('Payment processing error. Please try again.');
+              if (response.ok && result.status === 'approved') {
+                console.log('Payment approved with ID:', result.payment_id);
+                handlePaymentSuccess({ payment: { id: result.payment_id } });
+                return true;
+              } else {
+                console.error('Payment not approved:', result);
+                setError(result.error || result.details || 'Payment was not approved. Please try again.');
                 return false;
               }
+            } catch (submitError) {
+              console.error('Payment submit error:', submitError);
+              setError('Payment processing error. Please try again.');
+              return false;
             }
+          }
         },
         customization: {
           visual: {
@@ -341,7 +341,8 @@ export function MercadoPayoSDKModal({
           },
           paymentMethods: {
             creditCard: 'all',
-            bankTransfer: 'all',
+            debitCard: 'all',
+            ticket: 'all',
             maxInstallments: 1
           }
         }
