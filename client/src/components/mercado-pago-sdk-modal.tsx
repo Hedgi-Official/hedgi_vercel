@@ -280,9 +280,11 @@ export function MercadoPayoSDKModal({
             setError(null)
           },
           onError: (error: any) => {
-            console.error('Brick error:', error)
+            console.error('Mercado Pago Brick error details:', error)
+            console.error('Error type:', typeof error)
+            console.error('Error keys:', Object.keys(error || {}))
             clearTimeout(loadingTimeout)
-            setError('Failed to create payment interface. Please use the test payment option.')
+            setError(`Failed to create payment interface: ${error?.message || JSON.stringify(error)}. Please use the test payment option.`)
             setLoading(false)
           },
           onSubmit: async (formData: any) => {
