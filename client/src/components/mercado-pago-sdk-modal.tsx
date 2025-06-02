@@ -309,14 +309,7 @@ export function MercadoPayoSDKModal({
               
               if (!mpPaymentId) {
                 console.error('No payment ID found in cardFormData:', cardFormData)
-                // For development/testing, allow proceeding with a test token
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('Development mode: using test payment token')
-                  const testToken = `test_mp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                  handlePaymentSuccess({ payment: { id: testToken } })
-                  return true
-                }
-                setError('Payment processing failed. Please try again.')
+                setError('Payment processing failed. No payment ID received from Mercado Pago.')
                 return false
               }
               

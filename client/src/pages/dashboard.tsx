@@ -255,35 +255,64 @@ export default function Dashboard() {
         })
       });
 
+      let verificationResult;
+      try {
+        verificationResult = await verificationResponse.json();
+      } catch (parseError) {
+        console.error('[Dashboard] Failed to parse verification response:', parseError);
+        toast({
+          variant: "destructive",
+          title: "Payment Verification Error",
+          description: "Invalid response from payment service. Please try again.",
+        });
+        return;
+      }
+
+      console.log('[Dashboard] Payment verification result:', verificationResult);
+
+      // Check HTTP status first
       if (!verificationResponse.ok) {
-        const errorText = await verificationResponse.text();
-        console.error('[Dashboard] Payment verification failed:', errorText);
+        console.error('[Dashboard] Payment verification HTTP error:', verificationResponse.status, verificationResult);
+        
+        let errorMessage = "Payment verification failed.";
+        if (verificationResult.error) {
+          errorMessage = verificationResult.error;
+        } else if (verificationResponse.status === 404) {
+          errorMessage = "Payment not found. The payment ID may be invalid.";
+        } else if (verificationResponse.status === 500) {
+          errorMessage = "Payment service error. Please try again.";
+        }
+        
         toast({
           variant: "destructive",
           title: "Payment Verification Failed",
-          description: "Unable to verify payment. Please try again.",
+          description: errorMessage,
         });
         return;
       }
 
-      const verificationResult = await verificationResponse.json();
-      console.log('[Dashboard] Payment verification result:', verificationResult);
-
-      // Only proceed if payment is approved
-      if (verificationResult.status === 'approved' || 
-          verificationResult.status === 'success' || 
-          verificationResult.verified === true) {
-        console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
-        return createHedgeMutation.mutate({ hedgeData, paymentToken });
-      } else {
-        console.error('[Dashboard] Payment not approved:', verificationResult);
+      // Check if verification result indicates success
+      const isVerified = verificationResult.verified === true && verificationResult.status === 'approved';
+      
+      if (!isVerified) {
+        console.error('[Dashboard] Payment not verified or approved:', verificationResult);
+        
+        let errorMessage = `Payment not approved. Status: ${verificationResult.status || 'unknown'}`;
+        if (verificationResult.statusDetail) {
+          errorMessage += ` (${verificationResult.statusDetail})`;
+        }
+        
         toast({
           variant: "destructive",
           title: "Payment Not Approved",
-          description: `Payment status: ${verificationResult.status}. Please complete the payment first.`,
+          description: errorMessage,
         });
         return;
       }
+
+      // Only proceed if payment is explicitly verified and approved
+      console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
+      return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
       toast({

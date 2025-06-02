@@ -262,14 +262,31 @@ class PaymentService {
     }
 
     try {
-      const { paymentId, preferenceId, currency } = req.body;
+      const { paymentId, currency } = req.body;
       
-      if (!paymentId && !preferenceId) {
+      if (!paymentId) {
         return res.status(400).json({
-          error: 'Missing payment ID or preference ID'
+          error: 'Missing payment ID',
+          status: 'rejected'
         });
       }
       
+      console.log(`[PaymentService] Verifying payment ID: ${paymentId}`);
+      
+      // Handle test payments in development only - be more restrictive
+      if (process.env.NODE_ENV === 'development' && 
+          (paymentId.startsWith('test_payment_') || paymentId.startsWith('test_mp_'))) {
+        console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
+        return res.status(200).json({
+          status: 'approved',
+          statusDetail: 'test_payment_dev',
+          transactionId: paymentId,
+          verified: true,
+          test: true
+        });
+      }
+      
+      // For any real payment, we MUST verify with Mercado Pago
       // Determine which Mercado Pago instance to use based on currency
       let accessToken = '';
       if (currency === 'BRL') {
@@ -281,6 +298,14 @@ class PaymentService {
         accessToken = this.mpBR.accessToken;
       }
       
+      if (!accessToken) {
+        console.error('[PaymentService] No access token available for payment verification');
+        return res.status(500).json({
+          error: 'Payment service configuration error',
+          status: 'rejected'
+        });
+      }
+      
       // Initialize the client with MercadoPago v2.3.0 API
       const client = new MercadoPagoConfig({ 
         accessToken: accessToken 
@@ -289,98 +314,67 @@ class PaymentService {
       // Initialize the Payment resource
       const paymentClient = new Payment(client);
       
-      // Check payment status
-      // If we have a payment ID, check that directly
-      if (paymentId) {
-        try {
-          console.log(`[PaymentService] Verifying payment ID: ${paymentId}`);
-          
-          // Handle test payments in development
-          if (paymentId.startsWith('test_') || paymentId.includes('test_mp_')) {
-            console.log(`[PaymentService] Test payment detected: ${paymentId}`);
-            return res.status(200).json({
-              status: 'approved',
-              statusDetail: 'test_payment',
-              transactionId: paymentId,
-              verified: true,
-              test: true
-            });
-          }
-          
-          const payment = await paymentClient.get({ id: paymentId });
-          
-          console.log(`[PaymentService] Payment status from Mercado Pago:`, {
-            id: payment.id,
-            status: payment.status,
-            status_detail: payment.status_detail
-          });
-          
-          // Only return success for actually approved payments
-          const isApproved = payment.status === 'approved';
-          const responseStatus = isApproved ? 'approved' : payment.status;
-          
-          return res.status(200).json({
-            status: responseStatus,
+      try {
+        // ALWAYS verify with Mercado Pago for real payment IDs
+        const payment = await paymentClient.get({ id: paymentId });
+        
+        console.log(`[PaymentService] Payment verification response from Mercado Pago:`, {
+          id: payment.id,
+          status: payment.status,
+          status_detail: payment.status_detail,
+          amount: payment.transaction_amount,
+          currency_id: payment.currency_id
+        });
+        
+        // Only approve if the payment status is explicitly 'approved'
+        const isApproved = payment.status === 'approved';
+        
+        if (!isApproved) {
+          console.log(`[PaymentService] Payment ${paymentId} not approved. Status: ${payment.status}`);
+          return res.status(400).json({
+            error: 'Payment not approved',
+            status: payment.status || 'rejected',
             statusDetail: payment.status_detail,
-            transactionId: payment.id,
-            verified: isApproved
+            verified: false
           });
-        } catch (paymentError) {
-          console.error('Error getting payment:', paymentError);
-          
-          // If it's a test payment that failed MP verification, still approve it in development
-          if ((paymentId.startsWith('test_') || paymentId.includes('test_mp_')) && 
-              process.env.NODE_ENV === 'development') {
-            console.log(`[PaymentService] Allowing test payment in development: ${paymentId}`);
-            return res.status(200).json({
-              status: 'approved',
-              statusDetail: 'test_payment_dev',
-              transactionId: paymentId,
-              verified: true,
-              test: true
-            });
-          }
-          
+        }
+        
+        // Payment is approved
+        console.log(`[PaymentService] Payment ${paymentId} successfully verified as approved`);
+        return res.status(200).json({
+          status: 'approved',
+          statusDetail: payment.status_detail,
+          transactionId: payment.id,
+          verified: true,
+          amount: payment.transaction_amount,
+          currency: payment.currency_id
+        });
+        
+      } catch (paymentError: any) {
+        console.error(`[PaymentService] Error verifying payment ${paymentId}:`, paymentError);
+        
+        // Check if it's a 404 (payment not found) or other error
+        if (paymentError.status === 404 || paymentError.message?.includes('not found')) {
           return res.status(404).json({
-            error: 'Payment not found or invalid',
-            details: paymentError instanceof Error ? paymentError.message : String(paymentError),
-            status: 'rejected'
+            error: 'Payment not found',
+            status: 'rejected',
+            details: 'Payment ID does not exist in Mercado Pago'
           });
         }
+        
+        // Other errors (network, auth, etc.)
+        return res.status(500).json({
+          error: 'Payment verification failed',
+          status: 'rejected',
+          details: paymentError.message || 'Unknown error during verification'
+        });
       }
       
-      // Otherwise use the preference ID to find associated payments
-      if (preferenceId) {
-        try {
-          // Query Mercado Pago API to get actual payment status for this preference
-          console.log(`[PaymentService] Checking payment status for preference: ${preferenceId}`);
-          
-          // We need to search for payments associated with this preference
-          // Note: In production, you should use webhooks for real-time payment status
-          // For now, we'll return pending status to force proper payment completion
-          
-          return res.status(200).json({
-            status: 'pending',
-            statusDetail: 'pending_payment_in_process',
-            message: 'Payment verification required. Please complete the payment process.',
-            transactionId: null
-          });
-        } catch (error) {
-          console.error('Error checking payment status by preference:', error);
-          return res.status(500).json({
-            error: 'Failed to check payment status',
-            details: error instanceof Error ? error.message : String(error)
-          });
-        }
-      }
-      
-      return res.status(400).json({
-        error: 'Invalid payment request'
-      });
     } catch (error) {
-      console.error('Error processing payment:', error);
+      console.error('[PaymentService] Error processing payment:', error);
       return res.status(500).json({
         error: 'Failed to process payment',
+        status: 'rejected',
         details: error instanceof Error ? error.message : String(error)
       });
     }
