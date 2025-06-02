@@ -262,6 +262,16 @@ export function MercadoPayoSDKModal({
           preferenceId: prefId,
           amount: paymentAmount,
         },
+        customization: {
+          paymentMethods: {
+            creditCard: "all",
+            debitCard: "all",
+            ticket: "off",
+            bankTransfer: "off", 
+            atm: "off",
+            maxInstallments: 12
+          }
+        },
         callbacks: {
           onReady: () => {
             console.log('Payment brick ready')
@@ -296,9 +306,13 @@ export function MercadoPayoSDKModal({
             console.log('=== END DEBUG ===');
             
             if (!hedgeData) {
-              setError('Missing hedge data for payment processing.')
-              return false
+              console.error('Missing hedge data for payment processing.');
+              setError('Missing hedge data for payment processing.');
+              return false;
             }
+
+            // Add a small delay to ensure all form validation is complete
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             // Extract payment data according to Mercado Pago Bricks structure
             // Try multiple possible locations for payment_method_id
@@ -384,20 +398,6 @@ export function MercadoPayoSDKModal({
               setError('Payment processing error. Please try again.');
               return false;
             }
-          }
-        },
-        customization: {
-          visual: {
-            hidePaymentButton: false,
-            style: {
-              theme: 'default'
-            }
-          },
-          paymentMethods: {
-            creditCard: 'all',
-            debitCard: 'all',
-            ticket: 'all',
-            maxInstallments: 1
           }
         }
       }
