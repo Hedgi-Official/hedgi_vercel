@@ -329,6 +329,19 @@ export function MercadoPayoSDKModal({
               payer
             });
 
+            // Validate that we have the minimum required data
+            if (!token) {
+              console.error('Missing payment token - this usually means the card details were not properly processed');
+              setError('Payment processing failed: Card details not properly processed. Please check your card information and try again.');
+              return false;
+            }
+
+            if (!paymentMethodId || paymentMethodId === 'credit_card') {
+              console.error('Invalid payment method ID - received:', paymentMethodId);
+              setError('Payment processing failed: Unable to determine card type. Please check your card information and try again.');
+              return false;
+            }
+
             const paymentPayload = {
               token: token,
               transaction_amount: Number(paymentAmount),
