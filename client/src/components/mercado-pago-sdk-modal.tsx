@@ -58,6 +58,7 @@ export function MercadoPayoSDKModal({
   const [error, setError] = useState<string | null>(null)
   const [mp, setMp] = useState<any>(null)
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
+  const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
 
   const isPortuguese = i18n.language === 'pt-BR'
 
@@ -92,6 +93,11 @@ export function MercadoPayoSDKModal({
       console.log('[PaymentModal] Skipping SDK load - modal closed or no hedge data')
       return
     }
+
+    // Generate unique payment tracking token when modal opens
+    const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    setPaymentTrackingToken(trackingToken)
+    console.log('[PaymentModal] Generated payment tracking token:', trackingToken)
 
     console.log('[PaymentModal] Starting SDK load process...')
     const loadMercadoPagoSDK = () => {
@@ -272,14 +278,19 @@ export function MercadoPayoSDKModal({
           onSubmit: async (cardFormData: any) => {
             console.log('Payment submitted:', cardFormData)
             try {
-              // Extract payment token from MercadoPago response
-              const paymentToken = cardFormData?.token || 
-                                 cardFormData?.payment?.id || 
-                                 cardFormData?.id || 
-                                 `mp_${Date.now()}`
+              // Use our pre-generated tracking token along with MP response
+              const mpToken = cardFormData?.token || 
+                             cardFormData?.payment?.id || 
+                             cardFormData?.id || 
+                             'mp_submitted'
               
-              console.log('Payment token captured:', paymentToken)
-              handlePaymentSuccess({ payment: { id: paymentToken } })
+              console.log('Mercado Pago token:', mpToken)
+              console.log('Using tracking token:', paymentTrackingToken)
+              
+              // Create a combined token that includes both our tracking and MP info
+              const finalToken = `${paymentTrackingToken}_${mpToken}`
+              
+              handlePaymentSuccess({ payment: { id: finalToken } })
               return true
             } catch (submitError) {
               console.error('Submit error:', submitError)
@@ -348,8 +359,11 @@ export function MercadoPayoSDKModal({
   const handleTestPayment = () => {
     if (!hedgeData) return
 
-    const mockPaymentToken = "Dev_Mode"
-    onSuccess(hedgeData, mockPaymentToken)
+    // Use tracking token for test payments too
+    const testToken = paymentTrackingToken || `test_payment_${Date.now()}`
+    console.log('[PaymentModal] Using test payment token:', testToken)
+    
+    onSuccess(hedgeData, testToken)
 
     toast({
       title: isPortuguese ? 'Modo Dev: Proteção registrada' : 'Dev mode: Hedge placed',
