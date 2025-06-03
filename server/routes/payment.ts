@@ -96,8 +96,22 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
         processing_mode: "automatic",
         total_amount: payload.payment_details.total_amount,
         external_reference: payload.external_reference,
+        items: payload.items || [
+          {
+            title: `Hedge Protection - ${payload.currency || 'BRL'}`,
+            description: `Currency hedge protection`,
+            category_id: 'services',
+            quantity: 1,
+            unit_price: Number(payload.payment_details.total_amount)
+          }
+        ],
         payer: {
-          email: payload.payer.email
+          email: payload.payer.email,
+          name: payload.payer.name || "Customer",
+          identification: payload.payer.identification || {
+            type: "CPF",
+            number: "12345678901"
+          }
         },
         transactions: {
           payments: [
