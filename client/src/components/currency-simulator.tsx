@@ -10,7 +10,7 @@ import { calculateBusinessDays } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
-import { MercadoPayoSDKModal } from './mercado-pago-sdk-modal';
+import { MercadoPaySDKModal } from './mercado-pago-sdk-modal';
 
 export interface TradeResponse {
   ask: number;
@@ -402,7 +402,7 @@ export function CurrencySimulator({
         </CardContent>
       </Card>
 
-      <MercadoPayoSDKModal
+      <MercadoPaySDKModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSuccess={handlePaymentSuccess}
