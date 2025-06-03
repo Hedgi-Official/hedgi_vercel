@@ -123,33 +123,37 @@ export function MercadoPaySDKModal({
     setLoading(true);
     setError(null);
 
-    // Build v1 Orders payload **exactly** as MP expects:
-    // (we assume your backend expects this shape)
+    // Build v2 Preferences payload as expected by our server:
     const externalRef =
       paymentTrackingToken ||
       `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const body = {
       type: "online",
-      processing_mode: "automatic",
-      total_amount: paymentAmount.toFixed(2), // string, e.g. "100.00"
       external_reference: externalRef.substring(0, 64),
+      items: [
+        {
+          title: `Hedge Protection - ${currency}`,
+          description: `Currency hedge for ${hedgeData.amount} ${currency}`,
+          category_id: "services",
+          quantity: 1,
+          unit_price: paymentAmount,
+        },
+      ],
       payer: {
         email: "JohnDoe@hedgi.ai",
+        name: "John Doe",
+        identification: {
+          type: "CPF",
+          number: "12345678901",
+        },
       },
-      transactions: {
-        payments: [
-          {
-            amount: paymentAmount.toFixed(2), // string
-            payment_method: {
-              id: "master", // placeholder; real token comes from Brick
-              type: "credit_card",
-              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // dummy 32-char
-            },
-            installments: 1,
-          },
-        ],
+      back_urls: {
+        success: `${window.location.origin}/payment/success`,
+        failure: `${window.location.origin}/payment/failure`,
+        pending: `${window.location.origin}/payment/pending`,
       },
+      auto_return: "approved",
     };
 
     console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
