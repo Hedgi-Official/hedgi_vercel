@@ -53,7 +53,7 @@ interface BrickAdditionalData {
   paymentTypeId: string;
 }
 
-export function MercadoPayoSDKModal({
+export function MercadoPaySDKModal({
   isOpen,
   onClose,
   onSuccess,
