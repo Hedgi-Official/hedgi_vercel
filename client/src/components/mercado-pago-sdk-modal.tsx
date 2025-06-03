@@ -170,10 +170,10 @@ export function MercadoPaySDKModal({
       auto_return: "approved",
     };
 
-    console.log("➡️ [createOrder] Sending to /api/payment/preference:", body);
+    console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
 
     try {
-      const resp = await fetch("/api/payment/preference", {
+      const resp = await fetch("/api/payment/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -187,12 +187,12 @@ export function MercadoPaySDKModal({
       const data = await resp.json();
       console.log("✅ Order response:", data);
 
-      if (!data.id || !data.public_key) {
-        throw new Error("Invalid response: missing preference ID or public key");
+      if (!data.orderId || !data.publicKey) {
+        throw new Error("Invalid response: missing orderId or publicKey");
       }
 
-      setOrderId(data.id);
-      setPublicKey(data.public_key);
+      setOrderId(data.orderId);
+      setPublicKey(data.publicKey);
 
       // Now that we have orderId & publicKey, render the Card Payment Brick
       const mercadoPago = new window.MercadoPago(data.publicKey, {
