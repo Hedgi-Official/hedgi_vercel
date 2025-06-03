@@ -243,8 +243,8 @@ export default function Dashboard() {
         return createHedgeMutation.mutate({ hedgeData, paymentToken });
       }
 
-      // For real payments, verify with Mercado Pago before proceeding
-      console.log('[Dashboard] Verifying real payment with token:', paymentToken);
+      // For real payments, verify with backend before proceeding
+      console.log('[Dashboard] Verifying payment with token:', paymentToken);
       
       const verificationResponse = await fetch('/api/payment/process', {
         method: 'POST',
@@ -273,6 +273,18 @@ export default function Dashboard() {
           variant: "destructive",
           title: "Payment Verification Failed",
           description: errorMessage,
+        });
+        return;
+      }
+
+      const verificationData = await verificationResponse.json();
+      console.log('[Dashboard] Payment verification data:', verificationData);
+
+      if (verificationData.status !== 'approved' && !verificationData.verified) {
+        toast({
+          variant: "destructive",
+          title: "Payment Not Approved",
+          description: `Payment status: ${verificationData.status}. ${verificationData.statusDetail || ''}`,
         });
         return;
       }
