@@ -147,6 +147,8 @@ export function MercadoPayoSDKModal({
       console.log('[PaymentModal] Payment amount being sent:', paymentAmount)
       console.log('[PaymentModal] Currency:', currency)
 
+      
+
       const response = await fetch('/api/payment/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

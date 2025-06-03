@@ -19,7 +19,7 @@ export interface TradeResponse {
   deal: number;
   order: number;
   price: number;
-  request: any;
+  request: any; 
   request_id: number;
   retcode: number;
   retcode_external: number;
