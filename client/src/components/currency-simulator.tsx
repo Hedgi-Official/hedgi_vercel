@@ -386,7 +386,10 @@ export function CurrencySimulator({
               {/* Place Hedge */}
               {onPlaceHedge && (
                 <Button
-                  onClick={handlePlaceHedge}
+                  onClick={() => {
+                    console.log("🖱️ [CurrencySimulator] Place Hedge button clicked");
+                    handlePlaceHedge();
+                  }}
                   className="w-full"
                   variant="outline"
                   disabled={isPlacingHedge}
