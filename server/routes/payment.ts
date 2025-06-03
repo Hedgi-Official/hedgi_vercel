@@ -73,34 +73,11 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 });
 
 /**
- * Create a Mercado Pago "order" (V2) - proxy to Flask server
+ * Create a Mercado Pago "order" (V2) - use Express paymentService.createPreference
  */
 router.post('/api/payment/order', async (req: Request, res: Response) => {
-  try {
-    const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
-    console.log('[Express → Flask] Proxying payment order to Flask:', req.body);
-
-    const response = await fetch(`${FLASK}/api/payment/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
-    });
-
-    console.log('[Express → Flask] Flask response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Express → Flask] Flask error:', errorText);
-      return res.status(response.status).json({ error: errorText });
-    }
-
-    const result = await response.json();
-    console.log('[Express → Flask] Flask success:', result);
-    res.json(result);
-  } catch (error) {
-    console.error('[Express → Flask] Payment order proxy error:', error);
-    res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
-  }
+  // Route to paymentService.createPreference which handles v2 Preferences format
+  await paymentService.createPreference(req, res);
 });
 
 /**
