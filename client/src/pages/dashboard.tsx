@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MercadoPayoSDKModal } from "@/components/mercado-pago-sdk-modal";
+import { MercadoPaySDKModal } from "@/components/mercado-pago-sdk-modal";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
@@ -253,7 +253,7 @@ export default function Dashboard() {
 
       // For real payments, verify with Mercado Pago before proceeding
       console.log('[Dashboard] Verifying real payment with token:', paymentToken);
-      
+
       const verificationResponse = await fetch('/api/payment/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,7 +276,7 @@ export default function Dashboard() {
           console.error('[Dashboard] Payment verification failed with text:', errorText);
           errorMessage = errorText || errorMessage;
         }
-        
+
         toast({
           variant: "destructive",
           title: "Payment Verification Failed",
@@ -303,7 +303,7 @@ export default function Dashboard() {
       // Check HTTP status first
       if (!verificationResponse.ok) {
         console.error('[Dashboard] Payment verification HTTP error:', verificationResponse.status, verificationResult);
-        
+
         let errorMessage = "Payment verification failed.";
         if (verificationResult.error) {
           errorMessage = verificationResult.error;
@@ -312,7 +312,7 @@ export default function Dashboard() {
         } else if (verificationResponse.status === 500) {
           errorMessage = "Payment service error. Please try again.";
         }
-        
+
         toast({
           variant: "destructive",
           title: "Payment Verification Failed",
@@ -323,15 +323,15 @@ export default function Dashboard() {
 
       // Check if verification result indicates success
       const isVerified = verificationResult.verified === true && verificationResult.status === 'approved';
-      
+
       if (!isVerified) {
         console.error('[Dashboard] Payment not verified or approved:', verificationResult);
-        
+
         let errorMessage = `Payment not approved. Status: ${verificationResult.status || 'unknown'}`;
         if (verificationResult.statusDetail) {
           errorMessage += ` (${verificationResult.statusDetail})`;
         }
-        
+
         toast({
           variant: "destructive",
           title: "Payment Not Approved",
@@ -706,9 +706,9 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {showPaymentModal && pendingHedgeData && (
-        <MercadoPayoSDKModal
+        <MercadoPaySDKModal
           isOpen={showPaymentModal}
           onClose={() => {
             setShowPaymentModal(false)
@@ -724,7 +724,7 @@ export default function Dashboard() {
           simulation={null}
         />
       )}
-      
+
     </div>
   );
 }
