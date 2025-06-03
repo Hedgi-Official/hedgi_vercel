@@ -105,7 +105,7 @@ router.get('/payment/success', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-
+        
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready
@@ -191,7 +191,7 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-
+        
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready
@@ -210,14 +210,14 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
 router.post('/api/payment/webhook', async (req: Request, res: Response) => {
   try {
     const { id, topic } = req.body;
-
+    
     if (topic === 'payment') {
       // Process the payment notification
       console.log(`[Payment Webhook] Received payment notification for ID: ${id}`);
-
+      
       // Verify the payment status with Mercado Pago
       const paymentStatus = await paymentService.verifyPayment(id);
-
+      
       if (paymentStatus.status === 'approved') {
         // Payment was successful - you can now safely process the trade
         console.log(`[Payment Webhook] Payment ${id} approved`);
@@ -226,7 +226,7 @@ router.post('/api/payment/webhook', async (req: Request, res: Response) => {
         console.log(`[Payment Webhook] Payment ${id} status: ${paymentStatus.status}`);
       }
     }
-
+    
     res.status(200).send('OK');
   } catch (error) {
     console.error('[Payment Webhook] Error processing webhook:', error);
@@ -308,7 +308,7 @@ router.get('/payment/pending', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-
+        
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready

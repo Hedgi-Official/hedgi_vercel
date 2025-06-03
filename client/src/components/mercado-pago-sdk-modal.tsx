@@ -266,21 +266,102 @@ export function MercadoPayoSDKModal({
 
       const brickSettings = {
         initialization: {
-          preferenceId: prefId
+          preferenceId: prefId,
+          amount: paymentAmount,     // Must be > 0
+          currencyId: currency       // e.g. "BRL" or "USD"
         },
         callbacks: {
           onReady: () => {
             console.log('Payment brick ready')
             clearTimeout(loadingTimeout)
             setLoading(false)
-            setError(null)
+            setError(null) // Clear any previous errors
           },
           onError: (error: any) => {
             console.error('Brick error:', error)
             clearTimeout(loadingTimeout)
             setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
-          }
+          },
+          onSubmit: async (cardFormData: any) => {
+              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
+              try {
+                // Mercado Pago returns different structures depending on the payment method
+                // The most reliable way is to check for the actual payment response
+                let mpPaymentId = null;
+
+                // For credit card payments, MP typically returns a payment object with status and id
+                // First check if this is a successful payment response
+                if (cardFormData?.status === 'approved' && cardFormData?.id) {
+                  mpPaymentId = cardFormData.id;
+                  console.log('Found approved payment with ID:', mpPaymentId);
+                } 
+                // Check for payment_id field (common in some MP responses)
+                else if (cardFormData?.payment_id) {
+                  mpPaymentId = cardFormData.payment_id;
+                  console.log('Found payment_id field:', mpPaymentId);
+                } 
+                // Check nested payment object
+                else if (cardFormData?.payment?.id) {
+                  mpPaymentId = cardFormData.payment.id;
+                  console.log('Found payment.id field:', mpPaymentId);
+                }
+                // Check for transaction_id (sometimes used)
+                else if (cardFormData?.transaction_id) {
+                  mpPaymentId = cardFormData.transaction_id;
+                  console.log('Found transaction_id field:', mpPaymentId);
+                }
+                // Check for token (used in some payment flows)
+                else if (cardFormData?.token) {
+                  mpPaymentId = cardFormData.token;
+                  console.log('Found token field:', mpPaymentId);
+                }
+                // Last resort - check for any numeric ID field
+                else if (cardFormData?.id) {
+                  mpPaymentId = cardFormData.id;
+                  console.log('Found id field:', mpPaymentId);
+                }
+
+                console.log('Payment data structure analysis:', {
+                  hasStatus: !!cardFormData?.status,
+                  status: cardFormData?.status,
+                  hasPaymentId: !!cardFormData?.payment_id,
+                  hasId: !!cardFormData?.id,
+                  hasPaymentObject: !!cardFormData?.payment,
+                  hasTransactionId: !!cardFormData?.transaction_id,
+                  hasToken: !!cardFormData?.token,
+                  hasPaymentMethodId: !!cardFormData?.payment_method_id,
+                  paymentMethodId: cardFormData?.payment_method_id,
+                  issuerId: cardFormData?.issuer_id,
+                  allKeys: Object.keys(cardFormData || {})
+                })
+
+                if (!mpPaymentId) {
+                  console.error('No payment ID found in cardFormData:', cardFormData)
+                  console.error('Available fields:', Object.keys(cardFormData || {}))
+                  setError('Payment processing failed. No payment ID received from Mercado Pago.')
+                  return false
+                }
+
+                // Validate payment ID format (MP payment IDs are typically numeric)
+                const paymentIdStr = String(mpPaymentId);
+                if (paymentIdStr.length < 8 || (!paymentIdStr.match(/^\d+$/) && !paymentIdStr.startsWith('test_'))) {
+                  console.warn('Payment ID format seems unusual:', paymentIdStr);
+                  // Don't fail here, but log for debugging
+                }
+
+                console.log('Payment ID extracted, passing to dashboard for verification:', mpPaymentId)
+
+                // Don't verify here - pass the payment token to dashboard for verification
+                // The dashboard will verify the payment before placing the trade
+                handlePaymentSuccess({ payment: { id: mpPaymentId } })
+                return true
+              } catch (submitError) {
+                console.error('Payment submit error:', submitError)
+                setError('Payment processing error. Please try again.')
+                return false
+              }
+            }
         },
         customization: {
           visual: {
