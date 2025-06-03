@@ -1,0 +1,268 @@
+Your `PaymentService.createPreference` is expecting a **v2 Preferences** payload (with `type`, `external_reference`, `items`, `payer`, `back_urls`, and optionally `auto_return`), but your React `createOrder()` was still sending a v1‐Orders shape (`processing_mode`, `total_amount`, `transactions`, etc.). In other words, the server’s
+
+```ts
+const { type, external_reference, items, payer, back_urls, auto_return } = req.body;
+```
+
+is never seeing those fields, so it immediately returns:
+
+```
+400 { error: "Missing required payment information", details: "Required fields: type, external_reference, items, payer" }
+```
+
+Below are the steps (and code samples) to fix this mismatch.
+
+---
+
+## 1. Change your React `createOrder()` to send a v2 Preferences payload
+
+In your `MercadoPayoSDKModal.tsx`, replace the old `createOrder()` (which was sending `"processing_mode"`, `"total_amount"`, `"transactions"`, etc.) with this:
+
+```ts
+// … inside MercadoPayoSDKModal component …
+
+const createOrder = async (retryCount = 0) => {
+  if (!hedgeData) return;
+
+  console.log("▶️ createOrder() invoked");
+  setLoading(true);
+  setError(null);
+
+  // 1) Build a v2 Preferences payload (what your server expects in createPreference()):
+  const externalRef =
+    paymentTrackingToken ||
+    `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const body = {
+    type: "online",                                // must be "online"
+    external_reference: externalRef.substring(0, 64), // ≤ 64 chars
+    items: [
+      {
+        title:       `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+        description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
+        category_id: "others",
+        quantity:    1,
+        unit_price:  Number(paymentAmount),        // number, e.g. 585.00
+      },
+    ],
+    payer: {
+      email: "JohnDoe@hedgi.ai",
+      name:  "John Doe",
+      identification: {
+        type:   currency === "BRL" ? "CPF" : "CURP",
+        number: currency === "BRL" ? "11111111111" : "123456789",
+      },
+    },
+    back_urls: {
+      success: `${window.location.origin}/payment/success`,
+      failure: `${window.location.origin}/payment/failure`,
+      pending: `${window.location.origin}/payment/pending`,
+    },
+    auto_return: "approved",
+  };
+
+  console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
+
+  try {
+    const resp = await fetch("/api/payment/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.json().catch(() => ({ error: "Network" }));
+      throw new Error(text.error || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    console.log("✅ Order response:", data);
+
+    // The server should return { id, init_point, sandbox_init_point, public_key, enabled }
+    if (!data.id || !data.public_key) {
+      throw new Error("Invalid response: missing id or public_key");
+    }
+
+    // Option A: If you want to redirect to MP’s checkout page directly:
+    // window.location.href = data.sandbox_init_point || data.init_point;
+
+    // Option B (Card Payment Brick): Use data.public_key + data.id as the “preference”:
+    setOrderId(data.id);            // preference ID
+    setPublicKey(data.public_key);  // your MP sandbox public key
+
+    const mercadoPago = new window.MercadoPago(data.public_key, {
+      locale: isPortuguese ? "pt-BR" : "en-US",
+    });
+    const bricksBuilder = mercadoPago.bricks();
+    renderCardPaymentBrick(bricksBuilder, paymentAmount, data.id);
+  } catch (e: any) {
+    console.error("❌ Error creating payment preference:", e);
+    if (retryCount < 2 && e.message.includes("Network")) {
+      return setTimeout(() => createOrder(retryCount + 1), 2000);
+    }
+    setError(isPortuguese ? "Falha ao inicializar pagamento. Use o modo de teste." : "Failed to initialize payment. Use test mode.");
+    setLoading(false);
+  }
+};
+```
+
+**Key points:**
+
+* We are now sending exactly the fields that `paymentService.createPreference` does:
+
+  ```ts
+  const { type, external_reference, items, payer, back_urls, auto_return } = req.body;
+  ```
+* We removed any `processing_mode`, `total_amount`, or `transactions` keys—those belong to v1 Orders, not v2 Preferences.
+* After the fetch, the server will return something like:
+
+  ```json
+  {
+    "id": "1234567890",                     // preference ID
+    "init_point": "https://www.mercadopago.com.br/checkout/v2…",
+    "sandbox_init_point": "https://sandbox.mercadopago.com.br/checkout/v2…",
+    "public_key": "TEST-XXXXXXXXXXXXXXXX",
+    "enabled": true
+  }
+  ```
+* Use `data.public_key` + `data.id` (the v2 Preference ID) to render the Card Payment Brick if you want an “inline” checkout, or simply redirect to `data.init_point` if you prefer the hosted page.
+
+---
+
+## 2. Verify with a direct `curl` to your `/api/payment/order` (v2 Preferences)
+
+Once you’ve applied the above change and restarted your Express server, you can test with a one‐line `curl`. This ensures that your React payload exactly matches what `createPreference` expects:
+
+```bash
+curl -X POST http://localhost:3000/api/payment/order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type":               "online",
+    "external_reference": "hedge_test_123456",
+    "items": [
+      {
+        "title":       "Hedge BRL/USD",
+        "description": "Hedge protection for 10000 BRL",
+        "category_id": "others",
+        "quantity":    1,
+        "unit_price":  10000.00
+      }
+    ],
+    "payer": {
+      "email": "testuser@example.com",
+      "name":  "Test User",
+      "identification": {
+        "type":   "CPF",
+        "number": "11111111111"
+      }
+    },
+    "back_urls": {
+      "success": "https://your-domain.com/payment/success",
+      "failure": "https://your-domain.com/payment/failure",
+      "pending": "https://your-domain.com/payment/pending"
+    },
+    "auto_return": "approved"
+  }'
+```
+
+> **Note**: Replace `http://localhost:3000` with your actual API host (e.g. `https://your-app.com`).
+> **Also ensure** that your Express route `/api/payment/order` is indeed wired to `paymentService.createPreference`.
+
+If everything is correct, you should get a **200 OK** response similar to:
+
+```json
+{
+  "id":                  "1234567890",
+  "init_point":          "https://www.mercadopago.com.br/checkout/v2…",
+  "sandbox_init_point":  "https://sandbox.mercadopago.com.br/checkout/v2…",
+  "public_key":          "TEST-XXXXXXXXXXXXXXXX",
+  "enabled":             true
+}
+```
+
+If instead you still see `"Missing required payment information"`, then double‐check that:
+
+1. Your Express route really is this code branch (not the v1 Orders branch).
+2. You restarted your server after changing `createPreference`.
+3. No stray middleware is stripping properties before `paymentService.createPreference` sees them.
+
+---
+
+## 3. Keep the rest of your UI as‐is
+
+All of your existing `<Dialog>…</Dialog>` code (the payment summary, loading spinner, error banner, etc.) remains unchanged. We only replaced how `createOrder()` builds and sends the JSON.
+
+Below is a minimal “diff” summary of what changed in your React modal:
+
+```diff
+- // Old createOrder() which sent a v1 Orders payload (“processing_mode”, “total_amount”, “transactions”)
+- const createOrder = async (...) => {
+-   const body = {
+-     type: "online",
+-     processing_mode: "automatic",
+-     total_amount: paymentAmount.toFixed(2),
+-     external_reference: externalRef,
+-     payer: { email: "…" },
+-     transactions: { payments: [ { amount: "...", payment_method: { … }, installments: 1 } ] }
+-   };
+-   fetch("/api/payment/order", { body: JSON.stringify(body) });
+-   // …
+- };
+
++ // New createOrder() which sends a v2 Preferences payload (“type”, “external_reference”, “items”, “payer”, “back_urls”, “auto_return”)
++ const createOrder = async (retryCount = 0) => {
++   const body = {
++     type: "online",
++     external_reference: externalRef.substring(0, 64),
++     items: [
++       {
++         title:       `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
++         description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
++         category_id: "others",
++         quantity:    1,
++         unit_price:  Number(paymentAmount),
++       },
++     ],
++     payer: {
++       email: "JohnDoe@hedgi.ai",
++       name:  "John Doe",
++       identification: {
++         type:   currency === "BRL" ? "CPF" : "CURP",
++         number: currency === "BRL" ? "11111111111" : "123456789",
++       },
++     },
++     back_urls: {
++       success: `${window.location.origin}/payment/success`,
++       failure: `${window.location.origin}/payment/failure`,
++       pending: `${window.location.origin}/payment/pending`,
++     },
++     auto_return: "approved",
++   };
++
++   console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
++   const resp = await fetch("/api/payment/order", {
++     method: "POST",
++     headers: { "Content-Type": "application/json" },
++     body: JSON.stringify(body),
++   });
++   const data = await resp.json();
++   setOrderId(data.id);
++   setPublicKey(data.public_key);
++   // … render Card Payment Brick using data.public_key + data.id …
++ };
+```
+
+---
+
+### Recap
+
+1. **Your Express `PaymentService.createPreference` expects a v2 Preferences payload**:
+
+   ```ts
+   const { type, external_reference, items, payer, back_urls, auto_return } = req.body;
+   ```
+2. **Your React `createOrder()` must send exactly those fields**, not a v1 Orders‐style object.
+3. After making that change, test with a `curl` (shown above) to verify your `/api/payment/order` returns a valid `{ id, init_point, sandbox_init_point, public_key, enabled }`.
+4. Once the curl works, your React modal’s `createOrder()` and subsequent Brick rendering will work without the 400 error.
+
+With those corrections in place, you will stop seeing the “Missing required payment information” error, and the Card Payment Brick will load as expected.

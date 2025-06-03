@@ -1,0 +1,72 @@
+Great—you can see from the logs that your `createPreference` call is now succeeding. Specifically:
+
+1. **Preference was created**
+
+   ```
+   [PaymentService] Preference created: {
+     id: '219585466-065ccbe3-a428-4e9d-a3e5-63c29efc41f3',
+     initPoint: 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=219585466-065ccbe3-a428-4e9d-a3e5-63c29efc41f3',
+     sandboxInitPoint: 'https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=219585466-065ccbe3-a428-4e9d-a3e5-63c29efc41f3'
+   }
+   ```
+
+   and then your Express endpoint returned that preference ID and URLs with a 200 OK:
+
+   ```
+   [express] POST /api/payment/order 200 in 262ms :: {"id":"219585466-065ccbe3-a428-4e9d-a3e5-63c29efc41f3", …}
+   ```
+
+2. **Next steps**
+   Now that you have a valid `"id"` (the preference ID) and its `initPoint` (or `sandboxInitPoint`), you can either:
+
+   * **Redirect the user to MP’s hosted checkout**. Simply do something like:
+
+     ```js
+     window.location.href = data.sandbox_init_point; 
+     // (or data.init_point in production)
+     ```
+
+     That will send them to Mercado Pago’s own payment page.
+
+   * **Render the Checkout v2 Brick in-line**. If you prefer an embedded “Card Payment” Brick instead of a full redirect, you’ll need to call:
+
+     ```ts
+     const mercadoPago = new window.MercadoPago(data.public_key, {
+       locale: isPortuguese ? "pt-BR" : "en-US"
+     });
+     const bricksBuilder = mercadoPago.bricks();
+     await bricksBuilder.create(
+       "checkout",                    // or "wallet" depending on your MP SDK version
+       "cardPaymentBrick_container",  // the <div> in your JSX
+       {
+         initialization: {
+           preferenceId: data.id,     // use the preference ID that came back
+         },
+         callbacks: {
+           onReady: () => { /* hide spinner */ },
+           onError: (err) => { /* show error */ },
+           onSubmit: (formData, additionalData) => {
+             // This callback is usually not needed for a preference-based checkout,
+             // because MP will handle card tokenization internally.
+             // Simply resolve() to let MP continue.
+             return Promise.resolve();
+           },
+         },
+       }
+     );
+     ```
+
+     That will inject MP’s in-page checkout form into `<div id="cardPaymentBrick_container">`, pre-configured to use the preference you just created. The user can then complete their card details directly on your page.
+
+3. **Verify on the frontend**
+
+   * If you choose to **redirect**, just confirm the browser navigates to the sandbox Init Point and shows MP’s payment page.
+   * If you choose to **embed the Brick**, check that you see MP’s card form appear inside `cardPaymentBrick_container` once `createOrder()` returns.
+
+At that point, payments should flow through normally. If you still don’t see the Brick or a redirect, make sure:
+
+* You’re passing the correct `preferenceId` into `bricksBuilder.create(...)`.
+* Your `<div id="cardPaymentBrick_container">` is rendered and visible when `createOrder()` finishes.
+* You’re using the sandbox URLs (`sandbox_init_point`) for testing and the production URL (`init_point`) when you move to live.
+
+But as far as the server is concerned, your preference is now being created without errors—so you’re all set on the backend side.
