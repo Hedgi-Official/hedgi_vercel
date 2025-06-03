@@ -91,12 +91,15 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
       console.log('[Express → Flask] Processing real payment with card token');
 
+      // Extract payment data from the payload
+      const paymentData = payload.payment_details.transactions.payments[0];
+      
       const v1OrdersPayload = {
         type: "online",
         processing_mode: "automatic",
-        total_amount: payload.payment_details.total_amount,
+        total_amount: Number(payload.payment_details.total_amount),
         external_reference: payload.external_reference,
-        items: payload.items || [
+        items: [
           {
             title: `Hedge Protection - ${payload.currency || 'BRL'}`,
             description: `Currency hedge protection`,
@@ -106,26 +109,19 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
           }
         ],
         payer: {
-          email: payload.payer.email,
-          name: payload.payer.name || "Customer",
-          identification: payload.payer.identification || {
-            type: "CPF",
-            number: "12345678901"
-          }
+          email: payload.payer.email
         },
-        transactions: {
-          payments: [
-            {
-              amount: payload.payment_details.transactions.payments[0].amount,
-              payment_method: {
-                id: payload.payment_details.transactions.payments[0].payment_method.id,
-                type: payload.payment_details.transactions.payments[0].payment_method.type,
-                token: payload.payment_details.transactions.payments[0].payment_method.token
-              },
-              installments: payload.payment_details.transactions.payments[0].payment_method.installments || 1
+        transactions: [
+          {
+            amount: Number(paymentData.amount),
+            payment_method: {
+              id: paymentData.payment_method.id,
+              type: paymentData.payment_method.type,
+              token: paymentData.payment_method.token,
+              installments: paymentData.payment_method.installments || 1
             }
-          ]
-        }
+          }
+        ]
       };
 
       const response = await fetch(`${FLASK}/api/payment/order`, {
