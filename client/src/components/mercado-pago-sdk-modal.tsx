@@ -151,6 +151,7 @@ export function MercadoPayoSDKModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          type: "preference",
           amount: paymentAmount, 
           currency,
           description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,

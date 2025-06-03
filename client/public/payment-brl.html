@@ -263,6 +263,7 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            type: "preference",
             amount: paymentAmount,
             currency: currency,
             description: `Hedge for ${hedgeAmount} ${hedgeData.baseCurrency}${hedgeData.targetCurrency}`,
