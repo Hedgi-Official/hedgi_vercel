@@ -77,54 +77,8 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
  * This is the preferred V2 endpoint that your frontend should use.
  */
 router.post('/api/payment/order', async (req: Request, res: Response) => {
-  try {
-    const orderPayload = req.body;
-
-    // Basic sanity check of required V2 fields:
-    if (
-      orderPayload.type !== 'online' ||
-      typeof orderPayload.external_reference !== 'string' ||
-      !Array.isArray(orderPayload.items) ||
-      typeof orderPayload.payer !== 'object' ||
-      typeof orderPayload.back_urls !== 'object'
-    ) {
-      return res.status(400).json({
-        error: 'Invalid payload: you must include type, external_reference, items, payer and back_urls'
-      });
-    }
-
-    // Forward exactly to Mercado Pago's V2 "create order" endpoint:
-    const mpResponse = await fetch(
-      `https://api.mercadopago.com/checkout/orders?access_token=${MP_ACCESS_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
-      }
-    );
-
-    const mpJson = await mpResponse.json();
-
-    if (!mpResponse.ok) {
-      console.error('[Express → MP] Create Order error:', mpJson);
-      return res.status(mpResponse.status).json({ error: mpJson });
-    }
-
-    // MP's V2 comes back with { id: "1234567890", public_key: "TEST-ABCD1234", … }
-    const { id: orderId, public_key: publicKey } = mpJson as any;
-    if (!orderId || !publicKey) {
-      console.error('[Express → MP] Missing orderId/publicKey:', mpJson);
-      return res.status(500).json({
-        error: 'Invalid response from Mercado Pago: missing orderId or publicKey'
-      });
-    }
-
-    // Only send back what the front end needs:
-    return res.json({ orderId, publicKey });
-  } catch (err) {
-    console.error('[Express] /api/payment/order exception:', err);
-    return res.status(500).json({ error: `Internal error: ${err}` });
-  }
+  // Use the existing paymentService which handles the proper access tokens
+  await paymentService.createPreference(req, res);
 });
 
 /**
