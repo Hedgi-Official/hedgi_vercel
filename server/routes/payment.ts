@@ -73,12 +73,34 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 });
 
 /**
- * Create a Mercado Pago "order" (V2) and return { orderId, publicKey }.
- * This is the preferred V2 endpoint that your frontend should use.
+ * Create a Mercado Pago "order" (V2) - proxy to Flask server
  */
 router.post('/api/payment/order', async (req: Request, res: Response) => {
-  // Use the existing paymentService which handles the proper access tokens
-  await paymentService.createPreference(req, res);
+  try {
+    const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
+    console.log('[Express → Flask] Proxying payment order to Flask:', req.body);
+
+    const response = await fetch(`${FLASK}/api/payment/order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    console.log('[Express → Flask] Flask response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Express → Flask] Flask error:', errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const result = await response.json();
+    console.log('[Express → Flask] Flask success:', result);
+    res.json(result);
+  } catch (error) {
+    console.error('[Express → Flask] Payment order proxy error:', error);
+    res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+  }
 });
 
 /**
