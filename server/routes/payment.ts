@@ -6,103 +6,11 @@ const router = express.Router();
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX'; 
 
 
-router.post('/api/payment/order', async (req: Request, res: Response) => {
-  try {
-    //
-    // 1) Validate that the front end sent a v2 “order” shape.
-    //
-    //    A minimal v2 payload must include:
-    //
-    //    - payer: { email, first_name, last_name, identification: { type, number } }
-    //    - items: [ { title, description?, quantity, unit_price, currency_id } ]
-    //    - back_urls: { success, failure, pending }
-    //    - auto_return: "approved"   (if you want MP to auto-redirect on approval)
-    //    - (optionally) external_reference
-    //    - (optionally) payment_methods
-    //
-    const body = req.body;
-
-    // Basic sanity checks:
-    if (typeof body.payer !== 'object'
-      || !Array.isArray(body.items)
-      || typeof body.back_urls !== 'object'
-      || typeof body.auto_return !== 'string'
-    ) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid v2 payload: missing required fields (payer, items, back_urls, auto_return).' });
-    }
-
-    // (Optional) Verify that each item has title, quantity, unit_price, currency_id:
-    for (const item of body.items) {
-      if (typeof item.title !== 'string'
-        || typeof item.quantity !== 'number'
-        || typeof item.unit_price !== 'number'
-        || typeof item.currency_id !== 'string'
-      ) {
-        return res
-          .status(400)
-          .json({ error: 'Each item must have title, quantity, unit_price, and currency_id.' });
-      }
-    }
-
-    //
-    // 2) Forward the validated JSON to MP’s /checkout/orders endpoint:
-    //
-    const mpResponse = await fetch(
-      `https://api.mercadopago.com/checkout/orders?access_token=${MP_ACCESS_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }
-    );
-
-    const mpJson = await mpResponse.json();
-    if (!mpResponse.ok) {
-      console.error('[Express → MP] /checkout/orders error:', mpJson);
-      return res.status(mpResponse.status).json({ error: mpJson });
-    }
-
-    //
-    // 3) Extract only the two fields the front end needs: orderId and publicKey
-    //
-    //    (MercadoPago’s v2 “orders” response includes many fields; we only return { orderId, publicKey }.)
-    //
-    //    Typical v2 response looks like:
-    //    {
-    //      id: "1234567890",         ← this is the “orderId”
-    //      status: "created",
-    //      payer: { … },
-    //      payment_methods: { … },
-    //      /* … */,
-    //      sandbox_init_point: "https://www.mercadopago.com/checkout/v2/redirect?pref_id=…", 
-    //      init_point: "https://www.mercadopago.com/checkout/v2/redirect?pref_id=…",
-    //      public_key: "TEST-ABCD1234"
-    //    }
-    //
-    const orderId: string | undefined = (mpJson as any).id;
-    const publicKey: string | undefined = (mpJson as any).public_key;
-
-    if (!orderId || !publicKey) {
-      console.error('[Express → MP] missing id or public_key on MP response:', mpJson);
-      return res.status(500).json({ error: 'MP v2 returned no orderId or publicKey.' });
-    }
-
-    return res.json({ orderId, publicKey });
-  }
-  catch (err) {
-    console.error('[Express] /api/payment/order exception:', err);
-    return res.status(500).json({ error: `Internal error: ${(err as Error).message}` });
-  }
-});
-
-
 /**
  * Create a payment preference
  * This endpoint generates a payment preference ID that can be used to initiate
  * the Mercado Pago payment flow on the client side.
- 
+ */
 router.post('/api/payment/preference', async (req: Request, res: Response) => {
   try {
     // The front end should send exactly this v2 shape:
@@ -129,7 +37,7 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
         .json({ error: 'Invalid payload: missing required Checkout‐Order fields.' });
     }
 
-    // Forward to MP’s Checkout Orders endpoint:
+    // Forward to MP's Checkout Orders endpoint:
     const mpResponse = await fetch(
       `https://api.mercadopago.com/checkout/orders?access_token=${MP_ACCESS_TOKEN}`,
       {
@@ -143,7 +51,7 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 
     if (!mpResponse.ok) {
       console.error('[Express → MP] Create Order error:', mpJson);
-      // Send MP’s error message straight back to the client
+      // Send MP's error message straight back to the client
       return res.status(mpResponse.status).json({ error: mpJson });
     }
 
@@ -163,8 +71,61 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
     return res.status(500).json({ error: `Internal error: ${err}` });
   }
 });
-*/
 
+/**
+ * Create a Mercado Pago "order" (V2) and return { orderId, publicKey }.
+ * This is the preferred V2 endpoint that your frontend should use.
+ */
+router.post('/api/payment/order', async (req: Request, res: Response) => {
+  try {
+    const orderPayload = req.body;
+
+    // Basic sanity check of required V2 fields:
+    if (
+      orderPayload.type !== 'online' ||
+      typeof orderPayload.external_reference !== 'string' ||
+      !Array.isArray(orderPayload.items) ||
+      typeof orderPayload.payer !== 'object' ||
+      typeof orderPayload.back_urls !== 'object'
+    ) {
+      return res.status(400).json({
+        error: 'Invalid payload: you must include type, external_reference, items, payer and back_urls'
+      });
+    }
+
+    // Forward exactly to Mercado Pago's V2 "create order" endpoint:
+    const mpResponse = await fetch(
+      `https://api.mercadopago.com/checkout/orders?access_token=${MP_ACCESS_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      }
+    );
+
+    const mpJson = await mpResponse.json();
+
+    if (!mpResponse.ok) {
+      console.error('[Express → MP] Create Order error:', mpJson);
+      return res.status(mpResponse.status).json({ error: mpJson });
+    }
+
+    // MP's V2 comes back with { id: "1234567890", public_key: "TEST-ABCD1234", … }
+    const { id: orderId, public_key: publicKey } = mpJson as any;
+    if (!orderId || !publicKey) {
+      console.error('[Express → MP] Missing orderId/publicKey:', mpJson);
+      return res.status(500).json({
+        error: 'Invalid response from Mercado Pago: missing orderId or publicKey'
+      });
+    }
+
+    // Only send back what the front end needs:
+    return res.json({ orderId, publicKey });
+  } catch (err) {
+    console.error('[Express] /api/payment/order exception:', err);
+    return res.status(500).json({ error: `Internal error: ${err}` });
+  }
+});
 
 /**
  * Process payment
@@ -259,7 +220,7 @@ router.get('/payment/success', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-        
+
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready
@@ -345,7 +306,7 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-        
+
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready
@@ -364,14 +325,14 @@ router.get('/payment/failure', (_req: Request, res: Response) => {
 router.post('/api/payment/webhook', async (req: Request, res: Response) => {
   try {
     const { id, topic } = req.body;
-    
+
     if (topic === 'payment') {
       // Process the payment notification
       console.log(`[Payment Webhook] Received payment notification for ID: ${id}`);
-      
+
       // Verify the payment status with Mercado Pago
       const paymentStatus = await paymentService.verifyPayment(id);
-      
+
       if (paymentStatus.status === 'approved') {
         // Payment was successful - you can now safely process the trade
         console.log(`[Payment Webhook] Payment ${id} approved`);
@@ -380,7 +341,7 @@ router.post('/api/payment/webhook', async (req: Request, res: Response) => {
         console.log(`[Payment Webhook] Payment ${id} status: ${paymentStatus.status}`);
       }
     }
-    
+
     res.status(200).send('OK');
   } catch (error) {
     console.error('[Payment Webhook] Error processing webhook:', error);
@@ -462,7 +423,7 @@ router.get('/payment/pending', (_req: Request, res: Response) => {
           // Close this window
           window.close();
         }
-        
+
         // Auto-notify on page load
         window.addEventListener('load', function() {
           // Short delay to ensure parent window is ready
