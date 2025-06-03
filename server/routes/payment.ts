@@ -111,17 +111,19 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
         payer: {
           email: payload.payer.email
         },
-        transactions: [
-          {
-            amount: Number(paymentData.amount),
-            payment_method: {
-              id: paymentData.payment_method.id,
-              type: paymentData.payment_method.type,
-              token: paymentData.payment_method.token,
-              installments: paymentData.payment_method.installments || 1
+        transactions: {
+          payments: [
+            {
+              amount: Number(paymentData.amount),
+              payment_method: {
+                id: paymentData.payment_method.id,
+                type: paymentData.payment_method.type,
+                token: paymentData.payment_method.token,
+                installments: paymentData.payment_method.installments || 1
+              }
             }
-          }
-        ]
+          ]
+        }
       };
 
       const response = await fetch(`${FLASK}/api/payment/order`, {
