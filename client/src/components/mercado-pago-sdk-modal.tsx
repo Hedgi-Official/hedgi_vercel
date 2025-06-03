@@ -35,7 +35,22 @@ interface PaymentModalProps {
 declare global {
   interface Window {
     MercadoPago: any;
+    cardPaymentBrickController?: any;
   }
+}
+
+interface BrickFormData {
+  transaction_amount: number;
+  payment_method_id: string;
+  token: string; // real card token (≥32 chars)
+  installments: number;
+  payer: {
+    email: string;
+    identification: { type: string; number: string };
+  };
+}
+interface BrickAdditionalData {
+  paymentTypeId: string;
 }
 
 export function MercadoPayoSDKModal({
@@ -48,7 +63,6 @@ export function MercadoPayoSDKModal({
 }: PaymentModalProps) {
   const { i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [mp, setMp] = useState<any>(null)
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -56,7 +70,7 @@ export function MercadoPayoSDKModal({
 
   const isPortuguese = i18n.language === "pt-BR";
 
-  // Dev‐mode flag: if true, skip the real payment brick and go straight to test payment
+  // Dev‐mode flag: if true, skip real payment brick
   const SKIP_PAYMENTS = false;
 
   // Compute final payment amount (fees + margin + etc.)
@@ -68,22 +82,20 @@ export function MercadoPayoSDKModal({
     return Number((cost + margin).toFixed(2));
   })();
 
-  // 1) When modal opens and we have hedgeData, load the MP SDK and then create an Order
+  //
+  // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
+  //
   useEffect(() => {
-    if (!isOpen || !hedgeData) {
-      return;
-    }
+    if (!isOpen || !hedgeData) return;
 
-    // Generate a tracking token (for your own record)
+    // Generate a tracking token (for our records)
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setPaymentTrackingToken(trackingToken);
 
-    // 1a) Dynamically load MercadoPago SDK script
+    // Dynamically load the MercadoPago SDK
     const loadSDK = () =>
       new Promise<void>((resolve, reject) => {
-        if (window.MercadoPago) {
-          return resolve();
-        }
+        if (window.MercadoPago) return resolve();
         const script = document.createElement("script");
         script.src = "https://sdk.mercadopago.com/js/v2";
         script.onload = () => resolve();
@@ -93,59 +105,54 @@ export function MercadoPayoSDKModal({
 
     loadSDK()
       .then(() => {
-        // 1b) Once SDK is loaded, POST to /api/payment/order to get { orderId, publicKey }
+        // SDK is ready → create the MP Order
         createOrder();
       })
       .catch((err) => {
         console.error("❌ Error loading MP SDK:", err);
-        setError(
-          isPortuguese
-            ? "Falha ao carregar sistema de pagamento."
-            : "Failed to load payment system."
-        );
+        setError(isPortuguese ? "Falha ao carregar sistema de pagamento." : "Failed to load payment system.");
         setLoading(false);
       });
   }, [isOpen, hedgeData]);
 
-  // 2) CreateOrder: call your backend to hit Flask (/api/payment/order)
+  //
+  // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
+  //
   const createOrder = async (retryCount = 0) => {
     if (!hedgeData) return;
-
     setLoading(true);
     setError(null);
 
-    // Build v2 Checkout‐Order body exactly as MP expects:
+    // Build v1 Orders payload **exactly** as MP expects:
+    // (we assume your backend expects this shape)
     const externalRef =
       paymentTrackingToken ||
       `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const body = {
       type: "online",
-      external_reference: externalRef.substring(0, 64), // ≤ 64 chars
-      items: [
-        {
-          title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
-          description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
-          category_id: "others",
-          quantity: 1,
-          unit_price: paymentAmount,
-        },
-      ],
+      processing_mode: "automatic",
+      total_amount: paymentAmount.toFixed(2), // string, e.g. "100.00"
+      external_reference: externalRef.substring(0, 64),
       payer: {
         email: "JohnDoe@hedgi.ai",
-        name: "John Doe",
-        identification: {
-          type: currency === "BRL" ? "CPF" : "CURP",
-          number: currency === "BRL" ? "11111111111" : "123456789",
-        },
       },
-      back_urls: {
-        success: `${window.location.origin}/payment/success`,
-        failure: `${window.location.origin}/payment/failure`,
-        pending: `${window.location.origin}/payment/pending`,
+      transactions: {
+        payments: [
+          {
+            amount: paymentAmount.toFixed(2), // string
+            payment_method: {
+              id: "master", // placeholder; real token comes from Brick
+              type: "credit_card",
+              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // dummy 32-char
+            },
+            installments: 1,
+          },
+        ],
       },
-      auto_return: "approved",
     };
+
+    console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
 
     try {
       const resp = await fetch("/api/payment/order", {
@@ -155,15 +162,13 @@ export function MercadoPayoSDKModal({
       });
 
       if (!resp.ok) {
-        // Try retry on network glitch
         const text = await resp.json().catch(() => ({ error: "Network" }));
         throw new Error(text.error || `HTTP ${resp.status}`);
       }
 
       const data = await resp.json();
-      console.log("✅ Preference response:", data);
+      console.log("✅ Order response:", data);
 
-      // MP returns { id: "...", public_key: "TEST-..." }
       if (!data.orderId || !data.publicKey) {
         throw new Error("Invalid response: missing orderId or publicKey");
       }
@@ -171,138 +176,110 @@ export function MercadoPayoSDKModal({
       setOrderId(data.orderId);
       setPublicKey(data.publicKey);
 
-      // 3) Now that we have publicKey & orderId, initialize the Card Payment Brick
-      initializeCheckoutV2(data.publicKey, data.orderId);
+      // Now that we have orderId & publicKey, render the Card Payment Brick
+      const mercadoPago = new window.MercadoPago(data.publicKey, {
+        locale: isPortuguese ? "pt-BR" : "en-US",
+      });
+      const bricksBuilder = mercadoPago.bricks();
+      renderCardPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
     } catch (e: any) {
       console.error("❌ Error creating payment order:", e);
       if (retryCount < 2 && e.message.includes("Network")) {
         return setTimeout(() => createOrder(retryCount + 1), 2000);
       }
-      setError(
-        isPortuguese
-          ? "Falha ao inicializar pagamento. Use o modo de teste."
-          : "Failed to initialize payment. Use test mode."
-      );
+      setError(isPortuguese ? "Falha ao inicializar pagamento. Use o modo de teste." : "Failed to initialize payment. Use test mode.");
       setLoading(false);
     }
   };
 
-  // 4) initializeCheckoutV2: actually build a MercadoPago instance and render the CardPayment brick
-  const initializeCheckoutV2 = async (pk: string, oid: string) => {
-    console.log("[PaymentModal] initializeCheckoutV2 →", { pk, oid });
-
-    // 4a) Create MercadoPago instance
-    let mercadoPago: any;
-    try {
-      mercadoPago = new window.MercadoPago(pk, {
-        locale: isPortuguese ? "pt-BR" : "en-US",
-      });
-      setMp(mercadoPago);
-    } catch (mpErr) {
-      console.error("❌ Could not instantiate MercadoPago:", mpErr);
-      setError(
-        isPortuguese
-          ? "Não foi possível inicializar Mercado Pago."
-          : "Could not initialize Mercado Pago."
-      );
-      setLoading(false);
-      return;
-    }
-
-    // 4b) Grab the bricksBuilder
-    const bricksBuilder = mercadoPago.bricks();
-
-    // 4c) Render the Card Payment Brick into our container
-    try {
-      await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", {
-        initialization: {
-          amount: paymentAmount, // must be > 0
-          // You *could* pass `external_reference: oid` here as well, but not strictly required
+  //
+  // 3) renderCardPaymentBrick: called once we have publicKey & orderId
+  //
+  const renderCardPaymentBrick = async (
+    bricksBuilder: any,
+    amount: number,
+    externalRef: string
+  ) => {
+    const settings = {
+      initialization: {
+        amount: amount, // e.g. 100.00
+        external_reference: externalRef,
+      },
+      callbacks: {
+        onReady: () => {
+          // Brick is ready; hide your spinner if you have one
+          setLoading(false);
         },
-        callbacks: {
-          onReady: () => {
-            console.log("✅ CardPayment Brick is ready");
-            setLoading(false);
-          },
-          onError: (brickErr: any) => {
-            console.error("❌ Brick error:", brickErr);
-            setError(
-              isPortuguese
-                ? "Erro ao carregar interface de pagamento."
-                : "Failed to create payment interface."
-            );
-            setLoading(false);
-          },
-          onSubmit: (formData: any, additionalData: any) => {
-            console.log("▶️ Brick onSubmit:", { formData, additionalData });
-            return new Promise((resolve, reject) => {
-              // Build the v2 Payments payload exactly as MP docs require:
-              const submitData = {
-                type: "online",
-                total_amount: String(formData.transaction_amount), // "00.00"
-                external_reference: oid,
-                processing_mode: "automatic",
-                transactions: {
-                  payments: [
-                    {
-                      amount: String(formData.transaction_amount),
-                      payment_method: {
-                        id: formData.payment_method_id,
-                        type: additionalData.paymentTypeId,
-                        token: formData.token,
-                        installments: formData.installments,
-                      },
+        onError: (error: unknown) => {
+          console.error("❌ Brick error:", error);
+          setError(isPortuguese ? "Erro ao carregar interface de pagamento." : "Failed to load payment interface.");
+          setLoading(false);
+        },
+        onSubmit: (formData: BrickFormData, additionalData: BrickAdditionalData) => {
+          // Called when user clicks “Pay” in the brick.
+          // formData.token is the REAL card token (≥32 chars)
+          return new Promise<void>((resolve, reject) => {
+            const submitData = {
+              type: "online",
+              total_amount: String(formData.transaction_amount), // must be a string
+              external_reference: externalRef,
+              processing_mode: "automatic",
+              transactions: {
+                payments: [
+                  {
+                    amount: String(formData.transaction_amount),
+                    payment_method: {
+                      id: formData.payment_method_id,
+                      type: additionalData.paymentTypeId,
+                      token: formData.token, // 👈 real token from Brick
+                      installments: formData.installments,
                     },
-                  ],
-                },
-                payer: {
-                  email: formData.payer.email,
-                  identification: formData.payer.identification,
-                },
-              };
+                  },
+                ],
+              },
+              payer: {
+                email: formData.payer.email,
+              },
+            };
 
-              fetch("/process_order", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(submitData),
+            fetch("/api/payment/order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(submitData),
+            })
+              .then((response) => response.json())
+              .then((json) => {
+                console.log("✔️ /api/payment/order →", json);
+                if (json.error) {
+                  console.error("❌ Payment failed:", json.error);
+                  reject(json.error);
+                  return;
+                }
+                // Success! Pass the payment ID (or order ID) back
+                onSuccess(hedgeData!, json.orderId || "unknown_id");
+                onClose();
+                resolve();
               })
-                .then((r) => r.json())
-                .then((json) => {
-                  console.log("✔️ /process_order →", json);
-                  if (json.error) {
-                    console.error("❌ Payment failed:", json.error);
-                    return reject(json.error);
-                  }
-                  // Success! Pass the payment ID back to Dashboard
-                  const paymentToken = json.id || json.payment_id || "unknown_id";
-                  resolve(json);
-                  onSuccess(hedgeData!, paymentToken);
-                  onClose();
-                })
-                .catch((err) => {
-                  console.error("❌ Error calling /process_order:", err);
-                  reject(err);
-                });
-            });
-          },
+              .catch((error) => {
+                console.error("❌ Error calling /api/payment/order:", error);
+                reject(error);
+              });
+          });
         },
-      });
+      },
+    };
 
-      // If we reach here, the Brick will show up in the <div> below
-    } catch (brickCreationError) {
-      console.error("❌ Could not create CardPayment Brick:", brickCreationError);
-      setError(
-        isPortuguese
-          ? "Falha ao criar formulário de cartão."
-          : "Failed to create card form."
-      );
-      setLoading(false);
-    }
+    // ‼️ Render the Brick into your container div
+    window.cardPaymentBrickController = await bricksBuilder.create(
+      "cardPayment",
+      "cardPaymentBrick_container",
+      settings
+    );
   };
 
-  // 5) If user wants “Test Payment,” skip the real flow:
+  //
+  // 4) “Test Payment” button (dev mode)
+  //
   const handleTestPayment = () => {
     if (!hedgeData) return;
     const testToken = paymentTrackingToken || `test_payment_${Date.now()}`;
