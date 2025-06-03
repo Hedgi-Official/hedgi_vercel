@@ -73,12 +73,14 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 });
 
 /**
- * Create a Mercado Pago "order" (V2) - handles both Preferences creation and payment submission
+ * Create a Mercado Pago "order" (V2) - proxy to Flask server
  */
 router.post('/api/payment/order', async (req: Request, res: Response) => {
   try {
+    const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
+    console.log('[Express → Flask] Received payload:', req.body);
+
     const v2 = req.body;
-    console.log('[Express] Received payload type:', v2.items ? 'V2 Preferences' : 'V1 Orders/Payment');
 
     // Check if this is a real payment submission with actual card token
     const hasRealToken = v2.transactions?.payments?.[0]?.payment_method?.token && 
@@ -89,7 +91,6 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       // This is a real payment submission from the Brick - forward to Flask
       console.log('[Express → Flask] Processing real payment with card token:', v2.transactions.payments[0].payment_method.token.substring(0, 8) + '...');
 
-      const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
       const v1OrdersPayload = {
         type: "online",
         processing_mode: "automatic",
@@ -113,11 +114,26 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
         }
       };
 
+      console.log('[Express → Flask] Sending real payment to Flask:', {
+        ...v1OrdersPayload,
+        transactions: {
+          payments: [{
+            ...v1OrdersPayload.transactions.payments[0],
+            payment_method: {
+              ...v1OrdersPayload.transactions.payments[0].payment_method,
+              token: v1OrdersPayload.transactions.payments[0].payment_method.token.substring(0, 8) + '...'
+            }
+          }]
+        }
+      });
+
       const response = await fetch(`${FLASK}/api/payment/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(v1OrdersPayload)
       });
+
+      console.log('[Express → Flask] Flask response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -128,74 +144,17 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       const result = await response.json();
       console.log('[Express → Flask] Flask success:', result);
       return res.json(result);
-    } 
-    else if (v2.items && Array.isArray(v2.items)) {
-      // This is a V2 Preferences payload - create a Mercado Pago preference
-      console.log('[Express → MP] Creating Mercado Pago preference for V2 payload');
-
-      // Use paymentService to create the preference
-      const { MercadoPagoConfig, Preference } = await import('mercadopago');
-      
-      const client = new MercadoPagoConfig({ 
-        accessToken: MP_ACCESS_TOKEN 
-      });
-      
-      const preference = new Preference(client);
-
-      const preferenceData = {
-        external_reference: v2.external_reference,
-        items: v2.items.map((item: any, index: number) => ({
-          id: `item_${Date.now()}_${index}`,
-          title: item.title,
-          description: item.description,
-          category_id: item.category_id || "others",
-          quantity: item.quantity || 1,
-          unit_price: Number(item.unit_price),
-          currency_id: 'BRL'
-        })),
-        payer: {
-          email: v2.payer.email,
-          name: v2.payer.name,
-          identification: v2.payer.identification
-        },
-        back_urls: v2.back_urls || {
-          success: `${process.env.PUBLIC_URL || req.protocol + '://' + req.get('host')}/payment/success`,
-          failure: `${process.env.PUBLIC_URL || req.protocol + '://' + req.get('host')}/payment/failure`, 
-          pending: `${process.env.PUBLIC_URL || req.protocol + '://' + req.get('host')}/payment/pending`
-        },
-        auto_return: v2.auto_return || "approved"
-      };
-
-      console.log('[Express → MP] Creating preference with data:', {
-        ...preferenceData,
-        items: preferenceData.items.map(item => ({ ...item, unit_price: `${item.unit_price} BRL` }))
-      });
-
-      const mpResponse = await preference.create({ body: preferenceData });
-      
-      console.log('[Express → MP] Preference created:', {
-        id: mpResponse.id,
-        init_point: mpResponse.init_point
-      });
-
-      return res.json({
-        orderId: mpResponse.id,
-        publicKey: process.env.MP_BR_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY",
-        init_point: mpResponse.init_point,
-        sandbox_init_point: mpResponse.sandbox_init_point
-      });
-    } 
-    else {
-      // Unknown payload format
-      console.log('[Express] Unknown payload format, returning mock response');
+    } else {
+      // This is just order creation (initial call) - return mock success for frontend
+      console.log('[Express → Flask] Initial order creation, returning mock response');
       return res.json({
         orderId: `ORDER_${Date.now()}`,
         publicKey: process.env.MP_BR_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
       });
     }
   } catch (error) {
-    console.error('[Express] Payment order error:', error);
-    res.status(500).json({ error: 'Payment order error: ' + (error as Error).message });
+    console.error('[Express → Flask] Payment order proxy error:', error);
+    res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
   }
 });
 
