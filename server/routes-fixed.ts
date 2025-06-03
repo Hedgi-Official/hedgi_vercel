@@ -337,8 +337,7 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  //Added /api/payment/order route to create a payment order
-
+  
 
   // 5. Get trade history → GET /api/trades/history (proxy to Flask)
   app.get('/api/trades/history', async (req: Request, res: Response) => {
