@@ -18,10 +18,14 @@ router.get('/api/tickmill-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       
       clearTimeout(timeoutId);
@@ -30,12 +34,34 @@ router.get('/api/tickmill-rate', async (req, res) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('[Tickmill] Rate data:', data);
-      res.json(data);
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        console.log('[Tickmill] Rate data:', data);
+        res.json(data);
+      } else {
+        console.log("[Tickmill] Received non-JSON response. Returning fallback response.");
+        res.json({
+          bid: 0,
+          ask: 0,
+          swap_long: 0,
+          swap_short: 0,
+          broker: "tickmill",
+          symbol: symbol,
+          error: "Tickmill rate API unavailable due to service issue"
+        });
+      }
     } catch (fetchError) {
       console.error('[Tickmill] Fetch error:', fetchError);
-      res.status(500).json({ error: 'Failed to fetch rate from Tickmill API' });
+      res.json({
+        bid: 0,
+        ask: 0,
+        swap_long: 0,
+        swap_short: 0,
+        broker: "tickmill",
+        symbol: symbol,
+        error: "Failed to fetch rate from Tickmill API"
+      });
     }
   } catch (error) {
     console.error('[Tickmill] Error processing request:', error);

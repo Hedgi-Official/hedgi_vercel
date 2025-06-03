@@ -27,9 +27,20 @@ export function useActivTradesRate(symbol: string = 'USDBRL') {
         return data;
       } catch (error) {
         console.error('[useActivTradesRate] Rate fetch error:', error);
-        throw error;
+        // Return fallback data instead of throwing
+        return {
+          bid: 0,
+          ask: 0,
+          swap_long: 0,
+          swap_short: 0,
+          symbol: symbol,
+          broker: 'activtrades',
+          error: 'Failed to fetch rate'
+        } as ActivTradesRateResponse;
       }
     },
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 15000, // Refresh every 15 seconds (less frequent to reduce load)
+    retry: 2, // Retry failed requests 2 times
+    retryDelay: 3000, // Wait 3 seconds between retries
   });
 }
