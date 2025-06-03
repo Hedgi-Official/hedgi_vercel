@@ -1,0 +1,187 @@
+ turned out that Mercado Pago’s V2 “create order” endpoint really wants a /api/payment/order route (not /api/payment/preference), and that your front end must send exactly the V2 payload shape there. In your case, you’d want to:
+
+Remove (or comment out) the old /api/payment/preference handler entirely.
+
+Add a new /api/payment/order handler that forwards to https://api.mercadopago.com/checkout/orders instead of /checkout/preferences.
+
+Below is a minimal example of what your Express router should look like. Notice that:
+
+The route is now POST /api/payment/order.
+
+We do a simple “sanity check” that the client‐side V2 payload has at least the required V2 fields (type, external_reference, items, payer, and back_urls).
+
+We forward that JSON straight to https://api.mercadopago.com/checkout/orders?access_token=....
+
+We return only { orderId, publicKey } back to the React app so that your front end’s initializeCheckoutV2(...) can pick up.
+
+ts
+Copy
+Edit
+// server/src/routes/payment.ts
+import express, { Request, Response } from 'express';
+
+const router = express.Router();
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX';
+
+/**
+ * Create a Mercado Pago “order” (V2) and return { orderId, publicKey }.
+ * The front end must POST exactly this V2 shape to /api/payment/order:
+ *
+ * {
+ *   type: "online",
+ *   external_reference: "hedge_123456",
+ *   items: [
+ *     { title, description, category_id, quantity, unit_price }
+ *   ],
+ *   payer: {
+ *     email, name,
+ *     identification: { type, number }
+ *   },
+ *   back_urls: {
+ *     success: "...",
+ *     failure: "...",
+ *     pending: "..."
+ *   },
+ *   auto_return: "approved"
+ * }
+ */
+router.post('/api/payment/order', async (req: Request, res: Response) => {
+  try {
+    const orderPayload = req.body;
+
+    // Basic sanity check of required V2 fields:
+    if (
+      orderPayload.type !== 'online' ||
+      typeof orderPayload.external_reference !== 'string' ||
+      !Array.isArray(orderPayload.items) ||
+      typeof orderPayload.payer !== 'object' ||
+      typeof orderPayload.back_urls !== 'object'
+    ) {
+      return res.status(400).json({
+        error: 'Invalid payload: you must include type, external_reference, items, payer and back_urls'
+      });
+    }
+
+    // Forward exactly to Mercado Pago’s V2 “create order” endpoint:
+    const mpResponse = await fetch(
+      `https://api.mercadopago.com/checkout/orders?access_token=${MP_ACCESS_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      }
+    );
+
+    const mpJson = await mpResponse.json();
+
+    if (!mpResponse.ok) {
+      console.error('[Express → MP] Create Order error:', mpJson);
+      return res.status(mpResponse.status).json({ error: mpJson });
+    }
+
+    // MP’s V2 comes back with { id: "1234567890", public_key: "TEST-ABCD1234", … }
+    const { id: orderId, public_key: publicKey } = mpJson as any;
+    if (!orderId || !publicKey) {
+      console.error('[Express → MP] Missing orderId/publicKey:', mpJson);
+      return res.status(500).json({
+        error: 'Invalid response from Mercado Pago: missing orderId or publicKey'
+      });
+    }
+
+    // Only send back what the front end needs:
+    return res.json({ orderId, publicKey });
+  } catch (err) {
+    console.error('[Express] /api/payment/order exception:', err);
+    return res.status(500).json({ error: `Internal error: ${err}` });
+  }
+});
+
+/**
+ * (You can leave /api/payment/process and /api/payment/status etc. in place if you still use them,
+ *  but the “preference” route is no longer needed now that you’re doing V2 orders.)
+ */
+router.post('/api/payment/process', async (req: Request, res: Response) => {
+  // …whatever your existing logic was…
+});
+
+router.get('/api/payment/status', (_req: Request, res: Response) => {
+  res.json({ enabled: true /* or however you check */ });
+});
+
+/**
+ * The rest of your “/payment/success”, “/payment/failure”, “/api/payment/webhook”, etc.
+ * can remain exactly as before.
+ */
+
+export default router;
+Then, in your main index.ts (where you do registerRoutes(app)), make sure you’re importing this payment.ts (or payment-fixed.ts) and that app.use(paymentRouter) appears after you set up any Flask‐proxy routes. For example:
+
+ts
+Copy
+Edit
+import express from 'express';
+import paymentRouter from './routes/payment';
+// … other imports …
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+// … your proxy-to-Flask routes, auth, etc. …
+
+// Plug in the new paymentRouter (which now listens on /api/payment/order)
+app.use(paymentRouter);
+
+// … error-handler, Vite/static setup, etc. …
+Finally, on the front end, make sure your fetch goes to /api/payment/order (not /api/payment/preference). For example, in mercado-pago-sdk-modal.tsx:
+
+ts
+Copy
+Edit
+const response = await fetch('/api/payment/order', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    type: 'online',
+    external_reference: externalRef,
+    items: [
+      {
+        title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+        description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
+        category_id: 'others',
+        quantity: 1,
+        unit_price: paymentAmount
+      }
+    ],
+    payer: {
+      email: 'JohnDoe@hedgi.ai',
+      name: 'John Doe',
+      identification: {
+        type: currency === 'BRL' ? 'CPF' : 'CURP',
+        number: currency === 'BRL' ? '11111111111' : '123456789'
+      }
+    },
+    back_urls: {
+      success: `${window.location.origin}/payment/success`,
+      failure: `${window.location.origin}/payment/failure`,
+      pending: `${window.location.origin}/payment/pending`
+    },
+    auto_return: 'approved'
+  })
+});
+With those two changes in place (1) remove/comment out /api/payment/preference completely, and (2) add the new /api/payment/order handler that matches Mercado Pago’s V2 “create order” schema, your client should stop getting:
+
+swift
+Copy
+Edit
+{ "error": "{\"error\":\"amount, currency, description, and payer are required\"}\n" }
+That error was coming from the old V1 “preferences” endpoint. As soon as your Express route is listening on /api/payment/order and forwarding the correct V2 body to https://api.mercadopago.com/checkout/orders, the “amount, currency, description, and payer” complaint disappears. At that point, the MP SDK will return a valid { orderId, publicKey }, your front end’s initializeCheckoutV2(publicKey, orderId) can run, and the brick should load without that 400 error.
+
+
+
+
+
+
+
+
+Sources
