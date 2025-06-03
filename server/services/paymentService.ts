@@ -27,6 +27,7 @@ export interface PaymentRequest {
 class PaymentService {
   private enablePayments: boolean;
   private mpBR: { publicKey: string; accessToken: string };
+  private mpMX: { publicKey: string; accessToken: string };
 
   /**
    * Initialize payment service with environment variables
@@ -35,15 +36,20 @@ class PaymentService {
     // Use the configuration from config.ts instead of environment variables directly
     this.enablePayments = PAYMENT_CONFIG.ENABLED;
     
-    // Initialize with public and access tokens for BRL only
+    // Initialize with public and access tokens for both regions
     this.mpBR = {
       publicKey: PAYMENT_CONFIG.BR_PUBLIC_KEY,
       accessToken: process.env.MP_BR_ACCESS_TOKEN || '', // Use from environment directly
     };
     
+    this.mpMX = {
+      publicKey: PAYMENT_CONFIG.MX_PUBLIC_KEY,
+      accessToken: process.env.MP_MX_ACCESS_TOKEN || '', // Use from environment directly
+    };
+    
     console.log(`Payment service initialized. Payments enabled: ${this.enablePayments}`);
     console.log(`BR Access Token: ${this.mpBR.accessToken ? 'Available (Key length: ' + this.mpBR.accessToken.length + ')' : 'Not available'}`);
-    console.log(`MXN payments disabled - using test mode only`);
+    console.log(`MX Access Token: ${this.mpMX.accessToken ? 'Available (Key length: ' + this.mpMX.accessToken.length + ')' : 'Not available'}`);
   }
 
   /**
@@ -56,14 +62,16 @@ class PaymentService {
 
   /**
    * Get Mercado Pago public key based on currency
-   * @param currency Currency code ('BRL' only - MXN uses test mode)
-   * @returns Public key for BRL currency region
+   * @param currency Currency code ('BRL' or 'MXN')
+   * @returns Public key for the specified currency region
    */
   getPublicKey(currency: string): string {
     if (currency === 'BRL') {
       return this.mpBR.publicKey;
+    } else if (currency === 'MXN') {
+      return this.mpMX.publicKey;
     }
-    // For MXN and other currencies, return BRL key (will be handled in test mode)
+    // Default to BR
     return this.mpBR.publicKey;
   }
 
@@ -90,15 +98,17 @@ class PaymentService {
         });
       }
       
-      // Only support BRL for real payments, MXN uses test mode
-      if (currency !== 'BRL') {
+      // Configure Mercado Pago with the correct access token based on currency
+      let accessToken = '';
+      if (currency === 'BRL') {
+        accessToken = this.mpBR.accessToken;
+      } else if (currency === 'MXN') {
+        accessToken = this.mpMX.accessToken;
+      } else {
         return res.status(400).json({
-          error: 'Only BRL payments are supported. MXN trades use test mode.',
-          testMode: true
+          error: 'Unsupported currency'
         });
       }
-      
-      const accessToken = this.mpBR.accessToken;
       
       if (!accessToken) {
         return res.status(500).json({
@@ -289,17 +299,17 @@ class PaymentService {
         });
       }
       
-      // Only verify BRL payments with Mercado Pago, MXN uses test mode
-      if (currency === 'MXN') {
-        return res.status(400).json({
-          error: 'MXN payments are not supported. Use test mode.',
-          status: 'rejected',
-          testMode: true
-        });
+      // For any real payment, we MUST verify with Mercado Pago
+      // Determine which Mercado Pago instance to use based on currency
+      let accessToken = '';
+      if (currency === 'BRL') {
+        accessToken = this.mpBR.accessToken;
+      } else if (currency === 'MXN') {
+        accessToken = this.mpMX.accessToken;
+      } else {
+        // Default to BR if currency not specified
+        accessToken = this.mpBR.accessToken;
       }
-      
-      // Use BR access token for BRL payments
-      const accessToken = this.mpBR.accessToken;
       
       if (!accessToken) {
         console.error('[PaymentService] No access token available for payment verification');

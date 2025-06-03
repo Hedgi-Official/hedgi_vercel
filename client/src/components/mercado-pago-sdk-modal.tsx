@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast'
 import { Hedge } from 'db/schema'
 import { useTranslation } from 'react-i18next'
 import { SimulationResult } from './currency-simulator'
+import { userInfo } from 'os'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -57,7 +58,8 @@ export function MercadoPayoSDKModal({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mp, setMp] = useState<any>(null)
-  const [preferenceId, setPreferenceId] = useState<string | null>(null)
+  const [orderId, setOrderId] = useState<string | null>(null)
+  const [publicKey, setPublicKey] = useState<string | null>(null)
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
 
   const isPortuguese = i18n.language === 'pt-BR'
@@ -117,7 +119,7 @@ export function MercadoPayoSDKModal({
 
     loadMercadoPagoSDK()
       .then(() => {
-        createPreference()
+        createOrder()
       })
       .catch((err) => {
         console.error('Error loading MercadoPago SDK:', err)
@@ -126,23 +128,16 @@ export function MercadoPayoSDKModal({
       })
   }, [isOpen, hedgeData])
 
-  const createPreference = async (retryCount = 0) => {
-    console.log('[PaymentModal] createPreference called - retryCount:', retryCount)
+  const createOrder = async (retryCount = 0) => {
+    
+    console.log('[PaymentModal] line 130 createOrder called - retryCount:', retryCount)
+    
     if (!hedgeData) {
-      console.log('[PaymentModal] No hedge data, returning early')
+      console.log('[PaymentModal]line 132 No hedge data, returning early')
       return
     }
-
     console.log('[PaymentModal] hedgeData:', hedgeData)
     console.log('[PaymentModal] paymentAmount calculated:', paymentAmount)
-
-    // Force test mode for MXN currency
-    if (currency === 'MXN') {
-      console.log('[PaymentModal] MXN currency detected - forcing test mode')
-      setError('MXN payments are not supported. Please use the test payment option below.')
-      setLoading(false)
-      return
-    }
 
     try {
       setLoading(true)
@@ -152,7 +147,7 @@ export function MercadoPayoSDKModal({
       console.log('[PaymentModal] Payment amount being sent:', paymentAmount)
       console.log('[PaymentModal] Currency:', currency)
 
-      const response = await fetch('/api/payment/preference', {
+      const response = await fetch('/api/payment/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -160,8 +155,8 @@ export function MercadoPayoSDKModal({
           currency,
           description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
           payer: {
-            email: 'user@hedgi.com',
-            name: 'Hedgi User',
+            email: "JohnDoe@hedgi.ai",
+            name: "John Doe",
             identification: {
               type: currency === 'BRL' ? 'CPF' : 'CURP',
               number: currency === 'BRL' ? '11111111111' : '123456789'
@@ -178,35 +173,30 @@ export function MercadoPayoSDKModal({
       const data = await response.json()
       console.log('Preference response:', data)
 
-      if (data.enabled === false) {
-        setError('Payments are currently disabled. Please use the test payment option.')
-        setLoading(false)
-        return
-      }
-
       if (!data.id || !data.public_key) {
         throw new Error('Invalid response: missing preference ID or public key')
       }
 
-      setPreferenceId(data.id)
+      setOrderId(data.orderId)
+      setPublicKey(data.publicKey)
 
-      // Add a small delay before initializing MP
-      await new Promise(resolve => setTimeout(resolve, 500))
+      initializeCheckoutV2(data.publicKey, data.orderId)
 
-      initializeMercadoPago(data.public_key, data.id)
-    } catch (error) {
-      console.error('Error creating payment preference:', error)
-
-      // Retry logic for network errors
-      if (retryCount < 2 && (error instanceof Error && error.message.includes('Network'))) {
-        console.log(`Retrying preference creation in 2 seconds...`)
-        setTimeout(() => createPreference(retryCount + 1), 2000)
-        return
+    } catch (err) {
+      console.error('Error creating payment order:', err)
+      if (retryCount < 2 && err instanceof Error && err.message.includes('Network')) {
+        return setTimeout(() => createOrder(retryCount + 1), 2000)
       }
-
       setError('Failed to initialize payment. Please use the test payment option.')
       setLoading(false)
     }
+  }
+
+  const initializeCheckoutV2 = (pk: string, oid: string) => {
+    console.log('[PaymentModal] initializeCheckoutV2 called with:', { pk, oid })
+    // TODO: implement MercadoPago Bricks v2 creation here.
+    //       For now, we’ll just pretend it succeeds.
+    setLoading(false)
   }
 
   const initializeMercadoPago = async (publicKey: string, prefId: string) => {
@@ -477,7 +467,7 @@ export function MercadoPayoSDKModal({
               {isPortuguese ? 'Erro' : 'Error'}
             </p>
             <p>{error}</p>
-            <Button className="mt-2" onClick={() => createPreference()}>
+            <Button className="mt-2" onClick={() => createOrder()}>
               {isPortuguese ? 'Tentar Novamente' : 'Try Again'}
             </Button>
           </div>
@@ -487,7 +477,7 @@ export function MercadoPayoSDKModal({
         {!SKIP_PAYMENTS && (
           <div className="my-4">
             <div 
-              id="payment-brick-container" 
+              id="checkout-brick-container" 
               style={{ 
                 minHeight: '400px',
                 width: '100%',

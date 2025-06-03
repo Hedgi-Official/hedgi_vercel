@@ -224,16 +224,13 @@
       // Show payment details section
       document.getElementById('payment-details').style.display = 'block';
 
-      // Check for MXN currency and force test mode
+      // Check if this is MXN currency and show the currency warning and test payment button
       if (baseCurrency === 'MXN') {
-        console.log('MXN currency detected - showing test mode only');
-        document.getElementById('mxn-warning').style.display = 'block';
-        document.getElementById('loading').style.display = 'none';
-        showError('MXN payments are not supported. Please use the test payment option below.');
-        return;
+        currencyWarningEl.style.display = 'block';
+        testPaymentEl.style.display = 'block'; // Always show test payment for MXN
       }
 
-      // Initialize payment creation for supported currencies
+      // Initialize payment creation
       createPaymentPreference(hedgeAmount, hedgeCost, paymentAmount, baseCurrency);
     }
 
@@ -397,4 +394,3 @@
   </script>
 </body>
 </html>
-```

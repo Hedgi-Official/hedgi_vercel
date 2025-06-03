@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MercadoPayoSDKModal } from "@/components/mercado-pago-sdk-modal";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-
 // Define the shape your Flask /trades endpoint returns:
 type Trade = {
   id: number;
@@ -47,6 +47,14 @@ export default function Dashboard() {
   const { user, logout } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Want useStates from react
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false) //wheter the brick should be on screen
+  const [pendingHedgeData, setPendingHedgeData] = React.useState<
+    Omit<Hedge, 'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'>
+    | null
+  >(null)
+
 
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
@@ -666,7 +674,8 @@ export default function Dashboard() {
             <CardContent>
               <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={handlePlaceHedge}
+                onPlaceHedge={(hedgePayload) => { setPendingHedgeData(hedgePayload)
+                                                  setShowPaymentModal(true) }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
                   queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
@@ -683,7 +692,6 @@ export default function Dashboard() {
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Position Not Found</AlertDialogTitle>
             <AlertDialogDescription>
               The trade position couldn't be found at the broker.
               This could be because it was closed elsewhere or never existed.
@@ -698,6 +706,25 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {showPaymentModal && pendingHedgeData && (
+        <MercadoPayoSDKModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setPendingHedgeData(null)
+          }}
+          onSuccess={(hedgeData, paymentToken) => {
+            setShowPaymentModal(false)
+            handlePlaceHedge(hedgeData, paymentToken)
+            setPendingHedgeData(null)
+          }}
+          hedgeData={pendingHedgeData}
+          currency={pendingHedgeData.baseCurrency}
+          simulation={null}
+        />
+      )}
+      
     </div>
   );
 }

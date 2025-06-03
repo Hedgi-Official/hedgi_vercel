@@ -78,11 +78,18 @@ export default function StandaloneWindowPayment({
       return;
     }
     
-    // Use standard payment page for all currencies (MXN will show test mode)
-    const url = new URL('/payment-brl.html', window.location.origin);
+    // Check currency to determine which payment page to use
+    const usesMXN = hedgeData.baseCurrency === 'MXN';
+    
+    // Create URL with all hedge data as parameters
+    // Use currency-specific payment pages - one for MXN and one for BRL (and other currencies)
+    const url = new URL(
+      usesMXN ? '/payment-mxn.html' : '/payment-brl.html', 
+      window.location.origin
+    );
     
     // Log which payment page we're using
-    console.log(`[StandaloneWindowPayment] Using standard payment page`);
+    console.log(`[StandaloneWindowPayment] Using ${usesMXN ? 'MXN-specific' : 'standard'} payment page`);
     
     // Add all hedge data as URL parameters
     Object.entries(hedgeData).forEach(([key, value]) => {
@@ -98,7 +105,7 @@ export default function StandaloneWindowPayment({
     const top = window.screenY + (window.outerHeight - height) / 2;
     
     // Log which payment page is being used
-    console.log(`[StandaloneWindowPayment] Opening standard payment window`);
+    console.log(`[StandaloneWindowPayment] Opening ${usesMXN ? 'MXN' : 'standard'} payment window`);
     
     // Open the window
     const newWindow = window.open(
