@@ -101,8 +101,3 @@ app.use((req, res, next) => {
     process.exit(1);
   }
 })();
-import routes from './routes-fixed';
-import paymentRoutes from './routes/payment';
-
-app.use(routes);
-app.use(paymentRoutes);
