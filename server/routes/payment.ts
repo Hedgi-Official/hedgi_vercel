@@ -98,9 +98,9 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
             payment_method: {
               id: "master",      // placeholder—Brick token will replace this later
               type: "credit_card",
-              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",    // dummy token
-              installments: 1
-            }
+              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"    // dummy token
+            },
+            installments: 1  // installments moved to payment level
           }
         ]
       }
