@@ -249,7 +249,7 @@ export function registerRoutes(app: Express): Server {
           eq(t.userId, req.user.id)
         )
       });
-      
+
       if (!trade) {
         console.log(`[Express Proxy] Trade ${tradeId} not found for user ${req.user.id}`);
         return res.status(404).json({ error: 'Trade not found' });
@@ -337,34 +337,43 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  //Added /order route to create a payment order
+  //Added /api/payment/order route to create a payment order
   app.post("/api/payment/order", async (req: Request, res: Response) => {
     try {
-      console.log("[Express Proxy] Forwarding /api/payment/order to Flask:", req.body);
+      console.log("[Express Proxy] === PAYMENT ORDER REQUEST ===");
+      console.log("[Express Proxy] Request headers:", req.headers);
+      console.log("[Express Proxy] Request body:", req.body);
+      console.log("[Express Proxy] Flask URL:", `${FLASK}/api/payment/order`);
 
-      // Forward to Flask’s api/payment/order
+      // Forward to Flask's api/payment/order
       const response = await fetch(`${FLASK}/api/payment/order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req.body),
       });
 
-      console.log("[Express Proxy] Flask /api/payment/order status:", response.status);
+      console.log("[Express Proxy] Flask response status:", response.status);
+      console.log("[Express Proxy] Flask response headers:", Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        // Read the text from Flask’s error response and forward status code
+        // Read the text from Flask's error response and forward status code
         const errorText = await response.text();
-        console.error("[Express Proxy] Flask error:", errorText);
+        console.error("[Express Proxy] Flask error response:", errorText);
         return res.status(response.status).json({ error: errorText });
       }
 
       const result = await response.json();
-      console.log("[Express Proxy] Flask /api/payment/order success:", result);
+      console.log("[Express Proxy] Flask success response:", result);
 
       // Simply pass through the JSON from Flask back to the browser
       return res.json(result);
     } catch (error: any) {
       console.error("[Express Proxy] Error in /api/payment/order proxy:", error);
+      console.error("[Express Proxy] Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       return res.status(500).json({ error: "Proxy error: " + error.message });
     }
   });
