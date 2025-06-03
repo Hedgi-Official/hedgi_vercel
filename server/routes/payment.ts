@@ -78,12 +78,40 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 router.post('/api/payment/order', async (req: Request, res: Response) => {
   try {
     const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
-    console.log('[Express → Flask] Proxying payment order to Flask:', req.body);
+    console.log('[Express → Flask] Received v2 Preferences payload:', req.body);
+
+    const v2 = req.body;
+
+    // Transform v2 Preferences format to v1 Orders format for Flask
+    const v1OrdersPayload = {
+      type: "online",
+      processing_mode: "automatic",
+      total_amount: String(v2.items[0].unit_price), // must be a string
+      external_reference: v2.external_reference,
+      payer: {
+        email: v2.payer.email
+      },
+      transactions: {
+        payments: [
+          {
+            amount: String(v2.items[0].unit_price), // string
+            payment_method: {
+              id: "master",      // placeholder—Brick token will replace this later
+              type: "credit_card",
+              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",    // dummy token
+              installments: 1
+            }
+          }
+        ]
+      }
+    };
+
+    console.log('[Express → Flask] Transformed to v1 Orders payload:', v1OrdersPayload);
 
     const response = await fetch(`${FLASK}/api/payment/order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(v1OrdersPayload)
     });
 
     console.log('[Express → Flask] Flask response status:', response.status);
