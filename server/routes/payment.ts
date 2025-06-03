@@ -88,62 +88,65 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
                         v2.transactions.payments[0].payment_method.token !== "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     if (hasRealToken) {
-      // This is a real payment submission from the Brick - forward to Flask
-      console.log('[Express → Flask] Processing real payment with card token:', v2.transactions.payments[0].payment_method.token.substring(0, 8) + '...');
+      // This is a real payment submission from the Brick - process with Mercado Pago directly
+      console.log('[Express → MP] Processing real payment with card token:', v2.transactions.payments[0].payment_method.token.substring(0, 8) + '...');
 
-      const v1OrdersPayload = {
-        type: "online",
-        processing_mode: "automatic",
-        total_amount: String(v2.total_amount || v2.transactions.payments[0].amount),
-        external_reference: v2.external_reference,
-        payer: {
-          email: v2.payer.email
-        },
-        transactions: {
-          payments: [
-            {
-              amount: String(v2.transactions.payments[0].amount),
-              payment_method: {
-                id: v2.transactions.payments[0].payment_method.id,
-                type: v2.transactions.payments[0].payment_method.type,
-                token: v2.transactions.payments[0].payment_method.token  // 👈 REAL token from Brick
-              },
-              installments: v2.transactions.payments[0].payment_method.installments || 1
-            }
-          ]
+      try {
+        // Import MercadoPago SDK
+        const { MercadoPagoConfig, Payment } = await import('mercadopago');
+
+        // Use Brazilian access token for this payment
+        const client = new MercadoPagoConfig({ 
+          accessToken: MP_ACCESS_TOKEN 
+        });
+
+        const payment = new Payment(client);
+
+        // Create payment request using Mercado Pago's Payment API format
+        const paymentData = {
+          transaction_amount: Number(v2.transactions.payments[0].amount),
+          token: v2.transactions.payments[0].payment_method.token,
+          description: `Hedge Protection - ${v2.external_reference}`,
+          external_reference: v2.external_reference,
+          payment_method_id: v2.transactions.payments[0].payment_method.id,
+          installments: v2.transactions.payments[0].payment_method.installments || 1,
+          payer: {
+            email: v2.payer.email
+          }
+        };
+
+        console.log('[Express → MP] Creating payment with Mercado Pago API');
+
+        const mpPayment = await payment.create({ body: paymentData });
+
+        console.log('[Express → MP] Payment result:', {
+          id: mpPayment.id,
+          status: mpPayment.status,
+          status_detail: mpPayment.status_detail
+        });
+
+        if (mpPayment.status === 'approved') {
+          return res.json({
+            success: true,
+            paymentId: mpPayment.id,
+            status: mpPayment.status,
+            orderId: v2.external_reference
+          });
+        } else {
+          return res.status(402).json({
+            error: `Payment ${mpPayment.status}: ${mpPayment.status_detail}`,
+            status: mpPayment.status,
+            details: mpPayment.status_detail
+          });
         }
-      };
 
-      console.log('[Express → Flask] Sending real payment to Flask:', {
-        ...v1OrdersPayload,
-        transactions: {
-          payments: [{
-            ...v1OrdersPayload.transactions.payments[0],
-            payment_method: {
-              ...v1OrdersPayload.transactions.payments[0].payment_method,
-              token: v1OrdersPayload.transactions.payments[0].payment_method.token.substring(0, 8) + '...'
-            }
-          }]
-        }
-      });
-
-      const response = await fetch(`${FLASK}/api/payment/order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(v1OrdersPayload)
-      });
-
-      console.log('[Express → Flask] Flask response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Express → Flask] Flask error:', errorText);
-        return res.status(response.status).json({ error: errorText });
+      } catch (mpError) {
+        console.error('[Express → MP] Mercado Pago error:', mpError);
+        return res.status(500).json({
+          error: 'Payment processing failed',
+          details: mpError.message || 'Unknown error'
+        });
       }
-
-      const result = await response.json();
-      console.log('[Express → Flask] Flask success:', result);
-      return res.json(result);
     } else {
       // This is just order creation (initial call) - return mock success for frontend
       console.log('[Express → Flask] Initial order creation, returning mock response');
