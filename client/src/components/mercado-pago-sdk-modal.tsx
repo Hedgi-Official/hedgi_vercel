@@ -136,6 +136,14 @@ export function MercadoPayoSDKModal({
     console.log('[PaymentModal] hedgeData:', hedgeData)
     console.log('[PaymentModal] paymentAmount calculated:', paymentAmount)
 
+    // Force test mode for MXN currency
+    if (currency === 'MXN') {
+      console.log('[PaymentModal] MXN currency detected - forcing test mode')
+      setError('MXN payments are not supported. Please use the test payment option below.')
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
