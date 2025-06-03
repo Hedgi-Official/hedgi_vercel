@@ -155,7 +155,7 @@ export function MercadoPaySDKModal({
         },
       ],
       payer: {
-        email: "JohnDoe@hedgi.ai",
+        email: "testuser@example.com",
         name: "John Doe",
         identification: {
           type: "CPF",
