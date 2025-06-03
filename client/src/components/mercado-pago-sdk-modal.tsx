@@ -280,36 +280,6 @@ export function MercadoPayoSDKModal({
             clearTimeout(loadingTimeout)
             setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
-          },
-          onSubmit: async (formData: any) => {
-            console.log('Payment form submitted:', formData)
-            try {
-              // For preferenceId-based payments, we need to send the form data to our backend
-              const response = await fetch('/api/payment/process', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-              })
-
-              const result = await response.json()
-              console.log('Payment processing result:', result)
-
-              if (result.status === 'approved') {
-                // Payment was successful
-                handlePaymentSuccess({ payment: { id: result.transactionId || `mp_${Date.now()}` } })
-                return true
-              } else {
-                console.error('Payment not approved:', result)
-                setError('Payment was not approved. Please try again.')
-                return false
-              }
-            } catch (error) {
-              console.error('Payment processing error:', error)
-              setError('Payment processing failed. Please try again.')
-              return false
-            }
           }
         },
         customization: {
