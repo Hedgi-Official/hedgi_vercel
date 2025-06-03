@@ -1,35 +1,35 @@
-// client/src/components/mercado-pago-sdk-modal.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
-import { Hedge } from 'db/schema'
-import { useTranslation } from 'react-i18next'
-import { SimulationResult } from './currency-simulator'
-import { userInfo } from 'os'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Hedge } from "db/schema";
+import { useTranslation } from "react-i18next";
+import { SimulationResult } from "./currency-simulator";
 
 interface PaymentModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess: (
     hedgeData: Omit<
       Hedge,
-      'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'
+      "id" | "userId" | "status" | "createdAt" | "completedAt"
     >,
     paymentToken?: string
-  ) => void
-  hedgeData: Omit<
-    Hedge,
-    'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'
-  > | null
-  currency: string
-  simulation?: SimulationResult | null
+  ) => void;
+  hedgeData:
+    | Omit<
+        Hedge,
+        "id" | "userId" | "status" | "createdAt" | "completedAt"
+      >
+    | null;
+  currency: string;
+  simulation?: SimulationResult | null;
 }
 
 declare global {
@@ -46,407 +46,272 @@ export function MercadoPayoSDKModal({
   currency,
   simulation,
 }: PaymentModalProps) {
-  console.log('[PaymentModal] render – props:', {
-    isOpen,
-    onClose,
-    onSuccess,
-    hedgeData,
-    currency,
-    simulation,
-  })
-  const { i18n } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { i18n } = useTranslation();
+  const [loading, setLoading] = useState(true);
   const [mp, setMp] = useState<any>(null)
-  const [orderId, setOrderId] = useState<string | null>(null)
-  const [publicKey, setPublicKey] = useState<string | null>(null)
-  const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
 
-  const isPortuguese = i18n.language === 'pt-BR'
+  const isPortuguese = i18n.language === "pt-BR";
 
-  // Dev mode switch
-  const SKIP_PAYMENTS = false
+  // Dev‐mode flag: if true, skip the real payment brick and go straight to test payment
+  const SKIP_PAYMENTS = false;
 
-  // Compute amount
+  // Compute final payment amount (fees + margin + etc.)
   const paymentAmount = (() => {
-    if (!hedgeData) {
-      console.log('[PaymentModal] No hedge data for amount calculation')
-      return 0
-    }
-    const amt = Math.abs(Number(hedgeData.amount))
-    const cost = simulation?.costDetails.hedgeCost ?? amt * 0.0025
-    const margin = hedgeData.margin ? +hedgeData.margin : cost * 2
-    const finalAmount = Number((cost + margin).toFixed(2))
+    if (!hedgeData) return 0;
+    const amt = Math.abs(Number(hedgeData.amount));
+    const cost = simulation?.costDetails.hedgeCost ?? amt * 0.0025;
+    const margin = hedgeData.margin ? +hedgeData.margin : cost * 2;
+    return Number((cost + margin).toFixed(2));
+  })();
 
-    console.log('[PaymentModal] Amount calculation breakdown:')
-    console.log('  - hedgeData.amount:', hedgeData.amount)
-    console.log('  - amt (absolute):', amt)
-    console.log('  - cost:', cost)
-    console.log('  - margin:', margin)
-    console.log('  - finalAmount:', finalAmount)
-
-    return finalAmount
-  })()
-
-  // Load Mercado Pago SDK
+  // 1) When modal opens and we have hedgeData, load the MP SDK and then create an Order
   useEffect(() => {
-    console.log('[PaymentModal] useEffect triggered - isOpen:', isOpen, 'hedgeData:', hedgeData)
     if (!isOpen || !hedgeData) {
-      console.log('[PaymentModal] Skipping SDK load - modal closed or no hedge data')
-      return
+      return;
     }
 
-    // Generate unique payment tracking token when modal opens
-    const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    setPaymentTrackingToken(trackingToken)
-    console.log('[PaymentModal] Generated payment tracking token:', trackingToken)
+    // Generate a tracking token (for your own record)
+    const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setPaymentTrackingToken(trackingToken);
 
-    console.log('[PaymentModal] Starting SDK load process...')
-    const loadMercadoPagoSDK = () => {
-      return new Promise((resolve, reject) => {
+    // 1a) Dynamically load MercadoPago SDK script
+    const loadSDK = () =>
+      new Promise<void>((resolve, reject) => {
         if (window.MercadoPago) {
-          resolve(window.MercadoPago)
-          return
+          return resolve();
         }
+        const script = document.createElement("script");
+        script.src = "https://sdk.mercadopago.com/js/v2";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("MP SDK load failed"));
+        document.head.appendChild(script);
+      });
 
-        const script = document.createElement('script')
-        script.src = 'https://sdk.mercadopago.com/js/v2'
-        script.onload = () => resolve(window.MercadoPago)
-        script.onerror = reject
-        document.head.appendChild(script)
-      })
-    }
-
-    loadMercadoPagoSDK()
+    loadSDK()
       .then(() => {
-        createOrder()
+        // 1b) Once SDK is loaded, POST to /api/payment/order to get { orderId, publicKey }
+        createOrder();
       })
       .catch((err) => {
-        console.error('Error loading MercadoPago SDK:', err)
-        setError('Failed to load payment system')
-        setLoading(false)
-      })
-  }, [isOpen, hedgeData])
+        console.error("❌ Error loading MP SDK:", err);
+        setError(
+          isPortuguese
+            ? "Falha ao carregar sistema de pagamento."
+            : "Failed to load payment system."
+        );
+        setLoading(false);
+      });
+  }, [isOpen, hedgeData]);
 
+  // 2) CreateOrder: call your backend to hit Flask (/api/payment/order)
   const createOrder = async (retryCount = 0) => {
-    
-    console.log('[PaymentModal] line 130 createOrder called - retryCount:', retryCount)
-    
-    if (!hedgeData) {
-      console.log('[PaymentModal]line 132 No hedge data, returning early')
-      return
-    }
-    console.log('[PaymentModal] hedgeData:', hedgeData)
-    console.log('[PaymentModal] paymentAmount calculated:', paymentAmount)
+    if (!hedgeData) return;
+
+    setLoading(true);
+    setError(null);
+
+    // Build v2 Checkout‐Order body exactly as MP expects:
+    const externalRef =
+      paymentTrackingToken ||
+      `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const body = {
+      type: "online",
+      external_reference: externalRef.substring(0, 64), // ≤ 64 chars
+      items: [
+        {
+          title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+          description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
+          category_id: "others",
+          quantity: 1,
+          unit_price: paymentAmount,
+        },
+      ],
+      payer: {
+        email: "JohnDoe@hedgi.ai",
+        name: "John Doe",
+        identification: {
+          type: currency === "BRL" ? "CPF" : "CURP",
+          number: currency === "BRL" ? "11111111111" : "123456789",
+        },
+      },
+      back_urls: {
+        success: `${window.location.origin}/payment/success`,
+        failure: `${window.location.origin}/payment/failure`,
+        pending: `${window.location.origin}/payment/pending`,
+      },
+      auto_return: "approved",
+    };
 
     try {
-      setLoading(true)
-      setError(null)
-
-      console.log(`Creating payment preference (attempt ${retryCount + 1})...`)
-      console.log('[PaymentModal] Payment amount being sent:', paymentAmount)
-      console.log('[PaymentModal] Currency:', currency)
-
-      
-
-      // Generate external reference for tracking
-      const externalRef = paymentTrackingToken || `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-      const body = {
-        type: "online",
-        external_reference: externalRef.substring(0, 64), // Ensure ≤ 64 chars
-        items: [
-          {
-            title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
-            description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
-            category_id: "others",
-            quantity: 1,
-            unit_price: paymentAmount
-          }
-        ],
-        payer: {
-          email: "JohnDoe@hedgi.ai",
-          name: "John Doe",
-          identification: {
-            type: currency === "BRL" ? "CPF" : "CURP",
-            number: currency === "BRL" ? "11111111111" : "123456789"
-          }
-        },
-        back_urls: {
-          success: `${window.location.origin}/payment/success`,
-          failure: `${window.location.origin}/payment/failure`,
-          pending: `${window.location.origin}/payment/pending`
-        },
-        auto_return: "approved"
-      }
-
-      const response = await fetch('/api/payment/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const resp = await fetch("/api/payment/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      })
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Network error' }))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
+      if (!resp.ok) {
+        // Try retry on network glitch
+        const text = await resp.json().catch(() => ({ error: "Network" }));
+        throw new Error(text.error || `HTTP ${resp.status}`);
       }
 
-      const data = await response.json()
-      console.log('Preference response:', data)
+      const data = await resp.json();
+      console.log("✅ Preference response:", data);
 
-      if (!data.id || !data.public_key) {
-        throw new Error('Invalid response: missing preference ID or public key')
+      // MP returns { id: "...", public_key: "TEST-..." }
+      if (!data.orderId || !data.publicKey) {
+        throw new Error("Invalid response: missing orderId or publicKey");
       }
 
-      setOrderId(data.orderId)
-      setPublicKey(data.publicKey)
+      setOrderId(data.orderId);
+      setPublicKey(data.publicKey);
 
-      initializeCheckoutV2(data.publicKey, data.orderId)
-
-    } catch (err) {
-      console.error('Error creating payment order:', err)
-      if (retryCount < 2 && err instanceof Error && err.message.includes('Network')) {
-        return setTimeout(() => createOrder(retryCount + 1), 2000)
+      // 3) Now that we have publicKey & orderId, initialize the Card Payment Brick
+      initializeCheckoutV2(data.publicKey, data.orderId);
+    } catch (e: any) {
+      console.error("❌ Error creating payment order:", e);
+      if (retryCount < 2 && e.message.includes("Network")) {
+        return setTimeout(() => createOrder(retryCount + 1), 2000);
       }
-      setError('Failed to initialize payment. Please use the test payment option.')
-      setLoading(false)
+      setError(
+        isPortuguese
+          ? "Falha ao inicializar pagamento. Use o modo de teste."
+          : "Failed to initialize payment. Use test mode."
+      );
+      setLoading(false);
     }
-  }
+  };
 
-  const initializeCheckoutV2 = (pk: string, oid: string) => {
-    console.log('[PaymentModal] initializeCheckoutV2 called with:', { pk, oid })
-    // TODO: implement MercadoPago Bricks v2 creation here.
-    //       For now, we’ll just pretend it succeeds.
-    setLoading(false)
-  }
+  // 4) initializeCheckoutV2: actually build a MercadoPago instance and render the CardPayment brick
+  const initializeCheckoutV2 = async (pk: string, oid: string) => {
+    console.log("[PaymentModal] initializeCheckoutV2 →", { pk, oid });
 
-  const initializeMercadoPago = async (publicKey: string, prefId: string) => {
+    // 4a) Create MercadoPago instance
+    let mercadoPago: any;
     try {
-      console.log('Initializing MercadoPago with public key:', publicKey.substring(0, 20) + '...')
-      console.log('Preference ID:', prefId)
+      mercadoPago = new window.MercadoPago(pk, {
+        locale: isPortuguese ? "pt-BR" : "en-US",
+      });
+      setMp(mercadoPago);
+    } catch (mpErr) {
+      console.error("❌ Could not instantiate MercadoPago:", mpErr);
+      setError(
+        isPortuguese
+          ? "Não foi possível inicializar Mercado Pago."
+          : "Could not initialize Mercado Pago."
+      );
+      setLoading(false);
+      return;
+    }
 
-      // Wait for DOM to be ready and check container multiple times
-      let container = null
-      let attempts = 0
-      const maxAttempts = 10
+    // 4b) Grab the bricksBuilder
+    const bricksBuilder = mercadoPago.bricks();
 
-      while (!container && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        container = document.getElementById('payment-brick-container')
-        attempts++
-      }
-
-      if (!container) {
-        console.error('Payment container not found after', maxAttempts, 'attempts')
-        setError('Payment container not ready. Please try the test payment option.')
-        setLoading(false)
-        return
-      }
-
-      // Clear any existing content in the container
-      container.innerHTML = ''
-
-      // Validate the public key format
-      if (!publicKey || publicKey === 'DEV_PUBLIC_KEY' || !publicKey.startsWith('TEST-') && !publicKey.startsWith('APP_USR-')) {
-        console.error('Invalid public key format:', publicKey)
-        setError('Invalid payment configuration. Please use the test payment option.')
-        setLoading(false)
-        return
-      }
-
-      // Initialize MercadoPago with proper error handling
-      let mercadoPago
-      try {
-        mercadoPago = new window.MercadoPago(publicKey, {
-          locale: isPortuguese ? 'pt-BR' : 'en-US'
-        })
-        setMp(mercadoPago)
-      } catch (mpError) {
-        console.error('Error creating MercadoPago instance:', mpError)
-        setError('Failed to initialize payment system. Please use the test payment option.')
-        setLoading(false)
-        return
-      }
-
-      // Set a timeout to prevent infinite loading
-      const loadingTimeout = setTimeout(() => {
-        console.warn('Payment brick taking too long to load')
-        setLoading(false)
-        setError('Payment system is taking longer than expected to load. Please use the test payment option.')
-      }, 20000) // 20 second timeout
-
-      const brickSettings = {
+    // 4c) Render the Card Payment Brick into our container
+    try {
+      await bricksBuilder.create("cardPayment", "cardPaymentBrick_container", {
         initialization: {
-          preferenceId: prefId,
-          amount: paymentAmount,     // Must be > 0
-          currencyId: currency       // e.g. "BRL" or "USD"
+          amount: paymentAmount, // must be > 0
+          // You *could* pass `external_reference: oid` here as well, but not strictly required
         },
         callbacks: {
           onReady: () => {
-            console.log('Payment brick ready')
-            clearTimeout(loadingTimeout)
-            setLoading(false)
-            setError(null) // Clear any previous errors
+            console.log("✅ CardPayment Brick is ready");
+            setLoading(false);
           },
-          onError: (error: any) => {
-            console.error('Brick error:', error)
-            clearTimeout(loadingTimeout)
-            setError('Failed to create payment interface. Please use the test payment option.')
-            setLoading(false)
+          onError: (brickErr: any) => {
+            console.error("❌ Brick error:", brickErr);
+            setError(
+              isPortuguese
+                ? "Erro ao carregar interface de pagamento."
+                : "Failed to create payment interface."
+            );
+            setLoading(false);
           },
-          onSubmit: async (cardFormData: any) => {
-              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
-              try {
-                // Mercado Pago returns different structures depending on the payment method
-                // The most reliable way is to check for the actual payment response
-                let mpPaymentId = null;
+          onSubmit: (formData: any, additionalData: any) => {
+            console.log("▶️ Brick onSubmit:", { formData, additionalData });
+            return new Promise((resolve, reject) => {
+              // Build the v2 Payments payload exactly as MP docs require:
+              const submitData = {
+                type: "online",
+                total_amount: String(formData.transaction_amount), // "00.00"
+                external_reference: oid,
+                processing_mode: "automatic",
+                transactions: {
+                  payments: [
+                    {
+                      amount: String(formData.transaction_amount),
+                      payment_method: {
+                        id: formData.payment_method_id,
+                        type: additionalData.paymentTypeId,
+                        token: formData.token,
+                        installments: formData.installments,
+                      },
+                    },
+                  ],
+                },
+                payer: {
+                  email: formData.payer.email,
+                  identification: formData.payer.identification,
+                },
+              };
 
-                // For credit card payments, MP typically returns a payment object with status and id
-                // First check if this is a successful payment response
-                if (cardFormData?.status === 'approved' && cardFormData?.id) {
-                  mpPaymentId = cardFormData.id;
-                  console.log('Found approved payment with ID:', mpPaymentId);
-                } 
-                // Check for payment_id field (common in some MP responses)
-                else if (cardFormData?.payment_id) {
-                  mpPaymentId = cardFormData.payment_id;
-                  console.log('Found payment_id field:', mpPaymentId);
-                } 
-                // Check nested payment object
-                else if (cardFormData?.payment?.id) {
-                  mpPaymentId = cardFormData.payment.id;
-                  console.log('Found payment.id field:', mpPaymentId);
-                }
-                // Check for transaction_id (sometimes used)
-                else if (cardFormData?.transaction_id) {
-                  mpPaymentId = cardFormData.transaction_id;
-                  console.log('Found transaction_id field:', mpPaymentId);
-                }
-                // Check for token (used in some payment flows)
-                else if (cardFormData?.token) {
-                  mpPaymentId = cardFormData.token;
-                  console.log('Found token field:', mpPaymentId);
-                }
-                // Last resort - check for any numeric ID field
-                else if (cardFormData?.id) {
-                  mpPaymentId = cardFormData.id;
-                  console.log('Found id field:', mpPaymentId);
-                }
-
-                console.log('Payment data structure analysis:', {
-                  hasStatus: !!cardFormData?.status,
-                  status: cardFormData?.status,
-                  hasPaymentId: !!cardFormData?.payment_id,
-                  hasId: !!cardFormData?.id,
-                  hasPaymentObject: !!cardFormData?.payment,
-                  hasTransactionId: !!cardFormData?.transaction_id,
-                  hasToken: !!cardFormData?.token,
-                  hasPaymentMethodId: !!cardFormData?.payment_method_id,
-                  paymentMethodId: cardFormData?.payment_method_id,
-                  issuerId: cardFormData?.issuer_id,
-                  allKeys: Object.keys(cardFormData || {})
+              fetch("/process_order", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(submitData),
+              })
+                .then((r) => r.json())
+                .then((json) => {
+                  console.log("✔️ /process_order →", json);
+                  if (json.error) {
+                    console.error("❌ Payment failed:", json.error);
+                    return reject(json.error);
+                  }
+                  // Success! Pass the payment ID back to Dashboard
+                  const paymentToken = json.id || json.payment_id || "unknown_id";
+                  resolve(json);
+                  onSuccess(hedgeData!, paymentToken);
+                  onClose();
                 })
-
-                if (!mpPaymentId) {
-                  console.error('No payment ID found in cardFormData:', cardFormData)
-                  console.error('Available fields:', Object.keys(cardFormData || {}))
-                  setError('Payment processing failed. No payment ID received from Mercado Pago.')
-                  return false
-                }
-
-                // Validate payment ID format (MP payment IDs are typically numeric)
-                const paymentIdStr = String(mpPaymentId);
-                if (paymentIdStr.length < 8 || (!paymentIdStr.match(/^\d+$/) && !paymentIdStr.startsWith('test_'))) {
-                  console.warn('Payment ID format seems unusual:', paymentIdStr);
-                  // Don't fail here, but log for debugging
-                }
-
-                console.log('Payment ID extracted, passing to dashboard for verification:', mpPaymentId)
-
-                // Don't verify here - pass the payment token to dashboard for verification
-                // The dashboard will verify the payment before placing the trade
-                handlePaymentSuccess({ payment: { id: mpPaymentId } })
-                return true
-              } catch (submitError) {
-                console.error('Payment submit error:', submitError)
-                setError('Payment processing error. Please try again.')
-                return false
-              }
-            }
-        },
-        customization: {
-          visual: {
-            hidePaymentButton: false,
-            style: {
-              theme: 'default'
-            }
+                .catch((err) => {
+                  console.error("❌ Error calling /process_order:", err);
+                  reject(err);
+                });
+            });
           },
-          paymentMethods: {
-            creditCard: 'all',
-            bankTransfer: 'all',
-            maxInstallments: 1
-          }
-        }
-      }
+        },
+      });
 
-      // Create the payment brick with comprehensive error handling
-      try {
-        console.log('Creating payment brick...')
-        const bricks = mercadoPago.bricks()
-
-        if (!bricks) {
-          throw new Error('Failed to get bricks instance')
-        }
-
-        const paymentBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
-        console.log('Payment brick created successfully')
-
-        // Additional check to ensure the brick was actually created
-        if (!paymentBrick) {
-          throw new Error('Payment brick creation returned null')
-        }
-
-      } catch (brickError) {
-        console.error('Error creating payment brick:', brickError)
-        clearTimeout(loadingTimeout)
-        setError('Failed to create payment interface. Please use the test payment option.')
-        setLoading(false)
-      }
-
-    } catch (error) {
-      console.error('Error initializing MercadoPago:', error)
-      setError('Failed to initialize payment system. Please use the test payment option.')
-      setLoading(false)
+      // If we reach here, the Brick will show up in the <div> below
+    } catch (brickCreationError) {
+      console.error("❌ Could not create CardPayment Brick:", brickCreationError);
+      setError(
+        isPortuguese
+          ? "Falha ao criar formulário de cartão."
+          : "Failed to create card form."
+      );
+      setLoading(false);
     }
-  }
+  };
 
-  const handlePaymentSuccess = (paymentData: any) => {
-    const paymentToken = paymentData?.payment?.id || paymentData?.transactionId || `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    toast({
-      title: isPortuguese ? 'Pagamento realizado com sucesso!' : 'Payment successful!',
-      description: isPortuguese ? 'Sua proteção foi registrada.' : 'Your hedge has been placed.',
-    })
-
-    onSuccess(hedgeData!, paymentToken)
-    onClose()
-  }
-
+  // 5) If user wants “Test Payment,” skip the real flow:
   const handleTestPayment = () => {
-    if (!hedgeData) return
-
-    // Use tracking token for test payments too
-    const testToken = paymentTrackingToken || `test_payment_${Date.now()}`
-    console.log('[PaymentModal] Using test payment token:', testToken)
-
-    onSuccess(hedgeData, testToken)
-
+    if (!hedgeData) return;
+    const testToken = paymentTrackingToken || `test_payment_${Date.now()}`;
+    onSuccess(hedgeData, testToken);
     toast({
-      title: isPortuguese ? 'Modo Dev: Proteção registrada' : 'Dev mode: Hedge placed',
-    })
-
-    onClose()
-  }
+      title: isPortuguese ? "Modo Dev: Proteção registrada" : "Dev mode: Hedge placed",
+    });
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -454,94 +319,111 @@ export function MercadoPayoSDKModal({
         <DialogHeader>
           <DialogTitle>
             {isPortuguese
-              ? 'Complete o Pagamento para Registrar Proteção'
-              : 'Complete Payment to Place Hedge'}
+              ? "Complete o Pagamento para Registrar Proteção"
+              : "Complete Payment to Place Hedge"}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Payment Details */}
+        {/* Payment Details Summary */}
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-semibold mb-2">
-            {isPortuguese ? 'Detalhes do Pagamento:' : 'Payment Details:'}
+            {isPortuguese ? "Detalhes do Pagamento:" : "Payment Details:"}
           </h3>
           {hedgeData && (
             <div className="text-sm space-y-1">
-              <p>{isPortuguese ? 'Moeda:' : 'Currency:'} {currency}</p>
-              <p>{isPortuguese ? 'Valor da Proteção:' : 'Hedge Amount:'} {hedgeData.amount}</p>
-              <p>{isPortuguese ? 'Taxa:' : 'Fees:'} {(simulation?.costDetails.hedgeCost ?? Math.abs(Number(hedgeData.amount)) * 0.0025).toFixed(2)} {currency}</p>
-              <p>{isPortuguese ? 'Margem:' : 'Margin:'} {(hedgeData.margin ? +hedgeData.margin : (simulation?.costDetails.hedgeCost ?? Math.abs(Number(hedgeData.amount)) * 0.0025) * 2).toFixed(2)} {currency}</p>
-              <p className="font-semibold">{isPortuguese ? 'Total a Pagar:' : 'Total Payment:'} {paymentAmount} {currency}</p>
+              <p>
+                {isPortuguese ? "Moeda:" : "Currency:"} {currency}
+              </p>
+              <p>
+                {isPortuguese ? "Valor da Proteção:" : "Hedge Amount:"}{" "}
+                {hedgeData.amount}
+              </p>
+              <p>
+                {isPortuguese ? "Taxa:" : "Fees:"}{" "}
+                {(
+                  simulation?.costDetails.hedgeCost ??
+                  Math.abs(Number(hedgeData.amount)) * 0.0025
+                ).toFixed(2)}{" "}
+                {currency}
+              </p>
+              <p>
+                {isPortuguese ? "Margem:" : "Margin:"}{" "}
+                {(
+                  hedgeData.margin
+                    ? +hedgeData.margin
+                    : (simulation?.costDetails.hedgeCost ??
+                        Math.abs(Number(hedgeData.amount)) * 0.0025) * 2
+                ).toFixed(2)}{" "}
+                {currency}
+              </p>
+              <p className="font-semibold">
+                {isPortuguese ? "Total a Pagar:" : "Total Payment:"}{" "}
+                {paymentAmount} {currency}
+              </p>
             </div>
           )}
         </div>
 
+        {/* Loading Spinner */}
         {loading && !SKIP_PAYMENTS && (
           <div className="flex flex-col items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin mb-4" />
-            <p>{isPortuguese ? 'Carregando sistema de pagamento...' : 'Loading payment system...'}</p>
+            <p>
+              {isPortuguese
+                ? "Carregando sistema de pagamento..."
+                : "Loading payment system..."}
+            </p>
           </div>
         )}
 
+        {/* Error Banner */}
         {error && (
           <div className="bg-red-100 text-red-700 p-4 rounded my-4">
             <p className="font-semibold">
-              {isPortuguese ? 'Erro' : 'Error'}
+              {isPortuguese ? "Erro" : "Error"}
             </p>
             <p>{error}</p>
             <Button className="mt-2" onClick={() => createOrder()}>
-              {isPortuguese ? 'Tentar Novamente' : 'Try Again'}
+              {isPortuguese ? "Tentar Novamente" : "Try Again"}
             </Button>
           </div>
         )}
 
-        {/* Payment Brick Container */}
+        {/* ▶️ This is where the Card Payment Brick will be injected */}
         {!SKIP_PAYMENTS && (
           <div className="my-4">
-            <div 
-              id="checkout-brick-container" 
-              style={{ 
-                minHeight: '400px',
-                width: '100%',
-                border: error ? '2px dashed #ccc' : 'none',
-                borderRadius: '8px',
-                padding: error ? '20px' : '0',
-                textAlign: error ? 'center' : 'left',
-                color: error ? '#666' : 'inherit'
+            <div
+              id="cardPaymentBrick_container"
+              style={{
+                minHeight: "400px",
+                width: "100%",
+                border: error ? "2px dashed #ccc" : "none",
+                borderRadius: "8px",
+                padding: error ? "20px" : "0",
+                textAlign: error ? "center" : "left",
+                color: error ? "#666" : "inherit",
               }}
             >
               {error && (
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>
-                  Payment interface will appear here when ready
+                <div style={{ fontSize: 14, opacity: 0.7 }}>
+                  {isPortuguese
+                    ? "Aqui aparecerá a interface de pagamento."
+                    : "Payment interface will appear here when ready."}
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Test Payment Button - Always visible for development */}
+        {/* Always‐visible Test Payment button for dev */}
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleTestPayment}
-          >
+          <Button variant="outline" className="w-full" onClick={handleTestPayment}>
             {isPortuguese
-              ? 'Usar Pagamento de Teste (Desenvolvimento)'
-              : 'Use Test Payment (Development)'}
+              ? "Usar Pagamento de Teste (Desenvolvimento)"
+              : "Use Test Payment (Development)"}
           </Button>
         </div>
-
-        {SKIP_PAYMENTS && (
-          <Button
-            className="mt-4 w-full"
-            onClick={handleTestPayment}
-          >
-            {isPortuguese
-              ? 'Modo Dev: Continuar'
-              : 'Dev mode: Continue'}
-          </Button>
-        )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
