@@ -87,7 +87,7 @@ export function MercadoPaySDKModal({
   //
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData });
-    
+
     if (!isOpen || !hedgeData) {
       console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData);
       return;
@@ -127,12 +127,12 @@ export function MercadoPaySDKModal({
   //
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
-    
+
     if (!hedgeData) {
       console.log("❌ [createOrder] No hedgeData available, returning");
       return;
     }
-    
+
     console.log("✅ [createOrder] Starting order creation process");
     setLoading(true);
     setError(null);
@@ -234,29 +234,49 @@ export function MercadoPaySDKModal({
           setLoading(false);
         },
         onSubmit: (formData: BrickFormData, additionalData: BrickAdditionalData) => {
-          // Called when user clicks “Pay” in the brick.
+          // Called when user clicks "Pay" in the brick.
           // formData.token is the REAL card token (≥32 chars)
           return new Promise<void>((resolve, reject) => {
             const submitData = {
               type: "online",
-              total_amount: String(formData.transaction_amount), // must be a string
               external_reference: externalRef,
-              processing_mode: "automatic",
-              transactions: {
-                payments: [
-                  {
-                    amount: String(formData.transaction_amount),
-                    payment_method: {
-                      id: formData.payment_method_id,
-                      type: additionalData.paymentTypeId,
-                      token: formData.token, // 👈 real token from Brick
-                      installments: formData.installments,
-                    },
-                  },
-                ],
-              },
+              items: [
+                {
+                  title: `Hedge Protection - ${currency}`,
+                  description: `Currency hedge for ${hedgeData!.amount} ${currency}`,
+                  category_id: "services",
+                  quantity: 1,
+                  unit_price: formData.transaction_amount,
+                }
+              ],
               payer: {
                 email: formData.payer.email,
+                name: "Customer",
+                identification: formData.payer.identification,
+              },
+              back_urls: {
+                success: `${window.location.origin}/payment/success`,
+                failure: `${window.location.origin}/payment/failure`,
+                pending: `${window.location.origin}/payment/pending`,
+              },
+              auto_return: "approved",
+              // Include payment details for processing
+              payment_details: {
+                total_amount: String(formData.transaction_amount),
+                processing_mode: "automatic",
+                transactions: {
+                  payments: [
+                    {
+                      amount: String(formData.transaction_amount),
+                      payment_method: {
+                        id: formData.payment_method_id,
+                        type: additionalData.paymentTypeId,
+                        token: formData.token, // 👈 real token from Brick
+                        installments: formData.installments,
+                      },
+                    },
+                  ],
+                },
               },
             };
 

@@ -77,63 +77,48 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
  */
 router.post('/api/payment/order', async (req: Request, res: Response) => {
   try {
-    const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
-    console.log('[Express → Flask] Received payload:', req.body);
+    const payload = req.body;
+    console.log('[Express] Received /api/payment/order payload:', payload);
 
-    const v2 = req.body;
-
-    // Check if this is a real payment submission with actual card token
-    const hasRealToken = v2.transactions?.payments?.[0]?.payment_method?.token && 
-                        v2.transactions.payments[0].payment_method.token.length >= 32 &&
-                        v2.transactions.payments[0].payment_method.token !== "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    // Check if this is a payment submission (has payment_details with real token)
+    const hasPaymentDetails = payload.payment_details?.transactions?.payments?.[0]?.payment_method?.token;
+    const hasRealToken = hasPaymentDetails && 
+                        payload.payment_details.transactions.payments[0].payment_method.token.length >= 32 &&
+                        payload.payment_details.transactions.payments[0].payment_method.token !== "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     if (hasRealToken) {
       // This is a real payment submission from the Brick - forward to Flask
-      console.log('[Express → Flask] Processing real payment with card token:', v2.transactions.payments[0].payment_method.token.substring(0, 8) + '...');
+      const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
+      console.log('[Express → Flask] Processing real payment with card token');
 
       const v1OrdersPayload = {
         type: "online",
         processing_mode: "automatic",
-        total_amount: String(v2.total_amount || v2.transactions.payments[0].amount),
-        external_reference: v2.external_reference,
+        total_amount: payload.payment_details.total_amount,
+        external_reference: payload.external_reference,
         payer: {
-          email: v2.payer.email
+          email: payload.payer.email
         },
         transactions: {
           payments: [
             {
-              amount: String(v2.transactions.payments[0].amount),
+              amount: payload.payment_details.transactions.payments[0].amount,
               payment_method: {
-                id: v2.transactions.payments[0].payment_method.id,
-                type: v2.transactions.payments[0].payment_method.type,
-                token: v2.transactions.payments[0].payment_method.token  // 👈 REAL token from Brick
+                id: payload.payment_details.transactions.payments[0].payment_method.id,
+                type: payload.payment_details.transactions.payments[0].payment_method.type,
+                token: payload.payment_details.transactions.payments[0].payment_method.token
               },
-              installments: v2.transactions.payments[0].payment_method.installments || 1
+              installments: payload.payment_details.transactions.payments[0].payment_method.installments || 1
             }
           ]
         }
       };
-
-      console.log('[Express → Flask] Sending real payment to Flask:', {
-        ...v1OrdersPayload,
-        transactions: {
-          payments: [{
-            ...v1OrdersPayload.transactions.payments[0],
-            payment_method: {
-              ...v1OrdersPayload.transactions.payments[0].payment_method,
-              token: v1OrdersPayload.transactions.payments[0].payment_method.token.substring(0, 8) + '...'
-            }
-          }]
-        }
-      });
 
       const response = await fetch(`${FLASK}/api/payment/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(v1OrdersPayload)
       });
-
-      console.log('[Express → Flask] Flask response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -145,16 +130,47 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       console.log('[Express → Flask] Flask success:', result);
       return res.json(result);
     } else {
-      // This is just order creation (initial call) - return mock success for frontend
-      console.log('[Express → Flask] Initial order creation, returning mock response');
+      // This is order creation (initial call) - validate v2 Preferences payload
+      const { type, external_reference, items, payer } = payload;
+
+      if (!type || type !== 'online') {
+        return res.status(400).json({
+          error: 'Missing required payment information',
+          details: 'Required fields: type=\'online\', external_reference, items[], payer.email'
+        });
+      }
+
+      if (!external_reference || typeof external_reference !== 'string') {
+        return res.status(400).json({
+          error: 'Missing required payment information',
+          details: 'Required fields: type=\'online\', external_reference, items[], payer.email'
+        });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+          error: 'Missing required payment information',
+          details: 'Required fields: type=\'online\', external_reference, items[], payer.email'
+        });
+      }
+
+      if (!payer || !payer.email) {
+        return res.status(400).json({
+          error: 'Missing required payment information',
+          details: 'Required fields: type=\'online\', external_reference, items[], payer.email'
+        });
+      }
+
+      // Valid v2 Preferences payload - return mock response for frontend
+      console.log('[Express] Valid order creation request, returning mock response');
       return res.json({
         orderId: `ORDER_${Date.now()}`,
         publicKey: process.env.MP_BR_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
       });
     }
   } catch (error) {
-    console.error('[Express → Flask] Payment order proxy error:', error);
-    res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    console.error('[Express] Payment order error:', error);
+    res.status(500).json({ error: 'Internal server error: ' + (error as Error).message });
   }
 });
 
