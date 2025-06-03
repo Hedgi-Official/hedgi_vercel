@@ -78,53 +78,80 @@ router.post('/api/payment/preference', async (req: Request, res: Response) => {
 router.post('/api/payment/order', async (req: Request, res: Response) => {
   try {
     const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
-    console.log('[Express → Flask] Received v2 Preferences payload:', req.body);
+    console.log('[Express → Flask] Received payload:', req.body);
 
     const v2 = req.body;
 
-    // Transform v2 Preferences format to v1 Orders format for Flask
-    const v1OrdersPayload = {
-      type: "online",
-      processing_mode: "automatic",
-      total_amount: String(v2.items[0].unit_price), // must be a string
-      external_reference: v2.external_reference,
-      payer: {
-        email: v2.payer.email
-      },
-      transactions: {
-        payments: [
-          {
-            amount: String(v2.items[0].unit_price), // string
+    // Check if this is a real payment submission with actual card token
+    const hasRealToken = v2.transactions?.payments?.[0]?.payment_method?.token && 
+                        v2.transactions.payments[0].payment_method.token.length >= 32 &&
+                        v2.transactions.payments[0].payment_method.token !== "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+    if (hasRealToken) {
+      // This is a real payment submission from the Brick - forward to Flask
+      console.log('[Express → Flask] Processing real payment with card token:', v2.transactions.payments[0].payment_method.token.substring(0, 8) + '...');
+
+      const v1OrdersPayload = {
+        type: "online",
+        processing_mode: "automatic",
+        total_amount: String(v2.total_amount || v2.transactions.payments[0].amount),
+        external_reference: v2.external_reference,
+        payer: {
+          email: v2.payer.email
+        },
+        transactions: {
+          payments: [
+            {
+              amount: String(v2.transactions.payments[0].amount),
+              payment_method: {
+                id: v2.transactions.payments[0].payment_method.id,
+                type: v2.transactions.payments[0].payment_method.type,
+                token: v2.transactions.payments[0].payment_method.token  // 👈 REAL token from Brick
+              },
+              installments: v2.transactions.payments[0].payment_method.installments || 1
+            }
+          ]
+        }
+      };
+
+      console.log('[Express → Flask] Sending real payment to Flask:', {
+        ...v1OrdersPayload,
+        transactions: {
+          payments: [{
+            ...v1OrdersPayload.transactions.payments[0],
             payment_method: {
-              id: "master",      // placeholder—Brick token will replace this later
-              type: "credit_card",
-              token: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"    // dummy token
-            },
-            installments: 1  // installments moved to payment level
-          }
-        ]
+              ...v1OrdersPayload.transactions.payments[0].payment_method,
+              token: v1OrdersPayload.transactions.payments[0].payment_method.token.substring(0, 8) + '...'
+            }
+          }]
+        }
+      });
+
+      const response = await fetch(`${FLASK}/api/payment/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(v1OrdersPayload)
+      });
+
+      console.log('[Express → Flask] Flask response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express → Flask] Flask error:', errorText);
+        return res.status(response.status).json({ error: errorText });
       }
-    };
 
-    console.log('[Express → Flask] Transformed to v1 Orders payload:', v1OrdersPayload);
-
-    const response = await fetch(`${FLASK}/api/payment/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(v1OrdersPayload)
-    });
-
-    console.log('[Express → Flask] Flask response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Express → Flask] Flask error:', errorText);
-      return res.status(response.status).json({ error: errorText });
+      const result = await response.json();
+      console.log('[Express → Flask] Flask success:', result);
+      return res.json(result);
+    } else {
+      // This is just order creation (initial call) - return mock success for frontend
+      console.log('[Express → Flask] Initial order creation, returning mock response');
+      return res.json({
+        orderId: `ORDER_${Date.now()}`,
+        publicKey: process.env.MP_BR_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
+      });
     }
-
-    const result = await response.json();
-    console.log('[Express → Flask] Flask success:', result);
-    res.json(result);
   } catch (error) {
     console.error('[Express → Flask] Payment order proxy error:', error);
     res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
