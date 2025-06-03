@@ -59,7 +59,6 @@ export function MercadoPayoSDKModal({
   const [mp, setMp] = useState<any>(null)
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null)
-  const [paymentBrick, setPaymentBrick] = useState<any>(null)
 
   const isPortuguese = i18n.language === 'pt-BR'
 
@@ -260,143 +259,113 @@ export function MercadoPayoSDKModal({
       const brickSettings = {
         initialization: {
           preferenceId: prefId,
-          amount: paymentAmount,
-        },
-        customization: {
-          paymentMethods: {
-            creditCard: "all",
-            debitCard: "all",
-            maxInstallments: 12
-          }
+          amount: paymentAmount,     // Must be > 0
+          currencyId: currency       // e.g. "BRL" or "USD"
         },
         callbacks: {
           onReady: () => {
             console.log('Payment brick ready')
             clearTimeout(loadingTimeout)
             setLoading(false)
-            setError(null)
+            setError(null) // Clear any previous errors
           },
           onError: (error: any) => {
-            console.error('Mercado Pago Brick error details:', error)
-            console.error('Error type:', typeof error)
-            console.error('Error keys:', Object.keys(error || {}))
+            console.error('Brick error:', error)
             clearTimeout(loadingTimeout)
-            setError(`Failed to create payment interface: ${error?.message || JSON.stringify(error)}. Please use the test payment option.`)
+            setError('Failed to create payment interface. Please use the test payment option.')
             setLoading(false)
           },
-          onSubmit: async (formData: any) => {
-            console.log('=== PAYMENT SUBMIT DEBUG ===');
-            console.log('Raw formData received from Bricks onSubmit:', JSON.stringify(formData, null, 2));
-            console.log('FormData keys:', Object.keys(formData || {}));
-            console.log('FormData type:', typeof formData);
-            
-            // Log specific fields we're looking for
-            console.log('Checking for payment_method_id in various locations:');
-            console.log('- formData.payment_method_id:', formData.payment_method_id);
-            console.log('- formData.paymentMethodId:', formData.paymentMethodId);
-            console.log('- formData.selectedPaymentMethod:', formData.selectedPaymentMethod);
-            console.log('- formData.paymentMethod:', formData.paymentMethod);
-            console.log('- formData.paymentMethod?.id:', formData.paymentMethod?.id);
-            console.log('- formData.token:', formData.token);
-            console.log('- formData.issuer_id:', formData.issuer_id);
-            console.log('- formData.issuer?.id:', formData.issuer?.id);
-            console.log('- formData.installments:', formData.installments);
-            console.log('- formData.payer:', formData.payer);
-            console.log('=== END DEBUG ===');
-            
-            if (!hedgeData) {
-              console.error('Missing hedge data for payment processing.');
-              setError('Missing hedge data for payment processing.');
-              return false;
-            }
+          onSubmit: async (cardFormData: any) => {
+              console.log('Payment submitted - full cardFormData:', JSON.stringify(cardFormData, null, 2))
+              try {
+                // Mercado Pago returns different structures depending on the payment method
+                // The most reliable way is to check for the actual payment response
+                let mpPaymentId = null;
 
-            // Add a small delay to ensure all form validation is complete
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Extract payment data according to Mercado Pago Bricks structure
-            // Try multiple possible locations for payment_method_id
-            let paymentMethodId = formData.paymentMethod?.id || 
-                                 formData.payment_method_id || 
-                                 formData.selectedPaymentMethod?.id ||
-                                 formData.selectedPaymentMethod;
+                // For credit card payments, MP typically returns a payment object with status and id
+                // First check if this is a successful payment response
+                if (cardFormData?.status === 'approved' && cardFormData?.id) {
+                  mpPaymentId = cardFormData.id;
+                  console.log('Found approved payment with ID:', mpPaymentId);
+                } 
+                // Check for payment_id field (common in some MP responses)
+                else if (cardFormData?.payment_id) {
+                  mpPaymentId = cardFormData.payment_id;
+                  console.log('Found payment_id field:', mpPaymentId);
+                } 
+                // Check nested payment object
+                else if (cardFormData?.payment?.id) {
+                  mpPaymentId = cardFormData.payment.id;
+                  console.log('Found payment.id field:', mpPaymentId);
+                }
+                // Check for transaction_id (sometimes used)
+                else if (cardFormData?.transaction_id) {
+                  mpPaymentId = cardFormData.transaction_id;
+                  console.log('Found transaction_id field:', mpPaymentId);
+                }
+                // Check for token (used in some payment flows)
+                else if (cardFormData?.token) {
+                  mpPaymentId = cardFormData.token;
+                  console.log('Found token field:', mpPaymentId);
+                }
+                // Last resort - check for any numeric ID field
+                else if (cardFormData?.id) {
+                  mpPaymentId = cardFormData.id;
+                  console.log('Found id field:', mpPaymentId);
+                }
 
-            let token = formData.token;
-            let installments = formData.installments || 1;
-            let issuerId = formData.issuer?.id || formData.issuer_id;
-            let payer = formData.payer || {};
+                console.log('Payment data structure analysis:', {
+                  hasStatus: !!cardFormData?.status,
+                  status: cardFormData?.status,
+                  hasPaymentId: !!cardFormData?.payment_id,
+                  hasId: !!cardFormData?.id,
+                  hasPaymentObject: !!cardFormData?.payment,
+                  hasTransactionId: !!cardFormData?.transaction_id,
+                  hasToken: !!cardFormData?.token,
+                  hasPaymentMethodId: !!cardFormData?.payment_method_id,
+                  paymentMethodId: cardFormData?.payment_method_id,
+                  issuerId: cardFormData?.issuer_id,
+                  allKeys: Object.keys(cardFormData || {})
+                })
 
-            // If payment_method_id is still missing, try to extract from different structure
-            if (!paymentMethodId && formData.selectedPaymentMethod) {
-              if (typeof formData.selectedPaymentMethod === 'string') {
-                paymentMethodId = formData.selectedPaymentMethod;
-              } else if (formData.selectedPaymentMethod.type || formData.selectedPaymentMethod.name) {
-                paymentMethodId = formData.selectedPaymentMethod.type || formData.selectedPaymentMethod.name;
+                if (!mpPaymentId) {
+                  console.error('No payment ID found in cardFormData:', cardFormData)
+                  console.error('Available fields:', Object.keys(cardFormData || {}))
+                  setError('Payment processing failed. No payment ID received from Mercado Pago.')
+                  return false
+                }
+
+                // Validate payment ID format (MP payment IDs are typically numeric)
+                const paymentIdStr = String(mpPaymentId);
+                if (paymentIdStr.length < 8 || (!paymentIdStr.match(/^\d+$/) && !paymentIdStr.startsWith('test_'))) {
+                  console.warn('Payment ID format seems unusual:', paymentIdStr);
+                  // Don't fail here, but log for debugging
+                }
+
+                console.log('Payment ID extracted, passing to dashboard for verification:', mpPaymentId)
+
+                // Don't verify here - pass the payment token to dashboard for verification
+                // The dashboard will verify the payment before placing the trade
+                handlePaymentSuccess({ payment: { id: mpPaymentId } })
+                return true
+              } catch (submitError) {
+                console.error('Payment submit error:', submitError)
+                setError('Payment processing error. Please try again.')
+                return false
               }
             }
-
-            console.log('Extracted payment data:', {
-              paymentMethodId,
-              token,
-              installments,
-              issuerId,
-              payer
-            });
-
-            // Validate that we have the minimum required data
-            if (!token) {
-              console.error('Missing payment token - this usually means the card details were not properly processed');
-              setError('Payment processing failed: Card details not properly processed. Please check your card information and try again.');
-              return false;
+        },
+        customization: {
+          visual: {
+            hidePaymentButton: false,
+            style: {
+              theme: 'default'
             }
-
-            if (!paymentMethodId || paymentMethodId === 'credit_card') {
-              console.error('Invalid payment method ID - received:', paymentMethodId);
-              setError('Payment processing failed: Unable to determine card type. Please check your card information and try again.');
-              return false;
-            }
-
-            const paymentPayload = {
-              token: token,
-              transaction_amount: Number(paymentAmount),
-              installments: Number(installments),
-              payment_method_id: paymentMethodId,
-              issuer_id: issuerId,
-              payer: {
-                email: payer.email || 'user@hedgi.com',
-                identification: payer.identification
-              },
-              description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-              currency: currency
-            };
-
-            console.log('Prepared payment payload:', JSON.stringify(paymentPayload, null, 2));
-            
-            try {
-              const response = await fetch('/api/payment/process', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(paymentPayload),
-              });
-
-              const result = await response.json();
-              console.log('Payment processing result:', result);
-
-              if (response.ok && result.status === 'approved') {
-                console.log('Payment approved with ID:', result.payment_id);
-                handlePaymentSuccess({ payment: { id: result.payment_id } });
-                return true;
-              } else {
-                console.error('Payment not approved:', result);
-                setError(result.error || result.details || 'Payment was not approved. Please try again.');
-                return false;
-              }
-            } catch (submitError) {
-              console.error('Payment submit error:', submitError);
-              setError('Payment processing error. Please try again.');
-              return false;
-            }
+          },
+          paymentMethods: {
+            creditCard: 'all',
+            bankTransfer: 'all',
+            maxInstallments: 1
           }
         }
       }
@@ -410,12 +379,11 @@ export function MercadoPayoSDKModal({
           throw new Error('Failed to get bricks instance')
         }
 
-        const createdBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
+        const paymentBrick = await bricks.create('payment', 'payment-brick-container', brickSettings)
         console.log('Payment brick created successfully')
-        setPaymentBrick(createdBrick)
 
         // Additional check to ensure the brick was actually created
-        if (!createdBrick) {
+        if (!paymentBrick) {
           throw new Error('Payment brick creation returned null')
         }
 
@@ -441,40 +409,7 @@ export function MercadoPayoSDKModal({
       description: isPortuguese ? 'Sua proteção foi registrada.' : 'Your hedge has been placed.',
     })
 
-    // Clean up payment brick before closing
-    cleanupPaymentBrick()
-    
     onSuccess(hedgeData!, paymentToken)
-    onClose()
-  }
-
-  const cleanupPaymentBrick = () => {
-    try {
-      if (paymentBrick) {
-        console.log('Destroying payment brick...')
-        paymentBrick.unmount()
-        setPaymentBrick(null)
-      }
-      
-      // Clear the container
-      const container = document.getElementById('payment-brick-container')
-      if (container) {
-        container.innerHTML = ''
-      }
-      
-      // Reset all state
-      setMp(null)
-      setPreferenceId(null)
-      setLoading(true)
-      setError(null)
-    } catch (error) {
-      console.warn('Error cleaning up payment brick:', error)
-    }
-  }
-
-  // Cleanup when modal closes
-  const handleClose = () => {
-    cleanupPaymentBrick()
     onClose()
   }
 
@@ -485,9 +420,6 @@ export function MercadoPayoSDKModal({
     const testToken = paymentTrackingToken || `test_payment_${Date.now()}`
     console.log('[PaymentModal] Using test payment token:', testToken)
 
-    // Clean up payment brick before closing
-    cleanupPaymentBrick()
-    
     onSuccess(hedgeData, testToken)
 
     toast({
@@ -498,7 +430,7 @@ export function MercadoPayoSDKModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => handleClose()}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>

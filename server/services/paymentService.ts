@@ -262,97 +262,44 @@ class PaymentService {
     }
 
     try {
-      // Handle both old structure (with formData) and new structure (direct)
-      const { formData, amount, currency, description, paymentId, token, transaction_amount, installments, payment_method_id, issuer_id, payer } = req.body;
+      const { paymentId, currency } = req.body;
       
-      // Extract payment data from either structure
-      let paymentInfo;
-      if (formData) {
-        // Old structure with nested formData
-        paymentInfo = {
-          token: formData.token,
-          transaction_amount: amount || transaction_amount,
-          installments: formData.installments,
-          payment_method_id: formData.payment_method_id,
-          issuer_id: formData.issuer_id,
-          payer: formData.payer,
-          description: description,
-          currency: currency
-        };
-      } else {
-        // New structure with direct fields
-        paymentInfo = {
-          token,
-          transaction_amount,
-          installments,
-          payment_method_id,
-          issuer_id,
-          payer,
-          description,
-          currency
-        };
+      if (!paymentId) {
+        return res.status(400).json({
+          error: 'Missing payment ID',
+          status: 'rejected'
+        });
       }
       
-      console.log(`[PaymentService] Processing payment with data:`, {
-        hasToken: !!paymentInfo.token,
-        transaction_amount: paymentInfo.transaction_amount,
-        installments: paymentInfo.installments,
-        payment_method_id: paymentInfo.payment_method_id,
-        issuer_id: paymentInfo.issuer_id,
-        hasPayer: !!paymentInfo.payer,
-        description: paymentInfo.description,
-        currency: paymentInfo.currency,
-        paymentId,
-        structureUsed: formData ? 'formData' : 'direct'
-      });
-
-      // Handle payment verification if paymentId is provided (for webhook/callback verification)
-      if (paymentId && !paymentInfo.token) {
-        return this.verifyExistingPayment(paymentId, paymentInfo.currency, res);
-      }
-
-      // Handle payment creation if token and payment_method_id are provided (from Bricks onSubmit)
-      if (paymentInfo.token && paymentInfo.payment_method_id) {
-        return this.createPaymentFromBricksData(paymentInfo, res);
-      }
-
-      return res.status(400).json({
-        error: 'Missing payment data. Token and payment_method_id are required.',
-        status: 'rejected',
-        debug: {
-          hasToken: !!paymentInfo.token,
-          hasPaymentMethodId: !!paymentInfo.payment_method_id,
-          receivedStructure: formData ? 'formData' : 'direct'
-        }
-      });
+      console.log(`[PaymentService] Verifying payment ID: ${paymentId}`);
       
-    } catch (error) {
-      console.error('[PaymentService] Error processing payment:', error);
-      return res.status(500).json({
-        error: 'Failed to process payment',
-        status: 'rejected',
-        details: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }
-
-  /**
-   * Create a payment from Bricks data
-   */
-  private async createPaymentFromBricksData(paymentData: any, res: Response): Promise<Response> {
-    try {
-      const { token, transaction_amount, installments, payment_method_id, issuer_id, payer, description, currency } = paymentData;
-
-      console.log(`[PaymentService] Creating payment from Bricks data:`, {
-        transaction_amount,
-        payment_method_id,
-        installments,
-        currency,
-        hasToken: !!token,
-        hasIssuer: !!issuer_id,
-        hasPayer: !!payer
-      });
-
+      // Handle test payments in development only - be more restrictive
+      if (process.env.NODE_ENV === 'development' && 
+          (paymentId.startsWith('test_payment_') || 
+           paymentId.startsWith('test_mp_') || 
+           paymentId.startsWith('test_'))) {
+        console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
+        return res.status(200).json({
+          status: 'approved',
+          statusDetail: 'test_payment_dev',
+          transactionId: paymentId,
+          verified: true,
+          test: true
+        });
+      }
+      
+      // Validate payment ID format before making API call
+      const paymentIdStr = String(paymentId).trim();
+      if (!paymentIdStr || paymentIdStr.length < 8) {
+        console.error(`[PaymentService] Invalid payment ID format: ${paymentIdStr}`);
+        return res.status(400).json({
+          error: 'Invalid payment ID format',
+          status: 'rejected',
+          details: 'Payment ID must be at least 8 characters long'
+        });
+      }
+      
+      // For any real payment, we MUST verify with Mercado Pago
       // Determine which Mercado Pago instance to use based on currency
       let accessToken = '';
       if (currency === 'BRL') {
@@ -360,17 +307,18 @@ class PaymentService {
       } else if (currency === 'MXN') {
         accessToken = this.mpMX.accessToken;
       } else {
-        accessToken = this.mpBR.accessToken; // Default to BR
+        // Default to BR if currency not specified
+        accessToken = this.mpBR.accessToken;
       }
       
       if (!accessToken) {
-        console.error('[PaymentService] No access token available for payment creation');
+        console.error('[PaymentService] No access token available for payment verification');
         return res.status(500).json({
           error: 'Payment service configuration error',
           status: 'rejected'
         });
       }
-
+      
       // Initialize the client with MercadoPago v2.3.0 API
       const client = new MercadoPagoConfig({ 
         accessToken: accessToken 
@@ -378,215 +326,69 @@ class PaymentService {
       
       // Initialize the Payment resource
       const paymentClient = new Payment(client);
-
-      // Prepare payment data according to MercadoPago API structure
-      const mpPaymentData: any = {
-        transaction_amount: Number(transaction_amount),
-        token: token,
-        description: description,
-        installments: Number(installments) || 1,
-        payment_method_id: payment_method_id,
-        payer: {
-          email: payer?.email || 'user@hedgi.com'
+      
+      try {
+        // ALWAYS verify with Mercado Pago for real payment IDs
+        const payment = await paymentClient.get({ id: paymentId });
+        
+        console.log(`[PaymentService] Payment verification response from Mercado Pago:`, {
+          id: payment.id,
+          status: payment.status,
+          status_detail: payment.status_detail,
+          amount: payment.transaction_amount,
+          currency_id: payment.currency_id
+        });
+        
+        // Only approve if the payment status is explicitly 'approved'
+        const isApproved = payment.status === 'approved';
+        
+        if (!isApproved) {
+          console.log(`[PaymentService] Payment ${paymentId} not approved. Status: ${payment.status}`);
+          return res.status(400).json({
+            error: 'Payment not approved',
+            status: payment.status || 'rejected',
+            statusDetail: payment.status_detail,
+            verified: false
+          });
         }
-      };
-
-      // Add issuer_id if provided (required for some payment methods)
-      if (issuer_id) {
-        mpPaymentData.issuer_id = issuer_id;
-      }
-
-      // Add identification if provided
-      if (payer?.identification) {
-        mpPaymentData.payer.identification = payer.identification;
-      } else {
-        // Use default identification based on currency
-        mpPaymentData.payer.identification = {
-          type: currency === 'BRL' ? 'CPF' : 'CURP',
-          number: currency === 'BRL' ? '11111111111' : '123456789'
-        };
-      }
-
-      console.log(`[PaymentService] Sending payment data to MercadoPago:`, {
-        ...mpPaymentData,
-        token: mpPaymentData.token ? '[TOKEN_PROVIDED]' : '[NO_TOKEN]',
-        payer: {
-          ...mpPaymentData.payer,
-          identification: mpPaymentData.payer.identification ? '[IDENTIFICATION_PROVIDED]' : '[NO_IDENTIFICATION]'
-        }
-      });
-
-      // Validate required fields
-      if (!mpPaymentData.payment_method_id) {
-        console.error('[PaymentService] payment_method_id is missing');
-        return res.status(400).json({
-          error: 'Invalid payment data: payment_method_id is required',
-          status: 'rejected',
-          details: 'payment_method_id field cannot be null'
-        });
-      }
-
-      if (!mpPaymentData.token) {
-        console.error('[PaymentService] token is missing');
-        return res.status(400).json({
-          error: 'Invalid payment data: token is required',
-          status: 'rejected',
-          details: 'payment token field cannot be null'
-        });
-      }
-
-      // Create the payment
-      const payment = await paymentClient.create({ body: mpPaymentData });
-      
-      console.log(`[PaymentService] Payment creation response:`, {
-        id: payment.id,
-        status: payment.status,
-        status_detail: payment.status_detail,
-        amount: payment.transaction_amount,
-        currency_id: payment.currency_id
-      });
-
-      // Return the payment result
-      return res.status(200).json({
-        payment_id: payment.id,
-        status: payment.status,
-        status_detail: payment.status_detail,
-        transaction_amount: payment.transaction_amount,
-        currency_id: payment.currency_id
-      });
-
-    } catch (error: any) {
-      console.error(`[PaymentService] Error creating payment:`, error);
-      
-      // Handle specific MercadoPago errors
-      if (error.cause && Array.isArray(error.cause)) {
-        const causes = error.cause.map((c: any) => c.description || c.message).join(', ');
-        return res.status(400).json({
-          error: 'Payment creation failed',
-          status: 'rejected',
-          details: causes
-        });
-      }
-
-      return res.status(500).json({
-        error: 'Payment creation failed',
-        status: 'rejected',
-        details: error.message || 'Unknown error during payment creation'
-      });
-    }
-  }
-
-  /**
-   * Verify an existing payment by ID
-   */
-  private async verifyExistingPayment(paymentId: string, currency: string, res: Response): Promise<Response> {
-    console.log(`[PaymentService] Verifying existing payment ID: ${paymentId}`);
-    
-    // Handle test payments in development only
-    if (process.env.NODE_ENV === 'development' && 
-        (paymentId.startsWith('test_payment_') || 
-         paymentId.startsWith('test_mp_') || 
-         paymentId.startsWith('test_'))) {
-      console.log(`[PaymentService] Development test payment detected: ${paymentId}`);
-      return res.status(200).json({
-        status: 'approved',
-        statusDetail: 'test_payment_dev',
-        transactionId: paymentId,
-        verified: true,
-        test: true
-      });
-    }
-    
-    // Validate payment ID format before making API call
-    const paymentIdStr = String(paymentId).trim();
-    if (!paymentIdStr || paymentIdStr.length < 8) {
-      console.error(`[PaymentService] Invalid payment ID format: ${paymentIdStr}`);
-      return res.status(400).json({
-        error: 'Invalid payment ID format',
-        status: 'rejected',
-        details: 'Payment ID must be at least 8 characters long'
-      });
-    }
-    
-    // Determine which Mercado Pago instance to use based on currency
-    let accessToken = '';
-    if (currency === 'BRL') {
-      accessToken = this.mpBR.accessToken;
-    } else if (currency === 'MXN') {
-      accessToken = this.mpMX.accessToken;
-    } else {
-      accessToken = this.mpBR.accessToken; // Default to BR
-    }
-    
-    if (!accessToken) {
-      console.error('[PaymentService] No access token available for payment verification');
-      return res.status(500).json({
-        error: 'Payment service configuration error',
-        status: 'rejected'
-      });
-    }
-    
-    // Initialize the client with MercadoPago v2.3.0 API
-    const client = new MercadoPagoConfig({ 
-      accessToken: accessToken 
-    });
-    
-    // Initialize the Payment resource
-    const paymentClient = new Payment(client);
-    
-    try {
-      // Verify with Mercado Pago
-      const payment = await paymentClient.get({ id: paymentId });
-      
-      console.log(`[PaymentService] Payment verification response:`, {
-        id: payment.id,
-        status: payment.status,
-        status_detail: payment.status_detail,
-        amount: payment.transaction_amount,
-        currency_id: payment.currency_id
-      });
-      
-      // Only approve if the payment status is explicitly 'approved'
-      const isApproved = payment.status === 'approved';
-      
-      if (!isApproved) {
-        console.log(`[PaymentService] Payment ${paymentId} not approved. Status: ${payment.status}`);
-        return res.status(400).json({
-          error: 'Payment not approved',
-          status: payment.status || 'rejected',
+        
+        // Payment is approved
+        console.log(`[PaymentService] Payment ${paymentId} successfully verified as approved`);
+        return res.status(200).json({
+          status: 'approved',
           statusDetail: payment.status_detail,
-          verified: false
+          transactionId: payment.id,
+          verified: true,
+          amount: payment.transaction_amount,
+          currency: payment.currency_id
         });
-      }
-      
-      // Payment is approved
-      console.log(`[PaymentService] Payment ${paymentId} successfully verified as approved`);
-      return res.status(200).json({
-        status: 'approved',
-        statusDetail: payment.status_detail,
-        transactionId: payment.id,
-        verified: true,
-        amount: payment.transaction_amount,
-        currency: payment.currency_id
-      });
-      
-    } catch (paymentError: any) {
-      console.error(`[PaymentService] Error verifying payment ${paymentId}:`, paymentError);
-      
-      // Check if it's a 404 (payment not found) or other error
-      if (paymentError.status === 404 || paymentError.message?.includes('not found')) {
-        return res.status(404).json({
-          error: 'Payment not found',
+        
+      } catch (paymentError: any) {
+        console.error(`[PaymentService] Error verifying payment ${paymentId}:`, paymentError);
+        
+        // Check if it's a 404 (payment not found) or other error
+        if (paymentError.status === 404 || paymentError.message?.includes('not found')) {
+          return res.status(404).json({
+            error: 'Payment not found',
+            status: 'rejected',
+            details: 'Payment ID does not exist in Mercado Pago'
+          });
+        }
+        
+        // Other errors (network, auth, etc.)
+        return res.status(500).json({
+          error: 'Payment verification failed',
           status: 'rejected',
-          details: 'Payment ID does not exist in Mercado Pago'
+          details: paymentError.message || 'Unknown error during verification'
         });
       }
       
-      // Other errors (network, auth, etc.)
+    } catch (error) {
+      console.error('[PaymentService] Error processing payment:', error);
       return res.status(500).json({
-        error: 'Payment verification failed',
+        error: 'Failed to process payment',
         status: 'rejected',
-        details: paymentError.message || 'Unknown error during verification'
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   }
