@@ -263,10 +263,17 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            type: "preference",
-            amount: paymentAmount,
-            currency: currency,
-            description: `Hedge for ${hedgeAmount} ${hedgeData.baseCurrency}${hedgeData.targetCurrency}`,
+            type: "online",
+            external_reference: `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`.substring(0, 64),
+            items: [
+              {
+                title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+                description: `Hedge protection for ${hedgeAmount} ${hedgeData.baseCurrency}`,
+                category_id: "others",
+                quantity: 1,
+                unit_price: paymentAmount
+              }
+            ],
             payer: {
               email: 'customer@example.com',
               name: 'Test Customer',
@@ -275,6 +282,12 @@
                 number: '219585466'
               }
             },
+            back_urls: {
+              success: `${window.location.origin}/payment/success`,
+              failure: `${window.location.origin}/payment/failure`,
+              pending: `${window.location.origin}/payment/pending`
+            },
+            auto_return: "approved"
           }),
         });
 

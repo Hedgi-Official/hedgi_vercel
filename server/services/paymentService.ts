@@ -90,13 +90,17 @@ class PaymentService {
     }
 
     try {
-      const { amount, currency, description, payer } = req.body as PaymentRequest;
+      const { type, external_reference, items, payer, back_urls, auto_return } = req.body;
       
-      if (!amount || !currency || !description || !payer || !payer.email) {
+      if (!type || !external_reference || !items || !Array.isArray(items) || items.length === 0 || !payer || !payer.email) {
         return res.status(400).json({
-          error: 'Missing required payment information'
+          error: 'Missing required payment information',
+          details: 'Required fields: type, external_reference, items, payer'
         });
       }
+
+      // Extract currency from first item's unit_price context (we'll determine from the endpoint)
+      const currency = req.headers['x-currency'] || 'BRL'; // Default to BRL
       
       // Configure Mercado Pago with the correct access token based on currency
       let accessToken = '';
@@ -140,25 +144,36 @@ class PaymentService {
         });
       }
 
+      // Validate amount from first item
+      const amount = Number(items[0].unit_price);
+      if (!amount || amount <= 0) {
+        console.error(`[PaymentService] Invalid amount received: ${amount}`);
+        return res.status(400).json({
+          code: 'bad_request',
+          message: 'Amount cannot be zero or less than zero'
+        });
+      }
+
       // Create preference object according to MercadoPago v2.3.0 API
       const preferenceData: any = {
-        items: [
-          {
-            id: `item_${Date.now()}`,
-            title: description,
-            quantity: 1,
-            unit_price: Number(amount), // Ensure it's a number
-            currency_id: currency
-          }
-        ],
+        external_reference: external_reference,
+        items: items.map((item, index) => ({
+          id: `item_${Date.now()}_${index}`,
+          title: item.title,
+          description: item.description,
+          category_id: item.category_id || "others",
+          quantity: item.quantity || 1,
+          unit_price: Number(item.unit_price),
+          currency_id: currency
+        })),
         payer: {
           email: payer.email,
           name: payer.name,
           identification: payer.identification
         },
         
-        // Proper back_urls structure exactly matching Mercado Pago's documentation
-        back_urls: {
+        // Use provided back_urls or default ones
+        back_urls: back_urls || {
           success: `${absoluteBaseUrl}/payment/success`,
           failure: `${absoluteBaseUrl}/payment/failure`, 
           pending: `${absoluteBaseUrl}/payment/pending`
@@ -180,12 +195,10 @@ class PaymentService {
         }
       };
       
-      // Use a different approach for test/dev environment
-      if (process.env.NODE_ENV !== 'production') {
-        // For testing, we'll use a simpler configuration that doesn't require redirection
-        delete preferenceData.auto_return; // Remove this property completely for test env
-      } else {
-        // Only set auto_return in production with valid URLs
+      // Set auto_return from request or default
+      if (auto_return) {
+        preferenceData.auto_return = auto_return;
+      } else if (process.env.NODE_ENV === 'production') {
         preferenceData.auto_return = "approved";
       }
       

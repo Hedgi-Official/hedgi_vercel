@@ -149,23 +149,41 @@ export function MercadoPayoSDKModal({
 
       
 
+      // Generate external reference for tracking
+      const externalRef = paymentTrackingToken || `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      const body = {
+        type: "online",
+        external_reference: externalRef.substring(0, 64), // Ensure ≤ 64 chars
+        items: [
+          {
+            title: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+            description: `Hedge protection for ${hedgeData.amount} ${hedgeData.baseCurrency}`,
+            category_id: "others",
+            quantity: 1,
+            unit_price: paymentAmount
+          }
+        ],
+        payer: {
+          email: "JohnDoe@hedgi.ai",
+          name: "John Doe",
+          identification: {
+            type: currency === "BRL" ? "CPF" : "CURP",
+            number: currency === "BRL" ? "11111111111" : "123456789"
+          }
+        },
+        back_urls: {
+          success: `${window.location.origin}/payment/success`,
+          failure: `${window.location.origin}/payment/failure`,
+          pending: `${window.location.origin}/payment/pending`
+        },
+        auto_return: "approved"
+      }
+
       const response = await fetch('/api/payment/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: "preference",
-          amount: paymentAmount, 
-          currency,
-          description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency} - ${hedgeData.amount}`,
-          payer: {
-            email: "JohnDoe@hedgi.ai",
-            name: "John Doe",
-            identification: {
-              type: currency === 'BRL' ? 'CPF' : 'CURP',
-              number: currency === 'BRL' ? '11111111111' : '123456789'
-            }
-          }
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
