@@ -55,6 +55,11 @@ export default function Dashboard() {
     | null
   >(null)
 
+  // Debug logging for modal state changes
+  React.useEffect(() => {
+    console.log("🔍 [Dashboard] Modal state changed:", { showPaymentModal, pendingHedgeData: !!pendingHedgeData });
+  }, [showPaymentModal, pendingHedgeData]);
+
 
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
@@ -674,8 +679,12 @@ export default function Dashboard() {
             <CardContent>
               <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={(hedgePayload) => { setPendingHedgeData(hedgePayload)
-                                                  setShowPaymentModal(true) }}
+                onPlaceHedge={(hedgePayload) => { 
+                  console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
+                  setPendingHedgeData(hedgePayload);
+                  setShowPaymentModal(true);
+                  console.log("📝 [Dashboard] Modal state set to open");
+                }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
                   queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });

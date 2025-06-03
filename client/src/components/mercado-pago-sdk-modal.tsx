@@ -86,7 +86,14 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    if (!isOpen || !hedgeData) return;
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData });
+    
+    if (!isOpen || !hedgeData) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData);
+      return;
+    }
+
+    console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
 
     // Generate a tracking token (for our records)
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -119,7 +126,14 @@ export function MercadoPaySDKModal({
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
   //
   const createOrder = async (retryCount = 0) => {
-    if (!hedgeData) return;
+    console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
+    
+    if (!hedgeData) {
+      console.log("❌ [createOrder] No hedgeData available, returning");
+      return;
+    }
+    
+    console.log("✅ [createOrder] Starting order creation process");
     setLoading(true);
     setError(null);
 
