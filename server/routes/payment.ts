@@ -42,6 +42,9 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
 
       // Extract payment data from the payload
       const paymentData = payload.payment_details.transactions.payments[0];
+      
+      // Get total_amount from the correct location
+      const totalAmount = payload.payment_details?.total_amount || payload.total_amount;
 
       // Format the request exactly as Flask expects it (Brick-compatible format)
       const flaskPayload = {
@@ -51,7 +54,7 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
           email: payload.payer.email
         },
         payment_details: {
-          total_amount: payload.total_amount,
+          total_amount: totalAmount,
           transactions: {
             payments: [
               {
