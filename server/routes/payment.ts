@@ -86,7 +86,7 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       }
 
       const result = await response.json();
-      console.log('[Express → Flask] Flask response:', result);
+      console.log('[Express → Flask] Flask payment response:', result);
       
       // Check if Flask returned an error status
       if (result.status === 500 || result.response?.status === 500) {
@@ -96,6 +96,80 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
           details: result.response?.message || result.message || 'Internal server error',
           flaskResponse: result
         });
+      }
+
+      // Check if payment was approved
+      const paymentStatus = result.response?.status || result.status;
+      if (paymentStatus === 'approved') {
+        console.log('[Express → Flask] Payment approved, creating trade...');
+        
+        try {
+          // Extract trade parameters from the original payload
+          const hedgeData = payload.hedge_data || payload.hedgeData;
+          
+          if (hedgeData) {
+            // Convert hedge data to trade format
+            const amountNum = parseFloat(hedgeData.amount);
+            const volume = Math.abs(amountNum) / 100000;
+            const direction = amountNum > 0 ? 'buy' : 'sell';
+            const symbol = `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`;
+            
+            const tradePayload = {
+              symbol,
+              direction,
+              volume,
+              days: hedgeData.duration || 7,
+              deviation: 5,
+              magic: 123456,
+              comment: 'Hedgi automated trade',
+              paymentToken: result.response?.id || result.id,
+              margin: hedgeData.margin || 500
+            };
+
+            console.log('[Express → Flask] Creating trade with payload:', tradePayload);
+
+            // Call Flask /trades endpoint
+            const tradeResponse = await fetch(`${FLASK}/trades`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(tradePayload)
+            });
+
+            if (tradeResponse.ok) {
+              const tradeResult = await tradeResponse.json();
+              console.log('[Express → Flask] Trade created successfully:', tradeResult);
+              
+              // Return combined payment and trade result
+              return res.json({
+                ...result,
+                trade: tradeResult,
+                tradeCreated: true
+              });
+            } else {
+              const tradeError = await tradeResponse.text();
+              console.error('[Express → Flask] Trade creation failed:', tradeError);
+              
+              // Return payment success but trade failure
+              return res.json({
+                ...result,
+                tradeError: tradeError,
+                tradeCreated: false
+              });
+            }
+          } else {
+            console.warn('[Express → Flask] No hedge data found in payload for trade creation');
+            return res.json(result);
+          }
+        } catch (tradeError) {
+          console.error('[Express → Flask] Error creating trade:', tradeError);
+          
+          // Return payment success but trade creation error
+          return res.json({
+            ...result,
+            tradeError: tradeError instanceof Error ? tradeError.message : String(tradeError),
+            tradeCreated: false
+          });
+        }
       }
       
       return res.json(result);

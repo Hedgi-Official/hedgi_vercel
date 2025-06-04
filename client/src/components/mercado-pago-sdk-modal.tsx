@@ -304,9 +304,16 @@ export function MercadoPaySDKModal({
                 const isApproved = paymentStatus === "approved";
 
                 if (response.ok && isApproved) {
-                  // Payment approved
-                  console.log("✅ Payment approved:", result);
-                  setError(null);
+                  console.log("✅ [renderPaymentBrick] Payment approved successfully!");
+
+                  // Check if trade was also created
+                  if (result.tradeCreated) {
+                    console.log("✅ [renderPaymentBrick] Trade created successfully:", result.trade);
+                  } else if (result.tradeError) {
+                    console.warn("⚠️ [renderPaymentBrick] Payment approved but trade creation failed:", result.tradeError);
+                  }
+
+                  // Payment was successful
                   setLoading(true);
 
                   // Hide the payment brick container and show success message
