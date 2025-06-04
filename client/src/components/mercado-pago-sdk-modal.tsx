@@ -94,7 +94,7 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
 
-    if (!isOpen || !hedgeData || paymentCompleted) {
+    if (!isOpen || !hedgeData) {
       console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
       return;
     }
@@ -160,7 +160,7 @@ export function MercadoPaySDKModal({
         setLoading(false);
         setIsProcessing(false); // Reset processing state on error
       });
-  }, [isOpen, hedgeData, paymentCompleted]);
+  }, [isOpen, hedgeData]);
 
   // Reset all states when modal closes
   useEffect(() => {
@@ -198,6 +198,12 @@ export function MercadoPaySDKModal({
   //
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
+
+    // If we've already created a brick or payment is done, skip entirely
+    if (brickCreated || paymentCompleted) {
+      console.log("⚠️ [createOrder] Skipping because brickCreated or paymentCompleted is true");
+      return;
+    }
 
     if (!hedgeData) {
       console.log("❌ [createOrder] No hedgeData available, returning");
@@ -299,17 +305,21 @@ export function MercadoPaySDKModal({
     amount: number,
     orderIdFromServer: string
   ) => {
-    console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
+    console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick", {
+      paymentCompleted,
+      brickCreated,
+      windowPaymentController: !!window.paymentBrickController,
+    });
 
-    // ① If we already marked paymentCompleted = true, don't render again
+    // ① If we've already completed a payment, never create another form
     if (paymentCompleted) {
-      console.log("⚠️ [renderPaymentBrick] paymentCompleted is true ⇒ skip duplicate brick");
+      console.log("⚠️ [renderPaymentBrick] paymentCompleted=true; skip rendering a new Brick");
       return;
     }
 
-    // ② Prevent duplicate brick creation - check if one already exists
+    // ② If we already have a controller or flagged brickCreated, skip
     if (window.paymentBrickController || brickCreated) {
-      console.log("⚠️ [renderPaymentBrick] Payment brick already created, skipping duplicate");
+      console.log("⚠️ [renderPaymentBrick] Brick already exists; skipping");
       return;
     }
 

@@ -1,0 +1,718 @@
+It turned out that—even with the previous two guards—your code was still reaching `renderPaymentBrick(...)` a second time because:
+
+1. The first guard (`useEffect([isOpen, hedgeData])`) prevents re‐running on `paymentCompleted`, but doesn’t stop the original `createOrder()` call from racing into a second `renderPaymentBrick(...)` before `brickCreated` flips to true.
+2. In some cases, `renderPaymentBrick()` was still called twice in quick succession (once from the end of `createOrder()` and again from whatever parent‐state update happened when you called `onSuccess()`).
+
+To lock this down, you need to prevent **both** `createOrder()` and `renderPaymentBrick()` from ever running once a brick already exists or a payment has completed.
+
+Below is a revised version with two extra checks:
+
+* **At the top of `createOrder()`**, skip entirely if `brickCreated` or `paymentCompleted` is already true.
+* **At the top of `renderPaymentBrick()`**, skip if `brickCreated` or `paymentCompleted` is true (this is on top of your existing check for `window.paymentBrickController`).
+
+With those in place, **no second brick** can ever mount once one is already on screen.
+
+```tsx
+import { useState, useEffect, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Hedge } from "db/schema";
+import { useTranslation } from "react-i18next";
+import { SimulationResult } from "./currency-simulator";
+
+interface PaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (
+    hedgeData: Omit<
+      Hedge,
+      "id" | "userId" | "status" | "createdAt" | "completedAt"
+    >,
+    paymentToken?: string
+  ) => void;
+  hedgeData:
+    | Omit<
+        Hedge,
+        "id" | "userId" | "status" | "createdAt" | "completedAt"
+      >
+    | null;
+  currency: string;
+  simulation?: SimulationResult | null;
+}
+
+declare global {
+  interface Window {
+    MercadoPago: any;
+    cardPaymentBrickController?: any;
+    paymentBrickController?: any;
+  }
+}
+
+export function MercadoPaySDKModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  hedgeData,
+  currency,
+  simulation,
+}: PaymentModalProps) {
+  const { i18n } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [brickCreated, setBrickCreated] = useState(false);
+
+  // Prevent double‐mount in Strict Mode
+  const hasInitializedBrick = useRef(false);
+
+  const isPortuguese = i18n.language === "pt-BR";
+  const SKIP_PAYMENTS = false;
+
+  const paymentAmount = (() => {
+    if (!hedgeData) return 0;
+    const amt = Math.abs(Number(hedgeData.amount));
+    const cost = simulation?.costDetails.hedgeCost ?? amt * 0.0025;
+    const margin = hedgeData.margin ? +hedgeData.margin : cost * 2;
+    return Number((cost + margin).toFixed(2));
+  })();
+
+  //
+  // 1) When the modal opens, initialize once.
+  //
+  useEffect(() => {
+    console.log("🔍 useEffect: isOpen, hedgeData, paymentCompleted:", {
+      isOpen,
+      hedgeData: !!hedgeData,
+      paymentCompleted,
+    });
+
+    // Only run on open + hedgeData; do NOT re-run on paymentCompleted.
+    if (!isOpen || !hedgeData) {
+      return;
+    }
+    if (hasInitializedBrick.current) {
+      console.log("⚠️ Brick already initialized, skipping.");
+      return;
+    }
+    hasInitializedBrick.current = true;
+
+    console.log("✅ Initializing payment flow");
+
+    setIsProcessing(true);
+
+    // Clear any existing brick HTML
+    const container = document.getElementById("paymentBrick_container");
+    if (container) container.innerHTML = "";
+    // Unmount any existing controller
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Cleanup error:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
+    setLoading(true);
+    setError(null);
+    setOrderId(null);
+    setPublicKey(null);
+    setBrickCreated(false);
+
+    const trackingToken = `payment_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    setPaymentTrackingToken(trackingToken);
+
+    const loadSDK = () =>
+      new Promise<void>((resolve, reject) => {
+        if (window.MercadoPago) return resolve();
+        const script = document.createElement("script");
+        script.src = "https://sdk.mercadopago.com/js/v2";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("MP SDK load failed"));
+        document.head.appendChild(script);
+      });
+
+    loadSDK()
+      .then(() => {
+        createOrder();
+      })
+      .catch((err) => {
+        console.error("❌ Error loading MP SDK:", err);
+        setError(
+          isPortuguese
+            ? "Falha ao carregar sistema de pagamento."
+            : "Failed to load payment system."
+        );
+        setLoading(false);
+        setIsProcessing(false);
+      });
+  }, [isOpen, hedgeData]);
+
+  //
+  // 2) Reset everything when the modal closes
+  //
+  useEffect(() => {
+    if (!isOpen) {
+      console.log("🔄 Modal closed, resetting all state");
+      setLoading(false);
+      setError(null);
+      setOrderId(null);
+      setPublicKey(null);
+      setPaymentTrackingToken(null);
+      setPaymentCompleted(false);
+      setIsProcessing(false);
+      setBrickCreated(false);
+      hasInitializedBrick.current = false;
+
+      const container = document.getElementById("paymentBrick_container");
+      if (container) container.innerHTML = "";
+      if (window.paymentBrickController) {
+        try {
+          window.paymentBrickController.unmount();
+        } catch (e) {
+          console.log("Modal close cleanup:", e);
+        }
+        window.paymentBrickController = null;
+      }
+    }
+  }, [isOpen]);
+
+  //
+  // 3) createOrder: POST to /api/payment/order
+  //
+  const createOrder = async (retryCount = 0) => {
+    console.log("🚀 createOrder() called:", { hedgeData, brickCreated, paymentCompleted });
+
+    // If we've already created a brick or payment is done, skip.
+    if (brickCreated || paymentCompleted) {
+      console.log("⚠️ Skipping createOrder because brickCreated or paymentCompleted is true");
+      return;
+    }
+    if (!hedgeData) {
+      console.log("❌ No hedgeData, returning");
+      return;
+    }
+    if (orderId) {
+      console.log("⚠️ Order already exists, skipping");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const externalRef =
+      paymentTrackingToken ||
+      `hedge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const body = {
+      type: "online",
+      external_reference: externalRef.substring(0, 64),
+      items: [
+        {
+          title: `Hedge Protection - ${currency}`,
+          description: `Currency hedge for ${hedgeData.amount} ${currency}`,
+          category_id: "services",
+          quantity: 1,
+          unit_price: paymentAmount,
+        },
+      ],
+      payer: {
+        email: "testuser@example.com",
+        name: "John Doe",
+        identification: {
+          type: "CPF",
+          number: "12345678901",
+        },
+      },
+      back_urls: {
+        success: `${window.location.origin}/payment/success`,
+        failure: `${window.location.origin}/payment/failure`,
+        pending: `${window.location.origin}/payment/pending`,
+      },
+      auto_return: "approved",
+    };
+
+    console.log("➡️ Sending to /api/payment/order:", body);
+    try {
+      const resp = await fetch("/api/payment/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const text = await resp.json().catch(() => ({ error: "Network" }));
+        throw new Error(text.error || `HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      console.log("✅ Order response:", data);
+
+      if (!data.orderId || !data.publicKey) {
+        throw new Error("Missing orderId or publicKey");
+      }
+      setOrderId(data.orderId);
+      setPublicKey(data.publicKey);
+
+      const mercadoPago = new window.MercadoPago(data.publicKey, {
+        locale: isPortuguese ? "pt-BR" : "en-US",
+      });
+      const bricksBuilder = mercadoPago.bricks();
+      renderPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
+
+      // Mark created early so we never call again
+      setBrickCreated(true);
+      setIsProcessing(false);
+    } catch (e: any) {
+      console.error("❌ Error creating payment order:", e);
+      if (retryCount < 2 && e.message.includes("Network")) {
+        return setTimeout(() => createOrder(retryCount + 1), 2000);
+      }
+      setError(
+        isPortuguese
+          ? "Falha ao inicializar pagamento. Use o modo de teste."
+          : "Failed to initialize payment. Use test mode."
+      );
+      setLoading(false);
+    }
+  };
+
+  //
+  // 4) renderPaymentBrick: mount the Bricks Payment form
+  //
+  const renderPaymentBrick = async (
+    bricksBuilder: any,
+    amount: number,
+    orderIdFromServer: string
+  ) => {
+    console.log("🔨 renderPaymentBrick() called:", {
+      paymentCompleted,
+      brickCreated,
+      windowPaymentController: !!window.paymentBrickController,
+    });
+
+    // If we've already completed a payment, never create another form
+    if (paymentCompleted) {
+      console.log("⚠️ paymentCompleted=true; skip rendering a new Brick");
+      return;
+    }
+    // If we already have a controller or flagged brickCreated, skip
+    if (window.paymentBrickController || brickCreated) {
+      console.log("⚠️ Brick already exists; skipping");
+      return;
+    }
+
+    try {
+      const settings = {
+        initialization: {
+          amount,
+          preferenceId: orderIdFromServer,
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("✅ Payment Brick ready");
+            setLoading(false);
+          },
+          onError: (error: unknown) => {
+            console.error("❌ Payment Brick error:", error);
+            setError(
+              isPortuguese
+                ? "Erro ao carregar interface de pagamento."
+                : "Failed to load payment interface."
+            );
+            setLoading(false);
+          },
+          onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
+            console.log("💳 onSubmit called with:", selectedPaymentMethod, formData);
+
+            if (!hedgeData) {
+              console.error("❌ No hedgeData");
+              return;
+            }
+
+            const paymentToken = formData.token || selectedPaymentMethod.token;
+            if (!paymentToken) {
+              setError(
+                isPortuguese
+                  ? "Token de pagamento não encontrado."
+                  : "Payment token not found."
+              );
+              return;
+            }
+
+            const paymentPayload = {
+              type: "online",
+              external_reference:
+                paymentTrackingToken || `payment_${Date.now()}`,
+              payer: formData.payer || {
+                email: "testuser@example.com",
+                identification: { type: "CPF", number: "12345678901" },
+              },
+              payment_details: {
+                total_amount: paymentAmount.toString(),
+                processing_mode: "automatic",
+                transactions: {
+                  payments: [
+                    {
+                      amount: paymentAmount.toString(),
+                      installments: formData.installments || 1,
+                      payment_method: {
+                        id:
+                          selectedPaymentMethod.id ||
+                          formData.payment_method_id,
+                        type: "credit_card",
+                        token: paymentToken,
+                      },
+                    },
+                  ],
+                },
+              },
+              hedgeData,
+            };
+
+            console.log("📦 Sending payment payload:", paymentPayload);
+            try {
+              const response = await fetch("/api/payment/order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(paymentPayload),
+              });
+              const result = await response.json();
+              console.log("✅ Payment response:", result);
+
+              const paymentStatus = result.response?.status || result.status;
+              // Treat both “approved” and “in_process” as success
+              const isSuccess =
+                paymentStatus === "approved" || paymentStatus === "in_process";
+
+              if (response.ok && isSuccess) {
+                console.log("✅ Payment approved/in_process");
+
+                const paymentId =
+                  result.paymentId ||
+                  result.id ||
+                  result.response?.id ||
+                  paymentToken;
+
+                // 1) prevent further bricks
+                setPaymentCompleted(true);
+
+                // 2) show green banner
+                const container = document.getElementById(
+                  "paymentBrick_container"
+                );
+                if (container) {
+                  const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
+                  const baseC = hedgeData.baseCurrency || "BRL";
+                  const targetC = hedgeData.targetCurrency || "USD";
+                  const duration = hedgeData.duration || 7;
+                  container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                      ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
+                      <div style="font-size:14px; margin-top:15px; font-weight:normal; color:#374151;">
+                        <div style="margin-bottom:8px;">
+                          <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${baseC}
+                        </div>
+                        <div style="margin-bottom:8px;">
+                          <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${baseC}/${targetC}
+                        </div>
+                        <div>
+                          <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }
+
+                // 3) unmount the brick
+                if (window.paymentBrickController) {
+                  try {
+                    window.paymentBrickController.unmount();
+                  } catch (e) {
+                    console.log("Cleanup:", e);
+                  }
+                  window.paymentBrickController = null;
+                }
+
+                // 4) notify parent & close after a pause
+                onSuccess(hedgeData, paymentId);
+                setTimeout(() => {
+                  onClose();
+                }, 2500);
+              } else {
+                console.error("❌ Payment not approved:", result);
+                const statusDetail =
+                  result.status_detail || result.response?.status_detail;
+                const reason =
+                  statusDetail ||
+                  paymentStatus ||
+                  "Payment not approved";
+
+                setPaymentCompleted(true);
+
+                const container = document.getElementById(
+                  "paymentBrick_container"
+                );
+                if (container) {
+                  container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
+                      ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
+                      <div style="font-size:14px; margin-top:10px; font-weight:normal;">
+                        ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                      </div>
+                    </div>
+                  `;
+                }
+                setTimeout(() => {
+                  onClose();
+                }, 3000);
+              }
+            } catch (err) {
+              console.error("🚨 Payment request failed:", err);
+              setError(
+                isPortuguese
+                  ? "Falha no processamento do pagamento."
+                  : "Payment processing failed."
+              );
+            }
+          },
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: "all",
+            maxInstallments: 1,
+          },
+        },
+      };
+
+      console.log("🔨 Creating Payment Brick…");
+      const container = document.getElementById("paymentBrick_container");
+      if (!container) {
+        throw new Error("Container not found");
+      }
+      window.paymentBrickController = await bricksBuilder.create(
+        "payment",
+        "paymentBrick_container",
+        settings
+      );
+      console.log("✅ Payment Brick created:", window.paymentBrickController);
+
+      // Mark created and stop processing spinner
+      setBrickCreated(true);
+      setIsProcessing(false);
+    } catch (brickError) {
+      console.error("❌ renderPaymentBrick error:", brickError);
+      setError(
+        isPortuguese
+          ? "Falha ao criar interface de pagamento."
+          : "Failed to create payment interface."
+      );
+      setLoading(false);
+    }
+  };
+
+  //
+  // 5) Dev‐mode “Test Payment” button
+  //
+  const handleTestPayment = () => {
+    if (!hedgeData || paymentCompleted) {
+      console.log("⚠️ Test blocked");
+      return;
+    }
+    console.log("🧪 Test Payment");
+    setPaymentCompleted(true);
+    const testToken =
+      paymentTrackingToken || `test_payment_${Date.now()}`;
+    onSuccess(hedgeData, testToken);
+    toast({
+      title: isPortuguese
+        ? "Modo Dev: Proteção registrada"
+        : "Dev mode: Hedge placed",
+    });
+    onClose();
+  };
+
+  // Reset state on manual close
+  const handleClose = () => {
+    console.log("🔒 Modal closing");
+    setPaymentCompleted(false);
+    setLoading(true);
+    setError(null);
+    setOrderId(null);
+    setPublicKey(null);
+
+    const container = document.getElementById("paymentBrick_container");
+    if (container) container.innerHTML = "";
+
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Cleanup:", e);
+      }
+      window.paymentBrickController = null;
+    }
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isPortuguese
+              ? "Complete o Pagamento para Registrar Proteção"
+              : "Complete Payment to Place Hedge"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Payment Details */}
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="font-semibold mb-2">
+            {isPortuguese ? "Detalhes do Pagamento:" : "Payment Details:"}
+          </h3>
+          {hedgeData && (
+            <div className="text-sm space-y-1">
+              <p>
+                {isPortuguese ? "Moeda:" : "Currency:"} {currency}
+              </p>
+              <p>
+                {isPortuguese ? "Valor da Proteção:" : "Hedge Amount:"}{" "}
+                {hedgeData.amount}
+              </p>
+              <p>
+                {isPortuguese ? "Taxa:" : "Fees:"}{" "}
+                {(
+                  simulation?.costDetails.hedgeCost ??
+                  Math.abs(Number(hedgeData.amount)) * 0.0025
+                ).toFixed(2)}{" "}
+                {currency}
+              </p>
+              <p>
+                {isPortuguese ? "Margem:" : "Margin:"}{" "}
+                {(
+                  hedgeData.margin
+                    ? +hedgeData.margin
+                    : (simulation?.costDetails.hedgeCost ??
+                        Math.abs(Number(hedgeData.amount)) * 0.0025) * 2
+                ).toFixed(2)}{" "}
+                {currency}
+              </p>
+              <p className="font-semibold">
+                {isPortuguese ? "Total a Pagar:" : "Total Payment:"}{" "}
+                {paymentAmount} {currency}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Loading Spinner */}
+        {loading && !SKIP_PAYMENTS && (
+          <div className="flex flex-col items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+            <p>
+              {isPortuguese
+                ? "Carregando sistema de pagamento..."
+                : "Loading payment system..."}
+            </p>
+          </div>
+        )}
+
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded my-4">
+            <p className="font-semibold">
+              {isPortuguese ? "Erro" : "Error"}
+            </p>
+            <p>{error}</p>
+            <Button className="mt-2" onClick={() => createOrder()}>
+              {isPortuguese ? "Tentar Novamente" : "Try Again"}
+            </Button>
+          </div>
+        )}
+
+        {/* ▶️ Where the Brick mounts */}
+        {!SKIP_PAYMENTS && (
+          <div className="my-4">
+            <div
+              id="paymentBrick_container"
+              style={{
+                minHeight: "400px",
+                width: "100%",
+                border: error ? "2px dashed #ccc" : "none",
+                borderRadius: "8px",
+                padding: error ? "20px" : "0",
+                textAlign: error ? "center" : "left",
+                color: error ? "#666" : "inherit",
+              }}
+            >
+              {(error || loading) && (
+                <div style={{ fontSize: 14, opacity: 0.7 }}>
+                  {loading
+                    ? isPortuguese
+                      ? "Carregando interface de pagamento..."
+                      : "Loading payment interface..."
+                    : isPortuguese
+                    ? "Aqui aparecerá a interface de pagamento."
+                    : "Payment interface will appear here when ready."}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Dev‐mode Test Payment */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <Button variant="outline" className="w-full" onClick={handleTestPayment}>
+            {isPortuguese
+              ? "Usar Pagamento de Teste (Desenvolvimento)"
+              : "Use Test Payment (Development)"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**Key changes**:
+
+1. **`useEffect` dependencies** now only depend on `[isOpen, hedgeData]` (no longer on `paymentCompleted`). This ensures `createOrder()` runs exactly once when the modal opens (not again when `paymentCompleted` flips).
+2. **At the top of `createOrder()`**, we check:
+
+   ```ts
+   if (brickCreated || paymentCompleted) {
+     console.log("Skipping createOrder because brickCreated or paymentCompleted is true");
+     return;
+   }
+   ```
+
+   so we never request a new order once a brick already exists or the payment is done.
+3. **At the top of `renderPaymentBrick()`**, we check:
+
+   ```ts
+   if (paymentCompleted) {
+     console.log("Skipping rendering a new Brick because paymentCompleted=true");
+     return;
+   }
+   if (window.paymentBrickController || brickCreated) {
+     console.log("Skipping duplicate Brick");
+     return;
+   }
+   ```
+
+   so once we have shown the green banner (and set `paymentCompleted = true`), **any subsequent call** to `renderPaymentBrick()` immediately returns without doing anything.
+
+With those two guards, there is no code path that can mount a second brick once you’ve already shown “Hedge successfully placed!”. The modal stays open for your 2.5 seconds, the banner remains visible, and no new payment form “pops up” underneath it.
