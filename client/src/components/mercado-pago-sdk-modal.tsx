@@ -66,6 +66,7 @@ export function MercadoPaySDKModal({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -218,7 +219,7 @@ export function MercadoPaySDKModal({
     orderIdFromServer: string
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
-    
+
     try {
       const settings = {
         initialization: {
@@ -238,7 +239,7 @@ export function MercadoPaySDKModal({
           onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
             console.log("💳 [renderPaymentBrick] Payment Brick onSubmit called with selectedPaymentMethod:", selectedPaymentMethod);
             console.log("💳 [renderPaymentBrick] formData:", formData);
-            
+
             if (!hedgeData) {
               console.error("❌ [renderPaymentBrick] No hedgeData available");
               return;
@@ -300,7 +301,7 @@ export function MercadoPaySDKModal({
               // Show success message
               setError(null);
               setLoading(true);
-              
+
               // Hide the payment brick container and show success message
               const container = document.getElementById("paymentBrick_container");
               if (container) {
@@ -313,7 +314,7 @@ export function MercadoPaySDKModal({
 
               // Extract payment ID from the response
               const paymentId = result.paymentId || result.id || paymentToken;
-              
+
               // Short delay to show success message, then proceed with trade
               setTimeout(() => {
                 console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
@@ -337,13 +338,13 @@ export function MercadoPaySDKModal({
 
       // Create the Payment Brick
       console.log("🔨 [renderPaymentBrick] Creating Payment Brick with settings:", settings);
-      
+
       // Check if container exists
       const container = document.getElementById("paymentBrick_container");
       if (!container) {
         throw new Error("Container 'paymentBrick_container' not found in DOM");
       }
-      
+
       console.log("🔨 [renderPaymentBrick] Container found, creating Payment Brick...");
       window.paymentBrickController = await bricksBuilder.create(
         "payment", // Use "payment" for Payment Brick
@@ -351,7 +352,7 @@ export function MercadoPaySDKModal({
         settings
       );
       console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
-      
+
     } catch (brickError) {
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
@@ -360,10 +361,11 @@ export function MercadoPaySDKModal({
   };
 
   //
-  // 4) “Test Payment” button (dev mode)
+  // 4) "Test Payment" button (dev mode)
   //
   const handleTestPayment = () => {
-    if (!hedgeData) return;
+    if (!hedgeData || paymentCompleted) return;
+    setPaymentCompleted(true);
     const testToken = paymentTrackingToken || `test_payment_${Date.now()}`;
     onSuccess(hedgeData, testToken);
     toast({

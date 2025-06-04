@@ -54,6 +54,7 @@ export default function Dashboard() {
     Omit<Hedge, 'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'>
     | null
   >(null)
+  const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
 
   // Debug logging for modal state changes
   React.useEffect(() => {
@@ -681,6 +682,14 @@ export default function Dashboard() {
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
+                  
+                  // Prevent multiple payment flows
+                  if (isProcessingPayment || showPaymentModal) {
+                    console.log("⚠️ [Dashboard] Payment already in progress, ignoring new request");
+                    return;
+                  }
+                  
+                  setIsProcessingPayment(true);
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
                   console.log("📝 [Dashboard] Modal state set to open");
@@ -722,11 +731,13 @@ export default function Dashboard() {
           onClose={() => {
             setShowPaymentModal(false)
             setPendingHedgeData(null)
+            setIsProcessingPayment(false)
           }}
           onSuccess={(hedgeData, paymentToken) => {
             setShowPaymentModal(false)
             handlePlaceHedge(hedgeData, paymentToken)
             setPendingHedgeData(null)
+            setIsProcessingPayment(false)
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData.baseCurrency}
