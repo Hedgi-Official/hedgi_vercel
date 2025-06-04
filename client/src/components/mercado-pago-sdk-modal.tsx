@@ -214,10 +214,10 @@ export function MercadoPaySDKModal({
     };
   }, [isOpen, hedgeData]);
 
-  // Reset all states when modal closes
+  // Reset all states when modal closes, but keep preventBrickRef until next open
   useEffect(() => {
     if (!isOpen) {
-      console.log("🔄 [MercadoPaySDKModal] Modal closed, resetting all states");
+      console.log("🔄 [MercadoPaySDKModal] Modal closed, resetting states (keeping preventBrickRef)");
       setLoading(true);
       setError(null);
       setOrderId(null);
@@ -226,7 +226,7 @@ export function MercadoPaySDKModal({
       setPaymentCompleted(false);
       setIsProcessing(false);
       setBrickCreated(false);
-      preventBrickRef.current = false;
+      // DON'T reset preventBrickRef here - keep it true until next modal open
 
       // Clean up any remaining payment brick
       const container = document.getElementById("paymentBrick_container");
@@ -252,6 +252,10 @@ export function MercadoPaySDKModal({
         window.statusScreenBrickController = null;
       }
       hasInitializedBrick.current = false;
+    } else {
+      // Modal is opening - NOW we can reset preventBrickRef for a fresh start
+      console.log("🔓 [MercadoPaySDKModal] Modal opening, resetting preventBrickRef for fresh start");
+      preventBrickRef.current = false;
     }
   }, [isOpen]);
 
@@ -601,12 +605,15 @@ export function MercadoPaySDKModal({
                         </div>
                       `;
                     }
-                  onClose();
 
-                    // 6) Call onSuccess and then exit—no further code runs:
+                    // 6) Call onSuccess and then delay onClose to allow banner to render
                     console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   requestAnimationFrame(() => {
                     onSuccess(hedgeData, paymentId);
+                    // Delay onClose to allow the success banner to render properly
+                    setTimeout(() => {
+                      onClose();
+                    }, 1500); // Give user time to see the success message
                   });
                     return
                 } else {
@@ -770,7 +777,7 @@ export function MercadoPaySDKModal({
 
   // Reset payment state when modal closes
   const handleClose = () => {
-    console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
+    console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states (keeping preventBrickRef)");
 
     // Always allow closing and reset states properly
     setPaymentCompleted(false);
@@ -778,6 +785,7 @@ export function MercadoPaySDKModal({
     setError(null);
     setOrderId(null);
     setPublicKey(null);
+    // DON'T reset preventBrickRef here - it stays true until next modal open
 
     // Clear any existing payment brick and its controller
     const container = document.getElementById("paymentBrick_container");
