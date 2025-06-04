@@ -436,7 +436,7 @@ export function MercadoPaySDKModal({
             setBrickCreated(false);
             setPaymentCompleted(false);
 
-            
+
 
             // Extract the payment token from formData
             const paymentToken = formData.token || selectedPaymentMethod.token;
@@ -487,24 +487,24 @@ export function MercadoPaySDKModal({
                 const result = await response.json();
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
-                
+
 
                 // Check if the payment status is specifically "approved"
                 // The status is nested in result.response.status, not at the top level
-              
+
                 const paymentStatus = result.response?.status || result.status;
                 const isApproved = paymentStatus === "approved";
-              
+
 
                 if (response.ok && isApproved) {
                   // Immediately set payment completed to prevent any re-renders
                   setPaymentCompleted(true);
                   setBrickCreated(true);
-                  
+
                   // CRITICAL: Clear error state on successful payment
                   setError(null);
                   setLoading(false);
-                  
+
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
                   // CRITICAL: Destroy Payment Brick completely before creating Status Screen
@@ -526,7 +526,7 @@ export function MercadoPaySDKModal({
                     setTimeout(() => {
                       // Extract payment ID from the response
                       const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
-                      
+
                       if (paymentId) {
                         // Show simple success message instead of Status Screen Brick
                         // This avoids Mercado Pago's quirky Status Screen behavior
@@ -556,15 +556,17 @@ export function MercadoPaySDKModal({
                           </div>
                         `;
                       }
-                    }, 100); // Small delay to ensure Payment Brick is fully removed
+                    }, 100); // Small delay to ensure Payment Brick is completely removed
                   }
+
+                  // Extract payment ID from the response first
+                  const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   onSuccess(hedgeData, paymentId);
 
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
-                  // This was causing race condition with Dashboard's onSuccess callback
 
                 } else {
                   // Payment failed or not approved
@@ -574,24 +576,24 @@ export function MercadoPaySDKModal({
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
-                  
+
                   // Clear any existing error state and loading state
                   setError(null);
                   setLoading(false);
 
                   // Extract payment ID for Status Screen Brick
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
-
-                  // Show Status Screen Brick for failed payment
+</new_str>
+</changes>// Show Status Screen Brick for failed payment
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
                     // Create a new container specifically for the status screen
                     container.innerHTML = '<div id="statusScreenBrick_container"></div>';
-                    
+
                     try {
                       // Use a mock payment ID if we don't have a real one
                       const statusPaymentId = paymentId || '1234567890';
-                      
+
                       // Create Status Screen Brick for failed payment using the exact structure from your HTML
                       const statusSettings = {
                         initialization: {
