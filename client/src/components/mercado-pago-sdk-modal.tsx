@@ -299,7 +299,8 @@ export function MercadoPaySDKModal({
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
                 // Check if the payment status is specifically "approved"
-                const paymentStatus = result.status || result.response?.status;
+                // The status is nested in result.response.status, not at the top level
+                const paymentStatus = result.response?.status || result.status;
                 const isApproved = paymentStatus === "approved";
 
                 if (response.ok && isApproved) {
@@ -336,7 +337,7 @@ export function MercadoPaySDKModal({
                   console.error("❌ Payment failed or not approved:", result);
                   const statusDetail = result.status_detail || result.response?.status_detail;
                   const reason = statusDetail || paymentStatus || "Payment not approved";
-                  
+
                   // Show error in the payment container
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
@@ -349,7 +350,7 @@ export function MercadoPaySDKModal({
                       </div>
                     `;
                   }
-                  
+
                   setError(`${isPortuguese ? "Pagamento falhou:" : "Payment failed:"} ${reason}`);
                 }
               } catch (err) {
