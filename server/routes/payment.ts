@@ -105,87 +105,11 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       // Check if Flask returned an error status
       if (result.status === 500 || result.response?.status === 500) {
         console.error('[Express → Flask] Flask returned error:', result);
-        
-        // In development, fallback to test payment approval when Flask fails
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Express → Flask] Development mode: approving payment as test due to Flask error');
-          
-          const testResult = {
-            status: 'approved',
-            response: {
-              id: `test_fallback_${Date.now()}`,
-              status: 'approved',
-              transaction_amount: payload.payment_details?.total_amount || payload.total_amount,
-              status_detail: 'flask_fallback_approved'
-            },
-            test: true,
-            flaskFallback: true
-          };
-          
-          // Continue with trade creation logic using test result
-          const hedgeData = payload.hedge_data || payload.hedgeData;
-          
-          if (hedgeData) {
-            try {
-              const amountNum = parseFloat(hedgeData.amount);
-              const volume = Math.abs(amountNum) / 100000;
-              const direction = amountNum > 0 ? 'buy' : 'sell';
-              const symbol = `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`;
-              
-              // Create local trade record without Flask
-              const { db } = await import('@db');
-              const { trades } = await import('@db/schema');
-              
-              const localTrade = await db.insert(trades).values({
-                userId: req.user?.id || 7,
-                ticket: `TEST-FALLBACK-${Date.now()}`,
-                broker: 'test_fallback',
-                symbol: symbol,
-                volume: volume,
-                openTime: new Date(),
-                durationDays: hedgeData.duration || 7,
-                status: 'open',
-                flaskTradeId: null,
-                metadata: {
-                  paymentToken: testResult.response.id,
-                  direction: direction,
-                  paymentAmount: testResult.response.transaction_amount,
-                  flaskFallback: true
-                }
-              }).returning();
-              
-              console.log('[Express] Created fallback trade record:', localTrade[0]);
-              
-              return res.json({
-                ...testResult,
-                trade: {
-                  id: localTrade[0].id,
-                  symbol: symbol,
-                  volume: volume,
-                  direction: direction,
-                  created_at: localTrade[0].openTime
-                },
-                tradeCreated: true
-              });
-            } catch (tradeError) {
-              console.error('[Express] Error creating fallback trade:', tradeError);
-              return res.json({
-                ...testResult,
-                tradeError: tradeError instanceof Error ? tradeError.message : String(tradeError),
-                tradeCreated: false
-              });
-            }
-          } else {
-            return res.json(testResult);
-          }
-        } else {
-          // In production, return the actual error
-          return res.status(500).json({
-            error: 'Payment processing failed',
-            details: result.response?.message || result.message || 'Internal server error',
-            flaskResponse: result
-          });
-        }
+        return res.status(500).json({
+          error: 'Payment processing failed',
+          details: result.response?.message || result.message || 'Internal server error',
+          flaskResponse: result
+        });
       }
 
       // Check if payment was approved
