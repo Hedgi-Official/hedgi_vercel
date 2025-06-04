@@ -86,7 +86,18 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       }
 
       const result = await response.json();
-      console.log('[Express → Flask] Flask success:', result);
+      console.log('[Express → Flask] Flask response:', result);
+      
+      // Check if Flask returned an error status
+      if (result.status === 500 || result.response?.status === 500) {
+        console.error('[Express → Flask] Flask returned error:', result);
+        return res.status(500).json({
+          error: 'Payment processing failed',
+          details: result.response?.message || result.message || 'Internal server error',
+          flaskResponse: result
+        });
+      }
+      
       return res.json(result);
     } else {
       // This is order creation (initial call) - validate v2 Preferences payload
