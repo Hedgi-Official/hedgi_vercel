@@ -625,17 +625,82 @@ export function MercadoPaySDKModal({
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
 
-                  // Show error in the payment container
+                  // Extract payment ID for Status Screen Brick
+                  const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
+
+                  // Show Status Screen Brick for failed payment
                   const container = document.getElementById("paymentBrick_container");
-                  if (container) {
-                    container.innerHTML = `
-                      <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
-                        ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
-                        <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
-                          ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                  if (container && paymentId) {
+                    container.innerHTML = '';
+                    
+                    try {
+                      // Create Status Screen Brick for failed payment
+                      const statusSettings = {
+                        initialization: {
+                          paymentId: paymentId.toString(),
+                        },
+                        customization: {
+                          visual: {
+                            hideStatusDetails: true,
+                            hideTransactionDate: true,
+                            style: {
+                              theme: 'default',
+                            },
+                          },
+                          backUrls: {
+                            'error': `${window.location.origin}/dashboard`,
+                            'return': `${window.location.origin}/dashboard`
+                          }
+                        },
+                        callbacks: {
+                          onReady: () => {
+                            console.log("✅ Status Screen Brick ready (failed payment)");
+                            setLoading(false);
+                          },
+                          onError: (error: any) => {
+                            console.error("❌ Status Screen Brick error:", error);
+                            // Fallback to custom error message
+                            container.innerHTML = `
+                              <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
+                                ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
+                                <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
+                                  ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                                </div>
+                              </div>
+                            `;
+                          },
+                        },
+                      };
+
+                      window.statusScreenBrickController = bricksBuilder.create(
+                        'statusScreen', 
+                        'paymentBrick_container', 
+                        statusSettings
+                      );
+                    } catch (statusError) {
+                      console.error("❌ Failed to create Status Screen Brick for failed payment:", statusError);
+                      // Fallback to custom error message
+                      container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
+                          ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
+                          <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
+                            ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                          </div>
                         </div>
-                      </div>
-                    `;
+                      `;
+                    }
+                  } else {
+                    // Fallback if no container or payment ID
+                    if (container) {
+                      container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
+                          ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
+                          <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
+                            ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                          </div>
+                        </div>
+                      `;
+                    }
                   }
 
                   // ❌ REMOVED: setTimeout onClose() for failures too
