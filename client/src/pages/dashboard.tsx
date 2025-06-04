@@ -231,6 +231,9 @@ export default function Dashboard() {
       return;
     }
 
+    // Immediately set processing state to prevent duplicate flows
+    setIsProcessingPayment(true);
+
     // First check if payments are enabled in the system
     try {
       const paymentStatusResponse = await fetch('/api/payment/status');
@@ -371,6 +374,12 @@ export default function Dashboard() {
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
+      
+      // Reset modal states on error to allow retry
+      setShowPaymentModal(false);
+      setPendingHedgeData(null);
+      setIsProcessingPayment(false);
+      
       toast({
         variant: "destructive",
         title: "Payment Verification Error",
@@ -703,12 +712,14 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  // Prevent multiple payment flows
-                  if (isProcessingPayment || showPaymentModal) {
-                    console.log("⚠️ [Dashboard] Payment already in progress, ignoring new request");
+                  // Prevent multiple payment flows - check all possible states
+                  if (isProcessingPayment || showPaymentModal || pendingHedgeData) {
+                    console.log("⚠️ [Dashboard] Payment flow already active, ignoring new request");
+                    console.log("⚠️ [Dashboard] States:", { isProcessingPayment, showPaymentModal, hasPendingData: !!pendingHedgeData });
                     return;
                   }
                   
+                  console.log("✅ [Dashboard] Starting new payment flow");
                   setIsProcessingPayment(true);
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
@@ -750,15 +761,17 @@ export default function Dashboard() {
           isOpen={showPaymentModal}
           onClose={() => {
             console.log("🔒 [Dashboard] Payment modal closing");
+            // Force reset all payment states
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success, closing modal and placing trade");
+            console.log("✅ [Dashboard] Payment success, immediately resetting states and placing trade");
+            // Immediately reset modal states before placing trade
             setShowPaymentModal(false);
             setPendingHedgeData(null);
-            setIsProcessingPayment(false);
+            // Keep isProcessingPayment true until trade is complete
             handlePlaceHedge(hedgeData, paymentToken);
           }}
           hedgeData={pendingHedgeData}

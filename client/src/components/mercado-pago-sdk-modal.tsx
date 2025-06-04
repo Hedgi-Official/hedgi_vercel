@@ -419,22 +419,27 @@ export function MercadoPaySDKModal({
   const handleClose = () => {
     console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
     
-    // Prevent closing if payment is already completed to avoid interference
-    if (paymentCompleted) {
-      console.log("⚠️ [MercadoPaySDKModal] Payment completed, ignoring close request");
-      return;
-    }
-    
+    // Always allow closing and reset states properly
     setPaymentCompleted(false);
     setLoading(true);
     setError(null);
     setOrderId(null);
     setPublicKey(null);
 
-    // Clear any existing payment brick
+    // Clear any existing payment brick and its controller
     const container = document.getElementById("paymentBrick_container");
     if (container) {
       container.innerHTML = '';
+    }
+
+    // Destroy any existing payment brick controller
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Payment brick controller unmount failed:", e);
+      }
+      window.paymentBrickController = null;
     }
 
     onClose();
