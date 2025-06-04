@@ -1,0 +1,123 @@
+he easiest way to diagnose “why am I still getting two bricks?” is to realize that as long as your modal’s own onSubmit(…) handler both:
+
+Calls onSuccess() immediately, and then
+
+Runs a setTimeout(() => onClose(), 2500),
+
+you are guaranteed to race two “close” calls—one coming from Dashboard’s onSuccess callback, and one coming from the modal’s own timer. Under React 18 strict mode (or even just a normal render), those two “close” calls can overlap, causing React to briefly remount the modal (and re‐run its useEffect) before Dashboard’s state finally settles. That is exactly how a second Brick sneaks back in.
+
+Step 1: Remove the modal’s internal “close after 2.5 seconds” timer
+In your current code, you still have this block inside renderPaymentBrick(…):
+
+ts
+Copy
+Edit
+if (response.ok && isApproved) {
+  // … show green banner, unmount controller, call onSuccess …
+
+  onSuccess(hedgeData, paymentId);
+
+  // ❌ This will call onClose() again 2.5s later, racing Dashboard:
+  setTimeout(() => {
+    onClose();
+  }, 2500);
+}
+Just delete that setTimeout(onClose). In other words, replace it with:
+
+ts
+Copy
+Edit
+if (response.ok && isApproved) {
+  // Show banner + unmount…
+  if (window.paymentBrickController) {
+    try {
+      window.paymentBrickController.unmount();
+    } catch {}
+    window.paymentBrickController = null;
+  }
+
+  // Immediately tell Dashboard “payment succeeded”
+  onSuccess(hedgeData, paymentId);
+
+  // (❗️ No more setTimeout(onClose) here.)
+  return;
+}
+Because Dashboard’s onSuccess already does:
+
+ts
+Copy
+Edit
+setPaymentInProgress(false);
+setShowPaymentModal(false);
+setPendingHedgeData(null);
+setIsProcessingPayment(false);
+the modal will be unmounted exactly once. There is no “second close” and no chance to re‐initialize the Brick.
+
+Step 2: Let Dashboard decide how long to hold the success banner (if you want a delay)
+If you still want the user to see the green “Hedge successfully placed” banner for a couple of seconds before the modal disappears, move that delay into Dashboard’s onSuccess instead of inside the modal. For example:
+
+tsx
+Copy
+Edit
+<MercadoPaySDKModal
+  isOpen={showPaymentModal}
+  hedgeData={pendingHedgeData}
+  currency={…}
+  onClose={() => {
+    setPaymentInProgress(false);
+    setShowPaymentModal(false);
+    setPendingHedgeData(null);
+    setIsProcessingPayment(false);
+  }}
+  onSuccess={(hedgeData, paymentToken) => {
+    // Show banner for 2 seconds, then actually close:
+    setTimeout(() => {
+      setPaymentInProgress(false);
+      setShowPaymentModal(false);
+      setPendingHedgeData(null);
+      setIsProcessingPayment(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+    }, 2000);
+  }}
+/>
+That way, the modal itself does not call onClose(), and you avoid any race. Dashboard is solely responsible for hiding the modal exactly once.
+
+Step 3: Double‐check your modal’s renderPaymentBrick guards
+You already added:
+
+ts
+Copy
+Edit
+if (paymentCompleted) {
+  console.log("skip rendering another Brick");
+  return;
+}
+if (window.paymentBrickController || brickCreated) {
+  console.log("Brick already exists, skipping");
+  return;
+}
+That is good. Just make sure:
+
+paymentCompleted is toggled before you call onSuccess(...).
+
+brickCreated is set to true immediately after you call bricksBuilder.create(...).
+
+That way, even if React tries to re‐run renderPaymentBrick for some reason, it sees those flags and bails out.
+
+Summary
+Remove the setTimeout(() => onClose(), 2500) from inside your modal’s “approved” branch.
+
+If you want a visible delay, implement that delay in Dashboard’s onSuccess, not in the modal.
+
+Keep the paymentCompleted and brickCreated checks in renderPaymentBrick so even if React re‐invokes your effect prematurely, it won’t create a second Brick.
+
+Once you delete that internal setTimeout(onClose), you will no longer see two Bricks.
+
+
+
+
+
+
+
+
