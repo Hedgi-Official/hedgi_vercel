@@ -180,29 +180,19 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       // Get total_amount from the correct location
       const totalAmount = payload.payment_details?.total_amount || payload.total_amount;
 
-      // Format the request exactly as Flask expects it (Brick-compatible format)
+      // Format the request exactly as Flask expects it - simplified structure
       const flaskPayload = {
-        type: "online",
         external_reference: payload.external_reference,
         payer: {
           email: payload.payer.email
         },
-        payment_details: {
-          total_amount: totalAmount,
-          transactions: {
-            payments: [
-              {
-                amount: paymentData.amount,
-                installments: paymentData.payment_method.installments || 1,
-                payment_method: {
-                  id: paymentData.payment_method.id,
-                  type: paymentData.payment_method.type,
-                  token: paymentData.payment_method.token
-                }
-              }
-            ]
-          }
-        }
+        transaction_amount: parseFloat(totalAmount),
+        installments: paymentData.installments || 1,
+        payment_method_id: paymentData.payment_method.id,
+        token: paymentData.payment_method.token,
+        description: `Hedge Protection - ${payload.hedgeData?.baseCurrency || 'BRL'}`,
+        // Add hedge data for trade creation
+        hedge_data: payload.hedgeData
       };
 
       console.log('[Express → Flask] Sending payload to Flask:', JSON.stringify(flaskPayload, null, 2));
