@@ -501,6 +501,10 @@ export function MercadoPaySDKModal({
                   setPaymentCompleted(true);
                   setBrickCreated(true);
                   
+                  // CRITICAL: Clear error state on successful payment
+                  setError(null);
+                  setLoading(false);
+                  
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
                   // CRITICAL: Destroy Payment Brick completely before creating Status Screen
@@ -552,8 +556,6 @@ export function MercadoPaySDKModal({
                           </div>
                         `;
                       }
-                      
-                      setLoading(false);
                     }, 100); // Small delay to ensure Payment Brick is fully removed
                   }
 
@@ -572,6 +574,10 @@ export function MercadoPaySDKModal({
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
+                  
+                  // Clear any existing error state and loading state
+                  setError(null);
+                  setLoading(false);
 
                   // Extract payment ID for Status Screen Brick
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
@@ -650,6 +656,9 @@ export function MercadoPaySDKModal({
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);
                 setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
+                setLoading(false);
+                setPaymentCompleted(false); // Allow retry on network errors
+                setBrickCreated(false); // Allow re-creation of brick
               }
           },
         },
