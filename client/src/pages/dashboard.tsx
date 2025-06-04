@@ -328,13 +328,13 @@ export default function Dashboard() {
       }
 
       // Check if verification result indicates success - handle both direct status and nested response status
-      const paymentStatus = verificationResult.status || verificationResult.response?.status;
-      const isApproved = paymentStatus === 'approved';
+      const verificationStatus = verificationResult.status || verificationResult.response?.status;
+      const isApproved = verificationStatus === 'approved';
 
       if (!isApproved) {
         console.error('[Dashboard] Payment not approved:', verificationResult);
 
-        let errorMessage = `Payment not approved. Status: ${paymentStatus || 'unknown'}`;
+        let errorMessage = `Payment not approved. Status: ${verificationStatus || 'unknown'}`;
         const statusDetail = verificationResult.statusDetail || verificationResult.status_detail || verificationResult.response?.status_detail;
         if (statusDetail) {
           errorMessage += ` (${statusDetail})`;
