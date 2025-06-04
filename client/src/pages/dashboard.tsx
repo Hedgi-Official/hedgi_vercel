@@ -56,6 +56,9 @@ export default function Dashboard() {
   >(null)
   const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
   const [paymentInProgress, setPaymentInProgress] = React.useState(false) // Global payment lock
+  
+  // Add a ref-based lock to prevent duplicate modals from opening
+  const modalLockRef = React.useRef(false)
 
   // Debug logging for modal state changes
   React.useEffect(() => {
@@ -713,15 +716,22 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  // Enhanced payment lock - prevent ANY new payment flows
-                  if (paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
+                  // Enhanced payment lock with ref-based protection
+                  if (modalLockRef.current || paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
                     console.log("⚠️ [Dashboard] Payment BLOCKED - already in progress");
-                    console.log("⚠️ [Dashboard] Lock states:", { paymentInProgress, isProcessingPayment, showPaymentModal, hasPendingData: !!pendingHedgeData });
+                    console.log("⚠️ [Dashboard] Lock states:", { 
+                      modalLock: modalLockRef.current, 
+                      paymentInProgress, 
+                      isProcessingPayment, 
+                      showPaymentModal, 
+                      hasPendingData: !!pendingHedgeData 
+                    });
                     return;
                   }
                   
                   console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
-                  setPaymentInProgress(true);  // Global lock first
+                  modalLockRef.current = true;  // Ref lock first
+                  setPaymentInProgress(true);
                   setIsProcessingPayment(true);
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
@@ -764,6 +774,7 @@ export default function Dashboard() {
           onClose={() => {
             console.log("🔒 [Dashboard] Payment modal closing - releasing all locks");
             // Single atomic state reset to prevent race conditions
+            modalLockRef.current = false;
             setPaymentInProgress(false);
             setShowPaymentModal(false);
             setPendingHedgeData(null);
@@ -773,13 +784,13 @@ export default function Dashboard() {
             console.log("✅ [Dashboard] Payment success received");
             
             // Prevent duplicate calls - check current state atomically
-            if (!showPaymentModal || !pendingHedgeData) {
+            if (!showPaymentModal || !pendingHedgeData || !modalLockRef.current) {
               console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
               return;
             }
             
-            // Immediately set a processing flag to prevent additional modals
-            setIsProcessingPayment(true);
+            // Clear ref lock immediately to prevent any further modal operations
+            modalLockRef.current = false;
             
             // Close modal immediately after success - no delay needed
             console.log("🔄 [Dashboard] Closing modal immediately after success");
