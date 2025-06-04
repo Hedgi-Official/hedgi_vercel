@@ -57,9 +57,9 @@ try {
       });
     }
 
-    // Construct the exact JSON Flask expects:
-    const flaskPayload: Record<string, any> = {
-      items: items.map((it: any, i: number) => ({
+    // Construct the exact JSON Flask expects - matching your working curl structure:
+    const flaskPayload = {
+      items: items.map((it: any) => ({
         title: it.title,
         unit_price: Number(it.unit_price),
         quantity: Number(it.quantity || 1),
@@ -67,8 +67,8 @@ try {
       })),
       payer: {
         email: payer.email,
-        name: payer.name,
-        identification: payer.identification
+        name: payer.name || null,
+        identification: payer.identification || null
       },
       back_urls: back_urls,
       auto_return: auto_return || "approved"
@@ -77,37 +77,69 @@ try {
     console.log("[Express → Flask] Forwarding preference payload:", JSON.stringify(flaskPayload, null, 2));
 
     // ----------------------------------------
-    // 2) Send it to your Flask server.
-    //    Make sure FLASK_URL is set (e.g. "http://localhost:5000").
-    //    Flask should have its own route, e.g. POST /api/checkout/preferences.
+    // 2) Send it to your Flask server with proper error handling and timeout
     // ----------------------------------------
-    const FLASK_BASE_URL = process.env.FLASK_URL || "http://localhost:5000";
-    const flaskResponse = await fetch(`${FLASK_BASE_URL}/api/checkout/preferences`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(flaskPayload)
-    });
+    const FLASK_BASE_URL = process.env.FLASK_URL || "http://3.145.164.47";
+    console.log("[Express → Flask] Calling Flask at:", `${FLASK_BASE_URL}/api/checkout/preferences`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-    if (!flaskResponse.ok) {
-      // If Flask returned an error (404/500/etc), forward that status/text to the client.
-      const errorText = await flaskResponse.text();
-      console.error("[Express → Flask] Flask error:", flaskResponse.status, errorText);
-      return res.status(flaskResponse.status).json({ error: errorText || `HTTP ${flaskResponse.status}` });
+    try {
+      const flaskResponse = await fetch(`${FLASK_BASE_URL}/api/checkout/preferences`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(flaskPayload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      console.log("[Express → Flask] Flask response status:", flaskResponse.status);
+      console.log("[Express → Flask] Flask response headers:", flaskResponse.headers);
+
+      if (!flaskResponse.ok) {
+        const errorText = await flaskResponse.text();
+        console.error("[Express → Flask] Flask error response:", errorText);
+        throw new Error(`Flask returned ${flaskResponse.status}: ${errorText}`);
+      }
+
+      const flaskJson = await flaskResponse.json();
+      console.log("[Express → Flask] Flask success response:", flaskJson);
+      
+      // 4) Cache the response
+      preferenceCache.set(cacheKey, flaskJson);
+      setTimeout(() => preferenceCache.delete(cacheKey), CACHE_DURATION);
+
+      // 5) Return Flask's response
+      return res.json(flaskJson);
+
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      console.error("[Express → Flask] Fetch error details:", {
+        message: fetchError.message,
+        name: fetchError.name,
+        stack: fetchError.stack
+      });
+
+      if (fetchError.name === 'AbortError') {
+        console.error("[Express → Flask] Request timed out after 15 seconds");
+        return res.status(408).json({ 
+          error: "Flask request timed out",
+          details: "The Flask server did not respond within 15 seconds"
+        });
+      }
+
+      return res.status(500).json({ 
+        error: "Failed to communicate with Flask server",
+        details: fetchError.message,
+        flaskUrl: `${FLASK_BASE_URL}/api/checkout/preferences`
+      });
     }
 
-    // ----------------------------------------
-    // 3) Parse Flask's JSON response.
-    //    Expect something like { preferenceId: "...", publicKey: "TEST-..." }
-    // ----------------------------------------
-    const flaskJson = await flaskResponse.json();
-    console.log("[Express] Received from Flask:", flaskJson);
-
-    // 4) Cache the response if you want to prevent dupes for the next 30 seconds
-    preferenceCache.set(cacheKey, flaskJson);
-    setTimeout(() => preferenceCache.delete(cacheKey), CACHE_DURATION);
-
-    // 5) Return Flask's JSON back to React
-    return res.json(flaskJson);
+    
 
   } catch (err) {
     console.error("[Express] /api/payment/preferences exception:", err);
