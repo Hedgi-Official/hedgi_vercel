@@ -121,10 +121,10 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing });
 
-    if (!isOpen || !hedgeData) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
+    if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing);
       return;
     }
 
@@ -231,7 +231,7 @@ export function MercadoPaySDKModal({
         }
         window.paymentBrickController = null;
       }
-       hasInitializedBrick.current = false
+      hasInitializedBrick.current = false;
     }
   }, [isOpen]);
 
@@ -242,8 +242,8 @@ export function MercadoPaySDKModal({
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
 
     // If we've already created a brick or payment is done, skip entirely
-    if (brickCreated || paymentCompleted) {
-      console.log("⚠️ [createOrder] Skipping because brickCreated or paymentCompleted is true");
+    if (brickCreated || paymentCompleted || isProcessing) {
+      console.log("⚠️ [createOrder] Skipping because brickCreated:", brickCreated, "paymentCompleted:", paymentCompleted, "isProcessing:", isProcessing);
       return;
     }
 
@@ -253,8 +253,8 @@ export function MercadoPaySDKModal({
     }
 
     // Prevent multiple simultaneous order creation calls
-    if (orderId) {
-      console.log("⚠️ [createOrder] Order already exists, skipping duplicate call");
+    if (orderId || publicKey) {
+      console.log("⚠️ [createOrder] Order/publicKey already exists, skipping duplicate call");
       return;
     }
 
@@ -487,6 +487,10 @@ export function MercadoPaySDKModal({
               
 
                 if (response.ok && isApproved) {
+                  // Immediately set payment completed to prevent any re-renders
+                  setPaymentCompleted(true);
+                  setBrickCreated(true);
+                  
                   if (window.paymentBrickController) {
                     try {
                       window.paymentBrickController.unmount();
@@ -495,7 +499,6 @@ export function MercadoPaySDKModal({
                     }
                     window.paymentBrickController = null;
                   }
-                  setPaymentCompleted(true);
                           
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
