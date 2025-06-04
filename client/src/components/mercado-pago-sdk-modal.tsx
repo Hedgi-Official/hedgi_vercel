@@ -425,6 +425,10 @@ export function MercadoPaySDKModal({
       return;
     }
 
+    // CRITICAL: Set preventBrickRef IMMEDIATELY to prevent any other calls
+    preventBrickRef.current = true;
+    console.log("🔒 [renderPaymentBrick] Set preventBrickRef to true - no more bricks can be created");
+
     try {
       const settings = {
         initialization: {
@@ -523,9 +527,6 @@ export function MercadoPaySDKModal({
                 const isApproved = paymentStatus === "approved";
 
                 if (response.ok && isApproved) {
-                  // CRITICAL: Set preventBrickRef FIRST (synchronous, immediate)
-                  preventBrickRef.current = true;
-
                   // Extract payment ID before setting other states
                   const paymentId = result.response?.id || result.id || paymentToken;
 
@@ -536,7 +537,7 @@ export function MercadoPaySDKModal({
                   setLoading(false);
                   hasInitializedBrick.current = true;
 
-                  console.log("✅ [renderPaymentBrick] Payment approved successfully! preventBrickRef set to true");
+                  console.log("✅ [renderPaymentBrick] Payment approved successfully! preventBrickRef already set to true");
 
                   // CRITICAL: Destroy Payment Brick completely before creating Status Screen
                   if (window.paymentBrickController) {
@@ -737,6 +738,9 @@ export function MercadoPaySDKModal({
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
       setLoading(false);
+      // Reset preventBrickRef on error to allow retry
+      preventBrickRef.current = false;
+      console.log("🔓 [renderPaymentBrick] Reset preventBrickRef to false due to error");
     } 
   } finally {
       // ─── Always release the lock ───────────────────────────────────────────
