@@ -297,12 +297,29 @@ export function MercadoPaySDKModal({
               const result = await response.json();
               console.log("✅ [renderPaymentBrick] Payment successful:", result);
 
+              // Show success message
+              setError(null);
+              setLoading(true);
+              
+              // Hide the payment brick container and show success message
+              const container = document.getElementById("paymentBrick_container");
+              if (container) {
+                container.innerHTML = `
+                  <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                    ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
+                  </div>
+                `;
+              }
+
               // Extract payment ID from the response
               const paymentId = result.paymentId || result.id || paymentToken;
               
-              // Call onSuccess with the hedge data and payment token
-              onSuccess(hedgeData, paymentId);
-              onClose();
+              // Short delay to show success message, then proceed with trade
+              setTimeout(() => {
+                console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
+                onSuccess(hedgeData, paymentId);
+                onClose();
+              }, 1500);
 
             } catch (paymentError) {
               console.error("❌ [renderPaymentBrick] Payment processing error:", paymentError);
