@@ -298,7 +298,11 @@ export function MercadoPaySDKModal({
                 const result = await response.json();
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
-                if (response.ok) {
+                // Check if the payment status is specifically "approved"
+                const paymentStatus = result.status || result.response?.status;
+                const isApproved = paymentStatus === "approved";
+
+                if (response.ok && isApproved) {
                   // Payment approved
                   console.log("✅ Payment approved:", result);
                   setError(null);
@@ -315,7 +319,7 @@ export function MercadoPaySDKModal({
                   }
 
                   // Extract payment ID from the response
-                  const paymentId = result.paymentId || result.id || paymentToken;
+                  const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
@@ -328,10 +332,25 @@ export function MercadoPaySDKModal({
                   }, 1500);
 
                 } else {
-                  // Payment rejected
-                  console.error("❌ Payment rejected:", result);
-                  const reason = result.status_detail || "Unknown error";
-                  setError(`Payment was declined: ${reason}`);
+                  // Payment failed or not approved
+                  console.error("❌ Payment failed or not approved:", result);
+                  const statusDetail = result.status_detail || result.response?.status_detail;
+                  const reason = statusDetail || paymentStatus || "Payment not approved";
+                  
+                  // Show error in the payment container
+                  const container = document.getElementById("paymentBrick_container");
+                  if (container) {
+                    container.innerHTML = `
+                      <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
+                        ❌ ${isPortuguese ? "Pagamento falhou" : "Payment failed"}
+                        <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
+                          ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
+                        </div>
+                      </div>
+                    `;
+                  }
+                  
+                  setError(`${isPortuguese ? "Pagamento falhou:" : "Payment failed:"} ${reason}`);
                 }
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);

@@ -327,15 +327,17 @@ export default function Dashboard() {
         return;
       }
 
-      // Check if verification result indicates success
-      const isVerified = verificationResult.verified === true && verificationResult.status === 'approved';
+      // Check if verification result indicates success - handle both direct status and nested response status
+      const paymentStatus = verificationResult.status || verificationResult.response?.status;
+      const isApproved = paymentStatus === 'approved';
 
-      if (!isVerified) {
-        console.error('[Dashboard] Payment not verified or approved:', verificationResult);
+      if (!isApproved) {
+        console.error('[Dashboard] Payment not approved:', verificationResult);
 
-        let errorMessage = `Payment not approved. Status: ${verificationResult.status || 'unknown'}`;
-        if (verificationResult.statusDetail) {
-          errorMessage += ` (${verificationResult.statusDetail})`;
+        let errorMessage = `Payment not approved. Status: ${paymentStatus || 'unknown'}`;
+        const statusDetail = verificationResult.statusDetail || verificationResult.status_detail || verificationResult.response?.status_detail;
+        if (statusDetail) {
+          errorMessage += ` (${statusDetail})`;
         }
 
         toast({
