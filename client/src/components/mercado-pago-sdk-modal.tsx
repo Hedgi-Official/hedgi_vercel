@@ -73,6 +73,8 @@ export function MercadoPaySDKModal({
 
   // Add a ref to prevent React Strict Mode from creating duplicate bricks
   const hasInitializedBrick = useRef(false);
+  // Add a ref to prevent multiple simultaneous initialization attempts
+  const isInitializing = useRef(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -92,19 +94,27 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, isInitializing: isInitializing.current });
 
     if (!isOpen || !hedgeData) {
       console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
       return;
     }
 
-    // Only initialize once per open (prevent React Strict Mode double-mount)
-    if (hasInitializedBrick.current) {
-      console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
+    // Prevent any duplicate initialization attempts
+    if (hasInitializedBrick.current || isInitializing.current || paymentCompleted || brickCreated) {
+      console.log("⚠️ [MercadoPaySDKModal] Initialization blocked:", { 
+        hasInitialized: hasInitializedBrick.current, 
+        isInitializing: isInitializing.current, 
+        paymentCompleted, 
+        brickCreated 
+      });
       return;
     }
+
+    // Set both flags immediately to prevent any race conditions
     hasInitializedBrick.current = true;
+    isInitializing.current = true;
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
 
@@ -164,6 +174,7 @@ export function MercadoPaySDKModal({
     // Cleanup function to handle React 18 Strict Mode double-mounting
     return () => {
       console.log("🧹 [MercadoPaySDKModal] Component unmounting - cleaning up payment brick");
+      isInitializing.current = false;
       if (window.paymentBrickController) {
         try {
           window.paymentBrickController.unmount();
@@ -179,6 +190,11 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     if (!isOpen) {
       console.log("🔄 [MercadoPaySDKModal] Modal closed, resetting all states");
+      
+      // Reset all initialization flags first
+      hasInitializedBrick.current = false;
+      isInitializing.current = false;
+      
       setLoading(true);
       setError(null);
       setOrderId(null);
@@ -211,20 +227,20 @@ export function MercadoPaySDKModal({
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
 
-    // If we've already created a brick or payment is done, skip entirely
-    if (brickCreated || paymentCompleted) {
-      console.log("⚠️ [createOrder] Skipping because brickCreated or paymentCompleted is true");
+    // Enhanced guards - check all possible blocking conditions
+    if (brickCreated || paymentCompleted || !isInitializing.current || orderId) {
+      console.log("⚠️ [createOrder] Skipping because of blocking condition:", {
+        brickCreated,
+        paymentCompleted,
+        isInitializing: isInitializing.current,
+        hasOrderId: !!orderId
+      });
       return;
     }
 
     if (!hedgeData) {
       console.log("❌ [createOrder] No hedgeData available, returning");
-      return;
-    }
-
-    // Prevent multiple simultaneous order creation calls
-    if (orderId) {
-      console.log("⚠️ [createOrder] Order already exists, skipping duplicate call");
+      isInitializing.current = false;
       return;
     }
 
@@ -299,6 +315,8 @@ export function MercadoPaySDKModal({
       // Mark brick as created to prevent duplicates
       setBrickCreated(true);
       setIsProcessing(false);
+      // Clear initialization flag since we're done
+      isInitializing.current = false;
     } catch (e: any) {
       console.error("❌ Error creating payment order:", e);
       if (retryCount < 2 && e.message.includes("Network")) {
@@ -306,6 +324,8 @@ export function MercadoPaySDKModal({
       }
       setError(isPortuguese ? "Falha ao inicializar pagamento. Use o modo de teste." : "Failed to initialize payment. Use test mode.");
       setLoading(false);
+      // Clear initialization flag on error to allow retry
+      isInitializing.current = false;
     }
   };
 
