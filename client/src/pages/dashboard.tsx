@@ -770,7 +770,7 @@ export default function Dashboard() {
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success - releasing all locks and refreshing data");
+            console.log("✅ [Dashboard] Payment success - will close modal after showing success message");
             
             // Prevent duplicate calls with enhanced checking
             if (!showPaymentModal || !pendingHedgeData || !paymentInProgress) {
@@ -778,18 +778,20 @@ export default function Dashboard() {
               return;
             }
             
-            // Trade is already created by the /api/payment/order route
-            // Release all locks and clean up states
-            setPaymentInProgress(false);  // Release global lock first
-            setShowPaymentModal(false);
-            setPendingHedgeData(null);
-            setIsProcessingPayment(false);
-            
-            // Refresh trade queries to show the new trade
-            queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-            
-            console.log("🔄 [Dashboard] All locks released, trade lists refreshed");
+            // Show success message for 2 seconds, then close modal
+            setTimeout(() => {
+              console.log("🔄 [Dashboard] Closing modal after success delay");
+              setPaymentInProgress(false);  // Release global lock first
+              setShowPaymentModal(false);
+              setPendingHedgeData(null);
+              setIsProcessingPayment(false);
+              
+              // Refresh trade queries to show the new trade
+              queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+              
+              console.log("🔄 [Dashboard] All locks released, trade lists refreshed");
+            }, 2000);
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData?.baseCurrency || 'BRL'}

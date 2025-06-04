@@ -447,15 +447,12 @@ export function MercadoPaySDKModal({
                     }
                   }
 
-                  // Call onSuccess immediately 
+                  // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   onSuccess(hedgeData, paymentId);
                   
-                  // Close modal after showing success message
-                  setTimeout(() => {
-                    console.log("🔄 [renderPaymentBrick] Closing modal after successful payment");
-                    onClose();
-                  }, 2500);
+                  // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
+                  // This was causing race condition with Dashboard's onSuccess callback
 
                 } else {
                   // Payment failed or not approved
@@ -479,10 +476,8 @@ export function MercadoPaySDKModal({
                     `;
                   }
 
-                  // Add delay then close modal
-                  setTimeout(() => {
-                    onClose();
-                  }, 3000);
+                  // ❌ REMOVED: setTimeout onClose() for failures too
+                  // Let Dashboard handle all modal state management
                 }
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);
