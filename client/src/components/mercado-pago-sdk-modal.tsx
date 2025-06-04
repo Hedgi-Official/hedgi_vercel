@@ -498,6 +498,7 @@ export function MercadoPaySDKModal({
 
                 if (response.ok && isApproved) {
                   // Immediately set payment completed to prevent any re-renders
+                  const paymentId = result.response?.id || result.id || paymentToken;
                   setPaymentCompleted(true);
                   setBrickCreated(true);
                   
@@ -520,52 +521,63 @@ export function MercadoPaySDKModal({
 
                   // Clear container completely to remove any Payment Brick remnants
                   const container = document.getElementById("paymentBrick_container");
-                  if (container) {
-                    container.innerHTML = '';
-                    // Force a small delay to ensure Payment Brick is completely removed
-                    setTimeout(() => {
-                      // Extract payment ID from the response
-                      const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
-                      
-                      if (paymentId) {
-                        // Show simple success message instead of Status Screen Brick
-                        // This avoids Mercado Pago's quirky Status Screen behavior
-                        const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
-                        const currency = hedgeData.baseCurrency || 'BRL';
-                        const targetCurrency = hedgeData.targetCurrency || 'USD';
-                        const duration = hedgeData.duration || 7;
-
-                        container.innerHTML = `
-                          <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                            ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
-                            <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
-                              <div style="margin-bottom: 8px;">
-                                <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${currency}
-                              </div>
-                              <div style="margin-bottom: 8px;">
-                                <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
-                              </div>
-                              <div style="margin-bottom: 8px;">
-                                <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
-                              </div>
-                              <div style="margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid #10b981;">
-                                <strong style="color: #059669;">${isPortuguese ? "Pagamento Aprovado" : "Payment Approved"}</strong><br>
-                                <span style="font-size: 12px; color: #6b7280;">ID: ${paymentId}</span>
-                              </div>
+                  
+                   if (container) {
+                      container.innerHTML = ""; // wipe out old content
+                      container.innerHTML = `
+                        <div style="
+                          text-align: center;
+                          padding: 24px;
+                          color: #10b981;
+                          font-size: 18px;
+                          font-weight: 600;
+                        ">
+                          ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
+                          <div style="
+                            font-size: 14px;
+                            margin-top: 15px;
+                            font-weight: normal;
+                            color: #374151;
+                          ">
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${Math.abs(
+                        Number(hedgeData.amount || 0)
+                      ).toLocaleString()} ${hedgeData.baseCurrency || currency}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${
+                        hedgeData.baseCurrency || currency
+                      }/${hedgeData.targetCurrency || "USD"}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${
+                        hedgeData.duration || 7
+                      } ${isPortuguese ? "dias" : "days"}
+                            </div>
+                            <div style="
+                              margin-top: 20px;
+                              padding: 15px;
+                              background-color: #f0f9ff;
+                              border-radius: 8px;
+                              border-left: 4px solid #10b981;
+                            ">
+                              <strong style="color: #059669;">${
+                                isPortuguese ? "Pagamento Aprovado" : "Payment Approved"
+                              }</strong><br>
+                              <span style="font-size: 12px; color: #6b7280;">ID: ${paymentId}</span>
                             </div>
                           </div>
-                        `;
-                      }
-                    }, 100); // Small delay to ensure Payment Brick is fully removed
-                  }
+                        </div>
+                      `;
+                    }
+                  onClose();
 
-                  // Call onSuccess immediately - Dashboard will handle modal closing
-                  console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
-                  onSuccess(hedgeData, paymentId);
-
-                  // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
-                  // This was causing race condition with Dashboard's onSuccess callback
-
+                    // 6) Call onSuccess and then exit—no further code runs:
+                    console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
+                  requestAnimationFrame(() => {
+                    onSuccess(hedgeData, paymentId);
+                  });
+                    return
                 } else {
                   // Payment failed or not approved
                   console.error("❌ Payment failed or not approved:", result);
