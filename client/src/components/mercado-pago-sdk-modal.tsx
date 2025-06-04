@@ -301,7 +301,13 @@ export function MercadoPaySDKModal({
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
 
-    // Prevent duplicate brick creation - check if one already exists
+    // ① If we already marked paymentCompleted = true, don't render again
+    if (paymentCompleted) {
+      console.log("⚠️ [renderPaymentBrick] paymentCompleted is true ⇒ skip duplicate brick");
+      return;
+    }
+
+    // ② Prevent duplicate brick creation - check if one already exists
     if (window.paymentBrickController || brickCreated) {
       console.log("⚠️ [renderPaymentBrick] Payment brick already created, skipping duplicate");
       return;
