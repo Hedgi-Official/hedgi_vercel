@@ -501,7 +501,7 @@ export function MercadoPaySDKModal({
                   setPaymentCompleted(true);
                   setBrickCreated(true);
                   
-                  // CRITICAL: Clear ALL states on successful payment
+                  // CRITICAL: Clear error state on successful payment
                   setError(null);
                   setLoading(false);
                   
@@ -825,8 +825,8 @@ export function MercadoPaySDKModal({
           </div>
         )}
 
-        {/* Error Banner - only show if there's an error AND payment hasn't been completed */}
-        {error && !paymentCompleted && (
+        {/* Error Banner */}
+        {error && (
           <div className="bg-red-100 text-red-700 p-4 rounded my-4">
             <p className="font-semibold">
               {isPortuguese ? "Erro" : "Error"}
