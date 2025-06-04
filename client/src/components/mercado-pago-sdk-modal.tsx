@@ -583,8 +583,8 @@ export function MercadoPaySDKModal({
 
                   // Extract payment ID for Status Screen Brick
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
-</new_str>
-</changes>// Show Status Screen Brick for failed payment
+
+                  // Show Status Screen Brick for failed payment
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
                     // Create a new container specifically for the status screen
