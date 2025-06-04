@@ -122,6 +122,7 @@ export function MercadoPaySDKModal({
     setError(null);
     setOrderId(null);
     setPublicKey(null);
+    setBrickCreated(false);
 
     // Generate a tracking token (for our records)
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -151,6 +152,36 @@ export function MercadoPaySDKModal({
       });
   }, [isOpen, hedgeData, paymentCompleted]);
 
+  // Reset all states when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      console.log("🔄 [MercadoPaySDKModal] Modal closed, resetting all states");
+      setLoading(false);
+      setError(null);
+      setOrderId(null);
+      setPublicKey(null);
+      setPaymentTrackingToken(null);
+      setPaymentCompleted(false);
+      setIsProcessing(false);
+      setBrickCreated(false);
+      
+      // Clean up any remaining payment brick
+      const container = document.getElementById("paymentBrick_container");
+      if (container) {
+        container.innerHTML = '';
+      }
+      
+      if (window.paymentBrickController) {
+        try {
+          window.paymentBrickController.unmount();
+        } catch (e) {
+          console.log("Modal close cleanup:", e);
+        }
+        window.paymentBrickController = null;
+      }
+    }
+  }, [isOpen]);
+
   //
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
   //
@@ -159,6 +190,12 @@ export function MercadoPaySDKModal({
 
     if (!hedgeData) {
       console.log("❌ [createOrder] No hedgeData available, returning");
+      return;
+    }
+
+    // Prevent multiple simultaneous order creation calls
+    if (orderId) {
+      console.log("⚠️ [createOrder] Order already exists, skipping duplicate call");
       return;
     }
 

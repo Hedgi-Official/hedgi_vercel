@@ -3,6 +3,10 @@ import { paymentService } from '../services/paymentService';
 
 const router = express.Router();
 
+// Cache to prevent duplicate order creation requests
+const orderCache = new Map<string, any>();
+const CACHE_DURATION = 30000; // 30 seconds
+
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX'; 
 
 
@@ -31,6 +35,16 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
   try {
     const payload = req.body;
     console.log('[Express] Received /api/payment/order payload:', payload);
+
+    // Create a cache key based on external_reference to prevent duplicates
+    const cacheKey = payload.external_reference || `${Date.now()}_${Math.random()}`;
+    
+    // Check if we already have a cached response for this request
+    if (orderCache.has(cacheKey)) {
+      const cachedResponse = orderCache.get(cacheKey);
+      console.log('[Express] Returning cached order response for:', cacheKey);
+      return res.json(cachedResponse);
+    }
 
     const payment = payload?.payment_details?.transactions?.payments?.[0];
     const hasRealToken = !!payment?.payment_method?.token;
@@ -207,10 +221,17 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
 
       // Valid v2 Preferences payload - return mock response for frontend
       console.log('[Express] Valid order creation request, returning mock response');
-      return res.json({
+      
+      const response = {
         orderId: `ORDER_${Date.now()}`,
         publicKey: process.env.MERCADO_PAGO_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
-      });
+      };
+      
+      // Cache the response to prevent duplicates
+      orderCache.set(cacheKey, response);
+      setTimeout(() => orderCache.delete(cacheKey), CACHE_DURATION);
+      
+      return res.json(response);
     }
   } catch (error) {
     console.error('[Express] Payment order error:', error);
