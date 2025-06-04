@@ -160,6 +160,19 @@ export function MercadoPaySDKModal({
         setLoading(false);
         setIsProcessing(false); // Reset processing state on error
       });
+
+    // Cleanup function to handle React 18 Strict Mode double-mounting
+    return () => {
+      console.log("🧹 [MercadoPaySDKModal] Component unmounting - cleaning up payment brick");
+      if (window.paymentBrickController) {
+        try {
+          window.paymentBrickController.unmount();
+          window.paymentBrickController = null;
+        } catch (e) {
+          console.log("Unmount cleanup:", e);
+        }
+      }
+    };
   }, [isOpen, hedgeData]);
 
   // Reset all states when modal closes
