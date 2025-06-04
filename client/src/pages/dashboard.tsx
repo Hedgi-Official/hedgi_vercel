@@ -729,15 +729,17 @@ export default function Dashboard() {
         <MercadoPaySDKModal
           isOpen={showPaymentModal}
           onClose={() => {
-            setShowPaymentModal(false)
-            setPendingHedgeData(null)
-            setIsProcessingPayment(false)
+            console.log("🔒 [Dashboard] Payment modal closing");
+            setShowPaymentModal(false);
+            setPendingHedgeData(null);
+            setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            setShowPaymentModal(false)
-            handlePlaceHedge(hedgeData, paymentToken)
-            setPendingHedgeData(null)
-            setIsProcessingPayment(false)
+            console.log("✅ [Dashboard] Payment success, closing modal and placing trade");
+            setShowPaymentModal(false);
+            setPendingHedgeData(null);
+            setIsProcessingPayment(false);
+            handlePlaceHedge(hedgeData, paymentToken);
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData.baseCurrency}

@@ -86,14 +86,20 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
 
-    if (!isOpen || !hedgeData) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData);
+    if (!isOpen || !hedgeData || paymentCompleted) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
       return;
     }
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
+    
+    // Reset states for fresh start
+    setLoading(true);
+    setError(null);
+    setOrderId(null);
+    setPublicKey(null);
 
     // Generate a tracking token (for our records)
     const trackingToken = `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -120,7 +126,7 @@ export function MercadoPaySDKModal({
         setError(isPortuguese ? "Falha ao carregar sistema de pagamento." : "Failed to load payment system.");
         setLoading(false);
       });
-  }, [isOpen, hedgeData]);
+  }, [isOpen, hedgeData, paymentCompleted]);
 
   //
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
@@ -315,6 +321,9 @@ export function MercadoPaySDKModal({
               // Extract payment ID from the response
               const paymentId = result.paymentId || result.id || paymentToken;
 
+              // Mark payment as completed to prevent further interactions
+              setPaymentCompleted(true);
+              
               // Short delay to show success message, then proceed with trade
               setTimeout(() => {
                 console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
@@ -374,8 +383,26 @@ export function MercadoPaySDKModal({
     onClose();
   };
 
+  // Reset payment state when modal closes
+  const handleClose = () => {
+    console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
+    setPaymentCompleted(false);
+    setLoading(true);
+    setError(null);
+    setOrderId(null);
+    setPublicKey(null);
+    
+    // Clear any existing payment brick
+    const container = document.getElementById("paymentBrick_container");
+    if (container) {
+      container.innerHTML = '';
+    }
+    
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={() => onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
