@@ -224,6 +224,12 @@ export default function Dashboard() {
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
+    
+    // Ensure no additional modals can open during trade processing
+    if (isProcessingPayment || showPaymentModal) {
+      console.log("⚠️ [Dashboard] Payment already in progress, preventing duplicate processing");
+      return;
+    }
 
     // First check if payments are enabled in the system
     try {
@@ -356,6 +362,12 @@ export default function Dashboard() {
 
       // Only proceed if payment is explicitly verified and approved
       console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
+      
+      // Reset modal states immediately to prevent additional modals
+      setShowPaymentModal(false);
+      setPendingHedgeData(null);
+      setIsProcessingPayment(false);
+      
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);

@@ -332,12 +332,10 @@ export function MercadoPaySDKModal({
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
 
-                  // Short delay to show success message, then proceed with trade
-                  setTimeout(() => {
-                    console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
-                    onSuccess(hedgeData, paymentId);
-                    onClose();
-                  }, 1500);
+                  // Immediately close modal and proceed with trade to prevent additional modals
+                  console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
+                  onSuccess(hedgeData, paymentId);
+                  onClose();
 
                 } else {
                   // Payment failed or not approved
@@ -402,7 +400,12 @@ export function MercadoPaySDKModal({
   // 4) "Test Payment" button (dev mode)
   //
   const handleTestPayment = () => {
-    if (!hedgeData || paymentCompleted) return;
+    if (!hedgeData || paymentCompleted) {
+      console.log("⚠️ [MercadoPaySDKModal] Test payment blocked - no hedgeData or payment already completed");
+      return;
+    }
+    
+    console.log("🧪 [MercadoPaySDKModal] Processing test payment");
     setPaymentCompleted(true);
     const testToken = paymentTrackingToken || `test_payment_${Date.now()}`;
     onSuccess(hedgeData, testToken);
@@ -415,6 +418,13 @@ export function MercadoPaySDKModal({
   // Reset payment state when modal closes
   const handleClose = () => {
     console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
+    
+    // Prevent closing if payment is already completed to avoid interference
+    if (paymentCompleted) {
+      console.log("⚠️ [MercadoPaySDKModal] Payment completed, ignoring close request");
+      return;
+    }
+    
     setPaymentCompleted(false);
     setLoading(true);
     setError(null);
