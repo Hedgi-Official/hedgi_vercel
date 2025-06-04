@@ -296,28 +296,40 @@ export function MercadoPaySDKModal({
                 body: JSON.stringify(paymentPayload),
               });
 
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Network error" }));
-                throw new Error(errorData.error || `HTTP ${response.status}`);
-              }
-
               const result = await response.json();
               console.log("✅ [renderPaymentBrick] Payment successful:", result);
+              if (response.ok) {
+                // (mp_response.status was “approved” or “in_process”)
+                console.log("✅ Payment approved:", result);
+                // …show success UI / call onSuccess(…)…
+                // Show success message
+                setError(null);
+                setLoading(true);
 
-              // Show success message
-              setError(null);
-              setLoading(true);
-
-              // Hide the payment brick container and show success message
-              const container = document.getElementById("paymentBrick_container");
-              if (container) {
-                container.innerHTML = `
-                  <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                    ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
-                  </div>
-                `;
+                // Hide the payment brick container and show success message
+                const container = document.getElementById("paymentBrick_container");
+                if (container) {
+                  container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                      ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
+                    </div>
+                  `;
+                }
+                
+              } else {
+                // (mp_response.status was “rejected”)
+                console.error("❌ Payment rejected:", result);
+                // e.g. result.status_detail might be "cc_rejected_bad_filled_card_number", etc.
+                const reason = result.status_detail || "Unknown error";
+                alert("Payment was declined: " + reason);
+                // …show failure UI or keep them on the form…
+              }
+              } catch (err) {
+              console.error("🚨 Payment‐request failed:", err);
+              setError("Falha no processamento do pagamento.");
               }
 
+              
               // Extract payment ID from the response
               const paymentId = result.paymentId || result.id || paymentToken;
 
