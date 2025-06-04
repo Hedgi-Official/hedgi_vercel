@@ -93,18 +93,10 @@ class PaymentBrickManager {
   }
 
   startSession(sessionId: string): boolean {
-    if (this.globalPreventBrick) {
-      console.log("🛑 [PaymentBrickManager] Global brick prevention is active - rejecting session:", sessionId);
-      return false;
-    }
-    
-    if (this.currentSessionId && this.currentSessionId !== sessionId) {
-      console.log("🛑 [PaymentBrickManager] Another session is active - rejecting session:", sessionId);
-      return false;
-    }
-    
+    // Always allow a fresh session to start
     this.currentSessionId = sessionId;
-    console.log("✅ [PaymentBrickManager] Session started:", sessionId);
+    this.globalPreventBrick = false; // Reset on new session
+    console.log("✅ [PaymentBrickManager] Session started:", sessionId, "- reset global prevent flag");
     return true;
   }
 
@@ -115,7 +107,7 @@ class PaymentBrickManager {
 
   canCreateBrick(sessionId: string): boolean {
     const canCreate = !this.globalPreventBrick && this.currentSessionId === sessionId;
-    console.log("🔍 [PaymentBrickManager] Can create brick for session", sessionId, ":", canCreate);
+    console.log("🔍 [PaymentBrickManager] Can create brick for session", sessionId, ":", canCreate, "- globalPrevent:", this.globalPreventBrick, "currentSession:", this.currentSessionId);
     return canCreate;
   }
 
@@ -123,7 +115,7 @@ class PaymentBrickManager {
     if (this.currentSessionId === sessionId) {
       console.log("🏁 [PaymentBrickManager] Session ended:", sessionId);
       this.currentSessionId = null;
-      // Don't reset globalPreventBrick - it stays true once set
+      // Don't reset globalPreventBrick here - only reset on new session start
     }
   }
 
@@ -168,12 +160,9 @@ export function MercadoPaySDKModal({
   // Initialize session when modal opens
   useEffect(() => {
     if (isOpen && hedgeData) {
-      const canStart = brickManager.startSession(sessionId.current);
-      if (!canStart) {
-        console.log("🛑 [MercadoPaySDKModal] Cannot start session - another payment in progress");
-        setError(isPortuguese ? "Outro pagamento em andamento. Aguarde." : "Another payment in progress. Please wait.");
-        return;
-      }
+      // Always start a fresh session - this will reset any previous global prevent flags
+      brickManager.startSession(sessionId.current);
+      console.log("🚀 [MercadoPaySDKModal] Started fresh session:", sessionId.current);
     }
     
     if (!isOpen) {
@@ -337,8 +326,7 @@ export function MercadoPaySDKModal({
       // Modal is opening - ONLY NOW reset preventBrickRef for a fresh start
       console.log("🔓 [MercadoPaySDKModal] Modal opening, resetting preventBrickRef for fresh start");
       preventBrickRef.current = false;
-      // Reset the global manager for a completely fresh start
-      brickManager.reset();
+      // The global manager will be reset when startSession is called
     }
   }, [isOpen]);
 
