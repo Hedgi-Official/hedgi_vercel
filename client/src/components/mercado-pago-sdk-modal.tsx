@@ -219,102 +219,110 @@ export function MercadoPaySDKModal({
   ) => {
     console.log("🔨 [renderCardPaymentBrick] Starting to render brick with amount:", amount, "externalRef:", externalRef);
     
-    const settings = {
-      initialization: {
-        amount: amount, // e.g. 100.00
-        external_reference: externalRef,
-      },
-      callbacks: {
-        onReady: () => {
-          // Brick is ready; hide your spinner if you have one
-          console.log("✅ [renderCardPaymentBrick] Brick is ready");
-          setLoading(false);
-        },
-        onError: (error: unknown) => {
-          console.error("❌ [renderCardPaymentBrick] Brick error:", error);
-          setError(isPortuguese ? "Erro ao carregar interface de pagamento." : "Failed to load payment interface.");
-          setLoading(false);
-        },
-        onSubmit: (formData: BrickFormData, additionalData: BrickAdditionalData) => {
-          // Called when user clicks "Pay" in the brick.
-          // formData.token is the REAL card token (≥32 chars)
-          console.log("💳 [renderCardPaymentBrick] Brick onSubmit called with formData:", formData);
-          console.log("💳 [renderCardPaymentBrick] additionalData:", additionalData);
-          console.log("💳 [renderCardPaymentBrick] Real token detected:", formData.token);
-          
-          return new Promise<void>((resolve, reject) => {
-            const submitData = {
-              type: "online",
-              external_reference: externalRef,
-              items: [
-                {
-                  title: `Hedge Protection - ${currency}`,
-                  description: `Currency hedge for ${hedgeData!.amount} ${currency}`,
-                  category_id: "services",
-                  quantity: 1,
-                  unit_price: formData.transaction_amount,
-                }
-              ],
-              payer: {
-                email: formData.payer.email,
-                name: "Customer",
-                identification: formData.payer.identification,
-              },
-              back_urls: {
-                success: `${window.location.origin}/payment/success`,
-                failure: `${window.location.origin}/payment/failure`,
-                pending: `${window.location.origin}/payment/pending`,
-              },
-              auto_return: "approved",
-              // Include payment details for processing
-              payment_details: {
-                total_amount: String(formData.transaction_amount),
-                processing_mode: "automatic",
-                transactions: {
-                  payments: [
-                    {
-                      amount: String(formData.transaction_amount),
-                      payment_method: {
-                        id: formData.payment_method_id,
-                        type: additionalData.paymentTypeId,
-                        token: formData.token, // 👈 real token from Brick
-                        installments: 1,
-                      },
-                    },
-                  ],
-                },
-              },
-            };
-
-            fetch("/api/payment/order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(submitData),
-            })
-              .then((response) => response.json())
-              .then((json) => {
-                console.log("✔️ /api/payment/order →", json);
-                if (json.error) {
-                  console.error("❌ Payment failed:", json.error);
-                  reject(json.error);
-                  return;
-                }
-                // Success! Pass the payment ID (or order ID) back
-                onSuccess(hedgeData!, json.orderId || "unknown_id");
-                onClose();
-                resolve();
-              })
-              .catch((error) => {
-                console.error("❌ Error calling /api/payment/order:", error);
-                reject(error);
-              });
-          });
-        },
-      },
-    };
-
-    // ‼️ Render the Brick into your container div
+    // First, create a preference for this payment
+    console.log("🔨 [renderCardPaymentBrick] Creating preference...");
+    
     try {
+      const preferenceResponse = await fetch("/api/payment/preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "online",
+          external_reference: externalRef,
+          items: [
+            {
+              title: `Hedge Protection - ${currency}`,
+              description: `Currency hedge for ${hedgeData!.amount} ${currency}`,
+              category_id: "services",
+              quantity: 1,
+              unit_price: amount,
+            }
+          ],
+          payer: {
+            email: "testuser@example.com",
+            name: "John Doe",
+            identification: {
+              type: "CPF",
+              number: "12345678901",
+            },
+          },
+          back_urls: {
+            success: `${window.location.origin}/payment/success`,
+            failure: `${window.location.origin}/payment/failure`,
+            pending: `${window.location.origin}/payment/pending`,
+          },
+          auto_return: "approved",
+        }),
+      });
+
+      if (!preferenceResponse.ok) {
+        throw new Error("Failed to create preference");
+      }
+
+      const preferenceData = await preferenceResponse.json();
+      console.log("✅ [renderCardPaymentBrick] Preference created:", preferenceData);
+
+      // Now create the payment brick with the preference ID
+      const settings = {
+        initialization: {
+          amount: amount,
+          preferenceId: preferenceData.id, // Use preference ID instead of external_reference
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("✅ [renderCardPaymentBrick] Brick is ready");
+            setLoading(false);
+          },
+          onError: (error: unknown) => {
+            console.error("❌ [renderCardPaymentBrick] Brick error:", error);
+            setError(isPortuguese ? "Erro ao carregar interface de pagamento." : "Failed to load payment interface.");
+            setLoading(false);
+          },
+          onSubmit: (formData: any) => {
+            console.log("💳 [renderCardPaymentBrick] Brick onSubmit called with formData:", formData);
+            
+            // For preference-based payments, the onSubmit should return a promise
+            // that resolves when the payment process is complete
+            return new Promise((resolve, reject) => {
+              // Set up a listener for payment completion
+              const handlePaymentComplete = (event: MessageEvent) => {
+                if (event.data.type === 'PAYMENT_SUCCESS') {
+                  console.log("✅ [renderCardPaymentBrick] Payment success received");
+                  window.removeEventListener('message', handlePaymentComplete);
+                  
+                  // Extract payment ID from URL parameters or event data
+                  const urlParams = new URLSearchParams(window.location.search);
+                  const paymentId = urlParams.get('payment_id') || event.data.payment_id || externalRef;
+                  
+                  onSuccess(hedgeData!, paymentId);
+                  onClose();
+                  resolve();
+                } else if (event.data.type === 'PAYMENT_FAILED') {
+                  console.error("❌ [renderCardPaymentBrick] Payment failed");
+                  window.removeEventListener('message', handlePaymentComplete);
+                  reject(new Error('Payment failed'));
+                }
+              };
+
+              window.addEventListener('message', handlePaymentComplete);
+
+              // Timeout after 5 minutes
+              setTimeout(() => {
+                window.removeEventListener('message', handlePaymentComplete);
+                reject(new Error('Payment timeout'));
+              }, 300000);
+            });
+          },
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: "all",
+            maxInstallments: 1
+          }
+        }
+      };
+
+      // Create the brick
       console.log("🔨 [renderCardPaymentBrick] Creating brick with settings:", settings);
       console.log("🔨 [renderCardPaymentBrick] Target container: cardPaymentBrick_container");
       
@@ -326,11 +334,12 @@ export function MercadoPaySDKModal({
       
       console.log("🔨 [renderCardPaymentBrick] Container found, creating brick...");
       window.cardPaymentBrickController = await bricksBuilder.create(
-        "cardPayment",
+        "payment", // Use "payment" instead of "cardPayment" for preference-based flow
         "cardPaymentBrick_container",
         settings
       );
       console.log("✅ [renderCardPaymentBrick] Brick created successfully:", window.cardPaymentBrickController);
+      
     } catch (brickError) {
       console.error("❌ [renderCardPaymentBrick] Failed to create brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
