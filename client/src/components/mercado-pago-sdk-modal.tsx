@@ -67,7 +67,6 @@ export function MercadoPaySDKModal({
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -87,26 +86,14 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, isInitialized });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
 
-    if (!isOpen || !hedgeData || paymentCompleted || isInitialized) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "isInitialized:", isInitialized);
+    if (!isOpen || !hedgeData || paymentCompleted) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
       return;
     }
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
-    setIsInitialized(true);
-
-    // Clean up any existing payment brick before starting
-    if (window.paymentBrickController) {
-      console.log("🧹 [useEffect] Cleaning up existing payment brick controller");
-      try {
-        window.paymentBrickController.unmount();
-      } catch (e) {
-        console.log("⚠️ [useEffect] Error unmounting existing brick:", e);
-      }
-      window.paymentBrickController = null;
-    }
 
     // Reset states for fresh start
     setLoading(true);
@@ -139,7 +126,7 @@ export function MercadoPaySDKModal({
         setError(isPortuguese ? "Falha ao carregar sistema de pagamento." : "Failed to load payment system.");
         setLoading(false);
       });
-  }, [isOpen, hedgeData, paymentCompleted, isInitialized]);
+  }, [isOpen, hedgeData, paymentCompleted]);
 
   //
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
@@ -238,23 +225,6 @@ export function MercadoPaySDKModal({
     orderIdFromServer: string
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
-
-    // Clean up any existing payment brick first
-    if (window.paymentBrickController) {
-      console.log("🧹 [renderPaymentBrick] Cleaning up existing payment brick");
-      try {
-        await window.paymentBrickController.unmount();
-      } catch (e) {
-        console.log("⚠️ [renderPaymentBrick] Error unmounting existing brick:", e);
-      }
-      window.paymentBrickController = null;
-    }
-
-    // Clear container before creating new brick
-    const container = document.getElementById("paymentBrick_container");
-    if (container) {
-      container.innerHTML = '';
-    }
 
     try {
       const settings = {
@@ -411,26 +381,13 @@ export function MercadoPaySDKModal({
         throw new Error("Container 'paymentBrick_container' not found in DOM");
       }
 
-      // Ensure container is ready and empty
-      container.innerHTML = '';
-      
-      // Add a small delay to ensure DOM is stable
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       console.log("🔨 [renderPaymentBrick] Container found, creating Payment Brick...");
-      try {
-        window.paymentBrickController = await bricksBuilder.create(
-          "payment", // Use "payment" for Payment Brick
-          "paymentBrick_container",
-          settings
-        );
-        console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
-      } catch (createError) {
-        console.error("❌ [renderPaymentBrick] Error creating payment brick:", createError);
-        // Clear the controller reference if creation failed
-        window.paymentBrickController = null;
-        throw createError;
-      }
+      window.paymentBrickController = await bricksBuilder.create(
+        "payment", // Use "payment" for Payment Brick
+        "paymentBrick_container",
+        settings
+      );
+      console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
 
     } catch (brickError) {
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
@@ -462,33 +419,28 @@ export function MercadoPaySDKModal({
   const handleClose = () => {
     console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
     
-    // Clean up payment brick controller first, before DOM manipulation
-    if (window.paymentBrickController) {
-      try {
-        console.log("🧹 [handleClose] Unmounting payment brick controller");
-        window.paymentBrickController.unmount();
-      } catch (e) {
-        console.log("⚠️ [handleClose] Payment brick controller unmount failed:", e);
-      }
-      window.paymentBrickController = null;
-    }
-
-    // Small delay to ensure unmount completes before DOM cleanup
-    setTimeout(() => {
-      // Clear any existing payment brick container
-      const container = document.getElementById("paymentBrick_container");
-      if (container) {
-        container.innerHTML = '';
-      }
-    }, 100);
-
     // Always allow closing and reset states properly
     setPaymentCompleted(false);
-    setIsInitialized(false);
     setLoading(true);
     setError(null);
     setOrderId(null);
     setPublicKey(null);
+
+    // Clear any existing payment brick and its controller
+    const container = document.getElementById("paymentBrick_container");
+    if (container) {
+      container.innerHTML = '';
+    }
+
+    // Destroy any existing payment brick controller
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Payment brick controller unmount failed:", e);
+      }
+      window.paymentBrickController = null;
+    }
 
     onClose();
   };
