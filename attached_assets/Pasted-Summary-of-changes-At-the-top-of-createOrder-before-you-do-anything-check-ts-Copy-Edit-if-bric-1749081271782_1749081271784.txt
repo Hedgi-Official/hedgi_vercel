@@ -1,0 +1,72 @@
+Summary of changes
+At the top of createOrder, before you do anything, check:
+
+ts
+Copy
+Edit
+if (!brickManager.canCreateBrick(sessionId.current)) {
+  console.log("[createOrder] Skipping because globalPreventBrick=true");
+  return;
+}
+After you receive preferenceId + publicKey, replace:
+
+ts
+Copy
+Edit
+renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
+with:
+
+ts
+Copy
+Edit
+if (brickManager.canCreateBrick(sessionId.current)) {
+  renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
+} else {
+  console.log(
+    "[createOrder] Aborting renderPaymentBrick due to globalPreventBrick"
+  );
+}
+Inside renderPaymentBrick, you already have:
+
+ts
+Copy
+Edit
+if (!brickManager.canCreateBrick(sessionId.current)) {
+  console.log("🛑 [renderPaymentBrick] blocked by PaymentBrickManager");
+  return;
+}
+if (preventBrickRef.current) {
+  console.log("🛑 [renderPaymentBrick] blocked by preventBrickRef");
+  return;
+}
+preventBrickRef.current = true;
+// … acquire lock, build the brick, etc.
+That guard is fine as long as you never call renderPaymentBrick in the first place once globalPreventBrick is true.
+
+By adding both the “if (!brickManager.canCreateBrick…) return;” check at the very top of createOrder and again before actually calling renderPaymentBrick(...), you close the race window completely. No matter how React re-renders or how the effect fires, you will never attempt to build a second Brick after a payment has succeeded.
+
+Why the original still failed
+In your current code, the flow is:
+
+Modal opens → useEffect → createOrder() → fetch preference →
+⁠→ renderPaymentBrick(...) mounts the credit-card form.
+
+User submits → inside onSubmit, you do:
+
+ts
+Copy
+Edit
+brickManager.preventAllBricks(sessionId);
+preventBrickRef.current = true;
+// unmount old Brick, inject success banner, onSuccess, onClose after 1.5s…
+However, React’s first useEffect (the one that calls createOrder()) can still re-run during that 1.5 seconds or if hedgeData or isOpen toggles. Since createOrder() itself did not check brickManager.canCreateBrick at the top, it will call renderPaymentBrick(...) again (even though renderPaymentBrick then bails). That is enough to spin up a second Brick in some scenarios.
+
+By moving the “brickManager.canCreateBrick” guard into both places—up at the very top of createOrder, and also before calling renderPaymentBrick—you guarantee that after you call preventAllBricks(), no future path can ever reach the Brick-creation logic.
+
+
+
+
+
+
+
+
