@@ -767,7 +767,7 @@ export default function Dashboard() {
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success, placing trade directly");
+            console.log("✅ [Dashboard] Payment success - trade already created by payment flow");
             
             // Prevent duplicate calls
             if (!showPaymentModal || !pendingHedgeData) {
@@ -775,54 +775,20 @@ export default function Dashboard() {
               return;
             }
             
-            // Immediately reset modal states to prevent reopening
+            // Trade is already created by the /api/payment/order route
+            // Just clean up modal states and refresh trade lists
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
             
-            // Call the backend /trades endpoint directly with the correct structure
-            console.log("🚀 [Dashboard] Calling /trades endpoint with hedgeData:", hedgeData);
+            // Refresh trade queries to show the new trade
+            queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
             
-            const tradePayload = {
-              symbol: `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`,
-              direction: hedgeData.tradeDirection,
-              volume: Math.abs(parseFloat(hedgeData.amount)) / 100000,
-              days: hedgeData.duration || 7,
-              deviation: 5,
-              magic: 123456,
-              comment: 'Hedgi automated trade',
-              paymentToken: paymentToken,
-              margin: hedgeData.margin || 500
-            };
-            
-            console.log("📡 [Dashboard] Sending trade request to /api/trades");
-            fetch('/api/trades', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(tradePayload),
-              credentials: 'include'
-            })
-            .then(async response => {
-              console.log("📡 [Dashboard] Trade response status:", response.status);
-              const result = await response.json();
-              console.log("📡 [Dashboard] Trade response data:", result);
-              
-              if (response.ok) {
-                console.log("✅ [Dashboard] Trade created successfully:", result);
-                // Refresh the trades list
-                queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-              } else {
-                console.error("❌ [Dashboard] Trade creation failed:", result);
-              }
-            })
-            .catch(error => {
-              console.error("❌ [Dashboard] Trade creation network error:", error);
-            });
+            console.log("🔄 [Dashboard] Trade lists refreshed after successful payment");
           }}
           hedgeData={pendingHedgeData}
-          currency={pendingHedgeData.baseCurrency}
-          simulation={null}
+          currency={pendingHedgeData?.baseCurrency || 'BRL'}
         />
       )}
 
