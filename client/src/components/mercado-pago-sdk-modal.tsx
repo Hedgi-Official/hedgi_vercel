@@ -104,6 +104,9 @@ export function MercadoPaySDKModal({
   // Add a ref to prevent React Strict Mode from creating duplicate bricks
   const hasInitializedBrick = useRef(false);
 
+  // Add a ref to prevent duplicate brick creation
+  const preventBrickRef = useRef(false);
+
   const isPortuguese = i18n.language === "pt-BR";
 
   // Dev‐mode flag: if true, skip real payment brick
@@ -124,8 +127,8 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing });
 
-    if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing);
+    if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing || preventBrickRef.current) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing, "preventBrickRef:", preventBrickRef.current);
       return;
     }
 
@@ -217,6 +220,7 @@ export function MercadoPaySDKModal({
       setPaymentCompleted(false);
       setIsProcessing(false);
       setBrickCreated(false);
+      preventBrickRef.current = false;
 
       // Clean up any remaining payment brick
       const container = document.getElementById("paymentBrick_container");
@@ -436,7 +440,7 @@ export function MercadoPaySDKModal({
             setBrickCreated(false);
             setPaymentCompleted(false);
 
-            
+
 
             // Extract the payment token from formData
             const paymentToken = formData.token || selectedPaymentMethod.token;
@@ -487,26 +491,27 @@ export function MercadoPaySDKModal({
                 const result = await response.json();
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
-                
-
                 // Check if the payment status is specifically "approved"
                 // The status is nested in result.response.status, not at the top level
-              
+
                 const paymentStatus = result.response?.status || result.status;
                 const isApproved = paymentStatus === "approved";
-              
 
                 if (response.ok && isApproved) {
-                  // Immediately set payment completed to prevent any re-renders
+                  // CRITICAL: Set preventBrickRef FIRST (synchronous, immediate)
+                  preventBrickRef.current = true;
+
+                  // Extract payment ID before setting other states
                   const paymentId = result.response?.id || result.id || paymentToken;
+
+                  // Now set React states (these are batched and applied later)
                   setPaymentCompleted(true);
                   setBrickCreated(true);
-                  
-                  // CRITICAL: Clear error state on successful payment
                   setError(null);
                   setLoading(false);
-                  
-                  console.log("✅ [renderPaymentBrick] Payment approved successfully!");
+                  hasInitializedBrick.current = true;
+
+                  console.log("✅ [renderPaymentBrick] Payment approved successfully! preventBrickRef set to true");
 
                   // CRITICAL: Destroy Payment Brick completely before creating Status Screen
                   if (window.paymentBrickController) {
@@ -521,7 +526,7 @@ export function MercadoPaySDKModal({
 
                   // Clear container completely to remove any Payment Brick remnants
                   const container = document.getElementById("paymentBrick_container");
-                  
+
                    if (container) {
                       container.innerHTML = ""; // wipe out old content
                       container.innerHTML = `
@@ -586,7 +591,7 @@ export function MercadoPaySDKModal({
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
-                  
+
                   // Clear any existing error state and loading state
                   setError(null);
                   setLoading(false);
@@ -599,11 +604,11 @@ export function MercadoPaySDKModal({
                   if (container) {
                     // Create a new container specifically for the status screen
                     container.innerHTML = '<div id="statusScreenBrick_container"></div>';
-                    
+
                     try {
                       // Use a mock payment ID if we don't have a real one
                       const statusPaymentId = paymentId || '1234567890';
-                      
+
                       // Create Status Screen Brick for failed payment using the exact structure from your HTML
                       const statusSettings = {
                         initialization: {
