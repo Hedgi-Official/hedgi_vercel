@@ -271,11 +271,11 @@ export function MercadoPaySDKModal({
                 identification: { type: "CPF", number: "12345678901" }
               },
               payment_details: {
-                total_amount: amount.toString(),
+                total_amount: paymentAmount.toString(),
                 processing_mode: "automatic",
                 transactions: {
                   payments: [{
-                    amount: amount.toString(),
+                    amount: paymentAmount.toString(),
                     installments: formData.installments || 1,
                     payment_method: {
                       id: selectedPaymentMethod.id || formData.payment_method_id,
@@ -284,7 +284,9 @@ export function MercadoPaySDKModal({
                     }
                   }]
                 }
-              }
+              },
+              // Include hedge data for automatic trade creation
+              hedgeData: hedgeData
             };
 
             console.log("📦 [renderPaymentBrick] Sending payment payload:", paymentPayload);
