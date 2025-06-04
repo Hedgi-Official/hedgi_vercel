@@ -336,9 +336,9 @@ export function MercadoPaySDKModal({
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
 
-    // CRITICAL: Check global brick manager FIRST
+    // CRITICAL: Check global brick manager FIRST - before doing anything
     if (!brickManager.canCreateBrick(sessionId.current)) {
-      console.log("🛑 [createOrder] Global brick manager blocking order creation for session:", sessionId.current);
+      console.log("🛑 [createOrder] Skipping because globalPreventBrick=true");
       return;
     }
 
@@ -446,7 +446,14 @@ export function MercadoPaySDKModal({
         locale: isPortuguese ? "pt-BR" : "en-US",
       });
       const bricksBuilder = mercadoPago.bricks();
-      renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
+      
+      // CRITICAL: Check again before calling renderPaymentBrick to prevent race conditions
+      if (brickManager.canCreateBrick(sessionId.current)) {
+        renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
+      } else {
+        console.log("🛑 [createOrder] Aborting renderPaymentBrick due to globalPreventBrick");
+        return;
+      }
 
       // Mark brick as created to prevent duplicates
       setBrickCreated(true);
