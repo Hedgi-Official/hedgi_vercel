@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +70,9 @@ export function MercadoPaySDKModal({
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [brickCreated, setBrickCreated] = useState(false);
+  
+  // Add a ref to prevent React Strict Mode from creating duplicate bricks
+  const hasInitializedBrick = useRef(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -91,10 +94,18 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
 
-    if (!isOpen || !hedgeData || paymentCompleted || isProcessing || brickCreated) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "isProcessing:", isProcessing, "brickCreated:", brickCreated);
+    if (!isOpen || !hedgeData || paymentCompleted) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
+      hasInitializedBrick.current = false;
       return;
     }
+
+    // Only initialize once per open (prevent React Strict Mode double-mount)
+    if (hasInitializedBrick.current) {
+      console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
+      return;
+    }
+    hasInitializedBrick.current = true;
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
 
@@ -164,6 +175,7 @@ export function MercadoPaySDKModal({
       setPaymentCompleted(false);
       setIsProcessing(false);
       setBrickCreated(false);
+      hasInitializedBrick.current = false; // Reset ref to allow re-initialization
       
       // Clean up any remaining payment brick
       const container = document.getElementById("paymentBrick_container");
@@ -289,6 +301,12 @@ export function MercadoPaySDKModal({
     orderIdFromServer: string
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
+
+    // Prevent duplicate brick creation - check if one already exists
+    if (window.paymentBrickController) {
+      console.log("⚠️ [renderPaymentBrick] Payment brick controller already exists, skipping duplicate creation");
+      return;
+    }
 
     try {
       const settings = {

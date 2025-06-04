@@ -1,0 +1,161 @@
+You’re seeing two bricks because, in development mode with React 18’s Strict Mode (or a similar “double-invoke” setting), your useEffect is firing twice in quick succession and therefore calling renderPaymentBrick(...) twice. Concretely:
+
+Strict Mode (or React 18+) double-mounts the component in dev.
+In React 18 (and some custom setups), React will mount, unmount, and then mount your component again immediately (all before you even see it). Each mount runs your useEffect, so you end up calling renderPaymentBrick(...) twice. That results in two separate “Payment Brick” injections into the same <div id="paymentBrick_container">, one on top of the other.
+
+Your cleanup only happens at the start of useEffect, not between those two “mounts.”
+In your useEffect, you do:
+
+ts
+Copy
+Edit
+// Immediately clear out any old HTML + unmount any previous controller:
+const container = document.getElementById("paymentBrick_container");
+if (container) container.innerHTML = "";
+if (window.paymentBrickController) {
+  try {
+    window.paymentBrickController.unmount();
+  } catch (e) {
+    console.log("Previous payment brick cleanup:", e);
+  }
+  window.paymentBrickController = null;
+}
+// …then call createOrder() → renderPaymentBrick() → bricksBuilder.create(...)
+But because React Strict Mode will mount the component, run this cleanup+createOrder() once, then immediately unmount and mount it again (running the exact same cleanup+createOrder() a second time), you effectively call bricksBuilder.create("payment", "paymentBrick_container", settings) twice in a row. The first payment‐brick node is cleared just before the second one mounts, but depending on timing you can still end up with two “live” instances.
+
+How to fix it
+There are a couple of ways to prevent double-instantiation:
+
+1. Short-circuit useEffect in development Strict Mode
+One easy approach is to track whether you’ve already called renderPaymentBrick at least once. For example, keep a ref:
+
+tsx
+Copy
+Edit
+import { useRef, useState, useEffect } from "react";
+// …other imports…
+
+export function MercadoPaySDKModal({ … }: PaymentModalProps) {
+  // Add a ref to ensure createOrder only runs once per “modal open”
+  const hasInitializedBrick = useRef(false);
+
+  // …all your existing state hooks…
+
+  useEffect(() => {
+    // If the modal is not open, or no hedgeData, or paymentCompleted, bail out
+    if (!isOpen || !hedgeData || paymentCompleted) {
+      hasInitializedBrick.current = false;
+      return;
+    }
+
+    // Only initialize once per open (even if Strict Mode mounts twice)
+    if (hasInitializedBrick.current) {
+      return;
+    }
+    hasInitializedBrick.current = true;
+
+    // (cleanup any old brick, as you already do)
+    const container = document.getElementById("paymentBrick_container");
+    if (container) {
+      container.innerHTML = "";
+    }
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Previous payment brick cleanup:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
+    // Now do your normal “set loading, setError(null), set orderId/publicKey to null, …”
+    setLoading(true);
+    setError(null);
+    setOrderId(null);
+    setPublicKey(null);
+
+    const trackingToken = `payment_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    setPaymentTrackingToken(trackingToken);
+
+    // Load the SDK and call createOrder()
+    const loadSDK = () =>
+      new Promise<void>((resolve, reject) => {
+        if (window.MercadoPago) return resolve();
+        const script = document.createElement("script");
+        script.src = "https://sdk.mercadopago.com/js/v2";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("MP SDK load failed"));
+        document.head.appendChild(script);
+      });
+
+    loadSDK()
+      .then(() => {
+        createOrder();
+      })
+      .catch((err) => {
+        console.error("Error loading MP SDK:", err);
+        setError(
+          isPortuguese
+            ? "Falha ao carregar sistema de pagamento."
+            : "Failed to load payment system."
+        );
+        setLoading(false);
+      });
+  }, [isOpen, hedgeData, paymentCompleted]);
+  // …rest of component…
+}
+By checking hasInitializedBrick.current, you prevent the second Strict-Mode “mount” from calling createOrder() again. As soon as the modal closes (or paymentCompleted flips), you set hasInitializedBrick.current = false and next time the modal opens, it’ll run once.
+
+2. Conditionally skip the second renderPaymentBrick call
+Another pattern (if you don’t want a useRef) is to check “does paymentBrickController already exist?” right before you call bricksBuilder.create(...):
+
+ts
+Copy
+Edit
+const renderPaymentBrick = async (
+  bricksBuilder: any,
+  amount: number,
+  orderIdFromServer: string
+) => {
+  // …
+  // right before you do:
+  //   window.paymentBrickController = await bricksBuilder.create(...)
+  // insert:
+  if (window.paymentBrickController) {
+    // We already created a brick instance in this container.
+    return;
+  }
+
+  const container = document.getElementById("paymentBrick_container");
+  if (!container) {
+    throw new Error("Container 'paymentBrick_container' not found in DOM");
+  }
+
+  window.paymentBrickController = await bricksBuilder.create(
+    "payment",
+    "paymentBrick_container",
+    settings
+  );
+  console.log("Payment Brick created:", window.paymentBrickController);
+}
+That way, on the “second Strict-Mode mount,” window.paymentBrickController is still set from the first mount (until you explicitly unmount), and you never call create(...) twice.
+
+Why you see two bricks after pressing “Pay”
+Even if you successfully enter your credit card and hit “Pay,” the bricks library will re-render the payment form in the same container if you haven’t explicitly unmounted the prior instance. Because your code calls renderPaymentBrick(...) twice (once per Strict-Mode mount), two identical <iframe> (or equivalent) nodes end up in #paymentBrick_container.
+
+The first instance sits there waiting for you to fill in card details.
+
+When you hit “Pay,” the library validates and calls your onSubmit.
+
+Meanwhile, React’s Strict-Mode already created a second instance, which is probably hidden under the first one—or visible as a duplicate form.
+
+In summary
+React (in dev mode) often mounts the component twice to help detect side effects.
+
+Your useEffect ran twice before you unmounted in between, so bricksBuilder.create(...) was called twice.
+
+To fix it, guard against double-initialization (e.g. with a useRef or by checking window.paymentBrickController before calling create(...)).
+
+Once you stop rendering the brick twice, the “two‐brick” problem will go away.
