@@ -529,9 +529,17 @@ export function MercadoPaySDKModal({
                         visual: {
                           hideStatusDetails: false,
                           hideTransactionDate: false,
+                          hidePaymentButton: true,
                           style: {
                             theme: 'default',
                           },
+                        },
+                        paymentMethods: {
+                          creditCard: "none",
+                          debitCard: "none",
+                          bankTransfer: "none",
+                          atm: "none",
+                          maxInstallments: 0
                         },
                         backUrls: {
                           'error': `${window.location.origin}/dashboard`,
