@@ -254,29 +254,29 @@ export function MercadoPaySDKModal({
               return;
             }
 
-            // Build the payment payload for Flask
+            // Build the payment payload for Flask - proper structure
             const paymentPayload = {
               type: "online",
               external_reference: paymentTrackingToken || `payment_${Date.now()}`,
-              payment_details: {
-                transactions: {
-                  payments: [{
-                    amount: amount.toString(),
-                    payment_method: {
-                      id: selectedPaymentMethod.id || formData.payment_method_id,
-                      type: selectedPaymentMethod.type || "credit_card",
-                      token: paymentToken,
-                    },
-                    installments: formData.installments || 1,
-                  }]
-                }
-              },
               payer: formData.payer || {
                 email: "testuser@example.com",
                 identification: { type: "CPF", number: "12345678901" }
               },
-              processing_mode: "automatic",
-              total_amount: amount.toString(),
+              payment_details: {
+                total_amount: amount.toString(),
+                processing_mode: "automatic",
+                transactions: {
+                  payments: [{
+                    amount: amount.toString(),
+                    installments: formData.installments || 1,
+                    payment_method: {
+                      id: selectedPaymentMethod.id || formData.payment_method_id,
+                      type: selectedPaymentMethod.type || "credit_card",
+                      token: paymentToken,
+                    }
+                  }]
+                }
+              }
             };
 
             console.log("📦 [renderPaymentBrick] Sending payment payload:", paymentPayload);
