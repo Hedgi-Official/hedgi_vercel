@@ -37,6 +37,7 @@ declare global {
     MercadoPago: any;
     cardPaymentBrickController?: any;
     paymentBrickController?: any;
+    statusScreenBrickController?: any;
   }
 }
 
@@ -230,6 +231,15 @@ export function MercadoPaySDKModal({
           console.log("Modal close cleanup:", e);
         }
         window.paymentBrickController = null;
+      }
+
+      if (window.statusScreenBrickController) {
+        try {
+          window.statusScreenBrickController.unmount();
+        } catch (e) {
+          console.log("Status screen cleanup:", e);
+        }
+        window.statusScreenBrickController = null;
       }
       hasInitializedBrick.current = false;
     }
@@ -505,33 +515,80 @@ export function MercadoPaySDKModal({
                   // Extract payment ID from the response
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
-                  // Mark payment as completed to prevent further interactions
-                  
-
-                  // Show hedge placement success with details
+                  // Render Status Screen Brick for payment confirmation
                   const container = document.getElementById("paymentBrick_container");
-                  if (container) {
-                    const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
-                    const currency = hedgeData.baseCurrency || 'BRL';
-                    const targetCurrency = hedgeData.targetCurrency || 'USD';
-                    const duration = hedgeData.duration || 7;
+                  if (container && paymentId) {
+                    container.innerHTML = '';
+                    
+                    // Create Status Screen Brick
+                    const statusSettings = {
+                      initialization: {
+                        paymentId: paymentId.toString(),
+                      },
+                      customization: {
+                        visual: {
+                          hideStatusDetails: false,
+                          hideTransactionDate: false,
+                          style: {
+                            theme: 'default',
+                          },
+                        },
+                        backUrls: {
+                          'error': `${window.location.origin}/dashboard`,
+                          'return': `${window.location.origin}/dashboard`
+                        }
+                      },
+                      callbacks: {
+                        onReady: () => {
+                          console.log("✅ Status Screen Brick ready");
+                          setLoading(false);
+                        },
+                        onError: (error: any) => {
+                          console.error("❌ Status Screen Brick error:", error);
+                          // Fallback to custom success message
+                          container.innerHTML = `
+                            <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                              ✅ ${isPortuguese ? "Pagamento aprovado!" : "Payment approved!"}
+                              <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
+                                ${isPortuguese ? "Sua proteção foi registrada com sucesso." : "Your hedge has been placed successfully."}
+                              </div>
+                            </div>
+                          `;
+                        },
+                      },
+                    };
 
-                    container.innerHTML = `
-                      <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                        ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
-                        <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
-                          <div style="margin-bottom: 8px;">
-                            <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${currency}
-                          </div>
-                          <div style="margin-bottom: 8px;">
-                            <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
-                          </div>
-                          <div>
-                            <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
+                    try {
+                      window.statusScreenBrickController = bricksBuilder.create(
+                        'statusScreen', 
+                        'paymentBrick_container', 
+                        statusSettings
+                      );
+                    } catch (statusError) {
+                      console.error("❌ Failed to create Status Screen Brick:", statusError);
+                      // Fallback to custom success message
+                      const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
+                      const currency = hedgeData.baseCurrency || 'BRL';
+                      const targetCurrency = hedgeData.targetCurrency || 'USD';
+                      const duration = hedgeData.duration || 7;
+
+                      container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                          ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
+                          <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${currency}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
+                            </div>
+                            <div>
+                              <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    `;
+                      `;
+                    }
                   }
 
                   // Prevent any further payment processing
@@ -667,6 +724,16 @@ export function MercadoPaySDKModal({
         console.log("Payment brick controller unmount failed:", e);
       }
       window.paymentBrickController = null;
+    }
+
+    // Destroy any existing status screen brick controller
+    if (window.statusScreenBrickController) {
+      try {
+        window.statusScreenBrickController.unmount();
+      } catch (e) {
+        console.log("Status screen brick controller unmount failed:", e);
+      }
+      window.statusScreenBrickController = null;
     }
 
     onClose();
