@@ -398,9 +398,9 @@ export function MercadoPaySDKModal({
                   // Show hedge placement success with details
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
-                    const hedgeAmount = hedgeData.amount;
-                    const currency = hedgeData.baseCurrency;
-                    const targetCurrency = hedgeData.targetCurrency;
+                    const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
+                    const currency = hedgeData.baseCurrency || 'BRL';
+                    const targetCurrency = hedgeData.targetCurrency || 'USD';
                     const duration = hedgeData.duration || 7;
                     
                     container.innerHTML = `
@@ -408,7 +408,7 @@ export function MercadoPaySDKModal({
                         ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
                         <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
                           <div style="margin-bottom: 8px;">
-                            <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${Math.abs(hedgeAmount).toLocaleString()} ${currency}
+                            <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${currency}
                           </div>
                           <div style="margin-bottom: 8px;">
                             <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
@@ -431,14 +431,15 @@ export function MercadoPaySDKModal({
                     }
                   }
 
-                  // Call onSuccess immediately and close
+                  // Call onSuccess immediately 
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   onSuccess(hedgeData, paymentId);
                   
-                  // Close modal after brief delay to show success message
+                  // Close modal after showing success message
                   setTimeout(() => {
+                    console.log("🔄 [renderPaymentBrick] Closing modal after successful payment");
                     onClose();
-                  }, 800);
+                  }, 2500);
 
                 } else {
                   // Payment failed or not approved
