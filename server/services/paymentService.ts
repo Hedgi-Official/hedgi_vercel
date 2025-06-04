@@ -367,11 +367,7 @@ class PaymentService {
           amount: payment.transaction_amount,
           currency: payment.currency_id,
           paymentId: payment.id,
-          response: {
-            status: payment.status,
-            status_detail: payment.status_detail,
-            id: payment.id
-          }
+          response: payment // Include the full payment response for debugging
         });
 
       } catch (paymentError: any) {

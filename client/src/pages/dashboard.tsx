@@ -331,6 +331,12 @@ export default function Dashboard() {
       const verificationStatus = verificationResult.status || verificationResult.response?.status;
       const isApproved = verificationStatus === 'approved';
 
+      console.log('[Dashboard] Payment verification status check:', {
+        verificationStatus,
+        isApproved,
+        fullResult: verificationResult
+      });
+
       if (!isApproved) {
         console.error('[Dashboard] Payment not approved:', verificationResult);
 
