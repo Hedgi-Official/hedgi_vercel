@@ -331,6 +331,15 @@ export function MercadoPaySDKModal({
                   // Add delay to show success message then close
                   setTimeout(() => {
                     console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
+                    // Destroy the payment brick to prevent additional instances
+                    if (window.paymentBrickController) {
+                      try {
+                        window.paymentBrickController.unmount();
+                        window.paymentBrickController = null;
+                      } catch (e) {
+                        console.log("Payment brick unmount error:", e);
+                      }
+                    }
                     onSuccess(hedgeData, paymentId);
                     onClose();
                   }, 1500);

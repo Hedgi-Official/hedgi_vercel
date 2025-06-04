@@ -768,12 +768,49 @@ export default function Dashboard() {
           }}
           onSuccess={(hedgeData, paymentToken) => {
             console.log("✅ [Dashboard] Payment success, placing trade directly");
-            // Immediately reset modal states
+            
+            // Prevent duplicate calls
+            if (!showPaymentModal || !pendingHedgeData) {
+              console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
+              return;
+            }
+            
+            // Immediately reset modal states to prevent reopening
             setShowPaymentModal(false);
             setPendingHedgeData(null);
+            setIsProcessingPayment(false);
             
-            // Call the trade creation directly to avoid verification loops
-            createHedgeMutation.mutate({ hedgeData, paymentToken });
+            // Call the backend /trades endpoint directly with the correct structure
+            console.log("🚀 [Dashboard] Calling /trades endpoint with hedgeData:", hedgeData);
+            
+            const tradePayload = {
+              symbol: `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`,
+              direction: hedgeData.tradeDirection,
+              volume: Math.abs(parseFloat(hedgeData.amount)) / 100000,
+              days: hedgeData.duration || 7,
+              deviation: 5,
+              magic: 123456,
+              comment: 'Hedgi automated trade',
+              paymentToken: paymentToken,
+              margin: hedgeData.margin || 500
+            };
+            
+            fetch('/api/trades', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(tradePayload),
+              credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(result => {
+              console.log("✅ [Dashboard] Trade created successfully:", result);
+              // Refresh the trades list
+              queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+            })
+            .catch(error => {
+              console.error("❌ [Dashboard] Trade creation failed:", error);
+            });
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData.baseCurrency}
