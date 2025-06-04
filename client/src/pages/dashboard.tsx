@@ -767,12 +767,13 @@ export default function Dashboard() {
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success, immediately resetting states and placing trade");
-            // Immediately reset modal states before placing trade
+            console.log("✅ [Dashboard] Payment success, placing trade directly");
+            // Immediately reset modal states
             setShowPaymentModal(false);
             setPendingHedgeData(null);
-            // Keep isProcessingPayment true until trade is complete
-            handlePlaceHedge(hedgeData, paymentToken);
+            
+            // Call the trade creation directly to avoid verification loops
+            createHedgeMutation.mutate({ hedgeData, paymentToken });
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData.baseCurrency}

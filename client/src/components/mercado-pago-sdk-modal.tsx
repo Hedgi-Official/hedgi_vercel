@@ -36,6 +36,7 @@ declare global {
   interface Window {
     MercadoPago: any;
     cardPaymentBrickController?: any;
+    paymentBrickController?: any;
   }
 }
 
@@ -306,36 +307,31 @@ export function MercadoPaySDKModal({
                 if (response.ok && isApproved) {
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
-                  // Check if trade was also created
-                  if (result.tradeCreated) {
-                    console.log("✅ [renderPaymentBrick] Trade created successfully:", result.trade);
-                  } else if (result.tradeError) {
-                    console.warn("⚠️ [renderPaymentBrick] Payment approved but trade creation failed:", result.tradeError);
-                  }
-
-                  // Payment was successful
-                  setLoading(true);
-
-                  // Hide the payment brick container and show success message
-                  const container = document.getElementById("paymentBrick_container");
-                  if (container) {
-                    container.innerHTML = `
-                      <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                        ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
-                      </div>
-                    `;
-                  }
-
                   // Extract payment ID from the response
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
 
-                  // Immediately close modal and proceed with trade to prevent additional modals
-                  console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
-                  onSuccess(hedgeData, paymentId);
-                  onClose();
+                  // Hide the payment brick container and show success message
+                  const container = document.getElementById("paymentBrick_container");
+                  if (container) {
+                    container.innerHTML = `
+                      <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                        ✅ ${isPortuguese ? "Pagamento aprovado!" : "Payment approved!"}
+                        <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
+                          ${isPortuguese ? "Processando negociação..." : "Processing trade..."}
+                        </div>
+                      </div>
+                    `;
+                  }
+
+                  // Add delay to show success message then close
+                  setTimeout(() => {
+                    console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
+                    onSuccess(hedgeData, paymentId);
+                    onClose();
+                  }, 1500);
 
                 } else {
                   // Payment failed or not approved
@@ -343,12 +339,15 @@ export function MercadoPaySDKModal({
                   const statusDetail = result.status_detail || result.response?.status_detail;
                   const reason = statusDetail || paymentStatus || "Payment not approved";
 
+                  // Mark payment as completed to prevent further interactions
+                  setPaymentCompleted(true);
+
                   // Show error in the payment container
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
                     container.innerHTML = `
                       <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
-                        ❌ ${isPortuguese ? "Pagamento falhou" : "Payment failed"}
+                        ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
                         <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
                           ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
                         </div>
@@ -356,7 +355,10 @@ export function MercadoPaySDKModal({
                     `;
                   }
 
-                  setError(`${isPortuguese ? "Pagamento falhou:" : "Payment failed:"} ${reason}`);
+                  // Add delay then close modal
+                  setTimeout(() => {
+                    onClose();
+                  }, 3000);
                 }
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);
