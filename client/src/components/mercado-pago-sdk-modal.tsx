@@ -561,7 +561,7 @@ export function MercadoPaySDKModal({
 
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
-                  onSuccess(hedgeData, paymentId);
+                  onSuccess(hedgeData, paymentToken);
 
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
                   // This was causing race condition with Dashboard's onSuccess callback
