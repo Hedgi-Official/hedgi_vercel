@@ -18,7 +18,10 @@ const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX';
  */
 router.post('/api/checkout/preferences', async (req: Request, res: Response) => {
 try {
-    console.log("[Express] Received /api/payment/preferences payload:", req.body);
+    console.log("[Express] 🎯 HIT /api/checkout/preferences endpoint!");
+    console.log("[Express] Request method:", req.method);
+    console.log("[Express] Request URL:", req.url);
+    console.log("[Express] Received /api/checkout/preferences payload:", req.body);
 
     // Build a cache key if you want to avoid duplicate preference creations.
     // For example, if the client sent an external_reference in req.body, use that:

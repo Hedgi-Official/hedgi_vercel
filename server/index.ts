@@ -5,10 +5,14 @@ import { setupSimpleAuth } from "./simple-auth";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
+import paymentRoutes from './routes/payment';
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
+
+// Mount payment routes
+app.use(paymentRoutes);
 
 // Add test endpoint
 app.get('/ping', (req, res) => {
