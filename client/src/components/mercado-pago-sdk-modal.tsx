@@ -53,6 +53,35 @@ interface BrickAdditionalData {
   paymentTypeId: string;
 }
 
+
+class SimpleMutex {
+  private _locked = false;
+  private _waiting: Array<() => void> = [];
+
+  /** 
+   * Call `await acquire()` to wait for the lock. 
+   * It returns a `release()` function you must call when done.
+   */
+  async acquire(): Promise<() => void> {
+    if (this._locked) {
+      // Already locked ⇒ wait until someone calls `release()`
+      await new Promise<void>((resolve) => this._waiting.push(resolve));
+    }
+    // Now we have the lock
+    this._locked = true;
+    return () => {
+      // Release: allow the next waiter (if any) to proceed
+      this._locked = false;
+      const next = this._waiting.shift();
+      if (next) next();
+    };
+  }
+}
+
+
+const paymentBrickMutex = new SimpleMutex();
+
+
 export function MercadoPaySDKModal({
   isOpen,
   onClose,
@@ -202,6 +231,7 @@ export function MercadoPaySDKModal({
         }
         window.paymentBrickController = null;
       }
+       hasInitializedBrick.current = false
     }
   }, [isOpen]);
 
@@ -265,36 +295,51 @@ export function MercadoPaySDKModal({
       auto_return: "approved",
     };
 
-    console.log("➡️ [createOrder] Sending to /api/payment/order:", body);
+    console.log("➡️ [createOrder] Sending to /api/checkout/preferences:", body);
 
     try {
-      const resp = await fetch("/api/payment/order", {
+      const resp = await fetch("/api/checkout/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          items: [
+            {
+              title: `Hedge Protection - ${currency}`,
+              unit_price: paymentAmount,
+              quantity: 1,
+              currency_id: currency || "BRL",
+            },
+          ],
+          payer: {
+            email: "testuser@example.com",
+            name: "John Doe",
+            identification: { type: "CPF", number: "12345678901" },
+          },
+          back_urls: {
+            success: `${window.location.origin}/payment/success`,
+            failure: `${window.location.origin}/payment/failure`,
+            pending: `${window.location.origin}/payment/pending`,
+          },
+          auto_return: "approved",
+        }),
       });
-
       if (!resp.ok) {
-        const text = await resp.json().catch(() => ({ error: "Network" }));
-        throw new Error(text.error || `HTTP ${resp.status}`);
+        const error = await resp.json().catch(() => ({ error: "Network" }));
+        throw new Error(error || `HTTP ${resp.status}`);
       }
-
       const data = await resp.json();
-      console.log("✅ Order response:", data);
-
-      if (!data.orderId || !data.publicKey) {
-        throw new Error("Invalid response: missing orderId or publicKey");
+      console.log("✅ Preference response:", data);
+      if (!data.preferenceId || !data.publicKey) {
+        throw new Error("Missing preferenceId or publicKey");
       }
-
-      setOrderId(data.orderId);
       setPublicKey(data.publicKey);
 
-      // Now that we have orderId & publicKey, render the Payment Brick
+      // Now initialize the Brick with data.preferenceId (NOT data.orderId)
       const mercadoPago = new window.MercadoPago(data.publicKey, {
         locale: isPortuguese ? "pt-BR" : "en-US",
       });
       const bricksBuilder = mercadoPago.bricks();
-      renderPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
+      renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
 
       // Mark brick as created to prevent duplicates
       setBrickCreated(true);
@@ -315,7 +360,7 @@ export function MercadoPaySDKModal({
   const renderPaymentBrick = async (
     bricksBuilder: any,
     amount: number,
-    orderIdFromServer: string
+    preferenceId: string
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick", {
       paymentCompleted,
@@ -323,11 +368,17 @@ export function MercadoPaySDKModal({
       windowPaymentController: !!window.paymentBrickController,
     });
 
-    // ① If we've already completed a payment, never create another form
-    if (paymentCompleted) {
-      console.log("⚠️ [renderPaymentBrick] paymentCompleted=true; skip rendering a new Brick");
-      return;
-    }
+    const release = await paymentBrickMutex.acquire();
+    try {
+      console.log("🔐 [renderPaymentBrick] acquired lock, proceeding…");
+
+      // Check if we should still run (payment might already be done)
+      if (paymentCompleted) {
+        console.log(
+          "⚠️ [renderPaymentBrick] paymentCompleted=true; skipping render"
+        );
+        return;
+      }
 
     // ② If we already have a controller or flagged brickCreated, skip
     if (window.paymentBrickController || brickCreated) {
@@ -339,7 +390,7 @@ export function MercadoPaySDKModal({
       const settings = {
         initialization: {
           amount: amount,
-          preferenceId: orderIdFromServer, // Use preferenceId for Payment Brick
+          preferenceId: preferenceId, // Use preferenceId for Payment Brick
         },
         callbacks: {
           onReady: () => {
@@ -359,6 +410,23 @@ export function MercadoPaySDKModal({
               console.error("❌ [renderPaymentBrick] No hedgeData available");
               return;
             }
+
+            if (window.paymentBrickController) {
+              try {
+                window.paymentBrickController.unmount();
+              } catch (e) {
+                console.warn(
+                  "⚠️ [renderPaymentBrick] failed to unmount Brick:",
+                  e
+                );
+              }
+              window.paymentBrickController = null;
+            }
+            // Clear flags so we can re-create on failure
+            setBrickCreated(false);
+            setPaymentCompleted(false);
+
+            
 
             // Extract the payment token from formData
             const paymentToken = formData.token || selectedPaymentMethod.token;
@@ -409,19 +477,33 @@ export function MercadoPaySDKModal({
                 const result = await response.json();
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
+                
+
                 // Check if the payment status is specifically "approved"
                 // The status is nested in result.response.status, not at the top level
+              
                 const paymentStatus = result.response?.status || result.status;
                 const isApproved = paymentStatus === "approved";
+              
 
                 if (response.ok && isApproved) {
+                  if (window.paymentBrickController) {
+                    try {
+                      window.paymentBrickController.unmount();
+                    } catch (e) {
+                      console.warn("⚠️ failed to unmount Brick:", e);
+                    }
+                    window.paymentBrickController = null;
+                  }
+                  setPaymentCompleted(true);
+                          
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
                   // Extract payment ID from the response
                   const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
                   // Mark payment as completed to prevent further interactions
-                  setPaymentCompleted(true);
+                  
 
                   // Show hedge placement success with details
                   const container = document.getElementById("paymentBrick_container");
@@ -530,6 +612,11 @@ export function MercadoPaySDKModal({
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
       setLoading(false);
+    } 
+  } finally {
+      // ─── Always release the lock ───────────────────────────────────────────
+      release();
+      console.log("🔓 [renderPaymentBrick] released lock");
     }
   };
 

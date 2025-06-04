@@ -1,0 +1,293 @@
+From the logs you posted, two things are immediately clear:
+
+The server (Express) is receiving exactly one POST to /api/payment/order that ends up returning the “mock response” (i.e. the code path under “Valid v2 Preferences payload, returning mock response”). That is why you see
+
+pgsql
+Copy
+Edit
+[Express] Valid order creation request, returning mock response
+in your server console.
+
+Your client‐side code never actually logs 🚀 [createOrder] Function called with hedgeData, which means your React/TypeScript createOrder() function never ran at all. In other words, the only time your browser hits /api/payment/order is when you are somehow directly invoking the backend—your front‐end’s call to createOrder() never fired.
+
+Why the Brick still appears even though createOrder() didn’t run
+A previous run of renderPaymentBrick() injected the Mercado Pago iframe into <div id="paymentBrick_container">.
+Once bricksBuilder.create("payment", "paymentBrick_container", settings) runs, the SDK places its own <iframe> (and all of the credit‐card form UI) inside that <div>. That iframe will remain visible until you explicitly unmount it.
+
+You never unmounted or cleared the container after the first time you created the Brick.
+That means even though your React code (with its retry guards and hasInitializedBrick flag) no longer calls createOrder(), the old iframe is still “stuck” in the DOM. Hence, when you re‐open the modal (or refresh the page without clearing that <div>), you see the Brick again, because it was never torn down.
+
+How to fix it: Make sure you always unmount and clear before opening (or closing)
+1. In your “modal close” handler, unmount and clear everything
+Inside your MercadoPaySDKModal, you should have a handleClose() that is called whenever the user (or parent) wants to close the payment modal. Right at the top of that function, you must:
+
+ts
+Copy
+Edit
+const handleClose = () => {
+  console.log("🔒 [MercadoPaySDKModal] Modal closing — tearing down any lingering Brick");
+
+  // 1) Reset all flags so next open starts fresh:
+  setPaymentCompleted(false);
+  setBrickCreated(false);
+  setOrderId(null);
+  setPublicKey(null);
+
+  // 2) If a Brick controller still exists, unmount it now:
+  if (window.paymentBrickController) {
+    try {
+      window.paymentBrickController.unmount();
+    } catch (e) {
+      console.warn("⚠️ Error unmounting paymentBrickController:", e);
+    }
+    window.paymentBrickController = null;
+  }
+
+  // 3) Clear out the container’s innerHTML so no old iframe remains:
+  const container = document.getElementById("paymentBrick_container");
+  if (container) {
+    container.innerHTML = "";
+  }
+
+  // 4) Reset the Strict‐Mode guard so that next open’s useEffect can run:
+  hasInitializedBrick.current = false;
+
+  // 5) Finally notify the parent that the modal is closed:
+  onClose();
+};
+Why this matters: if you do not call .unmount() and set window.paymentBrickController = null, plus do container.innerHTML = "", the Mercado Pago widget remains “live” in the DOM even after your modal has been hidden. That is exactly why you still “see” the Brick even though your React code is no longer calling createOrder().
+
+2. In your “modal open” effect, clear anything leftover before calling createOrder()
+Right at the top of your useEffect (the one that listens to [isOpen, hedgeData]), insert those exact same three cleanup steps—this guarantees that each time the modal opens, you start with an empty container and no existing controller. For example:
+
+ts
+Copy
+Edit
+useEffect(() => {
+  console.log("🟢 [useEffect] triggered:", { isOpen, hasHedgeData: !!hedgeData });
+
+  // 1) As soon as the modal opens, clear/unmount any leftover Brick:
+  const container = document.getElementById("paymentBrick_container");
+  if (container) {
+    container.innerHTML = "";
+  }
+  if (window.paymentBrickController) {
+    try {
+      window.paymentBrickController.unmount();
+    } catch (e) {
+      console.warn("⛔️ [useEffect] Error unmounting old Brick on open:", e);
+    }
+    window.paymentBrickController = null;
+  }
+  setBrickCreated(false);
+  setPaymentCompleted(false);
+  setOrderId(null);
+  setPublicKey(null);
+  hasInitializedBrick.current = false;
+
+  // 2) Now run your normal “if (!isOpen || !hedgeData) return;” guards:
+  if (!isOpen || !hedgeData) {
+    console.log("⛔️ [useEffect] Skipping initialization because modal closed or no hedgeData");
+    return;
+  }
+  if (hasInitializedBrick.current) {
+    console.log("⛔️ [useEffect] Skipping because hasInitializedBrick is already true");
+    return;
+  }
+
+  // 3) Mark that we are starting the one-time init and call createOrder():
+  hasInitializedBrick.current = true;
+  console.log("✅ [useEffect] Loading Mercado Pago SDK → calling createOrder()");
+  loadSDK()
+    .then(() => createOrder())
+    .catch((err) => {
+      console.error("❌ [useEffect] Failed to load Mercado Pago SDK:", err);
+      setError("Failed to load payment system.");
+      setLoading(false);
+    });
+}, [isOpen, hedgeData]);
+Why this matters: if you only clear/unmount on “close” but never on “open,” there is a small gap—if the parent re-opens the modal before React’s Strict‐Mode has a chance to run handleClose, you can still end up with a leftover iframe. Clearing at the top of your “open” effect leaves no chance for a stale widget to show.
+
+3. Put a debug log at the very top of createOrder() so you know if it ever runs
+Right now you said you never see
+
+sql
+Copy
+Edit
+🚀 [createOrder] Function called with hedgeData
+, which means createOrder() was never invoked. Add a log at the top of that function, before any early‐return guards:
+
+ts
+Copy
+Edit
+const createOrder = async (retryCount = 0) => {
+  console.log("🟢 [createOrder] ENTERED (retryCount =", retryCount, ")");
+  if (brickCreated || paymentCompleted) {
+    console.log("⛔️ [createOrder] Early exit: brickCreated=", brickCreated, ", paymentCompleted=", paymentCompleted);
+    return;
+  }
+  if (!hedgeData) {
+    console.log("⛔️ [createOrder] Early exit: no hedgeData");
+    return;
+  }
+  if (orderId) {
+    console.log("⛔️ [createOrder] Early exit: already have orderId =", orderId);
+    return;
+  }
+
+  console.log("✅ [createOrder] Building payment preference payload…");
+  // … rest of your `fetch("/api/payment/order")` logic …
+};
+If you still never see 🟢 [createOrder] ENTERED … in your browser console, your effect or another guard is preventing createOrder() from firing.
+
+Once you fix that, you’ll be able to see whether you actually get a mock response from Express and then move on to renderPaymentBrick(...).
+
+4. Review how your client calls the server
+Right now your Express route for /api/payment/order does two very different things based on payload.payment_details.transactions.payments[0].payment_method.token:
+
+If it sees a real token → It forwards everything to Flask, processes the payment, etc.
+
+Otherwise → It interprets the request as a “create an order (v2 Preferences)” call, validates the payload, and returns:
+
+json
+Copy
+Edit
+{
+  "orderId": "ORDER_1234567890",
+  "publicKey": "TEST-MOCK-PUBLIC-KEY"
+}
+Your front‐end must do exactly two calls:
+
+createOrder()
+
+Builds a “v2 Preferences” body (with type: "online", external_reference, items[], payer.email, etc.).
+
+Hits POST /api/payment/order.
+
+Receives { orderId, publicKey } from Express.
+
+Then immediately does:
+
+ts
+Copy
+Edit
+const mercadoPago = new window.MercadoPago(publicKey, { locale: … });
+const bricksBuilder = mercadoPago.bricks();
+renderPaymentBrick(bricksBuilder, paymentAmount, orderId);
+When the user clicks “Pay” inside the Brick (that’s your onSubmit callback):
+
+You build a new payload containing:
+
+json
+Copy
+Edit
+{
+  "type": "online",
+  "external_reference": "...",
+  "payer": { "email": "…" },
+  "payment_details": {
+    "total_amount": "...",
+    "transactions": {
+      "payments": [
+        {
+          "amount": "...",
+          "installments": 1,
+          "payment_method": {
+            "id": "...",
+            "type": "...",
+            "token": "CARD_TOKEN_FROM_BRICK"
+          }
+        }
+      ]
+    }
+  },
+  "hedgeData": { /* … */ }
+}
+You again POST that entire payload to /api/payment/order.
+
+Because it now has payment_details.transactions.payments[0].payment_method.token, your Express code treats it as a “real payment” and forwards it to Flask.
+
+Flask charges the card, creates a trade, etc., and you return the final result back to the front‐end.
+
+If your front‐end is skipping createOrder() and jumping straight to step 2 (or if your mock “order creation” request is never actually sent), the server’s “Valid order creation request, returning mock response” block will still run (because you called that endpoint manually). But the Brick itself won’t render until you call renderPaymentBrick(...) in step 1.
+
+5. Checklist to get everything working in order
+Clear/unmount on both close and open.
+
+Make sure your handleClose (modal close) unmounts the Brick AND clears paymentBrick_container.innerHTML.
+
+In your “open” useEffect, do the same cleanup at the very top—then check your isOpen && hedgeData guards, and finally call createOrder().
+
+Instrument createOrder() with a console log at the very top.
+
+This will show you whether it’s ever being invoked. If you do see it, you’ll know the “step 1” call to /api/payment/order is actually happening from the client.
+
+Verify the response shape in your Network tab.
+
+Open DevTools → Network, find the “POST /api/payment/order” request.
+
+Confirm it returns something like:
+
+json
+Copy
+Edit
+{ "orderId": "ORDER_1234567890", "publicKey": "TEST-MOCK-PUBLIC-KEY" }
+If it does, you should immediately see the console logs from inside createOrder and then “🛠 [renderPaymentBrick] Creating Payment Brick…”
+
+If you see the “Valid order creation request” log on the server but no client log, it means you are calling the endpoint from somewhere else (maybe a Postman test or a stale form). Double-check that the only place in your front-end that calls /api/payment/order is inside createOrder and inside the Brick’s onSubmit.
+
+Watch for the yellow warning
+
+In your browser console, you saw:
+
+css
+Copy
+Edit
+[BRICKS] [Payment Brick] parameters preferenceId and mercadoPago must be provided together
+That warning means you reached the bricksBuilder.create(...) call with a missing or undefined publicKey or orderId. Make sure you never call renderPaymentBrick(bricksBuilder, paymentAmount, orderId) until both orderId and the MercadoPago instance (i.e. new window.MercadoPago(publicKey, …)) are non-null.
+
+Putting it all together
+After you apply the two cleanup patches (in both your close‐handler and at the top of useEffect), then:
+
+Open the modal → useEffect fires → you clear any old container → pass the “isOpen && hedgeData” guard → call createOrder().
+
+In createOrder(): you see
+
+scss
+Copy
+Edit
+🟢 [createOrder] ENTERED (retryCount=0)
+then you build/fetch("/api/payment/order") → server logs “Valid order creation request, returning mock response” → you get back { orderId, publicKey }.
+
+You log
+
+css
+Copy
+Edit
+🟢 [createOrder] About to call renderPaymentBrick…
+then inside renderPaymentBrick you log
+
+css
+Copy
+Edit
+🛠 [renderPaymentBrick] Container found, creating Payment Brick…
+✅ [renderPaymentBrick] Payment Brick is ready
+✅ [renderPaymentBrick] Payment Brick created successfully: { … }
+🔓 [renderPaymentBrick] released lock
+The Brick UI appears. If you click the “X” (or your code calls handleClose()), that unmounts the Brick and clears the container. There is no stale iframe left over, so when you re-open it, you must go back through step 1 to see it again.
+
+Once you have all of this in place, you should no longer see a leftover Brick stuck on screen—everything is torn down on close and on open, and createOrder() runs exactly once each time.
+
+
+
+
+
+
+
+
+
+
+
+Tools
+
+

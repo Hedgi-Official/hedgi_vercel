@@ -5,9 +5,10 @@ const router = express.Router();
 
 // Cache to prevent duplicate order creation requests
 const orderCache = new Map<string, any>();
+const preferenceCache = new Map<string, any>();
 const CACHE_DURATION = 30000; // 30 seconds
 
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX'; 
+const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX'; 
 
 
 /**
@@ -15,18 +16,102 @@ const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX';
  * This endpoint generates a payment preference ID that can be used to initiate
  * the Mercado Pago payment flow on the client side.
  */
-router.post('/api/payment/preference', async (req: Request, res: Response) => {
-  try {
-    console.log('[Express] Creating preference with payload:', req.body);
+router.post('/api/checkout/preferences', async (req: Request, res: Response) => {
+try {
+    console.log("[Express] Received /api/payment/preferences payload:", req.body);
 
-    // Use the payment service to create the preference
-    const result = await paymentService.createPreference(req, res);
-    return result;
+    // Build a cache key if you want to avoid duplicate preference creations.
+    // For example, if the client sent an external_reference in req.body, use that:
+    const cacheKey = req.body.external_reference || `${Date.now()}_${Math.random()}`;
+    if (preferenceCache.has(cacheKey)) {
+      const cachedResponse = preferenceCache.get(cacheKey);
+      console.log("[Express] Returning cached preference response for:", cacheKey);
+      return res.json(cachedResponse);
+    }
+
+    // ----------------------------------------
+    // 1) Build the payload to send to Flask.
+    //    We assume Flask expects exactly:
+    //      { items: [...], payer: {...}, back_urls: {...}, auto_return: "approved" }
+    //    Adapt this as necessary if Flask expects different keys.
+    // ----------------------------------------
+    const { items, payer, back_urls, auto_return } = req.body;
+
+    // Basic validation
+    if (
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      !payer ||
+      !payer.email ||
+      !back_urls ||
+      !back_urls.success ||
+      !back_urls.failure ||
+      !back_urls.pending
+    ) {
+      return res.status(400).json({
+        error: "Missing required preference fields",
+        details: "Required: items[], payer.email, back_urls.success/failure/pending, auto_return"
+      });
+    }
+
+    // Construct the exact JSON Flask expects:
+    const flaskPayload: Record<string, any> = {
+      items: items.map((it: any, i: number) => ({
+        title: it.title,
+        unit_price: Number(it.unit_price),
+        quantity: Number(it.quantity || 1),
+        currency_id: it.currency_id || "BRL"
+      })),
+      payer: {
+        email: payer.email,
+        name: payer.name,
+        identification: payer.identification
+      },
+      back_urls: back_urls,
+      auto_return: auto_return || "approved"
+    };
+
+    console.log("[Express → Flask] Forwarding preference payload:", JSON.stringify(flaskPayload, null, 2));
+
+    // ----------------------------------------
+    // 2) Send it to your Flask server.
+    //    Make sure FLASK_URL is set (e.g. "http://localhost:5000").
+    //    Flask should have its own route, e.g. POST /api/checkout/preferences.
+    // ----------------------------------------
+    const FLASK_BASE_URL = process.env.FLASK_URL || "http://localhost:5000";
+    const flaskResponse = await fetch(`${FLASK_BASE_URL}/api/checkout/preferences`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(flaskPayload)
+    });
+
+    if (!flaskResponse.ok) {
+      // If Flask returned an error (404/500/etc), forward that status/text to the client.
+      const errorText = await flaskResponse.text();
+      console.error("[Express → Flask] Flask error:", flaskResponse.status, errorText);
+      return res.status(flaskResponse.status).json({ error: errorText || `HTTP ${flaskResponse.status}` });
+    }
+
+    // ----------------------------------------
+    // 3) Parse Flask's JSON response.
+    //    Expect something like { preferenceId: "...", publicKey: "TEST-..." }
+    // ----------------------------------------
+    const flaskJson = await flaskResponse.json();
+    console.log("[Express] Received from Flask:", flaskJson);
+
+    // 4) Cache the response if you want to prevent dupes for the next 30 seconds
+    preferenceCache.set(cacheKey, flaskJson);
+    setTimeout(() => preferenceCache.delete(cacheKey), CACHE_DURATION);
+
+    // 5) Return Flask's JSON back to React
+    return res.json(flaskJson);
+
   } catch (err) {
-    console.error('[Express] /api/payment/preference exception:', err);
-    return res.status(500).json({ error: `Internal error: ${err}` });
+    console.error("[Express] /api/payment/preferences exception:", err);
+    return res.status(500).json({ error: `Internal error: ${(err as Error).message}` });
   }
 });
+
 
 /**
  * Create a Mercado Pago "order" (V2) - proxy to Flask server
