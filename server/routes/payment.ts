@@ -43,27 +43,28 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       // Extract payment data from the payload
       const paymentData = payload.payment_details.transactions.payments[0];
 
-      // Format the request exactly as Flask expects it
+      // Format the request exactly as Flask expects it (Brick-compatible format)
       const flaskPayload = {
         type: "online",
-        processing_mode: "automatic",
-        total_amount: payload.total_amount,
         external_reference: payload.external_reference,
         payer: {
           email: payload.payer.email
         },
-        transactions: {
-          payments: [
-            {
-              amount: paymentData.amount,
-              payment_method: {
-                id: paymentData.payment_method.id,
-                type: paymentData.payment_method.type,
-                token: paymentData.payment_method.token,
-                installments: paymentData.payment_method.installments || 1
+        payment_details: {
+          total_amount: payload.total_amount,
+          transactions: {
+            payments: [
+              {
+                amount: paymentData.amount,
+                installments: paymentData.payment_method.installments || 1,
+                payment_method: {
+                  id: paymentData.payment_method.id,
+                  type: paymentData.payment_method.type,
+                  token: paymentData.payment_method.token
+                }
               }
-            }
-          ]
+            ]
+          }
         }
       };
 
