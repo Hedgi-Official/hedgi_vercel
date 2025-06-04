@@ -421,20 +421,7 @@ export function MercadoPaySDKModal({
               return;
             }
 
-            if (window.paymentBrickController) {
-              try {
-                window.paymentBrickController.unmount();
-              } catch (e) {
-                console.warn(
-                  "⚠️ [renderPaymentBrick] failed to unmount Brick:",
-                  e
-                );
-              }
-              window.paymentBrickController = null;
-            }
-            // Clear flags so we can re-create on failure
-            setBrickCreated(false);
-            setPaymentCompleted(false);
+            // Don't clear flags here - only clear them on actual failure
 
 
 
@@ -500,6 +487,7 @@ export function MercadoPaySDKModal({
                   // Immediately set payment completed to prevent any re-renders
                   setPaymentCompleted(true);
                   setBrickCreated(true);
+                  setIsProcessing(true); // Prevent any further processing
 
                   // CRITICAL: Clear error state on successful payment
                   setError(null);
@@ -573,6 +561,16 @@ export function MercadoPaySDKModal({
                   console.error("❌ Payment failed or not approved:", result);
                   const statusDetail = result.status_detail || result.response?.status_detail;
                   const reason = statusDetail || paymentStatus || "Payment not approved";
+
+                  // Clear payment brick for failure case
+                  if (window.paymentBrickController) {
+                    try {
+                      window.paymentBrickController.unmount();
+                    } catch (e) {
+                      console.warn("⚠️ failed to unmount Brick:", e);
+                    }
+                    window.paymentBrickController = null;
+                  }
 
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
@@ -657,10 +655,22 @@ export function MercadoPaySDKModal({
                 }
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);
+                
+                // Clear payment brick on network error
+                if (window.paymentBrickController) {
+                  try {
+                    window.paymentBrickController.unmount();
+                  } catch (e) {
+                    console.warn("⚠️ failed to unmount Brick:", e);
+                  }
+                  window.paymentBrickController = null;
+                }
+                
                 setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
                 setLoading(false);
                 setPaymentCompleted(false); // Allow retry on network errors
                 setBrickCreated(false); // Allow re-creation of brick
+                setIsProcessing(false); // Allow retry
               }
           },
         },
