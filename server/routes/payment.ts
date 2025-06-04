@@ -14,7 +14,7 @@ const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-XXXXXXXXXXXXXXXX';
 router.post('/api/payment/preference', async (req: Request, res: Response) => {
   try {
     console.log('[Express] Creating preference with payload:', req.body);
-    
+
     // Use the payment service to create the preference
     const result = await paymentService.createPreference(req, res);
     return result;
@@ -42,43 +42,37 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
 
       // Extract payment data from the payload
       const paymentData = payload.payment_details.transactions.payments[0];
-      
-      const v1OrdersPayload = {
+
+      // Format the request exactly as Flask expects it
+      const flaskPayload = {
         type: "online",
         processing_mode: "automatic",
-        total_amount: Number(payload.payment_details.total_amount),
+        total_amount: payload.payment_details.total_amount,
         external_reference: payload.external_reference,
-        items: [
-          {
-            title: `Hedge Protection - ${payload.currency || 'BRL'}`,
-            description: `Currency hedge protection`,
-            category_id: 'services',
-            quantity: 1,
-            unit_price: Number(payload.payment_details.total_amount)
-          }
-        ],
         payer: {
           email: payload.payer.email
         },
         transactions: {
           payments: [
             {
-              amount: Number(paymentData.amount),
+              amount: paymentData.amount,
               payment_method: {
                 id: paymentData.payment_method.id,
                 type: paymentData.payment_method.type,
                 token: paymentData.payment_method.token,
-                installments: 1
+                installments: paymentData.payment_method.installments || 1
               }
             }
           ]
         }
       };
 
+      console.log('[Express → Flask] Sending payload to Flask:', JSON.stringify(flaskPayload, null, 2));
+
       const response = await fetch(`${FLASK}/api/payment/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(v1OrdersPayload)
+        body: JSON.stringify(flaskPayload)
       });
 
       if (!response.ok) {
