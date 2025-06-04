@@ -68,6 +68,8 @@ export function MercadoPaySDKModal({
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [brickCreated, setBrickCreated] = useState(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -89,12 +91,15 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
 
-    if (!isOpen || !hedgeData || paymentCompleted) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
+    if (!isOpen || !hedgeData || paymentCompleted || isProcessing || brickCreated) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "isProcessing:", isProcessing, "brickCreated:", brickCreated);
       return;
     }
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
+
+    // Set processing state immediately to prevent duplicate calls
+    setIsProcessing(true);
 
     // Clear any existing payment brick first
     const container = document.getElementById("paymentBrick_container");
@@ -142,6 +147,7 @@ export function MercadoPaySDKModal({
         console.error("❌ Error loading MP SDK:", err);
         setError(isPortuguese ? "Falha ao carregar sistema de pagamento." : "Failed to load payment system.");
         setLoading(false);
+        setIsProcessing(false); // Reset processing state on error
       });
   }, [isOpen, hedgeData, paymentCompleted]);
 
@@ -223,6 +229,10 @@ export function MercadoPaySDKModal({
       });
       const bricksBuilder = mercadoPago.bricks();
       renderPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
+      
+      // Mark brick as created to prevent duplicates
+      setBrickCreated(true);
+      setIsProcessing(false);
     } catch (e: any) {
       console.error("❌ Error creating payment order:", e);
       if (retryCount < 2 && e.message.includes("Network")) {
