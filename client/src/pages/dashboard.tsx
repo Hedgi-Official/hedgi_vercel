@@ -55,6 +55,7 @@ export default function Dashboard() {
     | null
   >(null)
   const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
+  const [paymentInProgress, setPaymentInProgress] = React.useState(false) // Global payment lock
 
   // Debug logging for modal state changes
   React.useEffect(() => {
@@ -712,18 +713,19 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  // Prevent multiple payment flows - check all possible states
-                  if (isProcessingPayment || showPaymentModal || pendingHedgeData) {
-                    console.log("⚠️ [Dashboard] Payment flow already active, ignoring new request");
-                    console.log("⚠️ [Dashboard] States:", { isProcessingPayment, showPaymentModal, hasPendingData: !!pendingHedgeData });
+                  // Enhanced payment lock - prevent ANY new payment flows
+                  if (paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
+                    console.log("⚠️ [Dashboard] Payment BLOCKED - already in progress");
+                    console.log("⚠️ [Dashboard] Lock states:", { paymentInProgress, isProcessingPayment, showPaymentModal, hasPendingData: !!pendingHedgeData });
                     return;
                   }
                   
-                  console.log("✅ [Dashboard] Starting new payment flow");
+                  console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
+                  setPaymentInProgress(true);  // Global lock first
                   setIsProcessingPayment(true);
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
-                  console.log("📝 [Dashboard] Modal state set to open");
+                  console.log("📝 [Dashboard] All payment locks engaged, modal opening");
                 }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
@@ -760,23 +762,25 @@ export default function Dashboard() {
         <MercadoPaySDKModal
           isOpen={showPaymentModal}
           onClose={() => {
-            console.log("🔒 [Dashboard] Payment modal closing");
-            // Force reset all payment states
+            console.log("🔒 [Dashboard] Payment modal closing - releasing all locks");
+            // Force reset all payment states including global lock
+            setPaymentInProgress(false);
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success - trade already created by payment flow");
+            console.log("✅ [Dashboard] Payment success - releasing all locks and refreshing data");
             
-            // Prevent duplicate calls
-            if (!showPaymentModal || !pendingHedgeData) {
+            // Prevent duplicate calls with enhanced checking
+            if (!showPaymentModal || !pendingHedgeData || !paymentInProgress) {
               console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
               return;
             }
             
             // Trade is already created by the /api/payment/order route
-            // Just clean up modal states and refresh trade lists
+            // Release all locks and clean up states
+            setPaymentInProgress(false);  // Release global lock first
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
@@ -785,7 +789,7 @@ export default function Dashboard() {
             queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
             queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
             
-            console.log("🔄 [Dashboard] Trade lists refreshed after successful payment");
+            console.log("🔄 [Dashboard] All locks released, trade lists refreshed");
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData?.baseCurrency || 'BRL'}
