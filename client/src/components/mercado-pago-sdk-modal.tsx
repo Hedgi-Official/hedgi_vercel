@@ -67,6 +67,7 @@ export function MercadoPaySDKModal({
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [paymentTrackingToken, setPaymentTrackingToken] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const isPortuguese = i18n.language === "pt-BR";
 
@@ -86,14 +87,15 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, isInitialized });
 
-    if (!isOpen || !hedgeData || paymentCompleted) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
+    if (!isOpen || !hedgeData || paymentCompleted || isInitialized) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "isInitialized:", isInitialized);
       return;
     }
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
+    setIsInitialized(true);
 
     // Reset states for fresh start
     setLoading(true);
@@ -126,7 +128,7 @@ export function MercadoPaySDKModal({
         setError(isPortuguese ? "Falha ao carregar sistema de pagamento." : "Failed to load payment system.");
         setLoading(false);
       });
-  }, [isOpen, hedgeData, paymentCompleted]);
+  }, [isOpen, hedgeData, paymentCompleted, isInitialized]);
 
   //
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
@@ -225,6 +227,13 @@ export function MercadoPaySDKModal({
     orderIdFromServer: string
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
+
+    // Check if a payment brick already exists
+    if (window.paymentBrickController) {
+      console.log("⚠️ [renderPaymentBrick] Payment brick already exists, skipping creation");
+      setLoading(false);
+      return;
+    }
 
     try {
       const settings = {
@@ -381,6 +390,9 @@ export function MercadoPaySDKModal({
         throw new Error("Container 'paymentBrick_container' not found in DOM");
       }
 
+      // Clear any existing content in the container
+      container.innerHTML = '';
+
       console.log("🔨 [renderPaymentBrick] Container found, creating Payment Brick...");
       window.paymentBrickController = await bricksBuilder.create(
         "payment", // Use "payment" for Payment Brick
@@ -421,6 +433,7 @@ export function MercadoPaySDKModal({
     
     // Always allow closing and reset states properly
     setPaymentCompleted(false);
+    setIsInitialized(false);
     setLoading(true);
     setError(null);
     setOrderId(null);
