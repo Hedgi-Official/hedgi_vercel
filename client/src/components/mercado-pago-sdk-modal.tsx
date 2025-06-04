@@ -405,15 +405,13 @@ export function MercadoPaySDKModal({
       return;
     }
 
+    // CRITICAL: Set preventBrickRef IMMEDIATELY to prevent any other calls (BEFORE acquiring lock)
+    preventBrickRef.current = true;
+    console.log("🔒 [renderPaymentBrick] Set preventBrickRef to true - no more bricks can be created");
+
     const release = await paymentBrickMutex.acquire();
     try {
       console.log("🔐 [renderPaymentBrick] acquired lock, proceeding…");
-
-      // Check again after acquiring lock (double safety)
-      if (preventBrickRef.current) {
-        console.log("🛑 [renderPaymentBrick] preventBrickRef is true after lock - aborting");
-        return;
-      }
 
       // Check if we should still run (payment might already be done)
       if (paymentCompleted) {
@@ -428,8 +426,6 @@ export function MercadoPaySDKModal({
       console.log("⚠️ [renderPaymentBrick] Brick already exists; skipping");
       return;
     }
-
-    // NOTE: We don't set preventBrickRef here - only set it when payment actually succeeds
 
     try {
       const settings = {
@@ -532,7 +528,7 @@ export function MercadoPaySDKModal({
                   // CRITICAL: Set preventBrickRef IMMEDIATELY before any other operations
                   preventBrickRef.current = true;
                   console.log("🔒 [renderPaymentBrick] Set preventBrickRef to true - NO MORE BRICKS CAN BE CREATED");
-                  
+
                   // Extract payment ID before setting other states
                   const paymentId = result.response?.id || result.id || paymentToken;
 
@@ -747,8 +743,9 @@ export function MercadoPaySDKModal({
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
       setLoading(false);
-      // DON'T reset preventBrickRef on error - only reset on modal reopen
-      console.log("⚠️ [renderPaymentBrick] Brick creation failed, but keeping preventBrickRef state");
+      // Reset preventBrickRef on error to allow retry
+      preventBrickRef.current = false;
+      console.log("🔓 [renderPaymentBrick] Reset preventBrickRef to false due to error");
     } 
   } finally {
       // ─── Always release the lock ───────────────────────────────────────────
