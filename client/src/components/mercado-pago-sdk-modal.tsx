@@ -217,6 +217,8 @@ export function MercadoPaySDKModal({
     amount: number,
     externalRef: string
   ) => {
+    console.log("🔨 [renderCardPaymentBrick] Starting to render brick with amount:", amount, "externalRef:", externalRef);
+    
     const settings = {
       initialization: {
         amount: amount, // e.g. 100.00
@@ -225,17 +227,21 @@ export function MercadoPaySDKModal({
       callbacks: {
         onReady: () => {
           // Brick is ready; hide your spinner if you have one
+          console.log("✅ [renderCardPaymentBrick] Brick is ready");
           setLoading(false);
         },
         onError: (error: unknown) => {
-          console.error("❌ Brick error:", error);
+          console.error("❌ [renderCardPaymentBrick] Brick error:", error);
           setError(isPortuguese ? "Erro ao carregar interface de pagamento." : "Failed to load payment interface.");
           setLoading(false);
         },
         onSubmit: (formData: BrickFormData, additionalData: BrickAdditionalData) => {
           // Called when user clicks "Pay" in the brick.
           // formData.token is the REAL card token (≥32 chars)
-          console.log("💳 Brick onSubmit called with formData:", formData);
+          console.log("💳 [renderCardPaymentBrick] Brick onSubmit called with formData:", formData);
+          console.log("💳 [renderCardPaymentBrick] additionalData:", additionalData);
+          console.log("💳 [renderCardPaymentBrick] Real token detected:", formData.token);
+          
           return new Promise<void>((resolve, reject) => {
             const submitData = {
               type: "online",
@@ -308,11 +314,28 @@ export function MercadoPaySDKModal({
     };
 
     // ‼️ Render the Brick into your container div
-    window.cardPaymentBrickController = await bricksBuilder.create(
-      "cardPayment",
-      "cardPaymentBrick_container",
-      settings
-    );
+    try {
+      console.log("🔨 [renderCardPaymentBrick] Creating brick with settings:", settings);
+      console.log("🔨 [renderCardPaymentBrick] Target container: cardPaymentBrick_container");
+      
+      // Check if container exists
+      const container = document.getElementById("cardPaymentBrick_container");
+      if (!container) {
+        throw new Error("Container 'cardPaymentBrick_container' not found in DOM");
+      }
+      
+      console.log("🔨 [renderCardPaymentBrick] Container found, creating brick...");
+      window.cardPaymentBrickController = await bricksBuilder.create(
+        "cardPayment",
+        "cardPaymentBrick_container",
+        settings
+      );
+      console.log("✅ [renderCardPaymentBrick] Brick created successfully:", window.cardPaymentBrickController);
+    } catch (brickError) {
+      console.error("❌ [renderCardPaymentBrick] Failed to create brick:", brickError);
+      setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
+      setLoading(false);
+    }
   };
 
   //
@@ -419,11 +442,12 @@ export function MercadoPaySDKModal({
                 color: error ? "#666" : "inherit",
               }}
             >
-              {error && (
+              {(error || loading) && (
                 <div style={{ fontSize: 14, opacity: 0.7 }}>
-                  {isPortuguese
-                    ? "Aqui aparecerá a interface de pagamento."
-                    : "Payment interface will appear here when ready."}
+                  {loading 
+                    ? (isPortuguese ? "Carregando interface de pagamento..." : "Loading payment interface...")
+                    : (isPortuguese ? "Aqui aparecerá a interface de pagamento." : "Payment interface will appear here when ready.")
+                  }
                 </div>
               )}
             </div>
