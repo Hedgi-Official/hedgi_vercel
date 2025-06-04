@@ -225,7 +225,7 @@ export default function Dashboard() {
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
-
+    
     // Ensure no additional modals can open during trade processing
     if (isProcessingPayment || showPaymentModal) {
       console.log("⚠️ [Dashboard] Payment already in progress, preventing duplicate processing");
@@ -366,21 +366,21 @@ export default function Dashboard() {
 
       // Only proceed if payment is explicitly verified and approved
       console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
-
+      
       // Reset modal states immediately to prevent additional modals
       setShowPaymentModal(false);
       setPendingHedgeData(null);
       setIsProcessingPayment(false);
-
+      
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
-
+      
       // Reset modal states on error to allow retry
       setShowPaymentModal(false);
       setPendingHedgeData(null);
       setIsProcessingPayment(false);
-
+      
       toast({
         variant: "destructive",
         title: "Payment Verification Error",
@@ -712,14 +712,14 @@ export default function Dashboard() {
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
-
+                  
                   // Enhanced payment lock - prevent ANY new payment flows
                   if (paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
                     console.log("⚠️ [Dashboard] Payment BLOCKED - already in progress");
                     console.log("⚠️ [Dashboard] Lock states:", { paymentInProgress, isProcessingPayment, showPaymentModal, hasPendingData: !!pendingHedgeData });
                     return;
                   }
-
+                  
                   console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
                   setPaymentInProgress(true);  // Global lock first
                   setIsProcessingPayment(true);
@@ -771,24 +771,24 @@ export default function Dashboard() {
           }}
           onSuccess={(hedgeData, paymentToken) => {
             console.log("✅ [Dashboard] Payment success - releasing all locks and refreshing data");
-
+            
             // Prevent duplicate calls with enhanced checking
             if (!showPaymentModal || !pendingHedgeData || !paymentInProgress) {
               console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
               return;
             }
-
+            
             // Trade is already created by the /api/payment/order route
             // Release all locks and clean up states
             setPaymentInProgress(false);  // Release global lock first
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
-
+            
             // Refresh trade queries to show the new trade
             queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
             queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-
+            
             console.log("🔄 [Dashboard] All locks released, trade lists refreshed");
           }}
           hedgeData={pendingHedgeData}
