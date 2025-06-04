@@ -132,13 +132,11 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
               symbol,
               direction,
               volume,
-              days: hedgeData.duration || 7,
-              deviation: 5,
-              magic: 123456,
-              comment: 'Hedgi automated trade',
-              paymentToken: result.response?.id || result.id,
-              margin: hedgeData.margin || 500,
-              userId: req.user?.id || 7 // Include user ID to link trade to user
+              metadata: {
+                days: hedgeData.duration || 7,
+                paymentToken: result.response?.id || result.id,
+                margin: hedgeData.margin || 500
+              }
             };
 
             console.log('[Express → Flask] Creating trade with payload:', tradePayload);

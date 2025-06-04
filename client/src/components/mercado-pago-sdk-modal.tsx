@@ -395,14 +395,27 @@ export function MercadoPaySDKModal({
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
 
-                  // Hide the payment brick container and show success message
+                  // Show hedge placement success with details
                   const container = document.getElementById("paymentBrick_container");
                   if (container) {
+                    const hedgeAmount = hedgeData.amount;
+                    const currency = hedgeData.baseCurrency;
+                    const targetCurrency = hedgeData.targetCurrency;
+                    const duration = hedgeData.duration || 7;
+                    
                     container.innerHTML = `
                       <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                        ✅ ${isPortuguese ? "Pagamento aprovado!" : "Payment approved!"}
-                        <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
-                          ${isPortuguese ? "Processando negociação..." : "Processing trade..."}
+                        ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
+                        <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
+                          <div style="margin-bottom: 8px;">
+                            <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${Math.abs(hedgeAmount).toLocaleString()} ${currency}
+                          </div>
+                          <div style="margin-bottom: 8px;">
+                            <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
+                          </div>
+                          <div>
+                            <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
+                          </div>
                         </div>
                       </div>
                     `;
