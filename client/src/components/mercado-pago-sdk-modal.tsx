@@ -456,7 +456,6 @@ export function MercadoPaySDKModal({
               )}
             </div>
           </div>
-        )}</div>
         )}
 
         {/* Always‐visible Test Payment button for dev */}
