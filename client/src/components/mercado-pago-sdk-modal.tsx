@@ -79,8 +79,63 @@ class SimpleMutex {
   }
 }
 
+// Global singleton to prevent any brick creation across all instances
+class PaymentBrickManager {
+  private static instance: PaymentBrickManager;
+  private globalPreventBrick = false;
+  private currentSessionId: string | null = null;
+
+  static getInstance(): PaymentBrickManager {
+    if (!PaymentBrickManager.instance) {
+      PaymentBrickManager.instance = new PaymentBrickManager();
+    }
+    return PaymentBrickManager.instance;
+  }
+
+  startSession(sessionId: string): boolean {
+    if (this.globalPreventBrick) {
+      console.log("🛑 [PaymentBrickManager] Global brick prevention is active - rejecting session:", sessionId);
+      return false;
+    }
+    
+    if (this.currentSessionId && this.currentSessionId !== sessionId) {
+      console.log("🛑 [PaymentBrickManager] Another session is active - rejecting session:", sessionId);
+      return false;
+    }
+    
+    this.currentSessionId = sessionId;
+    console.log("✅ [PaymentBrickManager] Session started:", sessionId);
+    return true;
+  }
+
+  preventAllBricks(sessionId: string): void {
+    console.log("🔒 [PaymentBrickManager] GLOBALLY preventing all brick creation from session:", sessionId);
+    this.globalPreventBrick = true;
+  }
+
+  canCreateBrick(sessionId: string): boolean {
+    const canCreate = !this.globalPreventBrick && this.currentSessionId === sessionId;
+    console.log("🔍 [PaymentBrickManager] Can create brick for session", sessionId, ":", canCreate);
+    return canCreate;
+  }
+
+  endSession(sessionId: string): void {
+    if (this.currentSessionId === sessionId) {
+      console.log("🏁 [PaymentBrickManager] Session ended:", sessionId);
+      this.currentSessionId = null;
+      // Don't reset globalPreventBrick - it stays true once set
+    }
+  }
+
+  reset(): void {
+    console.log("🔄 [PaymentBrickManager] Full reset - clearing all flags");
+    this.globalPreventBrick = false;
+    this.currentSessionId = null;
+  }
+}
 
 const paymentBrickMutex = new SimpleMutex();
+const brickManager = PaymentBrickManager.getInstance();
 
 
 export function MercadoPaySDKModal({
@@ -107,6 +162,25 @@ export function MercadoPaySDKModal({
   // Add a ref to prevent duplicate brick creation
   const preventBrickRef = useRef(false);
 
+  // Create a unique session ID for this modal instance
+  const sessionId = useRef(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+
+  // Initialize session when modal opens
+  useEffect(() => {
+    if (isOpen && hedgeData) {
+      const canStart = brickManager.startSession(sessionId.current);
+      if (!canStart) {
+        console.log("🛑 [MercadoPaySDKModal] Cannot start session - another payment in progress");
+        setError(isPortuguese ? "Outro pagamento em andamento. Aguarde." : "Another payment in progress. Please wait.");
+        return;
+      }
+    }
+    
+    if (!isOpen) {
+      brickManager.endSession(sessionId.current);
+    }
+  }, [isOpen, hedgeData]);
+
   const isPortuguese = i18n.language === "pt-BR";
 
   // Dev‐mode flag: if true, skip real payment brick
@@ -127,7 +201,13 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing, preventBrickRef: preventBrickRef.current });
 
-    // CRITICAL: Check preventBrickRef FIRST to prevent any brick creation after payment success
+    // CRITICAL: Check global brick manager FIRST
+    if (!brickManager.canCreateBrick(sessionId.current)) {
+      console.log("🛑 [MercadoPaySDKModal] Global brick manager blocking brick creation for session:", sessionId.current);
+      return;
+    }
+
+    // CRITICAL: Check preventBrickRef SECOND to prevent any brick creation after payment success
     if (preventBrickRef.current) {
       console.log("🛑 [MercadoPaySDKModal] preventBrickRef is true - blocking all brick creation");
       return;
@@ -252,10 +332,13 @@ export function MercadoPaySDKModal({
         window.statusScreenBrickController = null;
       }
       hasInitializedBrick.current = false;
+      brickManager.endSession(sessionId.current);
     } else {
       // Modal is opening - ONLY NOW reset preventBrickRef for a fresh start
       console.log("🔓 [MercadoPaySDKModal] Modal opening, resetting preventBrickRef for fresh start");
       preventBrickRef.current = false;
+      // Reset the global manager for a completely fresh start
+      brickManager.reset();
     }
   }, [isOpen]);
 
@@ -265,7 +348,13 @@ export function MercadoPaySDKModal({
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
 
-    // CRITICAL: Check preventBrickRef FIRST
+    // CRITICAL: Check global brick manager FIRST
+    if (!brickManager.canCreateBrick(sessionId.current)) {
+      console.log("🛑 [createOrder] Global brick manager blocking order creation for session:", sessionId.current);
+      return;
+    }
+
+    // CRITICAL: Check preventBrickRef SECOND
     if (preventBrickRef.current) {
       console.log("🛑 [createOrder] preventBrickRef is true - blocking order creation");
       return;
@@ -397,9 +486,16 @@ export function MercadoPaySDKModal({
       brickCreated,
       windowPaymentController: !!window.paymentBrickController,
       preventBrickRef: preventBrickRef.current,
+      sessionId: sessionId.current,
     });
 
-    // CRITICAL: Check preventBrickRef IMMEDIATELY before acquiring lock
+    // CRITICAL: Check global brick manager FIRST
+    if (!brickManager.canCreateBrick(sessionId.current)) {
+      console.log("🛑 [renderPaymentBrick] Global brick manager blocking brick creation for session:", sessionId.current);
+      return;
+    }
+
+    // CRITICAL: Check preventBrickRef SECOND before acquiring lock
     if (preventBrickRef.current) {
       console.log("🛑 [renderPaymentBrick] preventBrickRef is true - aborting brick creation");
       return;
@@ -525,9 +621,10 @@ export function MercadoPaySDKModal({
                 const isApproved = paymentStatus === "approved";
 
                 if (response.ok && isApproved) {
-                  // CRITICAL: Set preventBrickRef IMMEDIATELY before any other operations
+                  // CRITICAL: Use global brick manager to prevent ALL future bricks IMMEDIATELY
+                  brickManager.preventAllBricks(sessionId.current);
                   preventBrickRef.current = true;
-                  console.log("🔒 [renderPaymentBrick] Set preventBrickRef to true - NO MORE BRICKS CAN BE CREATED");
+                  console.log("🔒 [renderPaymentBrick] GLOBALLY prevented all brick creation - NO MORE BRICKS CAN BE CREATED EVER");
 
                   // Extract payment ID before setting other states
                   const paymentId = result.response?.id || result.id || paymentToken;
@@ -745,6 +842,7 @@ export function MercadoPaySDKModal({
       setLoading(false);
       // Reset preventBrickRef on error to allow retry
       preventBrickRef.current = false;
+      // Don't reset global manager on brick creation error - only on session end
       console.log("🔓 [renderPaymentBrick] Reset preventBrickRef to false due to error");
     } 
   } finally {
