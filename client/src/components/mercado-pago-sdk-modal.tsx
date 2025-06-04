@@ -193,12 +193,12 @@ export function MercadoPaySDKModal({
       setOrderId(data.orderId);
       setPublicKey(data.publicKey);
 
-      // Now that we have orderId & publicKey, render the Card Payment Brick
+      // Now that we have orderId & publicKey, render the Payment Brick
       const mercadoPago = new window.MercadoPago(data.publicKey, {
         locale: isPortuguese ? "pt-BR" : "en-US",
       });
       const bricksBuilder = mercadoPago.bricks();
-      renderCardPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
+      renderPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
     } catch (e: any) {
       console.error("❌ Error creating payment order:", e);
       if (retryCount < 2 && e.message.includes("Network")) {
@@ -210,75 +210,76 @@ export function MercadoPaySDKModal({
   };
 
   //
-  // 3) renderCardPaymentBrick: called once we have publicKey & orderId
+  // 3) renderPaymentBrick: called once we have publicKey & orderId (using Payment Brick instead)
   //
-  const renderCardPaymentBrick = async (
+  const renderPaymentBrick = async (
     bricksBuilder: any,
     amount: number,
     orderIdFromServer: string
   ) => {
-    console.log("🔨 [renderCardPaymentBrick] Starting to render Card Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
+    console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
     
     try {
-      // For Card Payment Brick, we need to use the orderId from our server
-      // This should be a proper MP Order ID, not a preference ID
       const settings = {
         initialization: {
           amount: amount,
+          preferenceId: orderIdFromServer, // Use preferenceId for Payment Brick
         },
         callbacks: {
           onReady: () => {
-            console.log("✅ [renderCardPaymentBrick] Card Payment Brick is ready");
+            console.log("✅ [renderPaymentBrick] Payment Brick is ready");
             setLoading(false);
           },
           onError: (error: unknown) => {
-            console.error("❌ [renderCardPaymentBrick] Card Payment Brick error:", error);
+            console.error("❌ [renderPaymentBrick] Payment Brick error:", error);
             setError(isPortuguese ? "Erro ao carregar interface de pagamento." : "Failed to load payment interface.");
             setLoading(false);
           },
-          onSubmit: async (formData: BrickFormData, additionalData: BrickAdditionalData) => {
-            console.log("💳 [renderCardPaymentBrick] Card Payment Brick onSubmit called with formData:", formData);
-            console.log("💳 [renderCardPaymentBrick] additionalData:", additionalData);
+          onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
+            console.log("💳 [renderPaymentBrick] Payment Brick onSubmit called with selectedPaymentMethod:", selectedPaymentMethod);
+            console.log("💳 [renderPaymentBrick] formData:", formData);
             
             if (!hedgeData) {
-              console.error("❌ [renderCardPaymentBrick] No hedgeData available");
+              console.error("❌ [renderPaymentBrick] No hedgeData available");
               return;
             }
 
-            // Extract the real card token from formData
-            const cardToken = formData.token;
-            console.log("🔑 [renderCardPaymentBrick] Extracted card token:", cardToken);
+            // Extract the payment token from formData
+            const paymentToken = formData.token || selectedPaymentMethod.token;
+            console.log("🔑 [renderPaymentBrick] Extracted payment token:", paymentToken);
 
-            if (!cardToken || cardToken.length < 32) {
-              console.error("❌ [renderCardPaymentBrick] Invalid or missing card token");
-              setError(isPortuguese ? "Token de pagamento inválido." : "Invalid payment token.");
+            if (!paymentToken) {
+              console.error("❌ [renderPaymentBrick] No payment token found");
+              setError(isPortuguese ? "Token de pagamento não encontrado." : "Payment token not found.");
               return;
             }
 
-            // Build the payment payload with the real card token
+            // Build the payment payload for Flask
             const paymentPayload = {
               type: "online",
               external_reference: paymentTrackingToken || `payment_${Date.now()}`,
-              transactions: {
-                payments: [{
-                  amount: amount.toString(),
-                  payment_method: {
-                    id: formData.payment_method_id,
-                    type: additionalData.paymentTypeId || "credit_card",
-                    token: cardToken,
-                  },
-                  installments: 1,
-                }]
+              payment_details: {
+                transactions: {
+                  payments: [{
+                    amount: amount.toString(),
+                    payment_method: {
+                      id: selectedPaymentMethod.id || formData.payment_method_id,
+                      type: selectedPaymentMethod.type || "credit_card",
+                      token: paymentToken,
+                    },
+                    installments: formData.installments || 1,
+                  }]
+                }
               },
-              payer: {
-                email: formData.payer.email,
-                identification: formData.payer.identification,
+              payer: formData.payer || {
+                email: "testuser@example.com",
+                identification: { type: "CPF", number: "12345678901" }
               },
               processing_mode: "automatic",
               total_amount: amount.toString(),
             };
 
-            console.log("📦 [renderCardPaymentBrick] Sending payment payload:", paymentPayload);
+            console.log("📦 [renderPaymentBrick] Sending payment payload:", paymentPayload);
 
             try {
               // Send the payment with real card token to our server
@@ -294,17 +295,17 @@ export function MercadoPaySDKModal({
               }
 
               const result = await response.json();
-              console.log("✅ [renderCardPaymentBrick] Payment successful:", result);
+              console.log("✅ [renderPaymentBrick] Payment successful:", result);
 
               // Extract payment ID from the response
-              const paymentId = result.paymentId || result.id || cardToken;
+              const paymentId = result.paymentId || result.id || paymentToken;
               
               // Call onSuccess with the hedge data and payment token
               onSuccess(hedgeData, paymentId);
               onClose();
 
             } catch (paymentError) {
-              console.error("❌ [renderCardPaymentBrick] Payment processing error:", paymentError);
+              console.error("❌ [renderPaymentBrick] Payment processing error:", paymentError);
               setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
             }
           },
@@ -317,25 +318,25 @@ export function MercadoPaySDKModal({
         }
       };
 
-      // Create the Card Payment Brick
-      console.log("🔨 [renderCardPaymentBrick] Creating Card Payment Brick with settings:", settings);
+      // Create the Payment Brick
+      console.log("🔨 [renderPaymentBrick] Creating Payment Brick with settings:", settings);
       
       // Check if container exists
-      const container = document.getElementById("cardPaymentBrick_container");
+      const container = document.getElementById("paymentBrick_container");
       if (!container) {
-        throw new Error("Container 'cardPaymentBrick_container' not found in DOM");
+        throw new Error("Container 'paymentBrick_container' not found in DOM");
       }
       
-      console.log("🔨 [renderCardPaymentBrick] Container found, creating Card Payment Brick...");
-      window.cardPaymentBrickController = await bricksBuilder.create(
-        "cardPayment", // Use "cardPayment" for Card Payment Brick
-        "cardPaymentBrick_container",
+      console.log("🔨 [renderPaymentBrick] Container found, creating Payment Brick...");
+      window.paymentBrickController = await bricksBuilder.create(
+        "payment", // Use "payment" for Payment Brick
+        "paymentBrick_container",
         settings
       );
-      console.log("✅ [renderCardPaymentBrick] Card Payment Brick created successfully:", window.cardPaymentBrickController);
+      console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
       
     } catch (brickError) {
-      console.error("❌ [renderCardPaymentBrick] Failed to create Card Payment Brick:", brickError);
+      console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
       setLoading(false);
     }
@@ -430,11 +431,11 @@ export function MercadoPaySDKModal({
           </div>
         )}
 
-        {/* ▶️ This is where the Card Payment Brick will be injected */}
+        {/* ▶️ This is where the Payment Brick will be injected */}
         {!SKIP_PAYMENTS && (
           <div className="my-4">
             <div
-              id="cardPaymentBrick_container"
+              id="paymentBrick_container"
               style={{
                 minHeight: "400px",
                 width: "100%",
@@ -455,6 +456,7 @@ export function MercadoPaySDKModal({
               )}
             </div>
           </div>
+        )}</div>
         )}
 
         {/* Always‐visible Test Payment button for dev */}
