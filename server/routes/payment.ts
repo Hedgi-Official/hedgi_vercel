@@ -47,7 +47,7 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       const flaskPayload = {
         type: "online",
         processing_mode: "automatic",
-        total_amount: payload.payment_details.total_amount,
+        total_amount: payload.total_amount,
         external_reference: payload.external_reference,
         payer: {
           email: payload.payer.email
