@@ -96,6 +96,22 @@ export function MercadoPaySDKModal({
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
 
+    // Clear any existing payment brick first
+    const container = document.getElementById("paymentBrick_container");
+    if (container) {
+      container.innerHTML = '';
+    }
+    
+    // Destroy any existing payment brick controller
+    if (window.paymentBrickController) {
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("Previous payment brick cleanup:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
     // Reset states for fresh start
     setLoading(true);
     setError(null);
@@ -328,21 +344,24 @@ export function MercadoPaySDKModal({
                     `;
                   }
 
-                  // Add delay to show success message then close
-                  setTimeout(() => {
-                    console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
-                    // Destroy the payment brick to prevent additional instances
-                    if (window.paymentBrickController) {
-                      try {
-                        window.paymentBrickController.unmount();
-                        window.paymentBrickController = null;
-                      } catch (e) {
-                        console.log("Payment brick unmount error:", e);
-                      }
+                  // Prevent any further payment processing
+                  if (window.paymentBrickController) {
+                    try {
+                      window.paymentBrickController.unmount();
+                      window.paymentBrickController = null;
+                    } catch (e) {
+                      console.log("Payment brick cleanup:", e);
                     }
-                    onSuccess(hedgeData, paymentId);
+                  }
+
+                  // Call onSuccess immediately and close
+                  console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
+                  onSuccess(hedgeData, paymentId);
+                  
+                  // Close modal after brief delay to show success message
+                  setTimeout(() => {
                     onClose();
-                  }, 1500);
+                  }, 800);
 
                 } else {
                   // Payment failed or not approved

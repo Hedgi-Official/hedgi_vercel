@@ -795,21 +795,29 @@ export default function Dashboard() {
               margin: hedgeData.margin || 500
             };
             
+            console.log("📡 [Dashboard] Sending trade request to /api/trades");
             fetch('/api/trades', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(tradePayload),
               credentials: 'include'
             })
-            .then(response => response.json())
-            .then(result => {
-              console.log("✅ [Dashboard] Trade created successfully:", result);
-              // Refresh the trades list
-              queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+            .then(async response => {
+              console.log("📡 [Dashboard] Trade response status:", response.status);
+              const result = await response.json();
+              console.log("📡 [Dashboard] Trade response data:", result);
+              
+              if (response.ok) {
+                console.log("✅ [Dashboard] Trade created successfully:", result);
+                // Refresh the trades list
+                queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+              } else {
+                console.error("❌ [Dashboard] Trade creation failed:", result);
+              }
             })
             .catch(error => {
-              console.error("❌ [Dashboard] Trade creation failed:", error);
+              console.error("❌ [Dashboard] Trade creation network error:", error);
             });
           }}
           hedgeData={pendingHedgeData}
