@@ -114,7 +114,7 @@ export function registerRoutes(app: Express): Server {
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
-  app.use(paymentRouter);
+  // app.use(paymentRouter); // Removed - using payment routes from server/index.ts instead
   app.use(simulateRouter);
 
   // **SIMPLE FLASK PROXY ENDPOINTS**
