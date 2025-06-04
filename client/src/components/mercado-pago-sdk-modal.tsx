@@ -529,12 +529,16 @@ export function MercadoPaySDKModal({
                         visual: {
                           hideStatusDetails: false,
                           hideTransactionDate: false,
+                          hidePaymentButton: true,
                           style: {
                             theme: 'default',
                           },
                         },
                         paymentMethods: {
-                          hide: true,
+                          creditCard: "none",
+                          debitCard: "none",
+                          bankTransfer: "none",
+                          atm: "none",
                           maxInstallments: 0
                         },
                         backUrls: {
@@ -562,57 +566,37 @@ export function MercadoPaySDKModal({
                       },
                     };
 
-                    // Don't use Status Screen Brick at all - create custom success display
-                    const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
-                    const currency = hedgeData.baseCurrency || 'BRL';
-                    const targetCurrency = hedgeData.targetCurrency || 'USD';
-                    const duration = hedgeData.duration || 7;
-                    const paymentAmountFormatted = paymentAmount.toLocaleString('pt-BR', { 
-                      style: 'currency', 
-                      currency: 'BRL' 
-                    });
+                    try {
+                      window.statusScreenBrickController = bricksBuilder.create(
+                        'statusScreen', 
+                        'paymentBrick_container', 
+                        statusSettings
+                      );
+                    } catch (statusError) {
+                      console.error("❌ Failed to create Status Screen Brick:", statusError);
+                      // Fallback to custom success message
+                      const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
+                      const currency = hedgeData.baseCurrency || 'BRL';
+                      const targetCurrency = hedgeData.targetCurrency || 'USD';
+                      const duration = hedgeData.duration || 7;
 
-                    container.innerHTML = `
-                      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; margin: 20px 0;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">✅</div>
-                        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">
-                          ${isPortuguese ? "Pagamento Aprovado!" : "Payment Approved!"}
-                        </h2>
-                        <p style="margin: 0; font-size: 16px; opacity: 0.9;">
-                          ${isPortuguese ? "Sua proteção foi registrada com sucesso" : "Your hedge has been placed successfully"}
-                        </p>
-                      </div>
-                      
-                      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: #1f2937;">
-                          ${isPortuguese ? "Detalhes da Transação" : "Transaction Details"}
-                        </h3>
-                        <div style="display: grid; gap: 10px; font-size: 14px;">
-                          <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">${isPortuguese ? "Valor Pago:" : "Amount Paid:"}</span>
-                            <span style="font-weight: 600; color: #1f2937;">${paymentAmountFormatted}</span>
-                          </div>
-                          <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">${isPortuguese ? "Par de Moedas:" : "Currency Pair:"}</span>
-                            <span style="font-weight: 600; color: #1f2937;">${currency}/${targetCurrency}</span>
-                          </div>
-                          <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">${isPortuguese ? "Valor Protegido:" : "Protected Amount:"}</span>
-                            <span style="font-weight: 600; color: #1f2937;">${hedgeAmount.toLocaleString()} ${currency}</span>
-                          </div>
-                          <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">${isPortuguese ? "Duração:" : "Duration:"}</span>
-                            <span style="font-weight: 600; color: #1f2937;">${duration} ${isPortuguese ? "dias" : "days"}</span>
-                          </div>
-                          <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">${isPortuguese ? "ID do Pagamento:" : "Payment ID:"}</span>
-                            <span style="font-weight: 600; color: #1f2937; font-family: monospace;">${paymentId}</span>
+                      container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                          ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
+                          <div style="font-size: 14px; margin-top: 15px; font-weight: normal; color: #374151;">
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Valor:" : "Amount:"}</strong> ${hedgeAmount.toLocaleString()} ${currency}
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                              <strong>${isPortuguese ? "Par:" : "Pair:"}</strong> ${currency}/${targetCurrency}
+                            </div>
+                            <div>
+                              <strong>${isPortuguese ? "Duração:" : "Duration:"}</strong> ${duration} ${isPortuguese ? "dias" : "days"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    `;
-
-                    // Remove any Status Screen Brick creation attempts
+                      `;
+                    }
                   }
 
                   // Prevent any further payment processing
