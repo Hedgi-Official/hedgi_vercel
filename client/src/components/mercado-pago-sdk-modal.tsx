@@ -525,9 +525,9 @@ export function MercadoPaySDKModal({
                     // Force a small delay to ensure Payment Brick is completely removed
                     setTimeout(() => {
                       // Extract payment ID from the response
-                      const displayPaymentId = result.response?.id || result.id || paymentToken;
+                      const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
                       
-                      if (displayPaymentId) {
+                      if (paymentId) {
                         // Show simple success message instead of Status Screen Brick
                         // This avoids Mercado Pago's quirky Status Screen behavior
                         const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
@@ -550,7 +550,7 @@ export function MercadoPaySDKModal({
                               </div>
                               <div style="margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid #10b981;">
                                 <strong style="color: #059669;">${isPortuguese ? "Pagamento Aprovado" : "Payment Approved"}</strong><br>
-                                <span style="font-size: 12px; color: #6b7280;">ID: ${displayPaymentId}</span>
+                                <span style="font-size: 12px; color: #6b7280;">ID: ${paymentId}</span>
                               </div>
                             </div>
                           </div>
@@ -561,8 +561,7 @@ export function MercadoPaySDKModal({
 
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
-                  const successPaymentId = result.response?.id || result.id || paymentToken;
-                  onSuccess(hedgeData, successPaymentId);
+                  onSuccess(hedgeData, paymentId);
 
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
                   // This was causing race condition with Dashboard's onSuccess callback
