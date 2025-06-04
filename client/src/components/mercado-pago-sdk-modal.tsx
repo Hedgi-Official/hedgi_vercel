@@ -125,10 +125,16 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing, preventBrickRef: preventBrickRef.current });
 
-    if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing || preventBrickRef.current) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing, "preventBrickRef:", preventBrickRef.current);
+    // CRITICAL: Check preventBrickRef FIRST to prevent any brick creation after payment success
+    if (preventBrickRef.current) {
+      console.log("🛑 [MercadoPaySDKModal] preventBrickRef is true - blocking all brick creation");
+      return;
+    }
+
+    if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing) {
+      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing);
       return;
     }
 
@@ -255,6 +261,12 @@ export function MercadoPaySDKModal({
   const createOrder = async (retryCount = 0) => {
     console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
 
+    // CRITICAL: Check preventBrickRef FIRST
+    if (preventBrickRef.current) {
+      console.log("🛑 [createOrder] preventBrickRef is true - blocking order creation");
+      return;
+    }
+
     // If we've already created a brick or payment is done, skip entirely
     if (brickCreated || paymentCompleted || isProcessing) {
       console.log("⚠️ [createOrder] Skipping because brickCreated:", brickCreated, "paymentCompleted:", paymentCompleted, "isProcessing:", isProcessing);
@@ -380,11 +392,24 @@ export function MercadoPaySDKModal({
       paymentCompleted,
       brickCreated,
       windowPaymentController: !!window.paymentBrickController,
+      preventBrickRef: preventBrickRef.current,
     });
+
+    // CRITICAL: Check preventBrickRef IMMEDIATELY before acquiring lock
+    if (preventBrickRef.current) {
+      console.log("🛑 [renderPaymentBrick] preventBrickRef is true - aborting brick creation");
+      return;
+    }
 
     const release = await paymentBrickMutex.acquire();
     try {
       console.log("🔐 [renderPaymentBrick] acquired lock, proceeding…");
+
+      // Check again after acquiring lock (double safety)
+      if (preventBrickRef.current) {
+        console.log("🛑 [renderPaymentBrick] preventBrickRef is true after lock - aborting");
+        return;
+      }
 
       // Check if we should still run (payment might already be done)
       if (paymentCompleted) {
