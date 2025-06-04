@@ -630,14 +630,18 @@ export function MercadoPaySDKModal({
 
                   // Show Status Screen Brick for failed payment
                   const container = document.getElementById("paymentBrick_container");
-                  if (container && paymentId) {
-                    container.innerHTML = '';
+                  if (container) {
+                    // Create a new container specifically for the status screen
+                    container.innerHTML = '<div id="statusScreenBrick_container"></div>';
                     
                     try {
-                      // Create Status Screen Brick for failed payment
+                      // Use a mock payment ID if we don't have a real one
+                      const statusPaymentId = paymentId || '1234567890';
+                      
+                      // Create Status Screen Brick for failed payment using the exact structure from your HTML
                       const statusSettings = {
                         initialization: {
-                          paymentId: paymentId.toString(),
+                          paymentId: statusPaymentId.toString(),
                         },
                         customization: {
                           visual: {
@@ -659,7 +663,7 @@ export function MercadoPaySDKModal({
                           },
                           onError: (error: any) => {
                             console.error("❌ Status Screen Brick error:", error);
-                            // Fallback to custom error message
+                            // Only show fallback if Status Screen completely fails
                             container.innerHTML = `
                               <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
                                 ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
@@ -672,26 +676,15 @@ export function MercadoPaySDKModal({
                         },
                       };
 
-                      window.statusScreenBrickController = bricksBuilder.create(
+                      // Create the Status Screen Brick in the dedicated container
+                      window.statusScreenBrickController = await bricksBuilder.create(
                         'statusScreen', 
-                        'paymentBrick_container', 
+                        'statusScreenBrick_container', 
                         statusSettings
                       );
                     } catch (statusError) {
                       console.error("❌ Failed to create Status Screen Brick for failed payment:", statusError);
-                      // Fallback to custom error message
-                      container.innerHTML = `
-                        <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
-                          ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
-                          <div style="font-size: 14px; margin-top: 10px; font-weight: normal;">
-                            ${isPortuguese ? "Motivo:" : "Reason:"} ${reason}
-                          </div>
-                        </div>
-                      `;
-                    }
-                  } else {
-                    // Fallback if no container or payment ID
-                    if (container) {
+                      // Only show fallback if Status Screen creation completely fails
                       container.innerHTML = `
                         <div style="text-align: center; padding: 40px 20px; color: #ef4444; font-size: 18px; font-weight: 600;">
                           ❌ ${isPortuguese ? "Pagamento rejeitado" : "Payment rejected"}
