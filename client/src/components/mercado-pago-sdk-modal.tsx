@@ -70,7 +70,7 @@ export function MercadoPaySDKModal({
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [brickCreated, setBrickCreated] = useState(false);
-  
+
   // Add a ref to prevent React Strict Mode from creating duplicate bricks
   const hasInitializedBrick = useRef(false);
 
@@ -116,7 +116,7 @@ export function MercadoPaySDKModal({
     if (container) {
       container.innerHTML = '';
     }
-    
+
     // Destroy any existing payment brick controller
     if (window.paymentBrickController) {
       try {
@@ -179,7 +179,7 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     if (!isOpen) {
       console.log("🔄 [MercadoPaySDKModal] Modal closed, resetting all states");
-      setLoading(false);
+      setLoading(true);
       setError(null);
       setOrderId(null);
       setPublicKey(null);
@@ -187,14 +187,13 @@ export function MercadoPaySDKModal({
       setPaymentCompleted(false);
       setIsProcessing(false);
       setBrickCreated(false);
-      hasInitializedBrick.current = false; // Reset ref to allow re-initialization
-      
+
       // Clean up any remaining payment brick
       const container = document.getElementById("paymentBrick_container");
       if (container) {
         container.innerHTML = '';
       }
-      
+
       if (window.paymentBrickController) {
         try {
           window.paymentBrickController.unmount();
@@ -296,7 +295,7 @@ export function MercadoPaySDKModal({
       });
       const bricksBuilder = mercadoPago.bricks();
       renderPaymentBrick(bricksBuilder, paymentAmount, data.orderId);
-      
+
       // Mark brick as created to prevent duplicates
       setBrickCreated(true);
       setIsProcessing(false);
@@ -431,7 +430,7 @@ export function MercadoPaySDKModal({
                     const currency = hedgeData.baseCurrency || 'BRL';
                     const targetCurrency = hedgeData.targetCurrency || 'USD';
                     const duration = hedgeData.duration || 7;
-                    
+
                     container.innerHTML = `
                       <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
                         ✅ ${isPortuguese ? "Hedge realizado com sucesso!" : "Hedge successfully placed!"}
@@ -463,7 +462,7 @@ export function MercadoPaySDKModal({
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   onSuccess(hedgeData, paymentId);
-                  
+
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
                   // This was causing race condition with Dashboard's onSuccess callback
 
@@ -522,7 +521,7 @@ export function MercadoPaySDKModal({
         settings
       );
       console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
-      
+
       // Mark brick as created and reset processing state
       setBrickCreated(true);
       setIsProcessing(false);
@@ -542,7 +541,7 @@ export function MercadoPaySDKModal({
       console.log("⚠️ [MercadoPaySDKModal] Test payment blocked - no hedgeData or payment already completed");
       return;
     }
-    
+
     console.log("🧪 [MercadoPaySDKModal] Processing test payment");
     setPaymentCompleted(true);
     const testToken = paymentTrackingToken || `test_payment_${Date.now()}`;
@@ -556,7 +555,7 @@ export function MercadoPaySDKModal({
   // Reset payment state when modal closes
   const handleClose = () => {
     console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
-    
+
     // Always allow closing and reset states properly
     setPaymentCompleted(false);
     setLoading(true);

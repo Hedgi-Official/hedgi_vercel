@@ -763,35 +763,34 @@ export default function Dashboard() {
           isOpen={showPaymentModal}
           onClose={() => {
             console.log("🔒 [Dashboard] Payment modal closing - releasing all locks");
-            // Force reset all payment states including global lock
+            // Single atomic state reset to prevent race conditions
             setPaymentInProgress(false);
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
           }}
           onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success - will close modal after showing success message");
+            console.log("✅ [Dashboard] Payment success received");
             
-            // Prevent duplicate calls with enhanced checking
-            if (!showPaymentModal || !pendingHedgeData || !paymentInProgress) {
+            // Prevent duplicate calls - check current state atomically
+            if (!showPaymentModal || !pendingHedgeData) {
               console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
               return;
             }
             
-            // Show success message for 2 seconds, then close modal
-            setTimeout(() => {
-              console.log("🔄 [Dashboard] Closing modal after success delay");
-              setPaymentInProgress(false);  // Release global lock first
-              setShowPaymentModal(false);
-              setPendingHedgeData(null);
-              setIsProcessingPayment(false);
-              
-              // Refresh trade queries to show the new trade
-              queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-              
-              console.log("🔄 [Dashboard] All locks released, trade lists refreshed");
-            }, 2000);
+            // Immediately set a processing flag to prevent additional modals
+            setIsProcessingPayment(true);
+            
+            // Close modal immediately after success - no delay needed
+            console.log("🔄 [Dashboard] Closing modal immediately after success");
+            setPaymentInProgress(false);
+            setShowPaymentModal(false);
+            setPendingHedgeData(null);
+            setIsProcessingPayment(false);
+            
+            // Refresh trade queries to show the new trade
+            queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
           }}
           hedgeData={pendingHedgeData}
           currency={pendingHedgeData?.baseCurrency || 'BRL'}
