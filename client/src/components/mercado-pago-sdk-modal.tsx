@@ -129,6 +129,12 @@ export function MercadoPaySDKModal({
       return;
     }
 
+    // Additional safety check: if payment is already completed, never run
+    if (paymentCompleted) {
+      console.log("❌ [MercadoPaySDKModal] Payment already completed, preventing useEffect execution");
+      return;
+    }
+
     // Only initialize once per open (prevent React Strict Mode double-mount)
     if (hasInitializedBrick.current) {
       console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
@@ -203,7 +209,7 @@ export function MercadoPaySDKModal({
         }
       }
     };
-  }, [isOpen, hedgeData]);
+  }, [isOpen, hedgeData, isProcessing]);
 
   // Reset all states when modal closes
   useEffect(() => {
@@ -242,6 +248,8 @@ export function MercadoPaySDKModal({
         window.statusScreenBrickController = null;
       }
       hasInitializedBrick.current = false;
+      
+      console.log("🔄 [MercadoPaySDKModal] All states reset, modal fully closed");
     }
   }, [isOpen]);
 
@@ -492,6 +500,9 @@ export function MercadoPaySDKModal({
                   // CRITICAL: Clear error state on successful payment
                   setError(null);
                   setLoading(false);
+
+                  // Prevent any further useEffect execution by updating all relevant states
+                  hasInitializedBrick.current = true;
 
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
