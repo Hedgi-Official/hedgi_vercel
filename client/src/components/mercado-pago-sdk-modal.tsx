@@ -121,15 +121,16 @@ export function MercadoPaySDKModal({
   // 1) When modal opens with hedgeData, load the MP SDK and then create an Order
   //
   useEffect(() => {
-    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted });
+    console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated });
 
-    if (!isOpen || !hedgeData) {
+    // Early guards - check paymentCompleted first
+    if (!isOpen || !hedgeData || paymentCompleted) {
       console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
       return;
     }
 
     // Only initialize once per open (prevent React Strict Mode double-mount)
-    if (hasInitializedBrick.current) {
+    if (hasInitializedBrick.current || brickCreated) {
       console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
       return;
     }
@@ -231,7 +232,7 @@ export function MercadoPaySDKModal({
         }
         window.paymentBrickController = null;
       }
-       hasInitializedBrick.current = false
+      hasInitializedBrick.current = false;
     }
   }, [isOpen]);
 
@@ -239,7 +240,7 @@ export function MercadoPaySDKModal({
   // 2) createOrder: POST to our backend /api/payment/order (v1 Orders)
   //
   const createOrder = async (retryCount = 0) => {
-    console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData);
+    console.log("🚀 [createOrder] Function called with hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated);
 
     // If we've already created a brick or payment is done, skip entirely
     if (brickCreated || paymentCompleted) {
@@ -373,16 +374,16 @@ export function MercadoPaySDKModal({
       console.log("🔐 [renderPaymentBrick] acquired lock, proceeding…");
 
       // Check if we should still run (payment might already be done)
-      if (paymentCompleted) {
+      if (paymentCompleted || brickCreated) {
         console.log(
-          "⚠️ [renderPaymentBrick] paymentCompleted=true; skipping render"
+          "⚠️ [renderPaymentBrick] paymentCompleted or brickCreated is true; skipping render"
         );
         return;
       }
 
-    // ② If we already have a controller or flagged brickCreated, skip
-    if (window.paymentBrickController || brickCreated) {
-      console.log("⚠️ [renderPaymentBrick] Brick already exists; skipping");
+    // ② If we already have a controller, skip
+    if (window.paymentBrickController) {
+      console.log("⚠️ [renderPaymentBrick] Brick controller already exists; skipping");
       return;
     }
 
@@ -527,6 +528,9 @@ export function MercadoPaySDKModal({
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
                   onSuccess(hedgeData, paymentId);
+
+                  // Immediately return to prevent any further processing
+                  return;
 
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
                   // This was causing race condition with Dashboard's onSuccess callback
