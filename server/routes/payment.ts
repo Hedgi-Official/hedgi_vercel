@@ -80,11 +80,8 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
     const payload = req.body;
     console.log('[Express] Received /api/payment/order payload:', payload);
 
-    // Check if this is a payment submission (has payment_details with real token)
-    const hasPaymentDetails = payload.payment_details?.transactions?.payments?.[0]?.payment_method?.token;
-    const hasRealToken = hasPaymentDetails && 
-                        payload.payment_details.transactions.payments[0].payment_method.token.length >= 32 &&
-                        payload.payment_details.transactions.payments[0].payment_method.token !== "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const payment = payload?.payment_details?.transactions?.payments?.[0];
+    const hasRealToken = !!payment?.payment_method?.token;
 
     if (hasRealToken) {
       // This is a real payment submission from the Brick - forward to Flask
@@ -119,7 +116,7 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
                 id: paymentData.payment_method.id,
                 type: paymentData.payment_method.type,
                 token: paymentData.payment_method.token,
-                installments: paymentData.payment_method.installments || 1
+                installments: 1
               }
             }
           ]
@@ -177,7 +174,7 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
       console.log('[Express] Valid order creation request, returning mock response');
       return res.json({
         orderId: `ORDER_${Date.now()}`,
-        publicKey: process.env.MP_BR_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
+        publicKey: process.env.MERCADO_PAGO_PUBLIC_KEY || "TEST-MOCK-PUBLIC-KEY"
       });
     }
   } catch (error) {

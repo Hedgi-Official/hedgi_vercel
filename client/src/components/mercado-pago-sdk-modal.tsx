@@ -43,7 +43,6 @@ interface BrickFormData {
   transaction_amount: number;
   payment_method_id: string;
   token: string; // real card token (≥32 chars)
-  installments: number;
   payer: {
     email: string;
     identification: { type: string; number: string };
@@ -236,6 +235,7 @@ export function MercadoPaySDKModal({
         onSubmit: (formData: BrickFormData, additionalData: BrickAdditionalData) => {
           // Called when user clicks "Pay" in the brick.
           // formData.token is the REAL card token (≥32 chars)
+          console.log("💳 Brick onSubmit called with formData:", formData);
           return new Promise<void>((resolve, reject) => {
             const submitData = {
               type: "online",
@@ -272,7 +272,7 @@ export function MercadoPaySDKModal({
                         id: formData.payment_method_id,
                         type: additionalData.paymentTypeId,
                         token: formData.token, // 👈 real token from Brick
-                        installments: formData.installments,
+                        installments: 1,
                       },
                     },
                   ],
