@@ -137,7 +137,8 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
               magic: 123456,
               comment: 'Hedgi automated trade',
               paymentToken: result.response?.id || result.id,
-              margin: hedgeData.margin || 500
+              margin: hedgeData.margin || 500,
+              userId: req.user?.id || 7 // Include user ID to link trade to user
             };
 
             console.log('[Express → Flask] Creating trade with payload:', tradePayload);
@@ -152,6 +153,33 @@ router.post('/api/payment/order', async (req: Request, res: Response) => {
             if (tradeResponse.ok) {
               const tradeResult = await tradeResponse.json();
               console.log('[Express → Flask] Trade created successfully:', tradeResult);
+              
+              // Also store the trade in our local database for user interface
+              try {
+                const { db } = await import('@db');
+                const { trades } = await import('@db/schema');
+                
+                const localTrade = await db.insert(trades).values({
+                  userId: req.user?.id || 7,
+                  ticket: `FLASK-${tradeResult.id}`,
+                  broker: 'flask',
+                  symbol: tradeResult.symbol,
+                  volume: tradeResult.volume,
+                  openTime: new Date(),
+                  durationDays: hedgeData.duration || 7,
+                  status: 'open',
+                  flaskTradeId: tradeResult.id,
+                  metadata: {
+                    paymentToken: result.response?.id?.toString() || result.id?.toString(),
+                    direction: tradeResult.direction,
+                    paymentAmount: result.response?.transaction_amount || result.transaction_amount
+                  }
+                }).returning();
+                
+                console.log('[Express] Local trade record created:', localTrade[0]);
+              } catch (dbError) {
+                console.error('[Express] Failed to create local trade record:', dbError);
+              }
               
               // Return combined payment and trade result
               return res.json({

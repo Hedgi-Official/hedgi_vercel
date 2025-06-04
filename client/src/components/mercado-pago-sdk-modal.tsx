@@ -96,7 +96,6 @@ export function MercadoPaySDKModal({
 
     if (!isOpen || !hedgeData || paymentCompleted) {
       console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted);
-      hasInitializedBrick.current = false;
       return;
     }
 
@@ -303,8 +302,8 @@ export function MercadoPaySDKModal({
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
 
     // Prevent duplicate brick creation - check if one already exists
-    if (window.paymentBrickController) {
-      console.log("⚠️ [renderPaymentBrick] Payment brick controller already exists, skipping duplicate creation");
+    if (window.paymentBrickController || brickCreated) {
+      console.log("⚠️ [renderPaymentBrick] Payment brick already created, skipping duplicate");
       return;
     }
 
@@ -485,6 +484,10 @@ export function MercadoPaySDKModal({
         settings
       );
       console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
+      
+      // Mark brick as created and reset processing state
+      setBrickCreated(true);
+      setIsProcessing(false);
 
     } catch (brickError) {
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);

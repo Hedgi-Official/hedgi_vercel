@@ -1,0 +1,162 @@
+Two things are happening:
+
+1. We only ever guard “early” in `useEffect`, but we never stop `renderPaymentBrick` (or `createOrder`) from running a second time once the user submits payment.
+2. We set `hasInitializedBrick.current = false` when `paymentCompleted` flips, but by then the first brick has already unmounted and the modal is still open long enough for “something” to re‐run `createOrder`/`renderPaymentBrick` again.
+
+In practice this boils down to:
+
+* **We mark the brick as “initialized”** (with `hasInitializedBrick.current = true`) so that the strict‐mode double‐mount on first open doesn’t recreate it twice.
+* But **after the user hits “Pay”**, we do:
+
+  1. `setPaymentCompleted(true)`
+  2. `window.paymentBrickController.unmount()`
+  3. `onSuccess(...)` immediately
+  4. Then `onClose()` after a short timeout
+
+  Right at step 1, `paymentCompleted` becomes `true`, which causes our first `useEffect` to run again (because it listens on `[isOpen, hedgeData, paymentCompleted]`). In that second run of the same effect, we see `paymentCompleted === true` and do:
+
+  ```ts
+  if (!isOpen || !hedgeData || paymentCompleted) {
+    hasInitializedBrick.current = false;
+    return;
+  }
+  ```
+
+  That resets our “hasInitializedBrick” flag to `false`, but does **not** actually clear or unmount anything (the unmount already happened in the onSubmit). So the modal is still open, `hasInitializedBrick` is now `false`, and once React finishes processing that effect, the code below runs again (because we never check `brickCreated` or `isProcessing` before calling `createOrder` again). In short, the modal is still technically “open,” `paymentCompleted` is `true` so the early‐return in that effect bails out, but we never prevent `renderPaymentBrick` from getting called a second time somewhere else.
+
+---
+
+### How to fix it
+
+You want only one brick instance per full “open → pay” cycle. Here’s one way to guarantee that:
+
+1. **Don’t reset `hasInitializedBrick` until the modal is fully closed.**
+   Right now, you do `hasInitializedBrick.current = false` as soon as `paymentCompleted` flips. Instead, only clear that flag when `isOpen` becomes `false`. That way, as long as the modal is open (“isOpen === true”), the flag stays true, and `useEffect` will never try to initialize again.
+
+2. **Use a single “created” guard at the top of `renderPaymentBrick`.**
+   Even if `hasInitializedBrick` is false, you should also check something like `brickCreated` or `window.paymentBrickController` itself. If it already exists, bail out. That will stop any stray calls from spawning a second popup.
+
+Below is the minimal change that accomplishes both:
+
+```diff
+// 1) Don’t reset `hasInitializedBrick` on paymentCompleted—only when modal closes.
+//    Remove this line from useEffect([isOpen, hedgeData, paymentCompleted]):
+-   if (!isOpen || !hedgeData || paymentCompleted) {
+-     hasInitializedBrick.current = false;
+-     return;
+-   }
+
+//    Instead, keep that early‐exit but only clear the ref when the modal actually
+//    closes (i.e. in your useEffect that watches isOpen):
+
+  useEffect(() => {
+    if (!isOpen) {
+      // ∎ Only clear everything—including `hasInitializedBrick`—once the modal fully closes:
+      setLoading(false);
+      setError(null);
+      setOrderId(null);
+      setPublicKey(null);
+      setPaymentTrackingToken(null);
+      setPaymentCompleted(false);
+      setIsProcessing(false);
+      setBrickCreated(false);
+
++     hasInitializedBrick.current = false;
+
+      // Clean up any remaining brick:
+      const container = document.getElementById("paymentBrick_container");
+      if (container) {
+        container.innerHTML = "";
+      }
+      if (window.paymentBrickController) {
+        try {
+          window.paymentBrickController.unmount();
+        } catch (e) {
+          console.log("Modal close cleanup:", e);
+        }
+        window.paymentBrickController = null;
+      }
+    }
+  }, [isOpen]);
+
+  // ...
+
+
+  // 2) In `renderPaymentBrick`, add a “has‐already‐created” check right at the top:
+  const renderPaymentBrick = async (
+    bricksBuilder: any,
+    amount: number,
+    orderIdFromServer: string
+  ) => {
+    console.log(
+      "🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:",
+      amount,
+      "orderId:",
+      orderIdFromServer
+    );
+
++   // If a controller already exists, bail immediately:
++   if (window.paymentBrickController || brickCreated) {
++     console.log("⚠️ [renderPaymentBrick] Already created; skipping duplicate");
++     return;
++   }
+
+    try {
+      const settings = {
+        initialization: {
+          amount: amount,
+          preferenceId: orderIdFromServer,
+        },
+        callbacks: {
+          // … your existing onReady/onError/onSubmit …
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: "all",
+            maxInstallments: 1,
+          },
+        },
+      };
+
+      const container = document.getElementById("paymentBrick_container");
+      if (!container) {
+        throw new Error("Container 'paymentBrick_container' not found in DOM");
+      }
+
+      console.log(
+        "🔨 [renderPaymentBrick] Container found, creating Payment Brick..."
+      );
+      window.paymentBrickController = await bricksBuilder.create(
+        "payment",
+        "paymentBrick_container",
+        settings
+      );
+      console.log(
+        "✅ [renderPaymentBrick] Payment Brick created successfully:",
+        window.paymentBrickController
+      );
+
++     setBrickCreated(true);
++     setIsProcessing(false);
+
+    } catch (brickError) {
+      console.error(
+        "❌ [renderPaymentBrick] Failed to create Payment Brick:",
+        brickError
+      );
+      setError(
+        isPortuguese
+          ? "Falha ao criar interface de pagamento."
+          : "Failed to create payment interface."
+      );
+      setLoading(false);
+    }
+  };
+```
+
+#### Why this solves it
+
+* By clearing `hasInitializedBrick.current` **only** in the `isOpen === false` block, you prevent React’s Strict-Mode double‐mount (which happens only when `isOpen` switches true → first render → second render) from ever reaching the “clear” branch. In other words, as soon as the modal goes from closed → open, you set `hasInitializedBrick.current = true` once, and it stays true until the modal actually closes.
+* By checking `if (window.paymentBrickController || brickCreated) return` at the very top of `renderPaymentBrick`, you guarantee that even if `renderPaymentBrick` were accidentally called a second time while the modal was still open, it will immediately do nothing.
+
+With those two guards in place, you can open the modal once, the Brick will render exactly once, and after you press “Pay” it will unmount and call `onClose()`. No stray calls will resurrect a second brick while the modal is still on screen.
