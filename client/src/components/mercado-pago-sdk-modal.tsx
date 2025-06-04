@@ -97,6 +97,17 @@ export function MercadoPaySDKModal({
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
     setIsInitialized(true);
 
+    // Clean up any existing payment brick before starting
+    if (window.paymentBrickController) {
+      console.log("🧹 [useEffect] Cleaning up existing payment brick controller");
+      try {
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("⚠️ [useEffect] Error unmounting existing brick:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
     // Reset states for fresh start
     setLoading(true);
     setError(null);
@@ -228,11 +239,21 @@ export function MercadoPaySDKModal({
   ) => {
     console.log("🔨 [renderPaymentBrick] Starting to render Payment Brick with amount:", amount, "orderId:", orderIdFromServer);
 
-    // Check if a payment brick already exists
+    // Clean up any existing payment brick first
     if (window.paymentBrickController) {
-      console.log("⚠️ [renderPaymentBrick] Payment brick already exists, skipping creation");
-      setLoading(false);
-      return;
+      console.log("🧹 [renderPaymentBrick] Cleaning up existing payment brick");
+      try {
+        await window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("⚠️ [renderPaymentBrick] Error unmounting existing brick:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
+    // Clear container before creating new brick
+    const container = document.getElementById("paymentBrick_container");
+    if (container) {
+      container.innerHTML = '';
     }
 
     try {
@@ -390,16 +411,26 @@ export function MercadoPaySDKModal({
         throw new Error("Container 'paymentBrick_container' not found in DOM");
       }
 
-      // Clear any existing content in the container
+      // Ensure container is ready and empty
       container.innerHTML = '';
+      
+      // Add a small delay to ensure DOM is stable
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       console.log("🔨 [renderPaymentBrick] Container found, creating Payment Brick...");
-      window.paymentBrickController = await bricksBuilder.create(
-        "payment", // Use "payment" for Payment Brick
-        "paymentBrick_container",
-        settings
-      );
-      console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
+      try {
+        window.paymentBrickController = await bricksBuilder.create(
+          "payment", // Use "payment" for Payment Brick
+          "paymentBrick_container",
+          settings
+        );
+        console.log("✅ [renderPaymentBrick] Payment Brick created successfully:", window.paymentBrickController);
+      } catch (createError) {
+        console.error("❌ [renderPaymentBrick] Error creating payment brick:", createError);
+        // Clear the controller reference if creation failed
+        window.paymentBrickController = null;
+        throw createError;
+      }
 
     } catch (brickError) {
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
@@ -431,6 +462,26 @@ export function MercadoPaySDKModal({
   const handleClose = () => {
     console.log("🔒 [MercadoPaySDKModal] Modal closing, resetting states");
     
+    // Clean up payment brick controller first, before DOM manipulation
+    if (window.paymentBrickController) {
+      try {
+        console.log("🧹 [handleClose] Unmounting payment brick controller");
+        window.paymentBrickController.unmount();
+      } catch (e) {
+        console.log("⚠️ [handleClose] Payment brick controller unmount failed:", e);
+      }
+      window.paymentBrickController = null;
+    }
+
+    // Small delay to ensure unmount completes before DOM cleanup
+    setTimeout(() => {
+      // Clear any existing payment brick container
+      const container = document.getElementById("paymentBrick_container");
+      if (container) {
+        container.innerHTML = '';
+      }
+    }, 100);
+
     // Always allow closing and reset states properly
     setPaymentCompleted(false);
     setIsInitialized(false);
@@ -438,22 +489,6 @@ export function MercadoPaySDKModal({
     setError(null);
     setOrderId(null);
     setPublicKey(null);
-
-    // Clear any existing payment brick and its controller
-    const container = document.getElementById("paymentBrick_container");
-    if (container) {
-      container.innerHTML = '';
-    }
-
-    // Destroy any existing payment brick controller
-    if (window.paymentBrickController) {
-      try {
-        window.paymentBrickController.unmount();
-      } catch (e) {
-        console.log("Payment brick controller unmount failed:", e);
-      }
-      window.paymentBrickController = null;
-    }
 
     onClose();
   };
