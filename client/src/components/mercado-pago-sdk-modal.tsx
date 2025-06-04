@@ -411,23 +411,6 @@ export function MercadoPaySDKModal({
               return;
             }
 
-            if (window.paymentBrickController) {
-              try {
-                window.paymentBrickController.unmount();
-              } catch (e) {
-                console.warn(
-                  "⚠️ [renderPaymentBrick] failed to unmount Brick:",
-                  e
-                );
-              }
-              window.paymentBrickController = null;
-            }
-            // Clear flags so we can re-create on failure
-            setBrickCreated(false);
-            setPaymentCompleted(false);
-
-            
-
             // Extract the payment token from formData
             const paymentToken = formData.token || selectedPaymentMethod.token;
             console.log("🔑 [renderPaymentBrick] Extracted payment token:", paymentToken);
