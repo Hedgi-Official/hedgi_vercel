@@ -129,12 +129,6 @@ export function MercadoPaySDKModal({
       return;
     }
 
-    // Additional safety check: if payment is already completed, never run
-    if (paymentCompleted) {
-      console.log("❌ [MercadoPaySDKModal] Payment already completed, preventing useEffect execution");
-      return;
-    }
-
     // Only initialize once per open (prevent React Strict Mode double-mount)
     if (hasInitializedBrick.current) {
       console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
@@ -209,7 +203,7 @@ export function MercadoPaySDKModal({
         }
       }
     };
-  }, [isOpen, hedgeData, isProcessing]);
+  }, [isOpen, hedgeData]);
 
   // Reset all states when modal closes
   useEffect(() => {
@@ -248,8 +242,6 @@ export function MercadoPaySDKModal({
         window.statusScreenBrickController = null;
       }
       hasInitializedBrick.current = false;
-      
-      console.log("🔄 [MercadoPaySDKModal] All states reset, modal fully closed");
     }
   }, [isOpen]);
 
@@ -429,9 +421,22 @@ export function MercadoPaySDKModal({
               return;
             }
 
-            // Don't clear flags here - only clear them on actual failure
+            if (window.paymentBrickController) {
+              try {
+                window.paymentBrickController.unmount();
+              } catch (e) {
+                console.warn(
+                  "⚠️ [renderPaymentBrick] failed to unmount Brick:",
+                  e
+                );
+              }
+              window.paymentBrickController = null;
+            }
+            // Clear flags so we can re-create on failure
+            setBrickCreated(false);
+            setPaymentCompleted(false);
 
-
+            
 
             // Extract the payment token from formData
             const paymentToken = formData.token || selectedPaymentMethod.token;
@@ -482,28 +487,24 @@ export function MercadoPaySDKModal({
                 const result = await response.json();
                 console.log("✅ [renderPaymentBrick] Payment response:", result);
 
-
+                
 
                 // Check if the payment status is specifically "approved"
                 // The status is nested in result.response.status, not at the top level
-
+              
                 const paymentStatus = result.response?.status || result.status;
                 const isApproved = paymentStatus === "approved";
-
+              
 
                 if (response.ok && isApproved) {
                   // Immediately set payment completed to prevent any re-renders
                   setPaymentCompleted(true);
                   setBrickCreated(true);
-                  setIsProcessing(true); // Prevent any further processing
-
+                  
                   // CRITICAL: Clear error state on successful payment
                   setError(null);
                   setLoading(false);
-
-                  // Prevent any further useEffect execution by updating all relevant states
-                  hasInitializedBrick.current = true;
-
+                  
                   console.log("✅ [renderPaymentBrick] Payment approved successfully!");
 
                   // CRITICAL: Destroy Payment Brick completely before creating Status Screen
@@ -524,9 +525,9 @@ export function MercadoPaySDKModal({
                     // Force a small delay to ensure Payment Brick is completely removed
                     setTimeout(() => {
                       // Extract payment ID from the response
-                      const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
-
-                      if (paymentId) {
+                      const displayPaymentId = result.response?.id || result.id || paymentToken;
+                      
+                      if (displayPaymentId) {
                         // Show simple success message instead of Status Screen Brick
                         // This avoids Mercado Pago's quirky Status Screen behavior
                         const hedgeAmount = Math.abs(Number(hedgeData.amount || 0));
@@ -549,23 +550,22 @@ export function MercadoPaySDKModal({
                               </div>
                               <div style="margin-top: 20px; padding: 15px; background-color: #f0f9ff; border-radius: 8px; border-left: 4px solid #10b981;">
                                 <strong style="color: #059669;">${isPortuguese ? "Pagamento Aprovado" : "Payment Approved"}</strong><br>
-                                <span style="font-size: 12px; color: #6b7280;">ID: ${paymentId}</span>
+                                <span style="font-size: 12px; color: #6b7280;">ID: ${displayPaymentId}</span>
                               </div>
                             </div>
                           </div>
                         `;
                       }
-                    }, 100); // Small delay to ensure Payment Brick is completely removed
+                    }, 100); // Small delay to ensure Payment Brick is fully removed
                   }
-
-                  // Extract payment ID from the response first
-                  const paymentId = result.paymentId || result.id || result.response?.id || paymentToken;
 
                   // Call onSuccess immediately - Dashboard will handle modal closing
                   console.log("🚀 [renderPaymentBrick] Payment approved, calling onSuccess");
-                  onSuccess(hedgeData, paymentId);
+                  const successPaymentId = result.response?.id || result.id || paymentToken;
+                  onSuccess(hedgeData, successPaymentId);
 
                   // ❌ REMOVED: setTimeout onClose() - Dashboard handles modal timing
+                  // This was causing race condition with Dashboard's onSuccess callback
 
                 } else {
                   // Payment failed or not approved
@@ -573,19 +573,9 @@ export function MercadoPaySDKModal({
                   const statusDetail = result.status_detail || result.response?.status_detail;
                   const reason = statusDetail || paymentStatus || "Payment not approved";
 
-                  // Clear payment brick for failure case
-                  if (window.paymentBrickController) {
-                    try {
-                      window.paymentBrickController.unmount();
-                    } catch (e) {
-                      console.warn("⚠️ failed to unmount Brick:", e);
-                    }
-                    window.paymentBrickController = null;
-                  }
-
                   // Mark payment as completed to prevent further interactions
                   setPaymentCompleted(true);
-
+                  
                   // Clear any existing error state and loading state
                   setError(null);
                   setLoading(false);
@@ -598,11 +588,11 @@ export function MercadoPaySDKModal({
                   if (container) {
                     // Create a new container specifically for the status screen
                     container.innerHTML = '<div id="statusScreenBrick_container"></div>';
-
+                    
                     try {
                       // Use a mock payment ID if we don't have a real one
                       const statusPaymentId = paymentId || '1234567890';
-
+                      
                       // Create Status Screen Brick for failed payment using the exact structure from your HTML
                       const statusSettings = {
                         initialization: {
@@ -666,22 +656,10 @@ export function MercadoPaySDKModal({
                 }
               } catch (err) {
                 console.error("🚨 Payment request failed:", err);
-                
-                // Clear payment brick on network error
-                if (window.paymentBrickController) {
-                  try {
-                    window.paymentBrickController.unmount();
-                  } catch (e) {
-                    console.warn("⚠️ failed to unmount Brick:", e);
-                  }
-                  window.paymentBrickController = null;
-                }
-                
                 setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
                 setLoading(false);
                 setPaymentCompleted(false); // Allow retry on network errors
                 setBrickCreated(false); // Allow re-creation of brick
-                setIsProcessing(false); // Allow retry
               }
           },
         },
