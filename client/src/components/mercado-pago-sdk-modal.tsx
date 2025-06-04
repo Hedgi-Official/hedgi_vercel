@@ -94,7 +94,7 @@ export function MercadoPaySDKModal({
     }
 
     console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
-    
+
     // Reset states for fresh start
     setLoading(true);
     setError(null);
@@ -289,64 +289,54 @@ export function MercadoPaySDKModal({
             console.log("📦 [renderPaymentBrick] Sending payment payload:", paymentPayload);
 
             try {
-              // Send the payment with real card token to our server
-              const response = await fetch("/api/payment/order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(paymentPayload),
-              });
+                const response = await fetch("/api/payment/order", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(paymentPayload),
+                });
 
-              const result = await response.json();
-              console.log("✅ [renderPaymentBrick] Payment successful:", result);
-              if (response.ok) {
-                // (mp_response.status was “approved” or “in_process”)
-                console.log("✅ Payment approved:", result);
-                // …show success UI / call onSuccess(…)…
-                // Show success message
-                setError(null);
-                setLoading(true);
+                const result = await response.json();
+                console.log("✅ [renderPaymentBrick] Payment response:", result);
 
-                // Hide the payment brick container and show success message
-                const container = document.getElementById("paymentBrick_container");
-                if (container) {
-                  container.innerHTML = `
-                    <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
-                      ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
-                    </div>
-                  `;
+                if (response.ok) {
+                  // Payment approved
+                  console.log("✅ Payment approved:", result);
+                  setError(null);
+                  setLoading(true);
+
+                  // Hide the payment brick container and show success message
+                  const container = document.getElementById("paymentBrick_container");
+                  if (container) {
+                    container.innerHTML = `
+                      <div style="text-align: center; padding: 40px 20px; color: #10b981; font-size: 18px; font-weight: 600;">
+                        ✅ ${isPortuguese ? "Pagamento bem-sucedido!" : "Payment successful!"}
+                      </div>
+                    `;
+                  }
+
+                  // Extract payment ID from the response
+                  const paymentId = result.paymentId || result.id || paymentToken;
+
+                  // Mark payment as completed to prevent further interactions
+                  setPaymentCompleted(true);
+
+                  // Short delay to show success message, then proceed with trade
+                  setTimeout(() => {
+                    console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
+                    onSuccess(hedgeData, paymentId);
+                    onClose();
+                  }, 1500);
+
+                } else {
+                  // Payment rejected
+                  console.error("❌ Payment rejected:", result);
+                  const reason = result.status_detail || "Unknown error";
+                  setError(`Payment was declined: ${reason}`);
                 }
-                
-              } else {
-                // (mp_response.status was “rejected”)
-                console.error("❌ Payment rejected:", result);
-                // e.g. result.status_detail might be "cc_rejected_bad_filled_card_number", etc.
-                const reason = result.status_detail || "Unknown error";
-                alert("Payment was declined: " + reason);
-                // …show failure UI or keep them on the form…
-              }
               } catch (err) {
-              console.error("🚨 Payment‐request failed:", err);
-              setError("Falha no processamento do pagamento.");
+                console.error("🚨 Payment request failed:", err);
+                setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
               }
-
-              
-              // Extract payment ID from the response
-              const paymentId = result.paymentId || result.id || paymentToken;
-
-              // Mark payment as completed to prevent further interactions
-              setPaymentCompleted(true);
-              
-              // Short delay to show success message, then proceed with trade
-              setTimeout(() => {
-                console.log("🚀 [renderPaymentBrick] Calling onSuccess to place trade");
-                onSuccess(hedgeData, paymentId);
-                onClose();
-              }, 1500);
-
-            } catch (paymentError) {
-              console.error("❌ [renderPaymentBrick] Payment processing error:", paymentError);
-              setError(isPortuguese ? "Falha no processamento do pagamento." : "Payment processing failed.");
-            }
           },
         },
         customization: {
@@ -403,13 +393,13 @@ export function MercadoPaySDKModal({
     setError(null);
     setOrderId(null);
     setPublicKey(null);
-    
+
     // Clear any existing payment brick
     const container = document.getElementById("paymentBrick_container");
     if (container) {
       container.innerHTML = '';
     }
-    
+
     onClose();
   };
 
