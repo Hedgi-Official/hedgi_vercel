@@ -687,7 +687,7 @@ export default function Dashboard() {
             <CardContent>
               <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={async (hedgePayload) => { 
+                onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
                   // Calculate payment amount based on hedge data
@@ -704,7 +704,7 @@ export default function Dashboard() {
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
                   
-                  // Return a resolved promise to prevent infinite loading
+                  // Return a resolved promise immediately to prevent infinite loading
                   return Promise.resolve({
                     ask: 0,
                     bid: 0,
