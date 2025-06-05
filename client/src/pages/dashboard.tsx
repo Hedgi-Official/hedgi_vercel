@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FlaskPaymentModal } from "@/components/flask-payment-modal";
+import { MercadoPagoBrickModal } from "@/components/mercado-pago-brick-modal";
 import { MercadoPagoBrickModal } from "@/components/mercado-pago-brick-modal"; 
 
 import { Badge } from "@/components/ui/badge";

@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';               // ← install uuid: npm install uuid
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { X, Loader2 } from "lucide-react";
 
 interface MercadoPagoBrickModalProps {
   isOpen: boolean;
@@ -19,171 +18,143 @@ export function MercadoPagoBrickModal({
   amount,
   hedgeData
 }: MercadoPagoBrickModalProps) {
-  // 1) Generate a unique txId once per‐modal
-  const txIdRef = useRef<string>(uuidv4());
-
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // brickRef now also holds our messageHandler so we can unbind it
-  const brickRef = useRef<{
-    iframe: HTMLIFrameElement;
-    messageHandler: (event: MessageEvent) => void;
-    unmount: () => void;
-  } | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInitialized = useRef(false);
+  const iframeCreated = useRef(false);
+  const txIdRef = useRef<string>('');
 
   useEffect(() => {
-    if (!isOpen || isInitialized.current) {
+    if (!isOpen) {
+      // Reset when modal closes
+      iframeCreated.current = false;
+      setIsLoading(true);
+      setError(null);
+      txIdRef.current = '';
       return;
     }
-    isInitialized.current = true;
-    setIsLoading(true);
-    setError(null);
 
-    if (!containerRef.current) return;
-
-    // 2) Append txId to the proxy URL
-    const flaskUrl = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}`;
-    console.log('[MercadoPago Modal] Loading Flask brick in iframe:', flaskUrl);
-
-    const iframe = document.createElement('iframe');
-    iframe.src = flaskUrl;
-    iframe.style.width = '100%';
-    iframe.style.height = '500px';
-    iframe.style.border = 'none';
-    iframe.style.borderRadius = '8px';
-    iframe.style.background = '#ffffff';
-
-    iframe.onload = () => {
-      console.log('[MercadoPago Modal] Iframe loaded successfully');
-      setIsLoading(false);
-    };
-    iframe.onerror = (err) => {
-      console.error('[MercadoPago Modal] Iframe load error:', err);
-      setError('Failed to load payment form. Please try again.');
-      setIsLoading(false);
-    };
-
-    // 3) Filter incoming messages by txId
-    const messageHandler = (event: MessageEvent) => {
-      console.log('[MercadoPago Modal] Received message:', event);
-
-      // Only trust local dev origins; in production check exact domain
-      if (!event.origin.includes('localhost') && !event.origin.includes('127.0.0.1')) {
-        console.log('[MercadoPago Modal] Ignoring message from origin:', event.origin);
-        return;
-      }
-
-      const payload = event.data;
-      if (!payload || typeof payload !== 'object') {
-        return;
-      }
-
-      // Ignore any messages not meant for this txId
-      if (payload.txId !== txIdRef.current) {
-        console.log('[MercadoPago Modal] Ignoring message for wrong txId:', payload.txId);
-        return;
-      }
-
-      // Now handle approved or error for the matching txId
-      if (payload.status === 'approved') {
-        console.log('[MercadoPago Modal] Payment approved for txId:', payload.txId, 'data:', payload.data);
-        // Pass the full JSON (including refund token/id) up to React
-        onPaymentSuccess(payload.data);
-        window.removeEventListener('message', messageHandler);
-        onClose();
-      } else if (payload.status === 'error') {
-        console.log('[MercadoPago Modal] Payment error for txId:', payload.txId, 'error:', payload.error);
-        setError(payload.error || 'Payment failed. Please try again.');
-        setIsProcessing(false);
-      }
-    };
-
-    window.addEventListener('message', messageHandler);
-
-    brickRef.current = {
-      iframe,
-      messageHandler,
-      unmount: () => {
-        window.removeEventListener('message', messageHandler);
-        if (iframe.parentNode) {
-          iframe.parentNode.removeChild(iframe);
-        }
-      }
-    };
-
-    containerRef.current.appendChild(iframe);
-
-    // Cleanup on modal close or unmount
-    return () => {
-      if (brickRef.current) {
-        brickRef.current.unmount();
-        brickRef.current = null;
-      }
-      isInitialized.current = false;
-    };
-  }, [isOpen, amount, onPaymentSuccess, onClose]);
-
-  const handleClose = () => {
-    if (brickRef.current) {
-      brickRef.current.unmount();
-      brickRef.current = null;
+    if (iframeCreated.current || !containerRef.current) {
+      return;
     }
-    setError(null);
-    setIsLoading(true);
-    setIsProcessing(false);
-    onClose();
-  };
+
+    console.log('[MercadoPago Brick Modal] Creating iframe for amount:', amount);
+    
+    // Generate unique transaction ID
+    txIdRef.current = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Mark as created to prevent duplicates
+    iframeCreated.current = true;
+    
+    try {
+      // Clear container
+      containerRef.current.innerHTML = '';
+      
+      // Create iframe with txId parameter
+      const iframe = document.createElement('iframe');
+      iframe.src = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}`;
+      iframe.style.width = '100%';
+      iframe.style.height = '600px';
+      iframe.style.border = 'none';
+      iframe.style.borderRadius = '8px';
+      
+      console.log('[MercadoPago Brick Modal] Iframe URL:', iframe.src);
+      console.log('[MercadoPago Brick Modal] Transaction ID:', txIdRef.current);
+      
+      // Set up message handler for payment completion
+      const messageHandler = (event: MessageEvent) => {
+        console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
+        
+        // Validate this message is for our transaction
+        if (event.data && event.data.txId === txIdRef.current) {
+          console.log('[MercadoPago Brick Modal] Message matches our txId:', txIdRef.current);
+          
+          if (event.data.status === 'approved') {
+            console.log('[MercadoPago Brick Modal] Payment approved:', event.data.data);
+            
+            // Extract payment result from Flask response
+            const paymentResult = {
+              id: event.data.data?.id || `payment_${Date.now()}`,
+              status: 'approved',
+              message: event.data.data?.message || 'Payment processed successfully',
+              txId: event.data.txId
+            };
+            
+            window.removeEventListener('message', messageHandler);
+            onPaymentSuccess(paymentResult);
+            
+          } else if (event.data.status === 'error') {
+            console.log('[MercadoPago Brick Modal] Payment error:', event.data.error);
+            setError(event.data.error || 'Payment failed. Please try again.');
+          }
+        } else if (event.data && event.data.txId) {
+          console.log('[MercadoPago Brick Modal] Ignoring message for different txId:', event.data.txId);
+        }
+      };
+      
+      // Listen for iframe load
+      iframe.onload = () => {
+        console.log('[MercadoPago Brick Modal] Iframe loaded successfully');
+        setIsLoading(false);
+      };
+      
+      iframe.onerror = () => {
+        console.error('[MercadoPago Brick Modal] Iframe failed to load');
+        setError('Failed to load payment form. Please try again.');
+        setIsLoading(false);
+      };
+      
+      // Add message listener
+      window.addEventListener('message', messageHandler);
+      
+      // Add iframe to container
+      containerRef.current.appendChild(iframe);
+      
+      // Cleanup function
+      return () => {
+        window.removeEventListener('message', messageHandler);
+      };
+      
+    } catch (error) {
+      console.error('[MercadoPago Brick Modal] Error creating iframe:', error);
+      setError('Failed to initialize payment form.');
+      setIsLoading(false);
+    }
+  }, [isOpen, amount, onPaymentSuccess]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md mx-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Complete Payment</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            <p>Amount: R$ {parseFloat(amount).toFixed(2)}</p>
-            <p>Hedge: {hedgeData?.baseCurrency}/{hedgeData?.targetCurrency}</p>
-          </div>
-
-          {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span>Loading payment form...</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
-              {error}
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              <span>Processing payment...</span>
-            </div>
-          )}
-
-          {/* Container for Flask‐served Brick iframe */}
-          <div
-            ref={containerRef}
-            className="w-full min-h-[500px] bg-white rounded-lg"
-            style={{ display: isLoading ? 'none' : 'block' }}
-          />
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
+          <DialogTitle className="flex items-center justify-between">
+            Payment - ${amount}
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
             </Button>
-          </div>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="relative">
+          {isLoading && (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading payment form...</span>
+            </div>
+          )}
+          
+          {error && (
+            <div className="text-center p-8">
+              <div className="text-red-600 mb-4">{error}</div>
+              <Button onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </div>
+          )}
+          
+          <div 
+            ref={containerRef}
+            className={isLoading || error ? 'hidden' : 'block'}
+          />
         </div>
       </DialogContent>
     </Dialog>
