@@ -113,22 +113,32 @@ export function registerRoutes(app: Express): Server {
     try {
       const { amount, hedgeData } = req.query;
       
+      console.log('[Flask Brick Proxy] Request:', { amount, hedgeData });
+      
       // Get Flask URL from environment (keeping it secure)
       const flaskUrl = process.env.FLASK_URL || 'http://3.145.164.47';
       
-      // Forward request to Flask /brick endpoint
-      const params = new URLSearchParams({
-        amount: amount as string,
-        hedgeData: hedgeData as string
+      // Forward request to Flask /brick endpoint with just amount parameter
+      const brickUrl = `${flaskUrl}/brick?amount=${amount}`;
+      console.log('[Flask Brick Proxy] Fetching from:', brickUrl);
+      
+      const brickResponse = await fetch(brickUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Hedgi-Proxy/1.0',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        timeout: 30000 // 30 second timeout
       });
       
-      const brickResponse = await fetch(`${flaskUrl}/brick?${params}`);
+      console.log('[Flask Brick Proxy] Response status:', brickResponse.status);
       
       if (!brickResponse.ok) {
-        throw new Error(`Flask brick endpoint returned ${brickResponse.status}`);
+        throw new Error(`Flask brick endpoint returned ${brickResponse.status}: ${brickResponse.statusText}`);
       }
       
       let html = await brickResponse.text();
+      console.log('[Flask Brick Proxy] HTML length:', html.length);
       
       // Inject message passing code to communicate payment results back to parent
       const messageScript = `
