@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mercado Pago Card Brick</title>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+  <div id="cardPaymentBrick_container"></div>
+
+  <script>
+    // Flask’s /brick route will replace these two placeholders:
+    const AMOUNT   = AMOUNT_PLACEHOLDER;   // e.g. 100.0
+    const TX_ID    = TXID_PLACEHOLDER;     // e.g. "tx_abcd1234"
+
+    // Initialize MercadoPago
+    const PUBLIC_KEY = "TEST-f0fe8e15-aed0-4b3c-ac0f-35269b1793f3";
+    const mp = new MercadoPago(PUBLIC_KEY, { locale: "en-US" });
+    const bricksBuilder = mp.bricks();
+
+    const renderCardPaymentBrick = async () => {
+      const settings = {
+        initialization: {
+          amount: AMOUNT,
+          payer: { email: "" }
+        },
+        customization: {
+          visual: {
+            style: { theme: "default" }
+          },
+          paymentMethods: {
+            types: { excluded: ["debit_card"] },
+            maxInstallments: 1
+          }
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("[iframe] Brick ready for amount =", AMOUNT);
+          },
+          onError: (err) => {
+            console.error("[iframe] Brick error:", err);
+            window.parent.postMessage(
+              { status: "error", txId: TX_ID, error: err.message || "Brick failed" },
+              "*"
+            );
+          },
+
+          // ── Note the destructuring here: we're pulling out selectedPaymentMethod and formData ──
+          onSubmit: async ({ selectedPaymentMethod, formData }) => {
+            console.log("[iframe] onSubmit, received formData:", formData);
+            console.log("[iframe] onSubmit, received selectedPaymentMethod:", selectedPaymentMethod);
+
+            // Build exactly the payload Flask/MercadoPago expect:
+            const paymentPayload = {
+              token:               formData.token,                  // card token
+              installments:        formData.installments,           // number of installments
+              payment_method_id:   selectedPaymentMethod.id,        // e.g. "master", "visa"
+              transaction_amount:  formData.transaction_amount,     // must be snake_case
+              description:         `Hedgi order for R$${formData.transaction_amount}`,
+              payer: {
+                email:            formData.payer.email,
+                identification:   {
+                  type:           formData.payer.identification?.type   || "CPF",
+                  number:         formData.payer.identification?.number || ""
+                },
+                first_name:       formData.payer.first_name || "HedgiCustomer"
+              },
+              txId:                TX_ID
+            };
+
+            console.log("[iframe] Sending payment payload:", paymentPayload);
+
+            try {
+              const response = await fetch("/api/proxy/process_payment", {
+                method:  "POST",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify(paymentPayload)
+              });
+
+              console.log("[iframe] proxy response status:", response.status);
+              const backendJson = await response.json();
+              console.log("[iframe] proxy JSON:", backendJson);
+
+              // Relay back to React via postMessage
+              if (backendJson.status === "approved") {
+                window.parent.postMessage(
+                  { status: "approved", txId: TX_ID, data: backendJson },
+                  "*"
+                );
+              } else {
+                window.parent.postMessage(
+                  { status: "error", txId: TX_ID, error: backendJson.error || "Not approved" },
+                  "*"
+                );
+              }
+            } catch (fetchErr) {
+              console.error("[iframe] fetch proxy failed:", fetchErr);
+              window.parent.postMessage(
+                { status: "error", txId: TX_ID, error: fetchErr.message || "Network error" },
+                "*"
+              );
+            }
+          }
+        }
+      };
+
+      window.cardPaymentBrickController = 
+        await bricksBuilder.create(
+          "cardPayment",
+          "cardPaymentBrick_container",
+          settings
+        );
+    };
+
+    renderCardPaymentBrick();
+  </script>
+</body>
+</html>
