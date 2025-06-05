@@ -52,6 +52,11 @@ export default function Dashboard() {
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
 
+  // State for Mercado Pago Brick modal popup
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+  const [pendingHedgeData, setPendingHedgeData] = React.useState<any>(null);
+  const [paymentAmount, setPaymentAmount] = React.useState<string>("0");
+
   // Fetch active trades with 10-second polling
   const { data: activeTrades = [] } = useQuery<Trade[]>({
     queryKey: ['/api/trades'],
@@ -689,11 +694,13 @@ export default function Dashboard() {
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : hedgeCost * 2;
                   const paymentAmount = Number((hedgeCost + margin).toFixed(2));
                   
-                  console.log("✅ [Dashboard] Redirecting to Mercado Pago Brick payment page");
+                  console.log("✅ [Dashboard] Opening Mercado Pago Brick modal popup");
                   console.log("Payment amount:", paymentAmount);
                   
-                  // Redirect to server-rendered payment page
-                  window.location.href = `/payment?amount=${paymentAmount}`;
+                  // Set data and open modal popup
+                  setPaymentAmount(paymentAmount.toString());
+                  setPendingHedgeData(hedgePayload);
+                  setShowPaymentModal(true);
                 }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
@@ -726,7 +733,64 @@ export default function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Mercado Pago Brick Modal Popup */}
+      {showPaymentModal && pendingHedgeData && (
+        <MercadoPagoBrickModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPendingHedgeData(null);
+          }}
+          onPaymentSuccess={async (paymentResult) => {
+            console.log('[Dashboard] Payment successful:', paymentResult);
+            
+            // Automatically place the hedge using payment token
+            try {
+              const response = await fetch('/api/trades', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  hedgeData: pendingHedgeData,
+                  paymentToken: paymentResult.id
+                }),
+              });
 
+              if (response.ok) {
+                toast({
+                  title: "Success",
+                  description: "Payment processed and hedge placed successfully!",
+                });
+                
+                // Refresh trade data
+                queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+              } else {
+                toast({
+                  variant: "destructive",
+                  title: "Trade Error",
+                  description: "Payment successful but failed to place hedge. Please contact support.",
+                });
+              }
+            } catch (error) {
+              console.error('Trade placement error:', error);
+              toast({
+                variant: "destructive",
+                title: "Trade Error", 
+                description: "Payment successful but failed to place hedge. Please contact support.",
+              });
+            }
+            
+            // Clean up state
+            setShowPaymentModal(false);
+            setPendingHedgeData(null);
+          }}
+          amount={paymentAmount}
+          hedgeData={pendingHedgeData}
+        />
+      )}
 
     </div>
   );
