@@ -204,21 +204,12 @@ export default function Dashboard() {
     }
   });
 
-  // Update the onPlaceHedge function to handle payment token
+  // Legacy function - no longer used with Mercado Pago Brick integration
   const handlePlaceHedge = async (
     hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
-    
-    // Ensure no additional modals can open during trade processing
-    if (isProcessingPayment || showPaymentModal) {
-      console.log("⚠️ [Dashboard] Payment already in progress, preventing duplicate processing");
-      return;
-    }
-
-    // Immediately set processing state to prevent duplicate flows
-    setIsProcessingPayment(true);
 
     // First check if payments are enabled in the system
     try {
@@ -352,19 +343,13 @@ export default function Dashboard() {
       // Only proceed if payment is explicitly verified and approved
       console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
       
-      // Reset modal states immediately to prevent additional modals
-      setShowPaymentModal(false);
-      setPendingHedgeData(null);
-      setIsProcessingPayment(false);
+      // Payment now handled by Mercado Pago Brick pages
       
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
       
-      // Reset modal states on error to allow retry
-      setShowPaymentModal(false);
-      setPendingHedgeData(null);
-      setIsProcessingPayment(false);
+      // Legacy modal code removed - now using Mercado Pago Brick pages
       
       toast({
         variant: "destructive",
