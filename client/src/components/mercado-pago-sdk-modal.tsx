@@ -190,31 +190,32 @@ export function MercadoPaySDKModal({
   useEffect(() => {
     console.log("🔍 [MercadoPaySDKModal] useEffect triggered with:", { isOpen, hedgeData: !!hedgeData, paymentCompleted, brickCreated, isProcessing, preventBrickRef: preventBrickRef.current });
 
-    // CRITICAL: Check global brick manager FIRST
+    // CRITICAL: Check global brick manager FIRST - before ANY operations
     if (!brickManager.canCreateBrick(sessionId.current)) {
-      console.log("🛑 [MercadoPaySDKModal] Global brick manager blocking brick creation for session:", sessionId.current);
+      console.log("🛑 [useEffect] ABORT: globalPreventBrick = true, no SDK load, no createOrder");
       return;
     }
 
-    // CRITICAL: Check preventBrickRef SECOND to prevent any brick creation after payment success
+    // CRITICAL: Check preventBrickRef SECOND - before ANY operations  
     if (preventBrickRef.current) {
-      console.log("🛑 [MercadoPaySDKModal] preventBrickRef is true - blocking all brick creation");
+      console.log("🛑 [useEffect] ABORT: preventBrickRef = true, no SDK load, no createOrder");
       return;
     }
 
+    // Check modal state before doing anything
     if (!isOpen || !hedgeData || paymentCompleted || brickCreated || isProcessing) {
-      console.log("❌ [MercadoPaySDKModal] Skipping useEffect - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing);
+      console.log("❌ [useEffect] Skipping - isOpen:", isOpen, "hedgeData:", !!hedgeData, "paymentCompleted:", paymentCompleted, "brickCreated:", brickCreated, "isProcessing:", isProcessing);
       return;
     }
 
     // Only initialize once per open (prevent React Strict Mode double-mount)
     if (hasInitializedBrick.current) {
-      console.log("⚠️ [MercadoPaySDKModal] Brick already initialized, skipping duplicate");
+      console.log("⚠️ [useEffect] Already initialized, skipping duplicate");
       return;
     }
     hasInitializedBrick.current = true;
 
-    console.log("✅ [MercadoPaySDKModal] Proceeding with modal initialization");
+    console.log("✅ [useEffect] Proceeding: loading SDK and calling createOrder()");
 
     // Set processing state immediately to prevent duplicate calls
     setIsProcessing(true);
@@ -259,7 +260,7 @@ export function MercadoPaySDKModal({
 
     loadSDK()
       .then(() => {
-        // SDK is ready → create the MP Order
+        // SDK is ready → create the MP Order (but createOrder will check again)
         createOrder();
       })
       .catch((err) => {
@@ -447,11 +448,11 @@ export function MercadoPaySDKModal({
       });
       const bricksBuilder = mercadoPago.bricks();
       
-      // CRITICAL: Check again before calling renderPaymentBrick to prevent race conditions
-      if (brickManager.canCreateBrick(sessionId.current)) {
+      // CRITICAL: Double-check before calling renderPaymentBrick to prevent race conditions
+      if (brickManager.canCreateBrick(sessionId.current) && !preventBrickRef.current) {
         renderPaymentBrick(bricksBuilder, paymentAmount, data.preferenceId);
       } else {
-        console.log("🛑 [createOrder] Aborting renderPaymentBrick due to globalPreventBrick");
+        console.log("🛑 [createOrder] ABORT: cannot render payment brick after globalPreventBrick or preventBrickRef");
         return;
       }
 
@@ -484,39 +485,43 @@ export function MercadoPaySDKModal({
       sessionId: sessionId.current,
     });
 
-    // CRITICAL: Check global brick manager FIRST
+    // CRITICAL: Global guard at the very top
     if (!brickManager.canCreateBrick(sessionId.current)) {
-      console.log("🛑 [renderPaymentBrick] Global brick manager blocking brick creation for session:", sessionId.current);
+      console.log("🛑 [renderPaymentBrick] ABORT: globalPreventBrick = true");
       return;
     }
 
-    // CRITICAL: Check preventBrickRef SECOND before acquiring lock
+    // CRITICAL: Local guard at the very top
     if (preventBrickRef.current) {
-      console.log("🛑 [renderPaymentBrick] preventBrickRef is true - aborting brick creation");
+      console.log("🛑 [renderPaymentBrick] ABORT: preventBrickRef = true");
       return;
     }
 
-    // CRITICAL: Set preventBrickRef IMMEDIATELY to prevent any other calls (BEFORE acquiring lock)
-    preventBrickRef.current = true;
-    console.log("🔒 [renderPaymentBrick] Set preventBrickRef to true - no more bricks can be created");
-
+    // CRITICAL: Acquire the mutex BEFORE setting preventBrickRef to close the race window
     const release = await paymentBrickMutex.acquire();
     try {
-      console.log("🔐 [renderPaymentBrick] acquired lock, proceeding…");
-
-      // Check if we should still run (payment might already be done)
-      if (paymentCompleted) {
-        console.log(
-          "⚠️ [renderPaymentBrick] paymentCompleted=true; skipping render"
-        );
+      // Double-check inside the lock
+      if (!brickManager.canCreateBrick(sessionId.current) || preventBrickRef.current) {
+        console.log("🛑 [renderPaymentBrick] ABORT inside lock, after re-checking flags");
         return;
       }
 
-    // ② If we already have a controller or flagged brickCreated, skip
-    if (window.paymentBrickController || brickCreated) {
-      console.log("⚠️ [renderPaymentBrick] Brick already exists; skipping");
-      return;
-    }
+      // Now that we are safely inside the lock and both flags are false,
+      // set preventBrickRef so no one else can even enter here:
+      preventBrickRef.current = true;
+      console.log("🔒 [renderPaymentBrick] ⚡️ preventBrickRef set = true under lock");
+
+      // Check if we should still run (payment might already be done)
+      if (paymentCompleted) {
+        console.log("⚠️ [renderPaymentBrick] ABORT: paymentCompleted already true");
+        return;
+      }
+
+      // If we already have a controller or flagged brickCreated, skip
+      if (window.paymentBrickController || brickCreated) {
+        console.log("⚠️ [renderPaymentBrick] ABORT: a brick already exists or has been flagged");
+        return;
+      }
 
     try {
       const settings = {
@@ -835,15 +840,14 @@ export function MercadoPaySDKModal({
       console.error("❌ [renderPaymentBrick] Failed to create Payment Brick:", brickError);
       setError(isPortuguese ? "Falha ao criar interface de pagamento." : "Failed to create payment interface.");
       setLoading(false);
-      // Reset preventBrickRef on error to allow retry
+      // If Brick creation fails, allow retry by resetting local flag
       preventBrickRef.current = false;
-      // Don't reset global manager on brick creation error - only on session end
       console.log("🔓 [renderPaymentBrick] Reset preventBrickRef to false due to error");
     } 
   } finally {
-      // ─── Always release the lock ───────────────────────────────────────────
+      // Always release the lock
       release();
-      console.log("🔓 [renderPaymentBrick] released lock");
+      console.log("🔓 [renderPaymentBrick] Mutex released");
     }
   };
 
