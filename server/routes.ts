@@ -557,7 +557,7 @@ export function registerRoutes(app: Express): Server {
   // … leave other unrelated routes (e.g. /api/xtb/rates) here …
 
   // Proxy endpoint for Flask brick to avoid CORS issues
-  app.get("/proxy/brick", async (req: Request, res: Response) => {
+  app.get("/api/proxy/brick", async (req: Request, res: Response) => {
     try {
       const amount = req.query.amount || 415;
       const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;

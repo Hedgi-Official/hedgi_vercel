@@ -33,7 +33,7 @@ export function MercadoPagoBrickModal({
         setError(null);
 
         if (containerRef.current) {
-          const flaskUrl = `/proxy/brick?amount=${amount}`;
+          const flaskUrl = `/api/proxy/brick?amount=${amount}`;
           
           console.log('[MercadoPago Modal] Loading Flask brick in iframe:', flaskUrl);
           
