@@ -1,0 +1,72 @@
+Your payload is still missing two required fields:
+
+1. **`description`** – a non‐empty string describing the purchase.
+2. **`payment_method_id`** – e.g. `"visa"`, `"master"`, `"amex"`, etc.
+
+Additionally, in your Flask code you read `"transaction_amount"` (not `"amount"`). So you need to rename `amount`→`transaction_amount` when you JSON‐serialize.
+
+Below is an example of a corrected payload. In your `payment_BRL.html` (inside the iframe’s `onSubmit`), change:
+
+```js
+body: JSON.stringify({
+  token:             cardFormData.token,
+  installments:      cardFormData.installments,
+  // … you currently have `amount: AMOUNT` here, but Flask expects `transaction_amount` …
+  amount:            AMOUNT,
+  payer: {
+    email:          cardFormData.payer.email,
+    identification: {
+      type:   cardFormData.payer.identification.type,
+      number: cardFormData.payer.identification.number
+    },
+    first_name:     cardFormData.payer.first_name || "HedgiCustomer" 
+  },
+  txId:              TX_ID
+})
+```
+
+Replace it with this:
+
+```js
+body: JSON.stringify({
+  token:             cardFormData.token,
+  installments:      cardFormData.installments,
+  payment_method_id: cardFormData.paymentMethodId,   // ← required
+  transaction_amount: AMOUNT,                        // ← rename `amount` → `transaction_amount`
+  description:       `Hedgi order for ${AMOUNT}`,    // ← required, non‐empty string
+  payer: {
+    email:          cardFormData.payer.email,
+    identification: {
+      type:   cardFormData.payer.identification.type,
+      number: cardFormData.payer.identification.number
+    },
+    first_name:     cardFormData.payer.first_name || "HedgiCustomer" 
+  },
+  txId:              TX_ID
+})
+```
+
+1. **`payment_method_id`** comes straight from the Brick’s `cardFormData.paymentMethodId`.
+2. **`transaction_amount`** must match what your Flask code expects.
+3. **`description`** can be any non‐empty string—here we used `Hedgi order for ${AMOUNT}`.
+4. We also ensure `payer.first_name` is never empty (Brick sometimes omits it), so we fallback to `"HedgiCustomer"` if needed.
+
+After making those two changes, your Flask endpoint will receive something like:
+
+```json
+{
+  "token": "23ed8fa0ee3a0397965266160d29a416",
+  "installments": 1,
+  "payment_method_id": "master",
+  "transaction_amount": 415,
+  "description": "Hedgi order for 415",
+  "payer": {
+    "email": "HjalmarLevander@Berkeley.edu",
+    "identification": { "type": "CPF", "number": "12345678909" },
+    "first_name": "HjalmarLevander"
+  },
+  "txId": "tx_1749152882891_l1g5v9wee"
+}
+```
+
+Once you include those two missing fields, Mercado Pago will no longer return a 400 with `id:null`; instead you’ll see a valid `"id"` and `"status":"approved"` in the JSON response.

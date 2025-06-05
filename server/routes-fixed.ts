@@ -103,8 +103,25 @@ export function registerRoutes(app: Express): Server {
     try {
       // 1) The request body is a JSON object containing:
       //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
-      const payload = req.body;
-      console.log("[Proxy] Received /process_payment payload:", payload);
+      const originalPayload = req.body;
+      console.log("[Proxy] Received payload:", originalPayload);
+
+      // Transform payload to match Flask's expected format
+      const payload = {
+        token: originalPayload.token,
+        installments: originalPayload.installments || 1,
+        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id,
+        transaction_amount: originalPayload.transactionAmount || originalPayload.amount,
+        description: `Hedgi order for ${originalPayload.transactionAmount || originalPayload.amount}`,
+        payer: {
+          email: originalPayload.payer?.email,
+          identification: originalPayload.payer?.identification,
+          first_name: originalPayload.payer?.first_name || "HedgiCustomer"
+        },
+        txId: originalPayload.txId
+      };
+
+      console.log("[Proxy] Transformed payload for Flask:", payload);
 
       // 2) Forward it directly to Flask’s /process_payment
       const flaskUrl = `http://3.145.164.47/process_payment`;
@@ -119,11 +136,15 @@ export function registerRoutes(app: Express): Server {
       // 3) Read Flask’s JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
       const data = await response.json();
 
-      // 4) Forward that same JSON (and status code) back to the iframe
-      res.status(response.status).json(data);
+      // Always return status 200 to iframe, let iframe handle success/error based on data.status
+      res.json(data);
     } catch (error) {
-      console.error("[Proxy] Error proxying /process_payment:", error);
-      res.status(500).json({ status: "error", error: "Server‐side proxy failed" });
+      console.error("[Proxy] Error proxying payment:", error);
+      res.json({ 
+        status: "error", 
+        error: "Payment processing failed",
+        txId: req.body?.txId || ""
+      });
     }
   });
 
