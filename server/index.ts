@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupSimpleAuth } from "./simple-auth";
@@ -10,15 +11,11 @@ import paymentRoutes from './routes/payment';
 const app = express();
 const server = createServer(app);
 
-// Add payment routes
-app.use('/', paymentRoutes);
-
-const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Mount payment routes
-app.use(paymentRoutes);
+// Add payment routes
+app.use('/', paymentRoutes);
 
 // Add test endpoint
 app.get('/ping', (req, res) => {
