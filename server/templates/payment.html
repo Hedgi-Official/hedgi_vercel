@@ -104,19 +104,22 @@
                         },
                         onSubmit: async ({ selectedPaymentMethod, formData }) => {
                             console.log('Processing payment...', formData);
+                            console.log('Selected payment method:', selectedPaymentMethod);
                             
                             try {
                                 // Extract txId from URL parameters
                                 const urlParams = new URLSearchParams(window.location.search);
                                 const txId = urlParams.get('txId');
                                 
-                                // Add txId to the form data
+                                // Add txId and payment_method_id to the form data
                                 const paymentPayload = {
                                     ...formData,
-                                    txId: txId
+                                    txId: txId,
+                                    payment_method_id: selectedPaymentMethod,
+                                    paymentMethodId: selectedPaymentMethod // Include both formats for compatibility
                                 };
                                 
-                                console.log('Payment payload with txId:', paymentPayload);
+                                console.log('Payment payload with txId and payment_method_id:', paymentPayload);
                                 
                                 const response = await fetch('/process_payment', {
                                     method: 'POST',
