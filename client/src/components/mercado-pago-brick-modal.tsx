@@ -33,10 +33,10 @@ export function MercadoPagoBrickModal({
       const tradePayload = {
         amount: parseFloat(amount),
         token: paymentId,
-        broker: tradeData.broker || 'mercadopago',
+        broker: tradeData?.broker || 'mercadopago',
         type: 'hedge',
-        symbol: tradeData.symbol || 'USDBRL',
-        direction: tradeData.direction || 'buy'
+        symbol: tradeData?.symbol || 'USDBRL',
+        direction: tradeData?.direction || 'buy'
       };
 
       const response = await fetch('/api/trades', {
@@ -58,17 +58,25 @@ export function MercadoPagoBrickModal({
       setPaymentResult((prev: any) => ({ ...prev, tradeError: 'Network error placing trade' }));
     } finally {
       setIsProcessingTrade(false);
-      window.removeEventListener('message', () => {});
       setTimeout(() => onPaymentSuccess(paymentResult), 2000);
     }
   };
 
+  const handleRetry = () => {
+    setPaymentResult(null);
+    setError(null);
+    setIsLoading(true);
+    setIsProcessingTrade(false);
+    iframeCreated.current = false;
+  };
+
   useEffect(() => {
     if (!isOpen) {
-      // Reset when modal closes
       iframeCreated.current = false;
       setIsLoading(true);
       setError(null);
+      setPaymentResult(null);
+      setIsProcessingTrade(false);
       txIdRef.current = '';
       return;
     }
@@ -79,17 +87,12 @@ export function MercadoPagoBrickModal({
 
     console.log('[MercadoPago Brick Modal] Creating iframe for amount:', amount);
     
-    // Generate unique transaction ID
     txIdRef.current = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Mark as created to prevent duplicates
     iframeCreated.current = true;
     
     try {
-      // Clear container
       containerRef.current.innerHTML = '';
       
-      // Create iframe with txId parameter
       const iframe = document.createElement('iframe');
       iframe.src = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}`;
       iframe.style.width = '100%';
@@ -100,11 +103,9 @@ export function MercadoPagoBrickModal({
       console.log('[MercadoPago Brick Modal] Iframe URL:', iframe.src);
       console.log('[MercadoPago Brick Modal] Transaction ID:', txIdRef.current);
       
-      // Set up message handler for payment completion
       const messageHandler = (event: MessageEvent) => {
         console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
         
-        // Validate this message is for our transaction
         if (event.data && event.data.txId === txIdRef.current) {
           console.log('[MercadoPago Brick Modal] Message matches our txId:', txIdRef.current);
           
@@ -121,7 +122,6 @@ export function MercadoPagoBrickModal({
             setPaymentResult(paymentResult);
             setIsLoading(false);
             
-            // Automatically place trade with payment ID
             if (hedgeData && paymentResult.id) {
               setIsProcessingTrade(true);
               placeTrade(paymentResult.id, hedgeData);
@@ -140,7 +140,6 @@ export function MercadoPagoBrickModal({
         }
       };
       
-      // Listen for iframe load
       iframe.onload = () => {
         console.log('[MercadoPago Brick Modal] Iframe loaded successfully');
         setIsLoading(false);
@@ -152,13 +151,9 @@ export function MercadoPagoBrickModal({
         setIsLoading(false);
       };
       
-      // Add message listener
       window.addEventListener('message', messageHandler);
-      
-      // Add iframe to container
       containerRef.current.appendChild(iframe);
       
-      // Cleanup function
       return () => {
         window.removeEventListener('message', messageHandler);
       };
@@ -168,16 +163,7 @@ export function MercadoPagoBrickModal({
       setError('Failed to initialize payment form.');
       setIsLoading(false);
     }
-  }, [isOpen, amount, onPaymentSuccess]);
-
-  const handleRetry = () => {
-    setPaymentResult(null);
-    setError(null);
-    setIsLoading(true);
-    setIsProcessingTrade(false);
-    iframeCreated.current = false;
-    // The useEffect will recreate the iframe
-  };
+  }, [isOpen, amount, onPaymentSuccess, hedgeData]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -208,7 +194,7 @@ export function MercadoPagoBrickModal({
 
           {paymentResult && paymentResult.status === 'approved' && (
             <div className="text-center p-8">
-              <div className="text-green-600 text-xl mb-4">✅ Payment Approved!</div>
+              <div className="text-green-600 text-xl mb-4">Payment Approved!</div>
               <p className="text-gray-600 mb-2">Payment ID: {paymentResult.id}</p>
               {paymentResult.trade && (
                 <p className="text-green-600 mb-4">Hedge trade placed successfully!</p>
@@ -224,7 +210,7 @@ export function MercadoPagoBrickModal({
 
           {paymentResult && paymentResult.status === 'error' && (
             <div className="text-center p-8">
-              <div className="text-red-600 text-xl mb-4">❌ Payment Failed</div>
+              <div className="text-red-600 text-xl mb-4">Payment Failed</div>
               <p className="text-red-600 mb-4">{paymentResult.error}</p>
               <div className="space-x-2">
                 <Button onClick={handleRetry}>
