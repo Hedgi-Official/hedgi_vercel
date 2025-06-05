@@ -54,7 +54,7 @@ export function MercadoPagoBrickModal({
           const popupWindow = window.open(
             flaskUrl,
             'MercadoPagoBrick',
-            `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no,titlebar=no`
+            `width=${width},height=${height},left=${left},top=${top},resizable=no,scrollbars=no,menubar=no,toolbar=no,location=no,status=no,titlebar=no,directories=no`
           );
 
           if (!popupWindow) {
@@ -69,39 +69,45 @@ export function MercadoPagoBrickModal({
           const messageHandler = (event: MessageEvent) => {
             console.log('[MercadoPago Modal] Received message:', event);
             
-            // Accept messages from Flask server
+            // Accept messages from Flask brick popup
             if (event.origin !== 'http://3.145.164.47') {
               console.log('[MercadoPago Modal] Ignoring message from origin:', event.origin);
               return;
             }
             
-            // Handle different Flask response formats
-            if (event.data.type === 'PAYMENT_SUCCESS' || event.data.status === 'approved') {
-              console.log('[MercadoPago Modal] Payment success received');
+            // Handle Flask brick postMessage format: { type: 'payment_result', status: 'approved', id: 'payment_id' }
+            if (event.data.type === 'payment_result') {
+              console.log('[MercadoPago Modal] Payment result received:', event.data);
               
-              // Extract payment data from Flask response
-              const paymentResult = {
-                id: event.data.id || event.data.paymentId || `mp_${Date.now()}`,
-                status: 'approved',
-                message: event.data.message || 'Payment processed successfully'
-              };
-              
-              // Close popup and cleanup
-              if (popupWindow && !popupWindow.closed) {
-                popupWindow.close();
+              if (event.data.status === 'approved') {
+                console.log('[MercadoPago Modal] Payment approved with ID:', event.data.id);
+                
+                // Extract payment data from Flask brick response
+                const paymentResult = {
+                  id: event.data.id || `mp_${Date.now()}`,
+                  status: 'approved',
+                  message: 'Payment processed successfully'
+                };
+                
+                // Close popup and cleanup
+                if (popupWindow && !popupWindow.closed) {
+                  popupWindow.close();
+                }
+                clearInterval(checkClosedInterval);
+                window.removeEventListener('message', messageHandler);
+                
+                onPaymentSuccess(paymentResult);
+                onClose();
+              } else if (event.data.status === 'error' || event.data.status === 'rejected' || event.data.status === 'failed') {
+                console.log('[MercadoPago Modal] Payment failed:', event.data);
+                setError(event.data.error || 'Payment failed. Please try again.');
+                setIsProcessing(false);
+                
+                // Close popup on error
+                if (popupWindow && !popupWindow.closed) {
+                  popupWindow.close();
+                }
               }
-              clearInterval(checkClosedInterval);
-              window.removeEventListener('message', messageHandler);
-              
-              onPaymentSuccess(paymentResult);
-              onClose();
-            } else if (event.data.type === 'PAYMENT_ERROR' || event.data.status === 'rejected' || event.data.status === 'failed') {
-              console.log('[MercadoPago Modal] Payment error received:', event.data);
-              setError(event.data.message || event.data.error || 'Payment failed. Please try again.');
-              setIsProcessing(false);
-            } else if (event.data.type === 'PAYMENT_PROCESSING') {
-              console.log('[MercadoPago Modal] Payment processing...');
-              setIsProcessing(true);
             }
           };
           

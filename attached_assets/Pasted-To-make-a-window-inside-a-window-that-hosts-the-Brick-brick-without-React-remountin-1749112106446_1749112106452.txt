@@ -1,0 +1,155 @@
+To make a **"window inside a window"** that hosts the **Brick (`/brick`)** **without React remounting it or losing state**, **and still have React read the final result**, here’s the best approach:
+
+---
+
+## ✅ **Solution Overview**
+
+1. **Use a popup window** (`window.open(...)`) to render the `/brick` endpoint (basic HTML with Mercado Pago's Brick).
+2. **Have the popup call `window.opener.postMessage(...)` when payment completes.**
+3. **Listen in your React app (`useEffect`) for that message.**
+
+This completely avoids React remounting, works with Mercado Pago's JS SDK, and lets you track payment result.
+
+---
+
+## 🧱 Step-by-Step Breakdown
+
+### ✅ 1. `/brick` Renders the Payment UI
+
+On your Flask backend, serve this at `/brick`:
+
+```html
+<!-- /brick -->
+<html>
+<head>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+  <div id="cardPaymentBrick_container"></div>
+  <script>
+    const mp = new MercadoPago('YOUR_PUBLIC_KEY', { locale: 'en-US' });
+    const bricksBuilder = mp.bricks();
+
+    const renderCardPaymentBrick = async () => {
+      const settings = {
+        initialization: {
+          amount: 585
+        },
+        customization: {
+          paymentMethods: {
+            creditCard: 'all',
+          },
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("✅ Brick ready");
+          },
+          onSubmit: ({ formData }) => {
+            return fetch('/process_payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(formData)
+            })
+            .then(res => res.json())
+            .then(data => {
+              console.log("✅ Payment response:", data);
+
+              // 🎯 Send result back to React
+              window.opener.postMessage({
+                type: 'payment_result',
+                status: data.status,
+                id: data.id
+              }, '*');
+
+              // 🔒 Optional: Close the popup
+              window.close();
+            })
+            .catch(err => {
+              console.error("❌ Payment failed", err);
+              window.opener.postMessage({
+                type: 'payment_result',
+                status: 'error',
+                error: err.message
+              }, '*');
+              window.close();
+            });
+          },
+          onError: (error) => {
+            console.error("Brick error:", error);
+          }
+        }
+      };
+
+      window.cardPaymentBrickController = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', settings);
+    };
+
+    renderCardPaymentBrick();
+  </script>
+</body>
+</html>
+```
+
+---
+
+### ✅ 2. React Component Launches the Window and Listens for Result
+
+In React (e.g., `CurrencySimulator.tsx`):
+
+```ts
+import { useEffect } from 'react';
+
+function launchPaymentWindow(onResult: (data: any) => void) {
+  const width = 500;
+  const height = 700;
+  const left = window.screen.width / 2 - width / 2;
+  const top = window.screen.height / 2 - height / 2;
+
+  const paymentWindow = window.open(
+    'http://localhost:5000/brick',
+    '_blank',
+    `width=${width},height=${height},top=${top},left=${left}`
+  );
+
+  const listener = (event: MessageEvent) => {
+    if (event.data?.type === 'payment_result') {
+      onResult(event.data);
+      window.removeEventListener('message', listener);
+    }
+  };
+
+  window.addEventListener('message', listener);
+}
+```
+
+Then call it when user clicks:
+
+```ts
+<Button
+  onClick={() => {
+    launchPaymentWindow((result) => {
+      if (result.status === 'approved') {
+        console.log("✅ Payment ID:", result.id);
+        // Place hedge using result.id as refund token
+        handlePaymentSuccess(pendingHedgeData, result.id);
+      } else {
+        console.warn("❌ Payment failed or canceled:", result);
+        toast({ title: "Payment failed", variant: "destructive" });
+      }
+    });
+  }}
+>
+  Pay & Hedge
+</Button>
+```
+
+---
+
+### 💡 Why this works:
+
+* 🪟 The Brick is rendered in a separate popup window — React doesn’t touch it, so no remounting or lifecycle interference.
+* 🔗 Communication is cleanly handled via `postMessage`.
+* ✅ Your React app can now directly access the `payment.id` and `status` to proceed or retry.
+
+---
+
+Would you like me to generate a complete working `Flask` + `React` example repo structure for this?
