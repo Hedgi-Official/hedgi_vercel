@@ -108,6 +108,92 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Flask brick proxy endpoint
+  app.get('/api/flask-brick-proxy', async (req: Request, res: Response) => {
+    try {
+      const { amount, hedgeData } = req.query;
+      
+      // Get Flask URL from environment (keeping it secure)
+      const flaskUrl = process.env.FLASK_URL || 'http://3.145.164.47';
+      
+      // Forward request to Flask /brick endpoint
+      const params = new URLSearchParams({
+        amount: amount as string,
+        hedgeData: hedgeData as string
+      });
+      
+      const brickResponse = await fetch(`${flaskUrl}/brick?${params}`);
+      
+      if (!brickResponse.ok) {
+        throw new Error(`Flask brick endpoint returned ${brickResponse.status}`);
+      }
+      
+      let html = await brickResponse.text();
+      
+      // Inject message passing code to communicate payment results back to parent
+      const messageScript = `
+        <script>
+          // Override any payment completion functions to send messages to parent
+          window.notifyPaymentSuccess = function(paymentResult) {
+            window.parent.postMessage({
+              type: 'PAYMENT_SUCCESS',
+              paymentResult: paymentResult
+            }, '*');
+          };
+          
+          window.notifyPaymentError = function(error) {
+            window.parent.postMessage({
+              type: 'PAYMENT_ERROR',
+              error: error
+            }, '*');
+          };
+          
+          window.notifyPaymentProcessing = function() {
+            window.parent.postMessage({
+              type: 'PAYMENT_PROCESSING'
+            }, '*');
+          };
+          
+          // Override console.log to capture payment completion
+          const originalLog = console.log;
+          console.log = function(...args) {
+            originalLog.apply(console, args);
+            
+            // Look for payment completion patterns
+            const message = args.join(' ');
+            if (message.includes('Payment') && message.includes('approved')) {
+              try {
+                const paymentData = JSON.parse(message);
+                if (paymentData.status === 'approved') {
+                  window.notifyPaymentSuccess(paymentData);
+                }
+              } catch (e) {
+                // If not JSON, look for payment ID patterns
+                const idMatch = message.match(/id[":]+([0-9]+)/);
+                if (idMatch) {
+                  window.notifyPaymentSuccess({
+                    id: idMatch[1],
+                    status: 'approved',
+                    message: 'Payment processed successfully'
+                  });
+                }
+              }
+            }
+          };
+        </script>
+      `;
+      
+      // Inject the script before closing </body> tag
+      html = html.replace('</body>', `${messageScript}</body>`);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error('Flask brick proxy error:', error);
+      res.status(500).json({ error: 'Failed to load payment form from Flask server' });
+    }
+  });
+
   // Mercado Pago Brick Integration Endpoints
   
   // 1. GET /payment?amount=<AMOUNT> - Renders payment form with cardPayment Brick

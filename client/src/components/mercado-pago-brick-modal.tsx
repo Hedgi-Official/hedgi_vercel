@@ -33,133 +33,59 @@ export function MercadoPagoBrickModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const loadMercadoPagoSDK = async () => {
+    const loadFlaskBrick = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Load Mercado Pago SDK if not already loaded
-        if (!window.MercadoPago) {
-          const script = document.createElement('script');
-          script.src = 'https://sdk.mercadopago.com/js/v2';
-          script.async = true;
-          document.head.appendChild(script);
-          
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
-          });
-        }
-
-        // Get public key from server
-        const response = await fetch('/api/mp-public-key');
-        if (!response.ok) {
-          throw new Error('Failed to get Mercado Pago public key');
-        }
-        const { publicKey } = await response.json();
-
-        // Initialize Mercado Pago
-        const mp = new window.MercadoPago(publicKey, {
-          locale: 'pt-BR'
-        });
-
-        // Create payment preference
-        const preferenceResponse = await fetch('/api/payment-preference', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: parseFloat(amount),
-            hedgeData
-          }),
-        });
-
-        if (!preferenceResponse.ok) {
-          throw new Error('Failed to create payment preference');
-        }
-
-        const preference = await preferenceResponse.json();
-
-        // Initialize Card Payment Brick
+        // Load payment form from Flask server brick endpoint
         if (containerRef.current) {
-          const brickBuilder = mp.bricks();
+          // Create iframe to load Flask brick endpoint
+          const iframe = document.createElement('iframe');
+          iframe.src = `/api/flask-brick-proxy?amount=${amount}&hedgeData=${encodeURIComponent(JSON.stringify(hedgeData))}`;
+          iframe.style.width = '100%';
+          iframe.style.height = '500px';
+          iframe.style.border = 'none';
+          iframe.style.borderRadius = '8px';
           
-          brickRef.current = await brickBuilder.create('cardPayment', containerRef.current, {
-            initialization: {
-              amount: parseFloat(amount),
-              preferenceId: preference.id
-            },
-            customization: {
-              visual: {
-                style: {
-                  customVariables: {
-                    theme: 'default'
-                  }
-                }
-              },
-              paymentMethods: {
-                creditCard: 'all',
-                debitCard: 'all'
-              }
-            },
-            callbacks: {
-              onReady: () => {
-                setIsLoading(false);
-              },
-              onSubmit: async (formData: any) => {
-                setIsProcessing(true);
-                try {
-                  // Process payment through our backend
-                  const paymentResponse = await fetch('/api/process-payment', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      ...formData,
-                      hedgeData,
-                      amount: parseFloat(amount)
-                    }),
-                  });
-
-                  if (!paymentResponse.ok) {
-                    throw new Error('Payment processing failed');
-                  }
-
-                  const paymentResult = await paymentResponse.json();
-                  
-                  if (paymentResult.status === 'approved') {
-                    onPaymentSuccess(paymentResult);
-                    onClose();
-                  } else {
-                    setError('Payment was not approved. Please try again.');
-                  }
-                } catch (error) {
-                  console.error('Payment error:', error);
-                  setError('Payment failed. Please try again.');
-                } finally {
-                  setIsProcessing(false);
-                }
-              },
-              onError: (error: any) => {
-                console.error('Brick error:', error);
-                setError('Payment form error. Please refresh and try again.');
-                setIsProcessing(false);
+          // Listen for payment completion messages from iframe
+          const messageHandler = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === 'PAYMENT_SUCCESS') {
+              onPaymentSuccess(event.data.paymentResult);
+              onClose();
+            } else if (event.data.type === 'PAYMENT_ERROR') {
+              setError(event.data.error || 'Payment failed. Please try again.');
+              setIsProcessing(false);
+            } else if (event.data.type === 'PAYMENT_PROCESSING') {
+              setIsProcessing(true);
+            }
+          };
+          
+          window.addEventListener('message', messageHandler);
+          
+          // Store cleanup function
+          brickRef.current = {
+            unmount: () => {
+              window.removeEventListener('message', messageHandler);
+              if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
               }
             }
-          });
+          };
+          
+          containerRef.current.appendChild(iframe);
+          setIsLoading(false);
         }
-
-        setIsLoading(false);
       } catch (error) {
-        console.error('Failed to load Mercado Pago:', error);
+        console.error('Failed to load Flask brick:', error);
         setError('Failed to load payment form. Please try again.');
         setIsLoading(false);
       }
     };
 
-    loadMercadoPagoSDK();
+    loadFlaskBrick();
 
     // Cleanup function
     return () => {
