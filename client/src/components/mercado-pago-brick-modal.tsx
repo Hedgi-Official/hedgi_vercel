@@ -41,7 +41,7 @@ export function MercadoPagoBrickModal({
         // Add a small delay to ensure the modal is fully rendered before opening popup
         setTimeout(() => {
           // Directly open Flask brick endpoint in a new popup window
-          const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
+          const flaskUrl = `http://3.145.164.47/payment?amount=${amount}`;
           
           console.log('[MercadoPago Modal] Opening Flask brick window:', flaskUrl);
           
@@ -54,7 +54,7 @@ export function MercadoPagoBrickModal({
           const popupWindow = window.open(
             flaskUrl,
             'MercadoPagoBrick',
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no`
+            `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no,titlebar=no`
           );
 
           if (!popupWindow) {
@@ -75,13 +75,15 @@ export function MercadoPagoBrickModal({
               return;
             }
             
-            if (event.data.status === 'success') {
+            // Handle different Flask response formats
+            if (event.data.type === 'PAYMENT_SUCCESS' || event.data.status === 'approved') {
               console.log('[MercadoPago Modal] Payment success received');
-              // Extract payment data from response
+              
+              // Extract payment data from Flask response
               const paymentResult = {
-                id: event.data.data?.id || `mp_${Date.now()}`,
+                id: event.data.id || event.data.paymentId || `mp_${Date.now()}`,
                 status: 'approved',
-                message: 'Payment processed successfully'
+                message: event.data.message || 'Payment processed successfully'
               };
               
               // Close popup and cleanup
@@ -93,9 +95,13 @@ export function MercadoPagoBrickModal({
               
               onPaymentSuccess(paymentResult);
               onClose();
-            } else if (event.data.status === 'error') {
-              setError(event.data.error || 'Payment failed. Please try again.');
+            } else if (event.data.type === 'PAYMENT_ERROR' || event.data.status === 'rejected' || event.data.status === 'failed') {
+              console.log('[MercadoPago Modal] Payment error received:', event.data);
+              setError(event.data.message || event.data.error || 'Payment failed. Please try again.');
               setIsProcessing(false);
+            } else if (event.data.type === 'PAYMENT_PROCESSING') {
+              console.log('[MercadoPago Modal] Payment processing...');
+              setIsProcessing(true);
             }
           };
           
