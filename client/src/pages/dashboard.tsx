@@ -2,6 +2,8 @@ import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlaskPaymentModal } from "@/components/flask-payment-modal";
+import { MercadoPagoBrickModal } from "@/components/mercado-pago-brick-modal"; 
+
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
@@ -731,20 +733,25 @@ export default function Dashboard() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>      
 
-      {/* Flask Payment Modal Popup */}
       {showPaymentModal && pendingHedgeData && (
-        <FlaskPaymentModal
+        <MercadoPagoBrickModal
           isOpen={showPaymentModal}
           onClose={() => {
             setShowPaymentModal(false);
             setPendingHedgeData(null);
           }}
           onPaymentSuccess={async (paymentResult) => {
-            console.log('[Dashboard] Payment successful:', paymentResult);
-            
-            // Automatically place the hedge using payment token
+            console.log('[Dashboard] Payment successful (Brick):', paymentResult);
+
+            // 1) Show a toast/banner right away
+            toast({
+              title: "Success",
+              description: "Payment processed and hedge placed successfully!",
+            });
+
+            // 2) Immediately place the hedge on your server
             try {
               const response = await fetch('/api/trades', {
                 method: 'POST',
@@ -754,36 +761,27 @@ export default function Dashboard() {
                 credentials: 'include',
                 body: JSON.stringify({
                   hedgeData: pendingHedgeData,
-                  paymentToken: paymentResult.id
+                  paymentToken: paymentResult.id   // this ID is the refund token from Flask
                 }),
               });
 
-              if (response.ok) {
-                toast({
-                  title: "Success",
-                  description: "Payment processed and hedge placed successfully!",
-                });
-                
-                // Refresh trade data
-                queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-              } else {
-                toast({
-                  variant: "destructive",
-                  title: "Trade Error",
-                  description: "Payment successful but failed to place hedge. Please contact support.",
-                });
+              if (!response.ok) {
+                throw new Error(await response.text());
               }
-            } catch (error) {
-              console.error('Trade placement error:', error);
+
+              // 3) Refresh trade lists
+              queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+            } catch (err: any) {
+              console.error('[Dashboard] Hedge placement after payment error:', err);
               toast({
                 variant: "destructive",
-                title: "Trade Error", 
-                description: "Payment successful but failed to place hedge. Please contact support.",
+                title: "Trade Error",
+                description: "Payment succeeded but failed to place hedge. Please contact support.",
               });
             }
-            
-            // Clean up state
+
+            // 4) Clean up local state
             setShowPaymentModal(false);
             setPendingHedgeData(null);
           }}
@@ -792,6 +790,7 @@ export default function Dashboard() {
         />
       )}
 
+      
     </div>
   );
 }

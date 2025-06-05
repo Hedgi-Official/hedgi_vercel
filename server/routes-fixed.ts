@@ -38,49 +38,53 @@ export function registerRoutes(app: Express): Server {
   // Local Mercado Pago brick endpoint to avoid CORS issues
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {
     try {
+      // 1) Read both amount and txId from the query string
       const amount = req.query.amount || 415;
-      
-      console.log(`[Local Brick] Creating Mercado Pago brick for amount: ${amount}`);
-      
-      // Fetch the actual Flask brick content with proper HTTP headers
-      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
-      
+      const txId   = req.query.txId   || "";  // will be a UUID set by React
+
+      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}`);
+
+      // 2) Forward both to Flask’s /brick endpoint
+      //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
-      
+
       const response = await fetch(flaskUrl, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate',
-          'Connection': 'keep-alive',
-          'Cache-Control': 'no-cache'
+          "User-Agent": "Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Accept-Encoding": "gzip, deflate",
+          "Connection": "keep-alive",
+          "Cache-Control": "no-cache"
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Flask server responded with ${response.status}: ${response.statusText}`);
       }
-      
+
       const html = await response.text();
-      
-      console.log(`[Local Brick] Generated brick HTML (${html.length} characters)`);
-      
-      // Set proper headers for iframe embedding
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      console.log(`[Local Brick] Generated brick HTML (${html.length} chars)`);
+
+      // 3) Return it as HTML so the iframe can render it
+      res.setHeader("Content-Type", "text/html");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
       res.send(html);
     } catch (error) {
-      console.error('[Local Brick] Error creating brick:', error);
+      console.error("[Local Brick] Error creating brick:", error);
       res.status(500).send(`
         <html>
           <body>
-            <div style="padding: 20px; text-align: center; color: #666;">
+            <div style="padding:20px; text-align:center; color:#666;">
               <h3>Payment form temporarily unavailable</h3>
               <p>Please try again in a moment.</p>
               <script>
-                window.parent.postMessage({ status: 'error', error: 'Payment form unavailable' }, "*");
+                window.parent.postMessage(
+                  { status: "error", error: "Payment form unavailable" },
+                  "*"
+                );
               </script>
             </div>
           </body>
@@ -88,6 +92,35 @@ export function registerRoutes(app: Express): Server {
       `);
     }
   });
+
+  app.post("/api/proxy/process_payment", async (req: Request, res: Response) => {
+    try {
+      // 1) The request body is a JSON object containing:
+      //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
+      const payload = req.body;
+      console.log("[Proxy] Received /process_payment payload:", payload);
+
+      // 2) Forward it directly to Flask’s /process_payment
+      const flaskUrl = `http://3.145.164.47/process_payment`;
+      console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
+
+      const response = await fetch(flaskUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      // 3) Read Flask’s JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
+      const data = await response.json();
+
+      // 4) Forward that same JSON (and status code) back to the iframe
+      res.status(response.status).json(data);
+    } catch (error) {
+      console.error("[Proxy] Error proxying /process_payment:", error);
+      res.status(500).json({ status: "error", error: "Server‐side proxy failed" });
+    }
+  });
+
 
   // Working registration endpoint that bypasses schema conflicts
   app.post("/signup", async (req: Request, res: Response) => {
