@@ -556,6 +556,41 @@ export function registerRoutes(app: Express): Server {
 
   // … leave other unrelated routes (e.g. /api/xtb/rates) here …
 
+  // Proxy endpoint for Flask brick to avoid CORS issues
+  app.get("/proxy/brick", async (req: Request, res: Response) => {
+    try {
+      const amount = req.query.amount || 415;
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
+      
+      console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
+      
+      const response = await fetch(flaskUrl);
+      const html = await response.text();
+      
+      console.log(`[Flask Proxy] Successfully fetched brick HTML (${html.length} characters)`);
+      
+      // Set proper headers for iframe embedding
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.send(html);
+    } catch (error) {
+      console.error('[Flask Proxy] Error fetching brick:', error);
+      res.status(500).send(`
+        <html>
+          <body>
+            <div style="padding: 20px; text-align: center; color: #666;">
+              <h3>Payment form temporarily unavailable</h3>
+              <p>Please try again in a moment.</p>
+              <script>
+                window.parent.postMessage({ status: 'error', error: 'Payment form unavailable' }, "*");
+              </script>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+  });
+
   // Register routes
   app.use(secondaryRateRouter);
   app.use(chatRouter);
