@@ -33,59 +33,82 @@ export function MercadoPagoBrickModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const loadFlaskBrick = async () => {
+    const openFlaskBrickWindow = () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Load payment form from Flask server brick endpoint
-        if (containerRef.current) {
-          // Create iframe to load Flask brick endpoint
-          const iframe = document.createElement('iframe');
-          iframe.src = `/api/flask-brick-proxy?amount=${amount}&hedgeData=${encodeURIComponent(JSON.stringify(hedgeData))}`;
-          iframe.style.width = '100%';
-          iframe.style.height = '500px';
-          iframe.style.border = 'none';
-          iframe.style.borderRadius = '8px';
-          
-          // Listen for payment completion messages from iframe
-          const messageHandler = (event: MessageEvent) => {
-            if (event.origin !== window.location.origin) return;
-            
-            if (event.data.type === 'PAYMENT_SUCCESS') {
-              onPaymentSuccess(event.data.paymentResult);
-              onClose();
-            } else if (event.data.type === 'PAYMENT_ERROR') {
-              setError(event.data.error || 'Payment failed. Please try again.');
-              setIsProcessing(false);
-            } else if (event.data.type === 'PAYMENT_PROCESSING') {
-              setIsProcessing(true);
-            }
-          };
-          
-          window.addEventListener('message', messageHandler);
-          
-          // Store cleanup function
-          brickRef.current = {
-            unmount: () => {
-              window.removeEventListener('message', messageHandler);
-              if (iframe.parentNode) {
-                iframe.parentNode.removeChild(iframe);
-              }
-            }
-          };
-          
-          containerRef.current.appendChild(iframe);
-          setIsLoading(false);
+        // Directly open Flask brick endpoint in a new popup window
+        const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
+        
+        // Open popup window with specific dimensions
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popupWindow = window.open(
+          flaskUrl,
+          'MercadoPagoBrick',
+          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+
+        if (!popupWindow) {
+          throw new Error('Popup blocked. Please allow popups for this site.');
         }
+
+        // Store reference for cleanup
+        brickRef.current = {
+          window: popupWindow,
+          unmount: () => {
+            if (popupWindow && !popupWindow.closed) {
+              popupWindow.close();
+            }
+            window.removeEventListener('message', messageHandler);
+          }
+        };
+
+        // Listen for payment completion messages from popup
+        const messageHandler = (event: MessageEvent) => {
+          // Accept messages from Flask server
+          if (event.origin !== 'http://3.145.164.47') return;
+          
+          if (event.data.status === 'success') {
+            // Extract payment data from response
+            const paymentResult = {
+              id: event.data.data?.id || Date.now(),
+              status: 'approved',
+              message: 'Payment processed successfully'
+            };
+            onPaymentSuccess(paymentResult);
+            onClose();
+          } else if (event.data.status === 'error') {
+            setError(event.data.error || 'Payment failed. Please try again.');
+            setIsProcessing(false);
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        setIsLoading(false);
+
+        // Check if popup was closed without payment
+        const checkClosed = setInterval(() => {
+          if (popupWindow.closed) {
+            clearInterval(checkClosed);
+            setError('Payment window was closed. Please try again.');
+            setIsProcessing(false);
+            window.removeEventListener('message', messageHandler);
+          }
+        }, 1000);
+
       } catch (error) {
-        console.error('Failed to load Flask brick:', error);
-        setError('Failed to load payment form. Please try again.');
+        console.error('Failed to open Flask brick window:', error);
+        setError('Failed to open payment window. Please try again.');
         setIsLoading(false);
       }
     };
 
-    loadFlaskBrick();
+    openFlaskBrickWindow();
 
     // Cleanup function
     return () => {

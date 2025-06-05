@@ -108,8 +108,8 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Flask brick proxy endpoint
-  app.get('/api/flask-brick-proxy', async (req: Request, res: Response) => {
+  // Flask brick proxy endpoint - using specific route that Vite won't intercept
+  app.get('/flask-brick-proxy', async (req: Request, res: Response) => {
     try {
       const { amount, hedgeData } = req.query;
       
