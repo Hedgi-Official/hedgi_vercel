@@ -128,25 +128,40 @@ export function CurrencySimulator({
   };
 
   // open payment modal
-  const handlePlaceHedge = () => {
+  const handlePlaceHedge = async () => {
     if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
     setHedgeError(null);
+    setIsPlacingHedge(true);
 
-    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
-      baseCurrency,
-      targetCurrency,
-      amount: amount.toString(),
-      rate: simulation.rate.toString(),
-      duration,
-      margin: margin?.toString() ?? null,
-      tradeDirection,
-      tradeOrderNumber: null,
-      tradeStatus: null,
-      broker: 'activtrades'
-    };
+    try {
+      const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
+        baseCurrency,
+        targetCurrency,
+        amount: amount.toString(),
+        rate: simulation.rate.toString(),
+        duration,
+        margin: margin?.toString() ?? null,
+        tradeDirection,
+        tradeOrderNumber: null,
+        tradeStatus: null,
+        broker: 'activtrades'
+      };
 
-    // Call the onPlaceHedge callback to trigger the new Mercado Pago Brick payment flow
-    onPlaceHedge(hedgeData);
+      // Call the onPlaceHedge callback to trigger the new Mercado Pago Brick payment flow
+      const result = onPlaceHedge(hedgeData);
+      
+      // If onPlaceHedge returns a promise, wait for it
+      if (result && typeof result.then === 'function') {
+        await result;
+      }
+      
+      console.log('[CurrencySimulator] Place hedge completed successfully');
+    } catch (error) {
+      console.error('[CurrencySimulator] Error placing hedge:', error);
+      setHedgeError(error instanceof Error ? error.message : 'Failed to place hedge');
+    } finally {
+      setIsPlacingHedge(false);
+    }
   };
 
   
