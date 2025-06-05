@@ -2,8 +2,6 @@ import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MercadoPagoBrickModal } from "@/components/mercado-pago-brick-modal";
-import { MercadoPagoBrickModal } from "@/components/mercado-pago-brick-modal"; 
-
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
