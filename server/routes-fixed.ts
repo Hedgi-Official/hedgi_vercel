@@ -42,84 +42,18 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`[Local Brick] Creating Mercado Pago brick for amount: ${amount}`);
       
-      // Create the Mercado Pago brick HTML directly
-      const html = `
-<html>
-<head>
-  <script src="https://sdk.mercadopago.com/js/v2"></script>
-</head>
-<body>
-  <div id="cardPaymentBrick_container"></div>
-  <script>
-    const mp = new MercadoPago('TEST-f0fe8e15-aed0-4b3c-ac0f-35269b1793f3', {
-      locale: 'en'
-    });
-    const bricksBuilder = mp.bricks();
-    const renderCardPaymentBrick = async (bricksBuilder) => {
-      const settings = {
-        initialization: {
-          amount: ${amount}, // total amount to be paid
-          payer: {
-            email: "",
-          },
-        },
-        customization: {
-          visual: {
-            style: {
-              theme: 'default', // | 'dark' | 'bootstrap' | 'flat'
-              customVariables: {
-              },
-            },
-          },
-          paymentMethods: {
-            types: {
-              excluded: ['debit_card']
-            }, 
-            maxInstallments: 1,
-          },
-        },
-        callbacks: {
-          onReady: () => {
-            console.log('Mercado Pago brick ready');
-          },
-          onSubmit: (cardFormData) => {
-            console.log('Payment submitted:', cardFormData);
-            return new Promise((resolve, reject) => {
-              // Simulate payment processing
-              setTimeout(() => {
-                const success = Math.random() > 0.2; // 80% success rate for testing
-                if (success) {
-                  const paymentId = 'mp_' + Date.now();
-                  window.parent.postMessage({ 
-                    status: 'success', 
-                    data: { id: paymentId, status: 'approved' } 
-                  }, "*");
-                  resolve();
-                } else {
-                  window.parent.postMessage({ 
-                    status: 'error', 
-                    error: 'Payment processing failed' 
-                  }, "*");
-                  reject();
-                }
-              }, 2000);
-            });
-          },
-          onError: (error) => {
-            console.error('Mercado Pago brick error:', error);
-            window.parent.postMessage({ 
-              status: 'error', 
-              error: 'Payment form error' 
-            }, "*");
-          },
-        },
-      };
-      window.cardPaymentBrickController = await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', settings);
-    };
-    renderCardPaymentBrick(bricksBuilder);
-  </script>
-</body>
-</html>`;
+      // Fetch the actual Flask brick content
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
+      
+      console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
+      
+      const response = await fetch(flaskUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Flask server responded with ${response.status}: ${response.statusText}`);
+      }
+      
+      const html = await response.text();
       
       console.log(`[Local Brick] Generated brick HTML (${html.length} characters)`);
       
