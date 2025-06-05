@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 export function MercadoPayIframeModal({ isOpen, onClose, amount }: { isOpen: boolean, onClose: () => void, amount: number }) {
   useEffect(() => {
