@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -6,23 +6,17 @@ import { Loader2 } from 'lucide-react';
 interface MercadoPagoBrickModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPaymentSuccess: (paymentData: any) => void;
+  onPaymentSuccess: (paymentResult: any) => void;
   amount: string;
-  hedgeData: any;
+  hedgeData?: any;
 }
 
-declare global {
-  interface Window {
-    MercadoPago: any;
-  }
-}
-
-export function MercadoPagoBrickModal({ 
-  isOpen, 
-  onClose, 
-  onPaymentSuccess, 
-  amount, 
-  hedgeData 
+export function MercadoPagoBrickModal({
+  isOpen,
+  onClose,
+  onPaymentSuccess,
+  amount,
+  hedgeData
 }: MercadoPagoBrickModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,43 +27,30 @@ export function MercadoPagoBrickModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const openFlaskBrickWindow = () => {
+    const loadFlaskBrick = () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Add a small delay to ensure the modal is fully rendered before opening popup
-        setTimeout(() => {
-          // Directly open Flask brick endpoint in a new popup window
-          const flaskUrl = `http://3.145.164.47/payment?amount=${amount}`;
+        if (containerRef.current) {
+          const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
           
-          console.log('[MercadoPago Modal] Opening Flask brick window:', flaskUrl);
+          console.log('[MercadoPago Modal] Loading Flask brick in iframe:', flaskUrl);
           
-          // Open popup window with specific dimensions
-          const width = 600;
-          const height = 700;
-          const left = window.screenX + (window.outerWidth - width) / 2;
-          const top = window.screenY + (window.outerHeight - height) / 2;
+          // Create iframe element
+          const iframe = document.createElement('iframe');
+          iframe.src = flaskUrl;
+          iframe.style.width = '100%';
+          iframe.style.height = '500px';
+          iframe.style.border = 'none';
+          iframe.style.borderRadius = '8px';
+          iframe.style.background = '#ffffff';
           
-          const popupWindow = window.open(
-            flaskUrl,
-            'MercadoPagoBrick',
-            `width=${width},height=${height},left=${left},top=${top},resizable=no,scrollbars=no,menubar=no,toolbar=no,location=no,status=no,titlebar=no,directories=no`
-          );
-
-          if (!popupWindow) {
-            setError('Popup blocked. Please allow popups for this site.');
-            setIsLoading(false);
-            return;
-          }
-
-          console.log('[MercadoPago Modal] Popup window opened successfully');
-
-          // Listen for payment completion messages from popup
+          // Listen for payment completion messages from iframe
           const messageHandler = (event: MessageEvent) => {
             console.log('[MercadoPago Modal] Received message:', event);
             
-            // Accept messages from Flask brick popup
+            // Accept messages from Flask brick iframe
             if (event.origin !== 'http://3.145.164.47') {
               console.log('[MercadoPago Modal] Ignoring message from origin:', event.origin);
               return;
@@ -89,24 +70,14 @@ export function MercadoPagoBrickModal({
                   message: 'Payment processed successfully'
                 };
                 
-                // Close popup and cleanup
-                if (popupWindow && !popupWindow.closed) {
-                  popupWindow.close();
-                }
-                clearInterval(checkClosedInterval);
+                // Cleanup and notify success
                 window.removeEventListener('message', messageHandler);
-                
                 onPaymentSuccess(paymentResult);
                 onClose();
               } else if (event.data.status === 'error' || event.data.status === 'rejected' || event.data.status === 'failed') {
                 console.log('[MercadoPago Modal] Payment failed:', event.data);
                 setError(event.data.error || 'Payment failed. Please try again.');
                 setIsProcessing(false);
-                
-                // Close popup on error
-                if (popupWindow && !popupWindow.closed) {
-                  popupWindow.close();
-                }
               }
             }
           };
@@ -115,41 +86,28 @@ export function MercadoPagoBrickModal({
 
           // Store reference for cleanup
           brickRef.current = {
-            window: popupWindow,
+            iframe,
             messageHandler,
             unmount: () => {
-              if (popupWindow && !popupWindow.closed) {
-                popupWindow.close();
-              }
               window.removeEventListener('message', messageHandler);
-              if (checkClosedInterval) {
-                clearInterval(checkClosedInterval);
+              if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
               }
             }
           };
 
-          // Check if popup was closed without payment
-          const checkClosedInterval = setInterval(() => {
-            if (popupWindow.closed) {
-              console.log('[MercadoPago Modal] Popup window closed by user');
-              clearInterval(checkClosedInterval);
-              setError('Payment window was closed. Please try again.');
-              setIsProcessing(false);
-              window.removeEventListener('message', messageHandler);
-            }
-          }, 1000);
-
+          // Add iframe to container
+          containerRef.current.appendChild(iframe);
           setIsLoading(false);
-        }, 100); // Small delay to ensure modal is rendered
-
+        }
       } catch (error) {
-        console.error('Failed to open Flask brick window:', error);
-        setError('Failed to open payment window. Please try again.');
+        console.error('Failed to load Flask brick:', error);
+        setError('Failed to load payment form. Please try again.');
         setIsLoading(false);
       }
     };
 
-    openFlaskBrickWindow();
+    loadFlaskBrick();
 
     // Cleanup function
     return () => {
@@ -194,36 +152,33 @@ export function MercadoPagoBrickModal({
 
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="ml-2">Loading payment form...</span>
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span>Loading payment form...</span>
             </div>
           )}
 
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+              {error}
             </div>
           )}
-
-          <div 
-            ref={containerRef} 
-            id="cardPaymentBrick_container"
-            className={isLoading ? 'hidden' : 'block'}
-          />
 
           {isProcessing && (
             <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="ml-2">Processing payment...</span>
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              <span>Processing payment...</span>
             </div>
           )}
 
-          <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={handleClose}
-              disabled={isProcessing}
-            >
+          {/* Container for Flask brick iframe */}
+          <div 
+            ref={containerRef}
+            className="w-full min-h-[500px] bg-white rounded-lg"
+            style={{ display: isLoading ? 'none' : 'block' }}
+          />
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
           </div>
