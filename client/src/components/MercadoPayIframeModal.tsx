@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 export function MercadoPayIframeModal({ isOpen, onClose, amount }: { isOpen: boolean, onClose: () => void, amount: number }) {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
