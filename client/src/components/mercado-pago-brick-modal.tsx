@@ -24,6 +24,8 @@ export function MercadoPagoBrickModal({
   const brickRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  console.log('[MercadoPago Modal] Component rendered - isOpen:', isOpen, 'amount:', amount);
+
   useEffect(() => {
     console.log('[MercadoPago Modal] useEffect triggered - isOpen:', isOpen, 'amount:', amount);
     

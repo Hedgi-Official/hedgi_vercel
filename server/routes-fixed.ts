@@ -42,12 +42,22 @@ export function registerRoutes(app: Express): Server {
       
       console.log(`[Local Brick] Creating Mercado Pago brick for amount: ${amount}`);
       
-      // Fetch the actual Flask brick content
+      // Fetch the actual Flask brick content with proper HTTP headers
       const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
       
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
       
-      const response = await fetch(flaskUrl);
+      const response = await fetch(flaskUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Flask server responded with ${response.status}: ${response.statusText}`);
