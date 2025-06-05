@@ -703,6 +703,9 @@ export default function Dashboard() {
                   setPaymentAmount(paymentAmount.toString());
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
+                  
+                  // Return undefined to indicate the payment modal will handle the actual trade creation
+                  return undefined;
                 }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });

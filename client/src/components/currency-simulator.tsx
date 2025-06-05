@@ -138,7 +138,7 @@ export function CurrencySimulator({
     if (!onPlaceHedge || !simulation || !onOrdersUpdated) return;
     setHedgeError(null);
 
-    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { status: 'pending' }= {
+    const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
       baseCurrency,
       targetCurrency,
       amount: amount.toString(),
@@ -148,8 +148,7 @@ export function CurrencySimulator({
       tradeDirection,
       tradeOrderNumber: null,
       tradeStatus: null,
-      broker: 'activtrades',
-      status: 'pending'
+      broker: 'activtrades'
     };
 
     // Call the onPlaceHedge callback to trigger the new Mercado Pago Brick payment flow
