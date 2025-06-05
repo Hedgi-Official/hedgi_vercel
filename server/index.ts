@@ -8,6 +8,12 @@ dotenv.config();
 import paymentRoutes from './routes/payment';
 
 const app = express();
+const server = createServer(app);
+
+// Add payment routes
+app.use('/', paymentRoutes);
+
+const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
