@@ -110,7 +110,7 @@ export function registerRoutes(app: Express): Server {
       const payload = {
         token: originalPayload.token,
         installments: originalPayload.installments || 1,
-        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id,
+        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id || "master", // fallback to master if missing
         transaction_amount: originalPayload.transactionAmount || originalPayload.amount,
         description: `Hedgi order for ${originalPayload.transactionAmount || originalPayload.amount}`,
         payer: {
@@ -120,6 +120,11 @@ export function registerRoutes(app: Express): Server {
         },
         txId: originalPayload.txId
       };
+
+      // Log missing fields for debugging
+      if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {
+        console.log("[Proxy] WARNING: payment_method_id missing from payload, using fallback 'master'");
+      }
 
       console.log("[Proxy] Transformed payload for Flask:", payload);
 
