@@ -383,39 +383,29 @@
     
     // Handle test payment
     async function handleTestPayment() {
-      console.log('[TestPayment] Processing test payment with hedge data:', hedgeData);
-      
       try {
-        // Call the trade API directly
-        const response = await fetch('/api/trades', {
+        const response = await fetch('/api/payment/process', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            symbol: `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`,
-            direction: hedgeData.tradeDirection,
-            volume: Math.abs(Number(hedgeData.amount)) / 100000,
-            metadata: {
-              days: hedgeData.duration,
-              paymentToken: `test_payment_mxn_${Date.now()}`,
-              margin: hedgeData.margin || 500
-            }
-          })
+            isTest: true,
+            hedgeData: hedgeData
+          }),
         });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('[TestPayment] Trade created successfully:', result);
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Test payment processed successfully.');
           processSuccessfulPayment();
         } else {
-          const error = await response.text();
-          console.error('[TestPayment] Trade creation failed:', error);
-          showError('Failed to create trade: ' + error);
+          showError('Test payment failed: ' + (data.message || 'Unknown error'));
         }
       } catch (error) {
-        console.error('[TestPayment] Error creating trade:', error);
-        showError('Error creating trade: ' + error.message);
+        console.error('Error processing test payment:', error);
+        showError('Test payment failed: ' + (error.message || 'Network error'));
       }
     }
     

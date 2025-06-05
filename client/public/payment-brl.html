@@ -397,49 +397,9 @@
       showSuccess('Payment processed successfully. You can close this window now.');
     }
 
-    // Handle test payment
-    async function handleTestPayment() {
-      console.log('[TestPayment] Processing test payment with hedge data:', hedgeData);
-      
-      try {
-        // Call the trade API directly
-        const response = await fetch('/api/trades', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            symbol: `${hedgeData.targetCurrency}${hedgeData.baseCurrency}`,
-            direction: hedgeData.tradeDirection,
-            volume: Math.abs(Number(hedgeData.amount)) / 100000,
-            metadata: {
-              days: hedgeData.duration,
-              paymentToken: `test_payment_${Date.now()}`,
-              margin: hedgeData.margin || 500
-            }
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('[TestPayment] Trade created successfully:', result);
-          processSuccessfulPayment();
-        } else {
-          const error = await response.text();
-          console.error('[TestPayment] Trade creation failed:', error);
-          showError('Failed to create trade: ' + error);
-        }
-      } catch (error) {
-        console.error('[TestPayment] Error creating trade:', error);
-        showError('Error creating trade: ' + error.message);
-      }
-    }
-
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       // Set up event listeners
-      document.getElementById('test-payment-button').addEventListener('click', handleTestPayment);
-      
       closeButtonEl.addEventListener('click', () => {
         // Close this window
         window.close();

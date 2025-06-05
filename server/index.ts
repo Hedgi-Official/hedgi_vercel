@@ -6,7 +6,6 @@ import { setupSimpleAuth } from "./simple-auth";
 import * as dotenv from 'dotenv';
 dotenv.config();
 import paymentRoutes from './routes/payment';
-import tradesRoutes from './routes/trades';
 
 const app = express();
 app.use(express.json());
@@ -14,7 +13,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Mount payment routes
 app.use(paymentRoutes);
-app.use(tradesRoutes);
 
 // Add test endpoint
 app.get('/ping', (req, res) => {
