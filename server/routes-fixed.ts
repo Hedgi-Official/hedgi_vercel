@@ -111,7 +111,10 @@ export function registerRoutes(app: Express): Server {
         token: originalPayload.token,
         installments: originalPayload.installments || 1,
         payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id || "master", // fallback to master if missing
-        transaction_amount: originalPayload.transactionAmount || originalPayload.amount,
+        transaction_amount: originalPayload.transaction_amount
+        || originalPayload.transactionAmount
+        || originalPayload.amount,
+        
         description: `Hedgi order for ${originalPayload.transactionAmount || originalPayload.amount}`,
         payer: {
           email: originalPayload.payer?.email,
@@ -120,6 +123,7 @@ export function registerRoutes(app: Express): Server {
         },
         txId: originalPayload.txId
       };
+      console.log("[iframe] 🤖 paymentPayload about to be sent:", paymentPayload);
 
       // Log missing fields for debugging
       if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {
