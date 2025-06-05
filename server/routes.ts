@@ -14,6 +14,8 @@ import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';
 // Import our modern trade service for the curl-based API implementation
 import { tradeService } from "./services/tradeService";
+import { PAYMENT_CONFIG } from "./config";
+import { paymentService } from "./services/paymentService";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -27,6 +29,84 @@ interface BrokerRate {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Mercado Pago API endpoints for modal popup
+  app.get('/api/mp-public-key', async (req: Request, res: Response) => {
+    try {
+      const publicKey = PAYMENT_CONFIG.BR_PUBLIC_KEY;
+      if (!publicKey) {
+        return res.status(500).json({ error: 'Mercado Pago public key not configured' });
+      }
+      res.json({ publicKey });
+    } catch (error) {
+      console.error('Error getting MP public key:', error);
+      res.status(500).json({ error: 'Failed to get public key' });
+    }
+  });
+
+  app.post('/api/payment-preference', async (req: Request, res: Response) => {
+    try {
+      const { amount, hedgeData } = req.body;
+      
+      const preference = {
+        id: `hedge_${Date.now()}`,
+        amount: parseFloat(amount),
+        currency_id: 'BRL',
+        description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+        metadata: hedgeData
+      };
+      
+      res.json(preference);
+    } catch (error) {
+      console.error('Error creating payment preference:', error);
+      res.status(500).json({ error: 'Failed to create payment preference' });
+    }
+  });
+
+  app.post('/api/process-payment', async (req: Request, res: Response) => {
+    try {
+      const { hedgeData, amount, ...paymentData } = req.body;
+      
+      console.log('[MP Process Payment] Processing payment for amount:', amount);
+      
+      const mpResult = await paymentService.processPayment({
+        token: paymentData.token,
+        transaction_amount: parseFloat(amount),
+        description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
+        payment_method_id: paymentData.payment_method_id,
+        payer: paymentData.payer,
+        metadata: {
+          days: hedgeData.duration,
+          margin: hedgeData.margin || '0',
+          baseCurrency: hedgeData.baseCurrency,
+          targetCurrency: hedgeData.targetCurrency,
+          tradeDirection: hedgeData.tradeDirection,
+          rate: hedgeData.rate,
+          amount: hedgeData.amount
+        }
+      });
+
+      if (mpResult && (mpResult as any).status === 'approved') {
+        const paymentResult = {
+          id: (mpResult as any).id,
+          status: 'approved',
+          message: 'Payment processed successfully'
+        };
+        res.json(paymentResult);
+      } else {
+        res.status(400).json({ 
+          error: 'Payment not approved', 
+          status: (mpResult as any)?.status || 'unknown' 
+        });
+      }
+    } catch (error: unknown) {
+      console.error('[MP Process Payment] Error:', error);
+      res.status(500).json({ 
+        error: 'Payment processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Mercado Pago Brick Integration Endpoints
   
