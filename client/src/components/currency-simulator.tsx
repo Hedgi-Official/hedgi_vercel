@@ -152,7 +152,18 @@ export function CurrencySimulator({
     };
 
     setPendingHedgeData(hedgeData);
-    window.open('/payment', '_blank', 'width=500,height=700');
+    // Redirect to Flask server payment endpoint with hedge data
+    const FLASK_URL = process.env.FLASK_URL || "http://3.145.164.47";
+    const params = new URLSearchParams({
+      amount: hedgeData.amount,
+      rate: hedgeData.rate,
+      duration: hedgeData.duration.toString(),
+      baseCurrency: hedgeData.baseCurrency,
+      targetCurrency: hedgeData.targetCurrency,
+      tradeDirection: hedgeData.tradeDirection,
+      margin: hedgeData.margin || '0'
+    });
+    window.open(`${FLASK_URL}/payment?${params.toString()}`, '_blank', 'width=500,height=700');
   };
 
   // after payment, call Dashboard's onPlaceHedge
