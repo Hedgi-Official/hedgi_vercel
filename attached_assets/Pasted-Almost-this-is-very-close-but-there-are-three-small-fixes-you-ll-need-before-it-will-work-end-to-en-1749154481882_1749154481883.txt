@@ -1,0 +1,244 @@
+Almost—this is very close, but there are three small fixes you’ll need before it will work end-to-end:
+
+1. **Fix the `<!DOCTYPE>` tag.**
+   Your file currently starts with
+
+   ```html
+   !DOCTYPE html>
+   ```
+
+   It must be:
+
+   ```html
+   <!DOCTYPE html>
+   ```
+
+2. **Make sure Jinja (Flask) actually replaces `{{AMOUNT}}` and `{{PUBLIC_KEY}}`.**
+   If you’re using `render_template_string` (or Jinja templates), you must pass `AMOUNT` and `PUBLIC_KEY` into the template context. For example, in your Flask route:
+
+   ```python
+   @app.route("/brick")
+   def brick():
+       amount = request.args.get("amount", type=float, default=100)
+       tx_id  = request.args.get("txId", type=str, default="")
+       public_key = "TEST-f0fe8e15-aed0-4b3c-ac0f-35269b1793f3"
+
+       with open("payment_BRL.html") as f:
+           html = f.read()
+
+       # Replace Jinja placeholders (or use render_template_string)
+       html = html.replace("{{AMOUNT}}", str(amount))
+       html = html.replace("{{PUBLIC_KEY}}", public_key)
+       html = html.replace("{{TX_ID_PLACEHOLDER}}", f"\"{tx_id}\"")
+
+       return render_template_string(html)
+   ```
+
+   Then inside `payment_BRL.html`, the `{{AMOUNT}}` and `{{PUBLIC_KEY}}` lines will become literal numbers/strings.
+
+3. **Point the `fetch()` at your proxy path, not directly at Flask’s HTTP endpoint.**
+   Since your dashboard is served over HTTPS, calling `fetch("http://3.145.164.47/process_payment")` will be blocked as mixed content. Instead you must call your Express (Replit) proxy endpoint—e.g. `/api/proxy/process_payment`. In other words, change:
+
+   ```js
+   return fetch("/process_payment", {
+   ```
+
+   to
+
+   ```js
+   return fetch("/api/proxy/process_payment", {
+   ```
+
+   (because `/api/proxy/process_payment` is what your Express server listens on and then forwards to `http://3.145.164.47/process_payment`).
+
+Putting all three fixes together, your final `payment_BRL.html` might look like this (assuming you’re using `render_template_string` and replacing `{{AMOUNT}}` & `{{PUBLIC_KEY}}` on the Flask side):
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Complete Payment – Hedgi</title>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .payment-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #cardPaymentBrick_container {
+            margin-top: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <h2>Complete Your Payment</h2>
+        <p>Amount: R$ {{AMOUNT}}</p>
+        <div id="cardPaymentBrick_container"></div>
+        <div id="loading" class="loading">Loading payment form...</div>
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 1) Mercado Pago public key gets substituted by Flask: "{{PUBLIC_KEY}}"
+        const mp = new MercadoPago('{{PUBLIC_KEY}}', {
+            locale: 'pt-BR'
+        });
+
+        // 2) Generate a txId (Flask already passed this into the template as well, if you prefer
+        // to keep consistency—just ensure txId matches what you passed into "/brick?txId=…"
+        const TX_ID = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log('🆔 Payment TX_ID:', TX_ID);
+
+        const bricksBuilder = mp.bricks();
+
+        const renderCardPaymentBrick = async (bricksBuilder) => {
+            try {
+                const settings = {
+                    initialization: {
+                        amount: {{AMOUNT}}, // replaced by Flask
+                        payer: {
+                            email: "",
+                        },
+                    },
+                    customization: {
+                        visual: {
+                            style: {
+                                theme: 'default',
+                            },
+                        },
+                        paymentMethods: {
+                            types: {
+                                excluded: ['debit_card', 'ticket', 'atm']
+                            },
+                            maxInstallments: 12,
+                        },
+                    },
+                    callbacks: {
+                        onReady: () => {
+                            document.getElementById('loading').style.display = 'none';
+                            console.log('🧱 Payment brick ready');
+                        },
+                        onError: (error) => {
+                            console.error('🧱 Brick error:', error);
+                            document.getElementById('error').textContent = 'Payment form error: ' + error.message;
+                            document.getElementById('error').style.display = 'block';
+                        },
+                        onSubmit: (cardFormData) => {
+                            console.log('🧱 Card form data:', cardFormData);
+
+                            // 3) Build the exact payload Flask requires:
+                            const paymentPayload = {
+                                token:              cardFormData.token,
+                                installments:       cardFormData.installments,
+                                payment_method_id:  cardFormData.paymentMethodId,           // REQUIRED
+                                transaction_amount: {{AMOUNT}},                               // REQUIRED
+                                description:        `Hedgi order for R$${{AMOUNT}}`,         // REQUIRED
+                                payer: {
+                                    email:          cardFormData.payer.email,               // REQUIRED
+                                    identification: {
+                                        type:   cardFormData.payer.identification?.type   || "CPF",
+                                        number: cardFormData.payer.identification?.number || ""
+                                    },
+                                    first_name:     cardFormData.payer.first_name || "HedgiCustomer" // REQUIRED
+                                },
+                                txId: TX_ID                                                  // REQUIRED
+                            };
+
+                            console.log('💳 Sending payment payload:', paymentPayload);
+
+                            // 4) Post to your Express proxy (over HTTPS), not straight to Flask’s HTTP URL
+                            return fetch("/api/proxy/process_payment", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify(paymentPayload)
+                            })
+                            .then(async (res) => {
+                                console.log('💳 Payment response status:', res.status);
+                                if (!res.ok) {
+                                    const text = await res.text();
+                                    console.error('💳 Payment error text:', text);
+                                    window.parent.postMessage({
+                                        status: "error",
+                                        txId: TX_ID,
+                                        error: text
+                                    }, "*");
+                                    throw new Error(text);
+                                }
+                                const json = await res.json();
+                                console.log('💳 Payment result JSON:', json);
+
+                                if (json.status === "approved") {
+                                    window.parent.postMessage({
+                                        status: "approved",
+                                        txId: TX_ID,
+                                        data: json
+                                    }, "*");
+                                } else {
+                                    window.parent.postMessage({
+                                        status: "error",
+                                        txId: TX_ID,
+                                        error: json.error || "Payment not approved"
+                                    }, "*");
+                                }
+                            })
+                            .catch((err) => {
+                                console.error('💳 Payment fetch failed:', err);
+                                window.parent.postMessage({
+                                    status: "error",
+                                    txId: TX_ID,
+                                    error: err.message
+                                }, "*");
+                            });
+                        }
+                    }
+                };
+
+                await bricksBuilder.create('cardPayment', 'cardPaymentBrick_container', settings);
+            } catch (error) {
+                console.error('🧱 Error creating payment brick:', error);
+                document.getElementById('error').textContent = 'Failed to load payment form: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+
+        renderCardPaymentBrick(bricksBuilder);
+    </script>
+</body>
+</html>
+```
+
+**Key points:**
+
+* We fixed the `<!DOCTYPE html>` line.
+* We assume Flask replaces `{{AMOUNT}}` and `{{PUBLIC_KEY}}` before sending the HTML to the browser.
+* We changed the `fetch(...)` URL to `/api/proxy/process_payment` (so the browser won’t be blocked by mixed-content).
+* We build exactly the JSON you showed (with `payment_method_id`, `transaction_amount`, `description`, `payer.first_name`, and `txId`).
+
+With those three adjustments in place, this template will submit a valid payload to your Express proxy → Flask → Mercado Pago. You should then see a non-null `"id"` and `"approved"` status in the JSON response.
