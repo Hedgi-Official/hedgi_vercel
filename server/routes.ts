@@ -14,6 +14,8 @@ import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';
 // Import our modern trade service for the curl-based API implementation
 import { tradeService } from "./services/tradeService";
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const FLASK = process.env.FLASK_URL || 'http://3.145.164.47';
 interface BrokerRate {
@@ -25,6 +27,133 @@ interface BrokerRate {
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Mercado Pago Brick Integration Endpoints
+  
+  // 1. GET /payment?amount=<AMOUNT> - Renders payment form with cardPayment Brick
+  app.get('/payment', (req: Request, res: Response) => {
+    const amount = req.query.amount as string;
+    const publicKey = process.env.MP_BR_PUBLIC_KEY;
+    
+    if (!amount || isNaN(Number(amount))) {
+      return res.status(400).send('Invalid amount parameter');
+    }
+    
+    if (!publicKey) {
+      return res.status(500).send('Payment system not configured');
+    }
+    
+    try {
+      const template = readFileSync(join(__dirname, 'templates/payment.html'), 'utf8');
+      const html = template
+        .replace(/{{AMOUNT}}/g, amount)
+        .replace(/{{PUBLIC_KEY}}/g, publicKey);
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      console.error('Error rendering payment template:', error);
+      res.status(500).send('Error loading payment page');
+    }
+  });
+
+  // 2. POST /process_payment - Processes payment via Mercado Pago API
+  app.post('/process_payment', async (req: Request, res: Response) => {
+    try {
+      const paymentData = req.body;
+      const accessToken = process.env.MP_BR_ACCESS_TOKEN;
+      
+      if (!accessToken) {
+        return res.status(500).json({ 
+          error: 'Payment system not configured',
+          status: 'error' 
+        });
+      }
+      
+      console.log('[Process Payment] Received payment data:', paymentData);
+      
+      // Call Mercado Pago Payments API
+      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        },
+        body: JSON.stringify(paymentData)
+      });
+      
+      const mpResult = await mpResponse.json();
+      console.log('[Process Payment] Mercado Pago response:', mpResult);
+      
+      if (mpResult.status === 'approved') {
+        return res.json({
+          id: mpResult.id,
+          message: 'Payment processed',
+          status: 'approved'
+        });
+      } else {
+        return res.json({
+          id: null,
+          message: 'Payment failed',
+          status: 'rejected',
+          details: mpResult.status_detail || 'Payment not approved'
+        });
+      }
+    } catch (error) {
+      console.error('[Process Payment] Error:', error);
+      res.status(500).json({
+        error: 'Payment processing failed',
+        status: 'error'
+      });
+    }
+  });
+
+  // 3. GET /payment_status/<payment_id> - Shows status with statusScreen Brick
+  app.get('/payment_status/:paymentId', (req: Request, res: Response) => {
+    const { paymentId } = req.params;
+    const publicKey = process.env.MP_BR_PUBLIC_KEY;
+    
+    if (!publicKey) {
+      return res.status(500).send('Payment system not configured');
+    }
+    
+    const isFailure = paymentId === 'failure';
+    
+    try {
+      const template = readFileSync(join(__dirname, 'templates/payment_status.html'), 'utf8');
+      
+      if (isFailure) {
+        const html = template
+          .replace(/{{#if isFailure}}/g, '')
+          .replace(/{{#unless isFailure}}[\s\S]*{{\/unless}}/g, '')
+          .replace(/{{\/if}}/g, '')
+          .replace(/{{AMOUNT}}/g, req.query.amount as string || '100')
+          .replace(/{{PUBLIC_KEY}}/g, publicKey);
+        
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      } else {
+        const html = template
+          .replace(/{{#if isFailure}}[\s\S]*{{\/if}}/g, '')
+          .replace(/{{#unless isFailure}}/g, '')
+          .replace(/{{\/unless}}/g, '')
+          .replace(/{{PAYMENT_ID}}/g, paymentId)
+          .replace(/{{PUBLIC_KEY}}/g, publicKey)
+          .replace(/{{SYMBOL}}/g, 'USDBRL')
+          .replace(/{{VOLUME}}/g, '0.1')
+          .replace(/{{DIRECTION}}/g, 'buy')
+          .replace(/{{DAYS}}/g, '7')
+          .replace(/{{MARGIN}}/g, '500');
+        
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      }
+    } catch (error) {
+      console.error('Error rendering payment status template:', error);
+      res.status(500).send('Error loading payment status page');
+    }
+  });
 
 
   // 1) Create a new trade (Simple proxy to Flask)

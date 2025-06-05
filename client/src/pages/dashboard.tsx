@@ -48,24 +48,6 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Want useStates from react
-  const [showPaymentModal, setShowPaymentModal] = React.useState(false) //wheter the brick should be on screen
-  const [pendingHedgeData, setPendingHedgeData] = React.useState<
-    Omit<Hedge, 'id' | 'userId' | 'status' | 'createdAt' | 'completedAt'>
-    | null
-  >(null)
-  const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
-  const [paymentInProgress, setPaymentInProgress] = React.useState(false) // Global payment lock
-  
-  // Add a ref-based lock to prevent duplicate modals from opening
-  const modalLockRef = React.useRef(false)
-
-  // Debug logging for modal state changes
-  React.useEffect(() => {
-    console.log("🔍 [Dashboard] Modal state changed:", { showPaymentModal, pendingHedgeData: !!pendingHedgeData });
-  }, [showPaymentModal, pendingHedgeData]);
-
-
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
@@ -716,13 +698,17 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
-                  modalLockRef.current = true;  // Ref lock first
-                  setPaymentInProgress(true);
-                  setIsProcessingPayment(true);
-                  setPendingHedgeData(hedgePayload);
-                  setShowPaymentModal(true);
-                  console.log("📝 [Dashboard] All payment locks engaged, modal opening");
+                  // Calculate payment amount based on hedge data
+                  const hedgeAmount = Math.abs(Number(hedgePayload.amount));
+                  const hedgeCost = hedgeAmount * 0.0025; // Simple calculation without costDetails dependency
+                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : hedgeCost * 2;
+                  const paymentAmount = Number((hedgeCost + margin).toFixed(2));
+                  
+                  console.log("✅ [Dashboard] Redirecting to Mercado Pago Brick payment page");
+                  console.log("Payment amount:", paymentAmount);
+                  
+                  // Redirect to server-rendered payment page
+                  window.location.href = `/payment?amount=${paymentAmount}`;
                 }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
@@ -755,45 +741,7 @@ export default function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {showPaymentModal && pendingHedgeData && (
-        <MercadoPaySDKModal
-          isOpen={showPaymentModal}
-          onClose={() => {
-            console.log("🔒 [Dashboard] Payment modal closing - releasing all locks");
-            // Single atomic state reset to prevent race conditions
-            modalLockRef.current = false;
-            setPaymentInProgress(false);
-            setShowPaymentModal(false);
-            setPendingHedgeData(null);
-            setIsProcessingPayment(false);
-          }}
-          onSuccess={(hedgeData, paymentToken) => {
-            console.log("✅ [Dashboard] Payment success received");
-            
-            // Prevent duplicate calls - check current state atomically
-            if (!showPaymentModal || !pendingHedgeData || !modalLockRef.current) {
-              console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
-              return;
-            }
-            
-            // Clear ref lock immediately to prevent any further modal operations
-            modalLockRef.current = false;
-            
-            // Close modal immediately after success - no delay needed
-            console.log("🔄 [Dashboard] Closing modal immediately after success");
-            setPaymentInProgress(false);
-            setShowPaymentModal(false);
-            setPendingHedgeData(null);
-            setIsProcessingPayment(false);
-            
-            // Refresh trade queries to show the new trade
-            queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-          }}
-          hedgeData={pendingHedgeData}
-          currency={pendingHedgeData?.baseCurrency || 'BRL'}
-        />
-      )}
+
 
     </div>
   );
