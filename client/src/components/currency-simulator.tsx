@@ -4,14 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { MercadoPayIframeModal } from './MercadoPayIframeModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { calculateBusinessDays } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
-import { MercadoPaySDKModal } from './mercado-pago-sdk-modal';
 
 export interface TradeResponse {
   ask: number;
@@ -71,11 +69,7 @@ export function CurrencySimulator({
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
-  // Payment modal
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [pendingHedgeData, setPendingHedgeData] = useState<
-    Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null
-  >(null);
+  
 
   const { data: activTradesRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
@@ -155,24 +149,7 @@ export function CurrencySimulator({
     onPlaceHedge(hedgeData);
   };
 
-  // after payment, call Dashboard's onPlaceHedge
-  const handlePaymentSuccess = async (
-    hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
-    paymentToken?: string
-  ) => {
-    if (!onPlaceHedge || !onOrdersUpdated) return;
-    setIsPlacingHedge(true);
-    try {
-      console.log('[CurrencySimulator] Payment successful, placing hedge with token:', paymentToken);
-      await onPlaceHedge(hedgeData, paymentToken || 'test-payment-success');
-      onOrdersUpdated();
-      setIsPaymentModalOpen(false);
-    } catch (err) {
-      setHedgeError(err instanceof Error ? err.message : 'Failed to place hedge');
-    } finally {
-      setIsPlacingHedge(false);
-    }
-  };
+  
 
   return (
     <>
@@ -404,12 +381,6 @@ export function CurrencySimulator({
           )}
         </CardContent>
       </Card>
-      <MercadoPayIframeModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        amount={margin ?? 0}
-      />
-
-    </>
+      </>
   );
 }

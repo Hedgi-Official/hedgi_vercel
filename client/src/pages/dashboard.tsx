@@ -687,7 +687,7 @@ export default function Dashboard() {
             <CardContent>
               <CurrencySimulator
                 showGraph={false}
-                onPlaceHedge={(hedgePayload) => { 
+                onPlaceHedge={async (hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
                   // Calculate payment amount based on hedge data
@@ -704,8 +704,20 @@ export default function Dashboard() {
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
                   
-                  // Return undefined to indicate the payment modal will handle the actual trade creation
-                  return undefined;
+                  // Return a resolved promise to prevent infinite loading
+                  return Promise.resolve({
+                    ask: 0,
+                    bid: 0,
+                    comment: "Payment modal opened",
+                    deal: 0,
+                    order: 0,
+                    price: 0,
+                    request: {},
+                    request_id: 0,
+                    retcode: 0,
+                    retcode_external: 0,
+                    volume: 0
+                  });
                 }}
                 onOrdersUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
