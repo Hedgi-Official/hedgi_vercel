@@ -25,7 +25,14 @@ export function MercadoPagoBrickModal({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    console.log('[MercadoPago Modal] useEffect triggered - isOpen:', isOpen, 'amount:', amount);
+    
+    if (!isOpen) {
+      console.log('[MercadoPago Modal] Modal not open, skipping brick load');
+      return;
+    }
+
+    console.log('[MercadoPago Modal] Starting brick load process');
 
     const loadFlaskBrick = () => {
       try {
