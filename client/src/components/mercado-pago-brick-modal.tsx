@@ -62,8 +62,8 @@ export function MercadoPagoBrickModal({
           const messageHandler = (event: MessageEvent) => {
             console.log('[MercadoPago Modal] Received message:', event);
             
-            // Accept messages from Flask brick iframe
-            if (event.origin !== 'http://3.145.164.47') {
+            // Accept messages from our local brick iframe
+            if (!event.origin.includes('localhost') && !event.origin.includes('127.0.0.1')) {
               console.log('[MercadoPago Modal] Ignoring message from origin:', event.origin);
               return;
             }
