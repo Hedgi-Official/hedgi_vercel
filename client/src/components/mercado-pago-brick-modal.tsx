@@ -38,68 +38,97 @@ export function MercadoPagoBrickModal({
         setIsLoading(true);
         setError(null);
 
-        // Directly open Flask brick endpoint in a new popup window
-        const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
-        
-        // Open popup window with specific dimensions
-        const width = 600;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        const popupWindow = window.open(
-          flaskUrl,
-          'MercadoPagoBrick',
-          `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
-
-        if (!popupWindow) {
-          throw new Error('Popup blocked. Please allow popups for this site.');
-        }
-
-        // Store reference for cleanup
-        brickRef.current = {
-          window: popupWindow,
-          unmount: () => {
-            if (popupWindow && !popupWindow.closed) {
-              popupWindow.close();
-            }
-            window.removeEventListener('message', messageHandler);
-          }
-        };
-
-        // Listen for payment completion messages from popup
-        const messageHandler = (event: MessageEvent) => {
-          // Accept messages from Flask server
-          if (event.origin !== 'http://3.145.164.47') return;
+        // Add a small delay to ensure the modal is fully rendered before opening popup
+        setTimeout(() => {
+          // Directly open Flask brick endpoint in a new popup window
+          const flaskUrl = `http://3.145.164.47/brick?amount=${amount}`;
           
-          if (event.data.status === 'success') {
-            // Extract payment data from response
-            const paymentResult = {
-              id: event.data.data?.id || Date.now(),
-              status: 'approved',
-              message: 'Payment processed successfully'
-            };
-            onPaymentSuccess(paymentResult);
-            onClose();
-          } else if (event.data.status === 'error') {
-            setError(event.data.error || 'Payment failed. Please try again.');
-            setIsProcessing(false);
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-        setIsLoading(false);
+          console.log('[MercadoPago Modal] Opening Flask brick window:', flaskUrl);
+          
+          // Open popup window with specific dimensions
+          const width = 600;
+          const height = 700;
+          const left = window.screenX + (window.outerWidth - width) / 2;
+          const top = window.screenY + (window.outerHeight - height) / 2;
+          
+          const popupWindow = window.open(
+            flaskUrl,
+            'MercadoPagoBrick',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=no,location=no,status=no`
+          );
 
-        // Check if popup was closed without payment
-        const checkClosed = setInterval(() => {
-          if (popupWindow.closed) {
-            clearInterval(checkClosed);
-            setError('Payment window was closed. Please try again.');
-            setIsProcessing(false);
-            window.removeEventListener('message', messageHandler);
+          if (!popupWindow) {
+            setError('Popup blocked. Please allow popups for this site.');
+            setIsLoading(false);
+            return;
           }
-        }, 1000);
+
+          console.log('[MercadoPago Modal] Popup window opened successfully');
+
+          // Listen for payment completion messages from popup
+          const messageHandler = (event: MessageEvent) => {
+            console.log('[MercadoPago Modal] Received message:', event);
+            
+            // Accept messages from Flask server
+            if (event.origin !== 'http://3.145.164.47') {
+              console.log('[MercadoPago Modal] Ignoring message from origin:', event.origin);
+              return;
+            }
+            
+            if (event.data.status === 'success') {
+              console.log('[MercadoPago Modal] Payment success received');
+              // Extract payment data from response
+              const paymentResult = {
+                id: event.data.data?.id || `mp_${Date.now()}`,
+                status: 'approved',
+                message: 'Payment processed successfully'
+              };
+              
+              // Close popup and cleanup
+              if (popupWindow && !popupWindow.closed) {
+                popupWindow.close();
+              }
+              clearInterval(checkClosedInterval);
+              window.removeEventListener('message', messageHandler);
+              
+              onPaymentSuccess(paymentResult);
+              onClose();
+            } else if (event.data.status === 'error') {
+              setError(event.data.error || 'Payment failed. Please try again.');
+              setIsProcessing(false);
+            }
+          };
+          
+          window.addEventListener('message', messageHandler);
+
+          // Store reference for cleanup
+          brickRef.current = {
+            window: popupWindow,
+            messageHandler,
+            unmount: () => {
+              if (popupWindow && !popupWindow.closed) {
+                popupWindow.close();
+              }
+              window.removeEventListener('message', messageHandler);
+              if (checkClosedInterval) {
+                clearInterval(checkClosedInterval);
+              }
+            }
+          };
+
+          // Check if popup was closed without payment
+          const checkClosedInterval = setInterval(() => {
+            if (popupWindow.closed) {
+              console.log('[MercadoPago Modal] Popup window closed by user');
+              clearInterval(checkClosedInterval);
+              setError('Payment window was closed. Please try again.');
+              setIsProcessing(false);
+              window.removeEventListener('message', messageHandler);
+            }
+          }, 1000);
+
+          setIsLoading(false);
+        }, 100); // Small delay to ensure modal is rendered
 
       } catch (error) {
         console.error('Failed to open Flask brick window:', error);
