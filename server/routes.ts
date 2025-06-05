@@ -127,8 +127,7 @@ export function registerRoutes(app: Express): Server {
         headers: {
           'User-Agent': 'Hedgi-Proxy/1.0',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        },
-        timeout: 30000 // 30 second timeout
+        }
       });
       
       console.log('[Flask Brick Proxy] Response status:', brickResponse.status);
@@ -196,11 +195,25 @@ export function registerRoutes(app: Express): Server {
       // Inject the script before closing </body> tag
       html = html.replace('</body>', `${messageScript}</body>`);
       
-      res.setHeader('Content-Type', 'text/html');
+      // Set proper headers to prevent iframe restrictions
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
+      res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *");
       res.send(html);
     } catch (error) {
       console.error('Flask brick proxy error:', error);
-      res.status(500).json({ error: 'Failed to load payment form from Flask server' });
+      res.status(500).send(`
+        <html>
+          <body>
+            <div style="padding: 20px; text-align: center;">
+              <h3>Payment Form Error</h3>
+              <p>Failed to load payment form from Flask server</p>
+              <p>Error: ${error.message}</p>
+              <button onclick="window.parent.postMessage({type: 'PAYMENT_ERROR', error: 'Failed to load payment form'}, '*')">Close</button>
+            </div>
+          </body>
+        </html>
+      `);
     }
   });
 
