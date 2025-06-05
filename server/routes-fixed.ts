@@ -123,7 +123,7 @@ export function registerRoutes(app: Express): Server {
         },
         txId: originalPayload.txId
       };
-      console.log("[iframe] 🤖 paymentPayload about to be sent:", paymentPayload);
+      console.log("[iframe] 🤖 payload about to be sent:", payload);
 
       // Log missing fields for debugging
       if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {
