@@ -152,7 +152,7 @@ export function CurrencySimulator({
     };
 
     setPendingHedgeData(hedgeData);
-    setIsPaymentModalOpen(true);
+    window.open('/payment', '_blank', 'width=500,height=700');
   };
 
   // after payment, call Dashboard's onPlaceHedge
@@ -404,15 +404,6 @@ export function CurrencySimulator({
           )}
         </CardContent>
       </Card>
-
-      <MercadoPaySDKModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
-        hedgeData={pendingHedgeData}
-        currency={baseCurrency}
-        simulation={simulation}
-      />
     </>
   );
 }

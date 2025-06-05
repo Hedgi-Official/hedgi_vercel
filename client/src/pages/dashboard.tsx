@@ -716,19 +716,6 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  // Enhanced payment lock with ref-based protection
-                  if (modalLockRef.current || paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
-                    console.log("⚠️ [Dashboard] Payment BLOCKED - already in progress");
-                    console.log("⚠️ [Dashboard] Lock states:", { 
-                      modalLock: modalLockRef.current, 
-                      paymentInProgress, 
-                      isProcessingPayment, 
-                      showPaymentModal, 
-                      hasPendingData: !!pendingHedgeData 
-                    });
-                    return;
-                  }
-                  
                   console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
                   modalLockRef.current = true;  // Ref lock first
                   setPaymentInProgress(true);
