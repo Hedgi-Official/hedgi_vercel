@@ -46,6 +46,18 @@ export function MercadoPagoBrickModal({
           iframe.style.borderRadius = '8px';
           iframe.style.background = '#ffffff';
           
+          // Add iframe event listeners for debugging
+          iframe.onload = () => {
+            console.log('[MercadoPago Modal] Iframe loaded successfully');
+            setIsLoading(false);
+          };
+          
+          iframe.onerror = (error) => {
+            console.error('[MercadoPago Modal] Iframe load error:', error);
+            setError('Failed to load payment form. Please try again.');
+            setIsLoading(false);
+          };
+          
           // Listen for payment completion messages from iframe
           const messageHandler = (event: MessageEvent) => {
             console.log('[MercadoPago Modal] Received message:', event);
@@ -56,29 +68,25 @@ export function MercadoPagoBrickModal({
               return;
             }
             
-            // Handle Flask brick postMessage format: { type: 'payment_result', status: 'approved', id: 'payment_id' }
-            if (event.data.type === 'payment_result') {
-              console.log('[MercadoPago Modal] Payment result received:', event.data);
+            // Handle Flask brick postMessage format: { status: 'success', data: response } or { status: 'error', error: ... }
+            if (event.data.status === 'success') {
+              console.log('[MercadoPago Modal] Payment success received:', event.data);
               
-              if (event.data.status === 'approved') {
-                console.log('[MercadoPago Modal] Payment approved with ID:', event.data.id);
-                
-                // Extract payment data from Flask brick response
-                const paymentResult = {
-                  id: event.data.id || `mp_${Date.now()}`,
-                  status: 'approved',
-                  message: 'Payment processed successfully'
-                };
-                
-                // Cleanup and notify success
-                window.removeEventListener('message', messageHandler);
-                onPaymentSuccess(paymentResult);
-                onClose();
-              } else if (event.data.status === 'error' || event.data.status === 'rejected' || event.data.status === 'failed') {
-                console.log('[MercadoPago Modal] Payment failed:', event.data);
-                setError(event.data.error || 'Payment failed. Please try again.');
-                setIsProcessing(false);
-              }
+              // Extract payment data from Flask brick response
+              const paymentResult = {
+                id: event.data.data?.id || `mp_${Date.now()}`,
+                status: 'approved',
+                message: 'Payment processed successfully'
+              };
+              
+              // Cleanup and notify success
+              window.removeEventListener('message', messageHandler);
+              onPaymentSuccess(paymentResult);
+              onClose();
+            } else if (event.data.status === 'error') {
+              console.log('[MercadoPago Modal] Payment error received:', event.data);
+              setError(event.data.error || 'Payment failed. Please try again.');
+              setIsProcessing(false);
             }
           };
           
