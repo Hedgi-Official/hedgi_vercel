@@ -138,6 +138,7 @@ export function MercadoPagoBrickModal({
         }
         brickRef.current = null;
       }
+      isInitialized.current = false;
     };
   }, [isOpen, amount]);
 
