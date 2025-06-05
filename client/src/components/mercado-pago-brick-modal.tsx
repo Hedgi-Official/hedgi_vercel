@@ -137,7 +137,7 @@ export function MercadoPagoBrickModal({
         brickRef.current = null;
       }
     };
-  }, [isOpen, amount, hedgeData]);
+  }, [isOpen, amount]);
 
   const handleClose = () => {
     if (brickRef.current) {
