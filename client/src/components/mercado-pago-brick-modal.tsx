@@ -23,18 +23,20 @@ export function MercadoPagoBrickModal({
   const [error, setError] = useState<string | null>(null);
   const brickRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
 
   console.log('[MercadoPago Modal] Component rendered - isOpen:', isOpen, 'amount:', amount);
 
   useEffect(() => {
-    console.log('[MercadoPago Modal] useEffect triggered - isOpen:', isOpen, 'amount:', amount);
+    console.log('[MercadoPago Modal] useEffect triggered - isOpen:', isOpen, 'amount:', amount, 'initialized:', isInitialized.current);
     
-    if (!isOpen) {
-      console.log('[MercadoPago Modal] Modal not open, skipping brick load');
+    if (!isOpen || isInitialized.current) {
+      console.log('[MercadoPago Modal] Modal not open or already initialized, skipping brick load');
       return;
     }
 
     console.log('[MercadoPago Modal] Starting brick load process');
+    isInitialized.current = true;
 
     const loadFlaskBrick = () => {
       try {
