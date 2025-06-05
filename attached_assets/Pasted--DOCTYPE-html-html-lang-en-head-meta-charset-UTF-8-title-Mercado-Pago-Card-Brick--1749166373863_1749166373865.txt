@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mercado Pago Card Brick</title>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+  <div id="cardPaymentBrick_container"></div>
+
+  <script>
+    // Flask’s /brick route will replace these placeholders:
+    const AMOUNT = AMOUNT_PLACEHOLDER;   // e.g. 100.0
+    const TX_ID  = TXID_PLACEHOLDER;     // e.g. "tx_abcd1234"
+
+    // Initialize MercadoPago
+    const PUBLIC_KEY = "TEST-f0fe8e15-aed0-4b3c-ac0f-35269b1793f3";
+    const mp = new MercadoPago(PUBLIC_KEY, { locale: "en-US" });
+    const bricksBuilder = mp.bricks();
+
+    const renderCardPaymentBrick = async () => {
+      const settings = {
+        initialization: {
+          amount: AMOUNT,
+          payer:  { email: "" }
+        },
+        customization: {
+          visual: {
+            style: { theme: "default" }
+          },
+          paymentMethods: {
+            types:           { excluded: ["debit_card"] },
+            maxInstallments: 1
+          }
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("[iframe] Brick ready for amount =", AMOUNT);
+          },
+          onError: (err) => {
+            console.error("[iframe] Brick error:", err);
+            window.parent.postMessage(
+              { status: "error", txId: TX_ID, error: err.message || "Brick failed" },
+              "*"
+            );
+          },
+
+          // ─────────────────────────────────────────────────────────────────────────
+          //  Use the older single-parameter signature: onSubmit(cardFormData)
+          //  Instead of the destructured version that never gets called by the Card Brick.
+          // ─────────────────────────────────────────────────────────────────────────
+          onSubmit: async (cardFormData) => {
+            console.log("[iframe] onSubmit, received cardFormData:", cardFormData);
+
+            // Pull the card‐brand out of cardFormData.paymentMethodId:
+            const paymentMethodId = cardFormData.paymentMethodId;
+            // If for some reason it's missing, you could fallback to cardFormData.payment_method_id:
+            // const paymentMethodId = cardFormData.payment_method_id || cardFormData.paymentMethodId;
+
+            // Build exactly the payload Flask/MercadoPago expect:
+            const paymentPayload = {
+              token:               cardFormData.token,                  // card token
+              installments:        cardFormData.installments,           // usually 1
+              payment_method_id:   paymentMethodId,                     // e.g. "visa" or "master"
+              transaction_amount:  cardFormData.transaction_amount || AMOUNT,
+              description:         `Hedgi order for R$${cardFormData.transaction_amount || AMOUNT}`,
+              payer: {
+                email:            cardFormData.payer.email,
+                identification:   {
+                  type:           cardFormData.payer.identification?.type   || "CPF",
+                  number:         cardFormData.payer.identification?.number || ""
+                },
+                first_name:       cardFormData.payer.first_name || "HedgiCustomer"
+              },
+              txId:                TX_ID   // exactly the same TX_ID Flask injected
+            };
+
+            console.log("[iframe] Sending payment payload:", paymentPayload);
+
+            try {
+              const response = await fetch("/api/proxy/process_payment", {
+                method:  "POST",
+                headers: { "Content-Type": "application/json" },
+                body:    JSON.stringify(paymentPayload)
+              });
+
+              console.log("[iframe] proxy response status:", response.status);
+              const backendJson = await response.json();
+              console.log("[iframe] proxy JSON:", backendJson);
+
+              // Relay back to React via postMessage
+              if (backendJson.status === "approved") {
+                window.parent.postMessage(
+                  { status: "approved", txId: TX_ID, data: backendJson },
+                  "*"
+                );
+              } else {
+                window.parent.postMessage(
+                  { status: "error", txId: TX_ID, error: backendJson.error || "Not approved" },
+                  "*"
+                );
+              }
+            } catch (fetchErr) {
+              console.error("[iframe] fetch proxy failed:", fetchErr);
+              window.parent.postMessage(
+                { status: "error", txId: TX_ID, error: fetchErr.message || "Network error" },
+                "*"
+              );
+            }
+          }
+        }
+      };
+
+      window.cardPaymentBrickController =
+        await bricksBuilder.create(
+          "cardPayment",
+          "cardPaymentBrick_container",
+          settings
+        );
+    };
+
+    renderCardPaymentBrick();
+  </script>
+</body>
+</html>
