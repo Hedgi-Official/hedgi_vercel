@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { MercadoPayIframeModal } from './MercadoPayIframeModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { calculateBusinessDays } from '@/lib/utils';
@@ -163,7 +164,9 @@ export function CurrencySimulator({
       tradeDirection: hedgeData.tradeDirection,
       margin: hedgeData.margin || '0'
     });
-    window.open(`${FLASK_URL}/payment?${params.toString()}`, '_blank', 'width=500,height=700');
+    
+    setIsPaymentModalOpen(true);
+    setPendingHedgeData(hedgeData);
   };
 
   // after payment, call Dashboard's onPlaceHedge
@@ -415,6 +418,12 @@ export function CurrencySimulator({
           )}
         </CardContent>
       </Card>
+      <MercadoPayIframeModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        amount={margin ?? 0}
+      />
+
     </>
   );
 }
