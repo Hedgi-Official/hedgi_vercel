@@ -68,10 +68,10 @@ export function registerRoutes(app: Express): Server {
       const html = await response.text();
       console.log(`[Local Brick] Generated brick HTML (${html.length} chars)`);
 
-      // Replace relative /process_payment URL with absolute Flask URL in the HTML
+      // Replace relative /process_payment URL with local proxy endpoint
       const updatedHtml = html.replace(
         /fetch\(['"`]\/process_payment['"`]/g,
-        `fetch('http://3.145.164.47/process_payment'`
+        `fetch('/api/proxy/process_payment'`
       );
 
       // 3) Return it as HTML so the iframe can render it
