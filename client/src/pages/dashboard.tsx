@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MercadoPaySDKModal } from "@/components/mercado-pago-sdk-modal";
+import { SimplePayment } from '@/components/simple-payment';
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { CurrencySimulator } from "@/components/currency-simulator";
@@ -56,7 +56,7 @@ export default function Dashboard() {
   >(null)
   const [isProcessingPayment, setIsProcessingPayment] = React.useState(false)
   const [paymentInProgress, setPaymentInProgress] = React.useState(false) // Global payment lock
-  
+
   // Add a ref-based lock to prevent duplicate modals from opening
   const modalLockRef = React.useRef(false)
 
@@ -228,7 +228,7 @@ export default function Dashboard() {
     paymentToken?: string
   ) => {
     console.log('[Dashboard] handlePlaceHedge called with paymentToken:', paymentToken);
-    
+
     // Ensure no additional modals can open during trade processing
     if (isProcessingPayment || showPaymentModal) {
       console.log("⚠️ [Dashboard] Payment already in progress, preventing duplicate processing");
@@ -369,21 +369,21 @@ export default function Dashboard() {
 
       // Only proceed if payment is explicitly verified and approved
       console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
-      
+
       // Reset modal states immediately to prevent additional modals
       setShowPaymentModal(false);
       setPendingHedgeData(null);
       setIsProcessingPayment(false);
-      
+
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
-      
+
       // Reset modal states on error to allow retry
       setShowPaymentModal(false);
       setPendingHedgeData(null);
       setIsProcessingPayment(false);
-      
+
       toast({
         variant: "destructive",
         title: "Payment Verification Error",
@@ -715,7 +715,7 @@ export default function Dashboard() {
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
-                  
+
                   // Enhanced payment lock with ref-based protection
                   if (modalLockRef.current || paymentInProgress || isProcessingPayment || showPaymentModal || pendingHedgeData) {
                     console.log("⚠️ [Dashboard] Payment BLOCKED - already in progress");
@@ -728,7 +728,7 @@ export default function Dashboard() {
                     });
                     return;
                   }
-                  
+
                   console.log("✅ [Dashboard] Starting new payment flow with enhanced locks");
                   modalLockRef.current = true;  // Ref lock first
                   setPaymentInProgress(true);
@@ -769,7 +769,7 @@ export default function Dashboard() {
       </AlertDialog>
 
       {showPaymentModal && pendingHedgeData && (
-        <MercadoPaySDKModal
+        <SimplePayment
           isOpen={showPaymentModal}
           onClose={() => {
             console.log("🔒 [Dashboard] Payment modal closing - releasing all locks");
@@ -782,23 +782,23 @@ export default function Dashboard() {
           }}
           onSuccess={(hedgeData, paymentToken) => {
             console.log("✅ [Dashboard] Payment success received");
-            
+
             // Prevent duplicate calls - check current state atomically
             if (!showPaymentModal || !pendingHedgeData || !modalLockRef.current) {
               console.log("⚠️ [Dashboard] Duplicate payment success call prevented");
               return;
             }
-            
+
             // Clear ref lock immediately to prevent any further modal operations
             modalLockRef.current = false;
-            
+
             // Close modal immediately after success - no delay needed
             console.log("🔄 [Dashboard] Closing modal immediately after success");
             setPaymentInProgress(false);
             setShowPaymentModal(false);
             setPendingHedgeData(null);
             setIsProcessingPayment(false);
-            
+
             // Refresh trade queries to show the new trade
             queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
             queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });

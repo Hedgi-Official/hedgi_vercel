@@ -17,7 +17,7 @@ import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users
 // Use StandaloneWindowPayment for complete isolation from React's refresh cycle
 // This opens a standalone HTML file in a new window which handles payment processing
 // independently from React's refresh cycle, ensuring consistent display of payment UI
-import StandaloneWindowPayment from './standalone-window-payment';
+import { SimplePayment } from './simple-payment';
 
 interface Props {
   showGraph?: boolean;
@@ -561,7 +561,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         </Card>
       </TooltipProvider>
 
-      {/* Payment Modal - Using StandaloneWindowPayment for complete isolation from React refresh cycles */}
+      {/* Payment Modal - Using SimplePayment for reliable HTML-based payment processing */}
       {isPaymentModalOpen && pendingHedgeData && (
         <Dialog open={isPaymentModalOpen} onOpenChange={(open: boolean) => !open && setIsPaymentModalOpen(false)}>
           <DialogContent className="sm:max-w-[600px]">
@@ -575,8 +575,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
               </p>
             </DialogHeader>
 
-            {/* Always use StandaloneWindowPayment for consistency */}
-            <StandaloneWindowPayment
+            <SimplePayment
               hedgeData={pendingHedgeData}
               onSuccess={handlePaymentSuccess}
               onClose={() => setIsPaymentModalOpen(false)}
