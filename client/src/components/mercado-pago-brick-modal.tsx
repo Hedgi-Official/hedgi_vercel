@@ -58,6 +58,15 @@ export function MercadoPagoBrickModal({
           setIsProcessingTrade(true);
           await placeTrade(data.id, hedgeData);
           return;
+        } else if (data.status === 'rejected') {
+          console.log('[MercadoPago Brick Modal] Payment rejected via polling:', data);
+          setPaymentResult({ 
+            status: 'error', 
+            error: 'Payment was rejected. Please try again with different payment details.' 
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+          return;
         } else if (data.status === 'error') {
           console.log('[MercadoPago Brick Modal] Payment failed via polling:', data);
           setPaymentResult({ 
@@ -133,11 +142,19 @@ export function MercadoPagoBrickModal({
       setPaymentResult((prev: any) => ({ ...prev, tradeError: 'Network error placing trade' }));
     } finally {
       setIsProcessingTrade(false);
-      // Auto-close after showing result for 3 seconds
+      // Auto-close after showing result for 20 seconds
       setTimeout(() => {
         window.removeEventListener('message', () => {});
-        onPaymentSuccess(paymentResult);
-      }, 3000);
+        // Only call onPaymentSuccess if trade was successful
+        if (paymentResult?.tradeSuccess) {
+          onPaymentSuccess({
+            id: paymentResult.id,
+            status: 'approved',
+            message: 'Payment and hedge placement completed successfully',
+            trade: paymentResult.trade
+          });
+        }
+      }, 20000);
     }
   };
 

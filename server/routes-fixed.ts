@@ -183,7 +183,7 @@ export function registerRoutes(app: Express): Server {
         installments: originalPayload.installments || 1,
         payment_method_id: paymentMethodId,
         transaction_amount: originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount,
-        description: `Hedgi order for ${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
+        description: `Hedgi order for R$${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
         payer: {
           email: originalPayload.payer?.email,
           identification: originalPayload.payer?.identification,
