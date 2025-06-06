@@ -46,7 +46,8 @@ export function registerRoutes(app: Express): Server {
 
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
-      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}`;
+      const cacheBuster = Date.now();
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
@@ -57,7 +58,9 @@ export function registerRoutes(app: Express): Server {
           "Accept-Language": "en-US,en;q=0.5",
           "Accept-Encoding": "gzip, deflate",
           "Connection": "keep-alive",
-          "Cache-Control": "no-cache"
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0"
         }
       });
 
@@ -68,10 +71,34 @@ export function registerRoutes(app: Express): Server {
       const html = await response.text();
       console.log(`[Local Brick] Generated brick HTML (${html.length} chars)`);
 
-      // Replace relative /process_payment URL with local proxy endpoint
-      const updatedHtml = html.replace(
+      // Fix the HTML template to use proper destructuring and include payment_method_id
+      let updatedHtml = html.replace(
         /fetch\(['"`]\/process_payment['"`]/g,
         `fetch('/api/proxy/process_payment'`
+      );
+
+      // Replace the onSubmit callback to use proper destructuring
+      updatedHtml = updatedHtml.replace(
+        /onSubmit:\s*async\s*\(\s*cardFormData\s*\)\s*=>/,
+        'onSubmit: async ({ selectedPaymentMethod, formData }) =>'
+      );
+
+      // Update the payload construction to use selectedPaymentMethod.id
+      updatedHtml = updatedHtml.replace(
+        /const paymentMethodId = cardFormData\.paymentMethodId;/,
+        'const paymentMethodId = selectedPaymentMethod.id;'
+      );
+
+      // Fix the transaction_amount reference
+      updatedHtml = updatedHtml.replace(
+        /cardFormData\.transaction_amount/g,
+        'formData.transaction_amount'
+      );
+
+      // Fix other formData references
+      updatedHtml = updatedHtml.replace(
+        /cardFormData\./g,
+        'formData.'
       );
 
       // 3) Return it as HTML so the iframe can render it
@@ -110,12 +137,9 @@ export function registerRoutes(app: Express): Server {
       const payload = {
         token: originalPayload.token,
         installments: originalPayload.installments || 1,
-        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id || "master", // fallback to master if missing
-        transaction_amount: originalPayload.transaction_amount
-        || originalPayload.transactionAmount
-        || originalPayload.amount,
-        
-        description: `Hedgi order for ${originalPayload.transactionAmount || originalPayload.amount}`,
+        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id || "master",
+        transaction_amount: originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount,
+        description: `Hedgi order for ${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
         payer: {
           email: originalPayload.payer?.email,
           identification: originalPayload.payer?.identification,
@@ -123,7 +147,6 @@ export function registerRoutes(app: Express): Server {
         },
         txId: originalPayload.txId
       };
-      console.log("[iframe] 🤖 payload about to be sent:", payload);
 
       // Log missing fields for debugging
       if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {

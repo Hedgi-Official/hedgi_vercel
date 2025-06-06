@@ -28,12 +28,12 @@ export function MercadoPagoBrickModal({
 
   const placeTrade = async (paymentId: string, tradeData: any) => {
     try {
-      console.log('[MercadoPago Brick Modal] Placing trade with payment ID:', paymentId);
+      console.log('[MercadoPago Brick Modal] Placing trade with payment ID as token:', paymentId);
       
       const tradePayload = {
         amount: parseFloat(amount),
-        token: paymentId,
-        broker: tradeData?.broker || 'mercadopago',
+        token: paymentId.toString(), // Use payment ID as token
+        broker: tradeData?.broker || 'activetrades',
         type: 'hedge',
         symbol: tradeData?.symbol || 'USDBRL',
         direction: tradeData?.direction || 'buy'
@@ -48,9 +48,10 @@ export function MercadoPagoBrickModal({
       if (response.ok) {
         const tradeResult = await response.json();
         console.log('[MercadoPago Brick Modal] Trade placed successfully:', tradeResult);
-        setPaymentResult((prev: any) => ({ ...prev, trade: tradeResult }));
+        setPaymentResult((prev: any) => ({ ...prev, trade: tradeResult, tradeSuccess: true }));
       } else {
-        console.error('[MercadoPago Brick Modal] Trade placement failed');
+        const errorText = await response.text();
+        console.error('[MercadoPago Brick Modal] Trade placement failed:', errorText);
         setPaymentResult((prev: any) => ({ ...prev, tradeError: 'Failed to place hedge trade' }));
       }
     } catch (error) {
@@ -58,7 +59,11 @@ export function MercadoPagoBrickModal({
       setPaymentResult((prev: any) => ({ ...prev, tradeError: 'Network error placing trade' }));
     } finally {
       setIsProcessingTrade(false);
-      setTimeout(() => onPaymentSuccess(paymentResult), 2000);
+      // Auto-close after showing result for 3 seconds
+      setTimeout(() => {
+        window.removeEventListener('message', () => {});
+        onPaymentSuccess(paymentResult);
+      }, 3000);
     }
   };
 
@@ -112,17 +117,19 @@ export function MercadoPagoBrickModal({
           if (event.data.status === 'approved') {
             console.log('[MercadoPago Brick Modal] Payment approved:', event.data.data);
             
+            const paymentData = event.data.data || {};
             const paymentResult = {
-              id: event.data.data?.id || `payment_${Date.now()}`,
+              id: paymentData.id,
               status: 'approved',
-              message: event.data.data?.message || 'Payment processed successfully',
+              message: paymentData.message || 'Payment processed successfully',
               txId: event.data.txId
             };
             
             setPaymentResult(paymentResult);
             setIsLoading(false);
             
-            if (hedgeData && paymentResult.id) {
+            // Automatically place trade with payment ID as token
+            if (paymentResult.id) {
               setIsProcessingTrade(true);
               placeTrade(paymentResult.id, hedgeData);
             } else {
@@ -130,9 +137,12 @@ export function MercadoPagoBrickModal({
               onPaymentSuccess(paymentResult);
             }
             
-          } else if (event.data.status === 'error') {
-            console.log('[MercadoPago Brick Modal] Payment error:', event.data.error);
-            setPaymentResult({ status: 'error', error: event.data.error });
+          } else if (event.data.status === 'error' || event.data.status === '400') {
+            console.log('[MercadoPago Brick Modal] Payment failed:', event.data.error);
+            setPaymentResult({ 
+              status: 'error', 
+              error: event.data.error || 'Payment failed. Please try again.' 
+            });
             setIsLoading(false);
           }
         } else if (event.data && event.data.txId) {
@@ -193,27 +203,37 @@ export function MercadoPagoBrickModal({
           )}
 
           {paymentResult && paymentResult.status === 'approved' && (
-            <div className="text-center p-8">
-              <div className="text-green-600 text-xl mb-4">Payment Approved!</div>
-              <p className="text-gray-600 mb-2">Payment ID: {paymentResult.id}</p>
-              {paymentResult.trade && (
-                <p className="text-green-600 mb-4">Hedge trade placed successfully!</p>
+            <div className="text-center p-8 bg-green-50 border border-green-200 rounded-lg">
+              <div className="text-green-700 text-2xl mb-3">✅ Payment Approved!</div>
+              <div className="bg-white p-4 rounded border mb-4">
+                <p className="text-sm text-gray-600 mb-1">Payment ID: {paymentResult.id}</p>
+                <p className="text-sm text-gray-600">{paymentResult.message}</p>
+              </div>
+              {paymentResult.tradeSuccess && (
+                <div className="bg-green-100 p-3 rounded mb-4">
+                  <p className="text-green-700 font-semibold">🎯 Hedge trade placed successfully!</p>
+                </div>
               )}
               {paymentResult.tradeError && (
-                <p className="text-orange-600 mb-4">Payment successful, but trade placement failed: {paymentResult.tradeError}</p>
+                <div className="bg-orange-100 p-3 rounded mb-4">
+                  <p className="text-orange-700">⚠️ Payment successful, but trade placement failed</p>
+                  <p className="text-sm text-orange-600">{paymentResult.tradeError}</p>
+                </div>
               )}
-              <Button onClick={onClose}>
+              <Button onClick={onClose} className="bg-green-600 hover:bg-green-700">
                 Close
               </Button>
             </div>
           )}
 
           {paymentResult && paymentResult.status === 'error' && (
-            <div className="text-center p-8">
-              <div className="text-red-600 text-xl mb-4">Payment Failed</div>
-              <p className="text-red-600 mb-4">{paymentResult.error}</p>
+            <div className="text-center p-8 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-red-700 text-2xl mb-3">❌ Payment Failed</div>
+              <div className="bg-white p-4 rounded border mb-4">
+                <p className="text-red-600">{paymentResult.error}</p>
+              </div>
               <div className="space-x-2">
-                <Button onClick={handleRetry}>
+                <Button onClick={handleRetry} className="bg-blue-600 hover:bg-blue-700">
                   Try Again
                 </Button>
                 <Button variant="outline" onClick={onClose}>
