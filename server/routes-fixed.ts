@@ -82,11 +82,17 @@ export function registerRoutes(app: Express): Server {
         console.log(`[Local Brick] Flask onSubmit signature: ${onSubmitMatch[0]}`);
       }
 
-      // Fix the fetch URL to point to our proxy
-      let updatedHtml = html.replace(
-        /fetch\(\s*['"`]\/process_payment['"`]/g,
-        `fetch('/api/proxy/process_payment'`
-      );
+      // Fix the fetch URL to point to our proxy with full URL
+      const originalFetch = 'fetch("/process_payment"';
+      const newFetch = `fetch("${req.protocol}://${req.get('host')}/api/proxy/process_payment"`;
+      
+      console.log(`[Brick Proxy] Looking for: ${originalFetch}`);
+      console.log(`[Brick Proxy] Replacing with: ${newFetch}`);
+      console.log(`[Brick Proxy] HTML contains original?: ${html.includes(originalFetch)}`);
+      
+      let updatedHtml = html.replace(originalFetch, newFetch);
+      
+      console.log(`[Brick Proxy] HTML contains new?: ${updatedHtml.includes(newFetch)}`);
 
       // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
