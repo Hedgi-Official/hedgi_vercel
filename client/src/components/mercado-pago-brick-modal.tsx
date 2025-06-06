@@ -105,6 +105,7 @@ export function MercadoPagoBrickModal({
       
       const tradePayload = {
         amount: parseFloat(amount),
+        volume: parseFloat(amount) / 1000, // Convert amount to volume (e.g., 415 -> 0.415 lots)
         token: paymentId.toString(), // Use payment ID as token
         broker: tradeData?.broker || 'activetrades',
         type: 'hedge',
