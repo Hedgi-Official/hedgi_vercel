@@ -198,9 +198,9 @@ export function MercadoPagoBrickModal({
       containerRef.current.innerHTML = '';
       
       const iframe = document.createElement('iframe');
-      // Get current language locale - map 'pt' to 'pt-BR' for Brazilian payment form
+      // Get current language locale - map 'pt-BR' to 'pt-BR' for Brazilian payment form
       const currentLang = i18n.language;
-      const locale = currentLang === 'pt' ? 'pt-BR' : 'en-US';
+      const locale = currentLang === 'pt-BR' ? 'pt-BR' : 'en-US';
       iframe.src = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}&lang=${locale}`;
       iframe.style.width = '100%';
       iframe.style.height = '600px';
