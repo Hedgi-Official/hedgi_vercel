@@ -87,6 +87,12 @@ export function registerRoutes(app: Express): Server {
         `fetch('/api/proxy/process_payment'`
       );
 
+      // Change locale from en-US to pt-BR for proper BRL currency display
+      updatedHtml = updatedHtml.replace(
+        'locale: "en-US"',
+        'locale: "pt-BR"'
+      );
+
       // Add enhanced logging to the postMessage section
       updatedHtml = updatedHtml.replace(
         /console\.log\("\[iframe\] proxy JSON:", backendJson\);/,
