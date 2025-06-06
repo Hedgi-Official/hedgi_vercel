@@ -91,14 +91,17 @@ export function registerRoutes(app: Express): Server {
       // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
         'locale: "en-US"',
-        `locale: "${locale}"`
+        `locale: "${lang}"`
       );
 
       // Fix payment method restrictions to support both Visa and Mastercard
+      const beforeReplace = updatedHtml.includes('excluded: ["debit_card"]');
       updatedHtml = updatedHtml.replace(
         'types:           { excluded: ["debit_card"] }',
-        'types: { included: ["credit_card"] }'
+        'types:           { included: ["credit_card"] }'
       );
+      const afterReplace = updatedHtml.includes('included: ["credit_card"]');
+      console.log(`[Brick Proxy] Payment method replacement - Before: ${beforeReplace}, After: ${afterReplace}`);
 
       // Also add locale to the Brick settings for form translation
       updatedHtml = updatedHtml.replace(
