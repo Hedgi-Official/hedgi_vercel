@@ -175,7 +175,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Handle CORS preflight for iframe requests
+  app.options("/api/proxy/process_payment", (req: Request, res: Response) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.sendStatus(200);
+  });
+
   app.post("/api/proxy/process_payment", async (req: Request, res: Response) => {
+    // Set CORS headers for iframe requests
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    
     try {
       console.log("[Proxy] /api/proxy/process_payment endpoint called!");
       console.log("[Proxy] Request headers:", req.headers);
