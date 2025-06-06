@@ -84,6 +84,27 @@ export function registerRoutes(app: Express): Server {
         `fetch('/api/proxy/process_payment'`
       );
 
+      // Add enhanced logging to the postMessage section
+      updatedHtml = updatedHtml.replace(
+        /console\.log\("\[iframe\] proxy JSON:", backendJson\);/,
+        `console.log("[iframe] proxy JSON:", backendJson);
+              console.log("[iframe] About to check status:", backendJson.status);
+              console.log("[iframe] Status comparison result:", backendJson.status === "approved");`
+      );
+
+      // Add logging before postMessage calls
+      updatedHtml = updatedHtml.replace(
+        /window\.parent\.postMessage\(\s*\{\s*status:\s*"approved"/g,
+        `console.log("[iframe] SENDING APPROVED postMessage with data:", backendJson);
+                window.parent.postMessage({ status: "approved"`
+      );
+
+      updatedHtml = updatedHtml.replace(
+        /window\.parent\.postMessage\(\s*\{\s*status:\s*"error"/g,
+        `console.log("[iframe] SENDING ERROR postMessage");
+                window.parent.postMessage({ status: "error"`
+      );
+
       // Debug: Show the final onSubmit signature we're serving
       const finalOnSubmitMatch = updatedHtml.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
       if (finalOnSubmitMatch) {
