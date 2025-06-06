@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface MercadoPagoBrickModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function MercadoPagoBrickModal({
   amount,
   hedgeData
 }: MercadoPagoBrickModalProps) {
+  const { i18n } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentResult, setPaymentResult] = useState<any>(null);
@@ -190,7 +192,10 @@ export function MercadoPagoBrickModal({
       containerRef.current.innerHTML = '';
       
       const iframe = document.createElement('iframe');
-      iframe.src = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}`;
+      // Get current language locale - map 'pt' to 'pt-BR' for Brazilian payment form
+      const currentLang = i18n.language;
+      const locale = currentLang === 'pt' ? 'pt-BR' : 'en-US';
+      iframe.src = `/api/proxy/brick?amount=${amount}&txId=${txIdRef.current}&locale=${locale}`;
       iframe.style.width = '100%';
       iframe.style.height = '600px';
       iframe.style.border = 'none';

@@ -41,12 +41,13 @@ export function registerRoutes(app: Express): Server {
   // Local Mercado Pago brick endpoint to avoid CORS issues
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {
     try {
-      // 1) Read both amount and txId from the query string
+      // 1) Read amount, txId, and locale from the query string
       const amount = req.query.amount || 415;
       const txId   = req.query.txId   || "";  // will be a UUID set by React
+      const locale = req.query.locale || "en-US"; // Default to English
 
       console.log(`[Local Brick] /api/proxy/brick endpoint called`);
-      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}`);
+      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, locale=${locale}`);
 
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
@@ -87,10 +88,10 @@ export function registerRoutes(app: Express): Server {
         `fetch('/api/proxy/process_payment'`
       );
 
-      // Change locale from en-US to pt-BR for proper BRL currency display
+      // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
         'locale: "en-US"',
-        'locale: "pt-BR"'
+        `locale: "${locale}"`
       );
 
       // Add enhanced logging to the postMessage section
