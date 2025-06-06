@@ -82,12 +82,13 @@ export function registerRoutes(app: Express): Server {
         console.log(`[Local Brick] Flask onSubmit signature: ${onSubmitMatch[0]}`);
       }
 
-      // Fix the fetch URL to point to our proxy with full URL
+      // Fix the fetch URL to point to our proxy with HTTPS support
       const originalFetch = 'fetch("/process_payment", {';
-      const newFetch = `fetch("${req.protocol}://${req.get('host')}/api/proxy/process_payment", {`;
+      const protocol = req.get('x-forwarded-proto') === 'https' ? 'https' : req.protocol;
+      const newFetch = `fetch("${protocol}://${req.get('host')}/api/proxy/process_payment", {`;
       
       let updatedHtml = html.replace(originalFetch, newFetch);
-      console.log(`[Brick Proxy] Fetch URL replacement successful: ${updatedHtml.includes(newFetch)}`);
+      console.log(`[Brick Proxy] Fetch URL replacement: ${originalFetch} -> ${newFetch}`);
 
       // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
@@ -103,6 +104,15 @@ export function registerRoutes(app: Express): Server {
       );
       const afterReplace = updatedHtml.includes('included: ["credit_card"]');
       console.log(`[Brick Proxy] Payment method replacement - Before: ${beforeReplace}, After: ${afterReplace}`);
+
+      // Fix payment method ID extraction - use payment_method_id instead of paymentMethodId
+      const beforeMethodFix = updatedHtml.includes('cardFormData.paymentMethodId');
+      updatedHtml = updatedHtml.replace(
+        /cardFormData\.paymentMethodId/g,
+        'cardFormData.payment_method_id'
+      );
+      const afterMethodFix = updatedHtml.includes('cardFormData.payment_method_id');
+      console.log(`[Brick Proxy] Payment method ID extraction - Before: ${beforeMethodFix}, After: ${afterMethodFix}`);
 
       // Also add locale to the Brick settings for form translation
       updatedHtml = updatedHtml.replace(
