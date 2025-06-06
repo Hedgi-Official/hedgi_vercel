@@ -19,7 +19,7 @@ export function MercadoPagoBrickModal({
   amount,
   hedgeData
 }: MercadoPagoBrickModalProps) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentResult, setPaymentResult] = useState<any>(null);
@@ -291,11 +291,8 @@ export function MercadoPagoBrickModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            Payment - ${amount}
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+          <DialogTitle>
+            {t('payment.title')} - {i18n.language === 'pt' ? 'R$' : '$'}{amount}
           </DialogTitle>
         </DialogHeader>
         

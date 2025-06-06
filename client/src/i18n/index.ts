@@ -113,7 +113,10 @@ const enUS = {
     'Using Hedgi': 'Using Hedgi',
     'About Us': 'About Us',
     'Page Under Construction': 'Page Under Construction',
-    'Coming Soon': 'This page is under construction. Please check back later.'
+    'Coming Soon': 'This page is under construction. Please check back later.',
+    payment: {
+      title: 'Payment'
+    }
   }
 };
 
@@ -229,7 +232,10 @@ const ptBR = {
     'Using Hedgi': 'Usando a Hedgi',
     'About Us': 'Sobre Nós',
     'Page Under Construction': 'Página Em Construção',
-    'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.'
+    'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.',
+    payment: {
+      title: 'Pagamento'
+    }
   }
 };
 
