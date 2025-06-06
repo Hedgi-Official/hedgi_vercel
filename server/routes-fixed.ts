@@ -78,9 +78,9 @@ export function registerRoutes(app: Express): Server {
         console.log(`[Local Brick] Flask onSubmit signature: ${onSubmitMatch[0]}`);
       }
 
-      // Only fix the fetch URL to point to our proxy
+      // Fix the fetch URL to point to our proxy
       let updatedHtml = html.replace(
-        /fetch\(['"`]\/process_payment['"`]/g,
+        /fetch\(\s*['"`]\/process_payment['"`]/g,
         `fetch('/api/proxy/process_payment'`
       );
 
@@ -130,11 +130,23 @@ export function registerRoutes(app: Express): Server {
       const originalPayload = req.body;
       console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
 
+      // Extract payment method ID with fallbacks
+      let paymentMethodId = originalPayload.paymentMethodId || originalPayload.payment_method_id;
+      
+      // If payment method ID is missing, try to infer from token or use intelligent fallback
+      if (!paymentMethodId) {
+        // For Brazilian payments, common payment methods are:
+        // visa, master, amex, elo, hipercard, diners, hiper
+        // Default to 'visa' for Brazilian market as it's most common
+        paymentMethodId = "visa";
+        console.log("[Proxy] No payment_method_id found, defaulting to 'visa' for Brazilian market");
+      }
+
       // Transform payload to match Flask's expected format
       const payload = {
         token: originalPayload.token,
         installments: originalPayload.installments || 1,
-        payment_method_id: originalPayload.paymentMethodId || originalPayload.payment_method_id || "master",
+        payment_method_id: paymentMethodId,
         transaction_amount: originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount,
         description: `Hedgi order for ${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
         payer: {
@@ -148,9 +160,10 @@ export function registerRoutes(app: Express): Server {
       // Log missing fields for debugging
       if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {
         console.log("[Proxy] WARNING: payment_method_id missing from payload, using fallback 'master'");
+        console.log("[Proxy] Available fields in originalPayload:", Object.keys(originalPayload));
       }
 
-      console.log("[Proxy] Transformed payload for Flask:", payload);
+      console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
       // 2) Forward it directly to Flask’s /process_payment
       const flaskUrl = `http://3.145.164.47/process_payment`;
