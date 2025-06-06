@@ -187,25 +187,21 @@ export function registerRoutes(app: Express): Server {
       const originalPayload = req.body;
       console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
 
-      // Extract payment method ID from multiple possible locations in the payload
-      let paymentMethodId = originalPayload.paymentMethodId || 
-                           originalPayload.payment_method_id ||
+      // Extract payment method ID - Flask sends it as payment_method_id
+      let paymentMethodId = originalPayload.payment_method_id || 
+                           originalPayload.paymentMethodId ||
                            originalPayload.paymentMethod?.id ||
                            originalPayload.payment_method?.id;
       
-      // Also check if it's nested in issuer or card info
-      if (!paymentMethodId && originalPayload.issuer) {
-        paymentMethodId = originalPayload.issuer.id || originalPayload.issuer.name;
-      }
-      
-      // Check cardData structure which is common in Mercado Pago responses
-      if (!paymentMethodId && originalPayload.cardData) {
-        paymentMethodId = originalPayload.cardData.payment_method_id || 
-                         originalPayload.cardData.paymentMethod?.id;
-      }
-      
+      console.log("[Proxy] Raw payload keys:", Object.keys(originalPayload));
+      console.log("[Proxy] Looking for payment_method_id:", originalPayload.payment_method_id);
+      console.log("[Proxy] Looking for paymentMethodId:", originalPayload.paymentMethodId);
       console.log("[Proxy] Extracted payment_method_id:", paymentMethodId);
-      console.log("[Proxy] Full payload structure for debugging:", JSON.stringify(originalPayload, null, 2));
+      
+      // Log full payload only if payment method ID is missing for debugging
+      if (!paymentMethodId) {
+        console.log("[Proxy] MISSING payment_method_id - Full payload:", JSON.stringify(originalPayload, null, 2));
+      }
 
       // Validate that we have required payment method ID
       if (!paymentMethodId) {
