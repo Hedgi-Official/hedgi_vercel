@@ -113,16 +113,22 @@ export function MercadoPagoBrickModal({
   const placeTrade = async (paymentId: string, tradeData: any) => {
     try {
       console.log('[MercadoPago Brick Modal] Placing trade with payment ID as token:', paymentId);
+      console.log('[MercadoPago Brick Modal] Original hedge data:', hedgeData);
+      
+      // Use the original hedge amount, not the payment amount
+      const hedgeAmount = hedgeData?.amount ? parseFloat(hedgeData.amount) : 10000;
       
       const tradePayload = {
-        amount: parseFloat(amount),
-        volume: parseFloat(amount) / 1000, // Convert amount to volume (e.g., 415 -> 0.415 lots)
+        amount: hedgeAmount, // Use hedge amount ($10,000), not payment amount ($415)
+        volume: hedgeAmount / 100000, // Correct volume calculation based on hedge amount
         token: paymentId.toString(), // Use payment ID as token
         broker: tradeData?.broker || 'activetrades',
         type: 'hedge',
         symbol: tradeData?.symbol || 'USDBRL',
         direction: tradeData?.direction || 'buy'
       };
+      
+      console.log('[MercadoPago Brick Modal] Trade payload with correct amount:', tradePayload);
 
       const response = await fetch('/api/trades', {
         method: 'POST',
