@@ -44,7 +44,7 @@ export function registerRoutes(app: Express): Server {
       // 1) Read amount, txId, and locale from the query string
       const amount = req.query.amount || 415;
       const txId   = req.query.txId   || "";  // will be a UUID set by React
-      const locale = req.query.locale || "en-US"; // Default to English
+      const lang = req.query.lang || "en-US"; // Default to English
 
       console.log(`[Local Brick] /api/proxy/brick endpoint called`);
       console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, locale=${locale}`);
@@ -52,7 +52,7 @@ export function registerRoutes(app: Express): Server {
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
       const cacheBuster = Date.now();
-      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&locale=${locale}&_cb=${cacheBuster}`;
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
@@ -91,13 +91,13 @@ export function registerRoutes(app: Express): Server {
       // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
         'locale: "en-US"',
-        `locale: "${locale}"`
+        `locale: "${lang}"`
       );
 
       // Also add locale to the Brick settings for form translation
       updatedHtml = updatedHtml.replace(
         'initialization: {',
-        `locale: "${locale}",\n        initialization: {`
+        `locale: "${lang}",\n        initialization: {`
       );
 
       // Add enhanced logging to the postMessage section
