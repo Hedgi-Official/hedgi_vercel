@@ -42,6 +42,7 @@ export function registerRoutes(app: Express): Server {
       const amount = req.query.amount || 415;
       const txId   = req.query.txId   || "";  // will be a UUID set by React
 
+      console.log(`[Local Brick] /api/proxy/brick endpoint called`);
       console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}`);
 
       // 2) Forward both to Flask’s /brick endpoint
@@ -128,10 +129,15 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/proxy/process_payment", async (req: Request, res: Response) => {
     try {
+      console.log("[Proxy] /api/proxy/process_payment endpoint called!");
+      console.log("[Proxy] Request headers:", req.headers);
+      console.log("[Proxy] Request method:", req.method);
+      console.log("[Proxy] Request URL:", req.url);
+      
       // 1) The request body is a JSON object containing:
       //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
       const originalPayload = req.body;
-      console.log("[Proxy] Received payload:", originalPayload);
+      console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
 
       // Transform payload to match Flask's expected format
       const payload = {
