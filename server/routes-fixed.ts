@@ -71,42 +71,24 @@ export function registerRoutes(app: Express): Server {
 
       const html = await response.text();
       console.log(`[Local Brick] Generated brick HTML (${html.length} chars)`);
+      
+      // Debug: Show the actual onSubmit signature from Flask
+      const onSubmitMatch = html.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
+      if (onSubmitMatch) {
+        console.log(`[Local Brick] Flask onSubmit signature: ${onSubmitMatch[0]}`);
+      }
 
-      // Fix the HTML template to use proper destructuring and include payment_method_id
+      // Only fix the fetch URL to point to our proxy
       let updatedHtml = html.replace(
         /fetch\(['"`]\/process_payment['"`]/g,
         `fetch('/api/proxy/process_payment'`
       );
 
-      // Replace the onSubmit callback to use proper destructuring
-      updatedHtml = updatedHtml.replace(
-        /onSubmit:\s*async\s*\(\s*cardFormData\s*\)\s*=>/,
-        'onSubmit: async ({ selectedPaymentMethod, formData }) =>'
-      );
-
-      // Update the payload construction to use selectedPaymentMethod.id
-      updatedHtml = updatedHtml.replace(
-        /const paymentMethodId = cardFormData\.paymentMethodId;/,
-        'const paymentMethodId = selectedPaymentMethod.id;'
-      );
-
-      // Fix the transaction_amount reference
-      updatedHtml = updatedHtml.replace(
-        /cardFormData\.transaction_amount/g,
-        'formData.transaction_amount'
-      );
-
-      // Fix other formData references
-      updatedHtml = updatedHtml.replace(
-        /cardFormData\./g,
-        'formData.'
-      );
-
-      // Fix all remaining cardFormData references including in console.log statements
-      updatedHtml = updatedHtml.replace(
-        /cardFormData(?!\w)/g,
-        '{ selectedPaymentMethod, formData }'
-      );
+      // Debug: Show the final onSubmit signature we're serving
+      const finalOnSubmitMatch = updatedHtml.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
+      if (finalOnSubmitMatch) {
+        console.log(`[Local Brick] Final onSubmit signature: ${finalOnSubmitMatch[0]}`);
+      }
 
       // 3) Return it as HTML so the iframe can render it
       res.setHeader("Content-Type", "text/html");
