@@ -22,9 +22,82 @@ export function MercadoPagoBrickModal({
   const [error, setError] = useState<string | null>(null);
   const [paymentResult, setPaymentResult] = useState<any>(null);
   const [isProcessingTrade, setIsProcessingTrade] = useState(false);
+  const [isPollingPayment, setIsPollingPayment] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeCreated = useRef(false);
   const txIdRef = useRef<string>('');
+
+  // Poll payment status instead of relying on postMessage
+  const pollPaymentStatus = async (txId: string) => {
+    console.log('[MercadoPago Brick Modal] Starting payment status polling for txId:', txId);
+    setIsPollingPayment(true);
+    
+    const maxAttempts = 30; // Poll for 30 seconds
+    let attempts = 0;
+    
+    const poll = async () => {
+      attempts++;
+      console.log(`[MercadoPago Brick Modal] Polling attempt ${attempts} for txId:`, txId);
+      
+      try {
+        const response = await fetch(`/api/payment-status/${txId}`);
+        const data = await response.json();
+        
+        if (data.status === 'approved' && data.id) {
+          console.log('[MercadoPago Brick Modal] Payment approved via polling:', data);
+          setPaymentResult({
+            id: data.id,
+            status: 'approved',
+            message: data.message || 'Payment processed successfully',
+            txId: data.txId
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+          
+          // Automatically place trade with payment ID as token
+          setIsProcessingTrade(true);
+          await placeTrade(data.id, hedgeData);
+          return;
+        } else if (data.status === 'error') {
+          console.log('[MercadoPago Brick Modal] Payment failed via polling:', data);
+          setPaymentResult({ 
+            status: 'error', 
+            error: data.error || 'Payment failed. Please try again.' 
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+          return;
+        }
+        
+        // Continue polling if payment is still pending
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1000);
+        } else {
+          console.log('[MercadoPago Brick Modal] Payment polling timeout');
+          setPaymentResult({ 
+            status: 'error', 
+            error: 'Payment verification timeout. Please try again.' 
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+        }
+      } catch (error) {
+        console.error('[MercadoPago Brick Modal] Payment polling error:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1000);
+        } else {
+          setPaymentResult({ 
+            status: 'error', 
+            error: 'Unable to verify payment. Please try again.' 
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+        }
+      }
+    };
+    
+    poll();
+  };
 
   const placeTrade = async (paymentId: string, tradeData: any) => {
     try {

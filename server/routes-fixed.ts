@@ -17,6 +17,9 @@ import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
 
+// In-memory cache for payment results
+const paymentResultsCache = new Map<string, any>();
+
 const crypto = {
   hash: async (password: string) => {
     const salt = randomBytes(16).toString("hex");
@@ -110,7 +113,10 @@ export function registerRoutes(app: Express): Server {
         /onReady:\s*\(\)\s*=>\s*\{/,
         `onReady: () => {
             console.log("[iframe] Brick ready, sending test postMessage");
-            window.parent.postMessage({ status: "test", message: "iframe ready" }, "*");`
+            setTimeout(() => {
+              console.log("[iframe] Sending delayed test postMessage");
+              window.parent.postMessage({ status: "test", message: "iframe ready", txId: TX_ID }, "*");
+            }, 1000);`
       );
 
       // Debug: Show the final onSubmit signature we're serving
