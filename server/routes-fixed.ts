@@ -102,6 +102,12 @@ export function registerRoutes(app: Express): Server {
         'formData.'
       );
 
+      // Fix the console.log reference to use the correct parameter
+      updatedHtml = updatedHtml.replace(
+        /console\.log\([^,]+,\s*cardFormData\)/g,
+        'console.log("[iframe] onSubmit, received:", { selectedPaymentMethod, formData })'
+      );
+
       // 3) Return it as HTML so the iframe can render it
       res.setHeader("Content-Type", "text/html");
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
