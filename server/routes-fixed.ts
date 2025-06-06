@@ -91,7 +91,13 @@ export function registerRoutes(app: Express): Server {
       // Set dynamic locale based on user's language preference
       updatedHtml = updatedHtml.replace(
         'locale: "en-US"',
-        `locale: "${lang}"`
+        `locale: "${locale}"`
+      );
+
+      // Fix payment method restrictions to support both Visa and Mastercard
+      updatedHtml = updatedHtml.replace(
+        'types:           { excluded: ["debit_card"] }',
+        'types: { included: ["credit_card"] }'
       );
 
       // Also add locale to the Brick settings for form translation

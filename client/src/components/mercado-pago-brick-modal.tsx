@@ -34,7 +34,7 @@ export function MercadoPagoBrickModal({
     console.log('[MercadoPago Brick Modal] Starting payment status polling for txId:', txId);
     setIsPollingPayment(true);
     
-    const maxAttempts = 30; // Poll for 30 seconds
+    const maxAttempts = 60; // Poll for 60 seconds
     let attempts = 0;
     
     const poll = async () => {
