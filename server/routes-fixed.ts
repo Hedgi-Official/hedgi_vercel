@@ -105,6 +105,14 @@ export function registerRoutes(app: Express): Server {
                 window.parent.postMessage({ status: "error"`
       );
 
+      // Add a test postMessage when brick is ready
+      updatedHtml = updatedHtml.replace(
+        /onReady:\s*\(\)\s*=>\s*\{/,
+        `onReady: () => {
+            console.log("[iframe] Brick ready, sending test postMessage");
+            window.parent.postMessage({ status: "test", message: "iframe ready" }, "*");`
+      );
+
       // Debug: Show the final onSubmit signature we're serving
       const finalOnSubmitMatch = updatedHtml.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
       if (finalOnSubmitMatch) {
