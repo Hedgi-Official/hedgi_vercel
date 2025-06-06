@@ -213,6 +213,15 @@ export function registerRoutes(app: Express): Server {
       // 3) Read Flask’s JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
       const data = await response.json();
 
+      // Store payment result for polling
+      if (data.txId) {
+        paymentResultsCache.set(data.txId, {
+          ...data,
+          timestamp: Date.now()
+        });
+        console.log(`[Proxy] Stored payment result for txId ${data.txId}:`, data);
+      }
+
       // Always return status 200 to iframe, let iframe handle success/error based on data.status
       res.json(data);
     } catch (error) {
@@ -225,6 +234,32 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Payment status endpoint for polling
+  app.get("/api/payment-status/:txId", async (req, res) => {
+    try {
+      const { txId } = req.params;
+      console.log(`[Payment Status] Checking status for txId: ${txId}`);
+      
+      const cachedResult = paymentResultsCache.get(txId);
+      if (cachedResult) {
+        console.log(`[Payment Status] Found cached result for ${txId}:`, cachedResult);
+        res.json(cachedResult);
+      } else {
+        console.log(`[Payment Status] No cached result for ${txId}, returning pending`);
+        res.json({
+          status: "pending",
+          message: "Payment verification in progress",
+          txId: txId
+        });
+      }
+    } catch (error) {
+      console.error("[Payment Status] Error checking payment status:", error);
+      res.status(500).json({
+        status: "error",
+        error: "Unable to check payment status"
+      });
+    }
+  });
 
   // Working registration endpoint that bypasses schema conflicts
   app.post("/signup", async (req: Request, res: Response) => {

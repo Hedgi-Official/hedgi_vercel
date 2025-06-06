@@ -229,6 +229,12 @@ export function MercadoPagoBrickModal({
       iframe.onload = () => {
         console.log('[MercadoPago Brick Modal] Iframe loaded successfully');
         setIsLoading(false);
+        
+        // Start polling for payment status after iframe loads
+        setTimeout(() => {
+          console.log('[MercadoPago Brick Modal] Starting payment status polling');
+          pollPaymentStatus(txIdRef.current);
+        }, 3000); // Wait 3 seconds for user to potentially start payment
       };
       
       iframe.onerror = () => {
