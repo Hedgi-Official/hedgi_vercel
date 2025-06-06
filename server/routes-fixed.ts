@@ -52,7 +52,7 @@ export function registerRoutes(app: Express): Server {
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
       const cacheBuster = Date.now();
-      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&_cb=${cacheBuster}`;
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&locale=${locale}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
