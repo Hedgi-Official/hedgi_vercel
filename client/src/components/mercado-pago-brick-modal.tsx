@@ -110,6 +110,9 @@ export function MercadoPagoBrickModal({
       
       const messageHandler = (event: MessageEvent) => {
         console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
+        console.log('[MercadoPago Brick Modal] Event origin:', event.origin);
+        console.log('[MercadoPago Brick Modal] Expected txId:', txIdRef.current);
+        console.log('[MercadoPago Brick Modal] Received txId:', event.data?.txId);
         
         if (event.data && event.data.txId === txIdRef.current) {
           console.log('[MercadoPago Brick Modal] Message matches our txId:', txIdRef.current);
@@ -161,10 +164,17 @@ export function MercadoPagoBrickModal({
         setIsLoading(false);
       };
       
+      // Add global listener for debugging
+      const globalHandler = (event: MessageEvent) => {
+        console.log('[Global] Any postMessage received:', event.data, 'from origin:', event.origin);
+      };
+      
       window.addEventListener('message', messageHandler);
+      window.addEventListener('message', globalHandler);
       containerRef.current.appendChild(iframe);
       
       return () => {
+        window.removeEventListener('message', globalHandler);
         window.removeEventListener('message', messageHandler);
       };
       
