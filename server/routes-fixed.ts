@@ -47,7 +47,7 @@ export function registerRoutes(app: Express): Server {
       const lang = req.query.lang || "en-US"; // Default to English
 
       console.log(`[Local Brick] /api/proxy/brick endpoint called`);
-      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, locale=${locale}`);
+      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, lang=${lang}`);
 
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
