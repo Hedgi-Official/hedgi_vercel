@@ -94,6 +94,12 @@ export function registerRoutes(app: Express): Server {
         `locale: "${locale}"`
       );
 
+      // Also add locale to the Brick settings for form translation
+      updatedHtml = updatedHtml.replace(
+        'initialization: {',
+        `locale: "${locale}",\n        initialization: {`
+      );
+
       // Add enhanced logging to the postMessage section
       updatedHtml = updatedHtml.replace(
         /console\.log\("\[iframe\] proxy JSON:", backendJson\);/,
