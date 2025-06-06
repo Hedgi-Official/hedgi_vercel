@@ -187,16 +187,35 @@ export function registerRoutes(app: Express): Server {
       const originalPayload = req.body;
       console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
 
-      // Extract payment method ID with fallbacks
-      let paymentMethodId = originalPayload.paymentMethodId || originalPayload.payment_method_id;
+      // Extract payment method ID from multiple possible locations in the payload
+      let paymentMethodId = originalPayload.paymentMethodId || 
+                           originalPayload.payment_method_id ||
+                           originalPayload.paymentMethod?.id ||
+                           originalPayload.payment_method?.id;
       
-      // If payment method ID is missing, try to infer from token or use intelligent fallback
+      // Also check if it's nested in issuer or card info
+      if (!paymentMethodId && originalPayload.issuer) {
+        paymentMethodId = originalPayload.issuer.id || originalPayload.issuer.name;
+      }
+      
+      // Check cardData structure which is common in Mercado Pago responses
+      if (!paymentMethodId && originalPayload.cardData) {
+        paymentMethodId = originalPayload.cardData.payment_method_id || 
+                         originalPayload.cardData.paymentMethod?.id;
+      }
+      
+      console.log("[Proxy] Extracted payment_method_id:", paymentMethodId);
+      console.log("[Proxy] Full payload structure for debugging:", JSON.stringify(originalPayload, null, 2));
+
+      // Validate that we have required payment method ID
       if (!paymentMethodId) {
-        // For Brazilian payments, common payment methods are:
-        // visa, master, amex, elo, hipercard, diners, hiper
-        // Default to 'visa' for Brazilian market as it's most common
-        paymentMethodId = "visa";
-        console.log("[Proxy] No payment_method_id found, defaulting to 'visa' for Brazilian market");
+        console.error("[Proxy] CRITICAL: payment_method_id not found in payload");
+        console.error("[Proxy] Available fields in originalPayload:", Object.keys(originalPayload));
+        return res.status(400).json({
+          status: "error",
+          error: "Payment method ID is required but not found in request",
+          txId: originalPayload.txId
+        });
       }
 
       // Transform payload to match Flask's expected format
@@ -213,12 +232,6 @@ export function registerRoutes(app: Express): Server {
         },
         txId: originalPayload.txId
       };
-
-      // Log missing fields for debugging
-      if (!originalPayload.paymentMethodId && !originalPayload.payment_method_id) {
-        console.log("[Proxy] WARNING: payment_method_id missing from payload, using fallback 'master'");
-        console.log("[Proxy] Available fields in originalPayload:", Object.keys(originalPayload));
-      }
 
       console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
