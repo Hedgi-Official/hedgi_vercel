@@ -134,13 +134,14 @@ export function CurrencySimulator({
     setIsPlacingHedge(true);
 
     try {
-      const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> = {
+      const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { cost: string } = {
         baseCurrency,
         targetCurrency,
         amount: amount.toString(),
         rate: simulation.rate.toString(),
         duration,
         margin: margin?.toString() ?? null,
+        cost: simulation.costDetails.hedgeCost.toString(), // Include hedge cost for payment calculation
         tradeDirection,
         tradeOrderNumber: null,
         tradeStatus: null,
