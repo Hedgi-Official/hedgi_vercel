@@ -688,11 +688,15 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
                   
-                  // Calculate payment amount based on hedge data
-                  const hedgeAmount = Math.abs(Number(hedgePayload.amount));
-                  const hedgeCost = hedgeAmount * 0.0025; // Simple calculation without costDetails dependency
-                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : hedgeCost * 2;
-                  const paymentAmount = Number((hedgeCost + margin).toFixed(2));
+                  // Calculate payment amount using actual hedge costs and margin
+                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
+                  const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
+                  const paymentAmount = Number((margin + hedgeCost).toFixed(2));
+                  
+                  console.log("💰 [Dashboard] Payment calculation:");
+                  console.log("- Margin:", margin);
+                  console.log("- Hedge cost:", hedgeCost);
+                  console.log("- Total payment amount:", paymentAmount);
                   
                   console.log("✅ [Dashboard] Opening Mercado Pago Brick modal popup");
                   console.log("Payment amount:", paymentAmount);
