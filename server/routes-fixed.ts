@@ -102,15 +102,18 @@ export function registerRoutes(app: Express): Server {
         'formData.'
       );
 
-      // Fix the console.log reference to use the correct parameter
+      // Fix all remaining cardFormData references including in console.log statements
       updatedHtml = updatedHtml.replace(
-        /console\.log\([^,]+,\s*cardFormData\)/g,
-        'console.log("[iframe] onSubmit, received:", { selectedPaymentMethod, formData })'
+        /cardFormData(?!\w)/g,
+        '{ selectedPaymentMethod, formData }'
       );
 
       // 3) Return it as HTML so the iframe can render it
       res.setHeader("Content-Type", "text/html");
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
       res.send(updatedHtml);
     } catch (error) {
       console.error("[Local Brick] Error creating brick:", error);
