@@ -119,13 +119,14 @@ export function MercadoPagoBrickModal({
       const hedgeAmount = hedgeData?.amount ? parseFloat(hedgeData.amount) : 10000;
       
       const tradePayload = {
-        amount: hedgeAmount, // Use hedge amount ($10,000), not payment amount ($415)
-        volume: hedgeAmount / 100000, // Correct volume calculation based on hedge amount
-        token: paymentId.toString(), // Use payment ID as token
-        broker: tradeData?.broker || 'activetrades',
-        type: 'hedge',
         symbol: tradeData?.symbol || 'USDBRL',
-        direction: tradeData?.direction || 'buy'
+        direction: tradeData?.direction || hedgeData?.tradeDirection || 'buy',
+        volume: hedgeAmount / 100000, // Correct volume calculation based on hedge amount
+        metadata: {
+          days: hedgeData?.duration || 7,
+          margin: hedgeData?.margin ? parseFloat(hedgeData.margin) : 500,
+          paymentToken: paymentId.toString() // Payment token in metadata as required
+        }
       };
       
       console.log('[MercadoPago Brick Modal] Trade payload with correct amount:', tradePayload);
