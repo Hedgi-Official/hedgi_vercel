@@ -154,16 +154,17 @@ export default function Dashboard() {
         deviation: 5,
         magic:     123456,
         comment:   'Hedgi test trade',
-        margin:    h.margin || 500, // Include margin from hedge calculation
-        paymentToken: paymentToken  // Include payment token in metadata
+        paymentToken: paymentToken, // Include payment token in metadata
+        margin:    h.margin || 500 // Include margin from hedge calculation
       };
 
-      // only these fields go on the wire - payment token only in metadata
+      // only these fields go on the wire - now including payment token
       const payload = { 
         symbol, 
         direction, 
         volume, 
-        metadata
+        metadata,
+        paymentToken // Also include at top level for easy access
       };
 
       console.log('[Dashboard] sending payload:', payload);
@@ -346,15 +347,15 @@ export default function Dashboard() {
 
       // Only proceed if payment is explicitly verified and approved
       console.log('[Dashboard] Payment verified successfully, proceeding with trade creation');
-
+      
       // Payment now handled by Mercado Pago Brick pages
-
+      
       return createHedgeMutation.mutate({ hedgeData, paymentToken });
     } catch (error) {
       console.error('[Dashboard] Payment verification error:', error);
-
+      
       // Legacy modal code removed - now using Mercado Pago Brick pages
-
+      
       toast({
         variant: "destructive",
         title: "Payment Verification Error",
@@ -686,25 +687,25 @@ export default function Dashboard() {
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
-
+                  
                   // Calculate payment amount using actual hedge costs and margin
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
                   const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
                   const paymentAmount = Number((margin + hedgeCost).toFixed(2));
-
+                  
                   console.log("💰 [Dashboard] Payment calculation:");
                   console.log("- Margin:", margin);
                   console.log("- Hedge cost:", hedgeCost);
                   console.log("- Total payment amount:", paymentAmount);
-
+                  
                   console.log("✅ [Dashboard] Opening Mercado Pago Brick modal popup");
                   console.log("Payment amount:", paymentAmount);
-
+                  
                   // Set data and open modal popup
                   setPaymentAmount(paymentAmount.toString());
                   setPendingHedgeData(hedgePayload);
                   setShowPaymentModal(true);
-
+                  
                   // Return a resolved promise immediately to prevent infinite loading
                   return Promise.resolve({
                     ask: 0,
@@ -806,7 +807,7 @@ export default function Dashboard() {
         />
       )}
 
-
+      
     </div>
   );
 }

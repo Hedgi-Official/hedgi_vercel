@@ -266,21 +266,15 @@ export function registerRoutes(app: Express): Server {
       });
 
       // 3) Read Flask’s JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
-      console.log(`[Proxy] Flask response status: ${response.status}`);
       const data = await response.json();
-      console.log(`[Proxy] Flask response data:`, JSON.stringify(data, null, 2));
 
       // Store payment result for polling
-      if (data.txId || originalPayload.txId) {
-        const txId = data.txId || originalPayload.txId;
-        paymentResultsCache.set(txId, {
+      if (data.txId) {
+        paymentResultsCache.set(data.txId, {
           ...data,
-          txId: txId,
           timestamp: Date.now()
         });
-        console.log(`[Proxy] Stored payment result for txId ${txId}:`, JSON.stringify(data, null, 2));
-      } else {
-        console.warn(`[Proxy] No txId found in response or payload to cache result`);
+        console.log(`[Proxy] Stored payment result for txId ${data.txId}:`, data);
       }
 
       // Always return status 200 to iframe, let iframe handle success/error based on data.status

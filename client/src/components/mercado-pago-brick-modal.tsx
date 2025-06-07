@@ -45,15 +45,13 @@ export function MercadoPagoBrickModal({
         const response = await fetch(`/api/payment-status/${txId}`);
         const data = await response.json();
         
-        // Only treat "approved" status as successful payment
         if (data.status === 'approved' && data.id) {
           console.log('[MercadoPago Brick Modal] Payment approved via polling:', data);
-          
           setPaymentResult({
             id: data.id,
             status: 'approved',
             message: data.message || 'Payment processed successfully',
-            txId: data.txId || txId
+            txId: data.txId
           });
           setIsLoading(false);
           setIsPollingPayment(false);
@@ -71,11 +69,11 @@ export function MercadoPagoBrickModal({
           setIsLoading(false);
           setIsPollingPayment(false);
           return;
-        } else if (data.status === 500 || data.status === 'error') {
+        } else if (data.status === 'error') {
           console.log('[MercadoPago Brick Modal] Payment failed via polling:', data);
           setPaymentResult({ 
             status: 'error', 
-            error: data.message || data.error || 'Payment failed. Please try again.' 
+            error: data.error || 'Payment failed. Please try again.' 
           });
           setIsLoading(false);
           setIsPollingPayment(false);
@@ -121,14 +119,13 @@ export function MercadoPagoBrickModal({
       const hedgeAmount = hedgeData?.amount ? parseFloat(hedgeData.amount) : 10000;
       
       const tradePayload = {
-        symbol: tradeData?.symbol || 'USDBRL',
-        direction: tradeData?.direction || hedgeData?.tradeDirection || 'buy',
+        amount: hedgeAmount, // Use hedge amount ($10,000), not payment amount ($415)
         volume: hedgeAmount / 100000, // Correct volume calculation based on hedge amount
-        metadata: {
-          days: hedgeData?.duration || 7,
-          margin: hedgeData?.margin ? parseFloat(hedgeData.margin) : 500,
-          paymentToken: paymentId.toString() // Payment token in metadata as required
-        }
+        token: paymentId.toString(), // Use payment ID as token
+        broker: tradeData?.broker || 'activetrades',
+        type: 'hedge',
+        symbol: tradeData?.symbol || 'USDBRL',
+        direction: tradeData?.direction || 'buy'
       };
       
       console.log('[MercadoPago Brick Modal] Trade payload with correct amount:', tradePayload);
