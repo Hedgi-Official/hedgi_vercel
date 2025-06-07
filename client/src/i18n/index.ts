@@ -115,7 +115,8 @@ const enUS = {
     'Page Under Construction': 'Page Under Construction',
     'Coming Soon': 'This page is under construction. Please check back later.',
     payment: {
-      title: 'Payment'
+      title: 'Payment',
+      mercadoPagoUnavailable: 'Mercado Pago is temporarily unavailable. Please try again in a few hours.'
     }
   }
 };
@@ -234,7 +235,8 @@ const ptBR = {
     'Page Under Construction': 'Página Em Construção',
     'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.',
     payment: {
-      title: 'Pagamento'
+      title: 'Pagamento',
+      mercadoPagoUnavailable: 'Mercado Pago está temporariamente indisponível. Tente novamente em algumas horas.'
     }
   }
 };

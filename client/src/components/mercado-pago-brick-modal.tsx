@@ -69,6 +69,15 @@ export function MercadoPagoBrickModal({
           setIsLoading(false);
           setIsPollingPayment(false);
           return;
+        } else if (data.status === 500) {
+          console.log('[MercadoPago Brick Modal] Mercado Pago temporarily unavailable:', data);
+          setPaymentResult({ 
+            status: 'error', 
+            error: t('payment.mercadoPagoUnavailable')
+          });
+          setIsLoading(false);
+          setIsPollingPayment(false);
+          return;
         } else if (data.status === 'error') {
           console.log('[MercadoPago Brick Modal] Payment failed via polling:', data);
           setPaymentResult({ 
