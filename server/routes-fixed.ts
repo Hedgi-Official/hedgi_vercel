@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || "https://electoral-fuzzy-divorce-proc.trycloudflare.com";
+const FLASK = process.env.FLASK_URL || "http://3.145.164.47";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -52,7 +52,7 @@ export function registerRoutes(app: Express): Server {
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
       const cacheBuster = Date.now();
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
+      const flaskUrl = `http://3.145.164.47/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
@@ -256,7 +256,7 @@ export function registerRoutes(app: Express): Server {
       console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
       // 2) Forward it directly to Flask’s /process_payment
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/process_payment`;
+      const flaskUrl = `http://3.145.164.47/process_payment`;
       console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
