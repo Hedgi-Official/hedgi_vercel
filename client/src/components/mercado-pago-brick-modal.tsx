@@ -126,18 +126,25 @@ export function MercadoPagoBrickModal({
       
       // Use the original hedge amount, not the payment amount
       const hedgeAmount = hedgeData?.amount ? parseFloat(hedgeData.amount) : 10000;
+      const volume = hedgeAmount / 100000; // Correct volume calculation based on hedge amount
+      const symbol = tradeData?.symbol || 'USDBRL';
+      const direction = tradeData?.direction || 'buy';
       
+      // Flask expects this exact structure based on working curl example
       const tradePayload = {
-        amount: hedgeAmount, // Use hedge amount ($10,000), not payment amount ($415)
-        volume: hedgeAmount / 100000, // Correct volume calculation based on hedge amount
-        token: paymentId.toString(), // Use payment ID as token
-        broker: tradeData?.broker || 'activetrades',
-        type: 'hedge',
-        symbol: tradeData?.symbol || 'USDBRL',
-        direction: tradeData?.direction || 'buy'
+        symbol, 
+        direction, 
+        volume,
+        metadata: {
+          days: hedgeData?.duration || 30,
+          margin: hedgeData?.margin || 500,
+          paymentToken: paymentId.toString(), // Use payment ID as token
+          deviation: 5,
+          comment: 'Hedgi payment trade'
+        }
       };
       
-      console.log('[MercadoPago Brick Modal] Trade payload with correct amount:', tradePayload);
+      console.log('[MercadoPago Brick Modal] Trade payload with Flask structure:', tradePayload);
 
       const response = await fetch('/api/trades', {
         method: 'POST',
