@@ -156,20 +156,23 @@ export default function Dashboard() {
       const direction = amountNum > 0 ? 'buy' : 'sell';
       const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
 
-      // Flask expects only these core fields - keep it simple
+      // Flask expects this exact structure based on working curl example
       const payload = { 
         symbol, 
         direction, 
         volume,
-        broker: h.broker || 'activtrades',
-        deviation: 5,
-        magic: 123456,
-        comment: `Hedgi hedge - ${Math.abs(amountNum)} ${h.baseCurrency} - Token: ${paymentToken || 'test'}`
+        metadata: {
+          days: h.duration,
+          margin: h.margin || 500,
+          paymentToken: paymentToken || 'DEV_MODE',
+          deviation: 5,
+          comment: 'Hedgi test trade'
+        }
       };
 
       console.log('[Dashboard] sending payload:', payload);
       console.log('[Dashboard] payment token received:', paymentToken);
-      console.log('[Dashboard] payment token in comment:', payload.comment);
+      console.log('[Dashboard] payment token in metadata:', payload.metadata.paymentToken);
 
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
