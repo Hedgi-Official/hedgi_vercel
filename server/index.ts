@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupSimpleAuth } from "./simple-auth";
 // Load environment variables from .env file
@@ -87,25 +87,22 @@ app.use((req, res, next) => {
 
   const startServer = (port: number) => {
     log(`Attempting to start server on port ${port}...`);
-    return new Promise((resolve, reject) => {
-      const serverInstance = server.listen(port, "0.0.0.0", () => {
-        log(`Server successfully bound and listening on port ${port}`);
-        log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
-        resolve(serverInstance);
-      }).on('error', (e: any) => {
-        if (e.code === 'EADDRINUSE') {
-          log(`Port ${port} is busy, trying ${port + 1}...`);
-          startServer(port + 1).then(resolve).catch(reject);
-        } else {
-          log(`Server error: ${e.message}`);
-          reject(e);
-        }
-      });
+    server.listen(port, "0.0.0.0", () => {
+      log(`Server successfully bound and listening on port ${port}`);
+      log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
+    }).on('error', (e: any) => {
+      if (e.code === 'EADDRINUSE') {
+        log(`Port ${port} is busy, trying ${port + 1}...`);
+        startServer(port + 1);
+      } else {
+        log(`Server error: ${e.message}`);
+        throw e;  // Rethrow non-port-related errors
+      }
     });
   };
 
   try {
-    await startServer(PORT);
+    startServer(PORT);
   } catch (error) {
     log(`Failed to start server: ${error}`);
     process.exit(1);
