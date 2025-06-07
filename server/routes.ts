@@ -261,26 +261,8 @@ export function registerRoutes(app: Express): Server {
       
       console.log('[Process Payment] Received payment data:', paymentData);
       
-      // Transform the payment data to match Mercado Pago API format
-      const mpPayload = {
-        token: paymentData.token,
-        installments: paymentData.installments || 1,
-        transaction_amount: paymentData.transaction_amount,
-        description: paymentData.description || 'Hedgi Payment',
-        payment_method_id: 'visa', // or extract from token
-        payer: {
-          email: paymentData.payer?.email || 'customer@hedgi.com',
-          first_name: paymentData.payer?.first_name || 'Hedgi Customer',
-          identification: {
-            type: paymentData.payer?.identification?.type || 'CPF',
-            number: paymentData.payer?.identification?.number || '12345678909'
-          }
-        }
-      };
-      
-      console.log('[Process Payment] Transformed MP payload:', mpPayload);
-      
-      // Call Mercado Pago Payments API
+      // Call Mercado Pago Payments API directly with the received data
+      // The frontend already sends the correct format
       const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
         headers: {
@@ -288,7 +270,7 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
-        body: JSON.stringify(mpPayload)
+        body: JSON.stringify(paymentData)
       });
       
       const mpResult = await mpResponse.json() as any;
