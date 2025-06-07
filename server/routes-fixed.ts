@@ -40,13 +40,24 @@ export function registerRoutes(app: Express): Server {
 
   // Local Mercado Pago brick endpoint to avoid CORS issues
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {
+    const startTime = Date.now();
     try {
       // 1) Read amount, txId, and locale from the query string
       const amount = req.query.amount || 415;
       const txId   = req.query.txId   || "";  // will be a UUID set by React
       const lang = req.query.lang || "en-US"; // Default to English
 
+      // Debug user session and account info
+      const sessionInfo = {
+        sessionId: req.sessionID || 'no-session',
+        userId: (req as any).user?.id || 'no-user',
+        userAgent: req.get('User-Agent')?.substring(0, 100) || 'no-ua',
+        ip: req.ip || req.connection.remoteAddress || 'no-ip',
+        referer: req.get('Referer') || 'no-referer'
+      };
+
       console.log(`[Local Brick] /api/proxy/brick endpoint called`);
+      console.log(`[Local Brick] Session info:`, sessionInfo);
       console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, lang=${lang}`);
 
       // 2) Forward both to Flask’s /brick endpoint
@@ -55,26 +66,37 @@ export function registerRoutes(app: Express): Server {
       const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
-      const response = await fetch(flaskUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
-          "Accept-Encoding": "gzip, deflate",
-          "Connection": "keep-alive",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0"
-        }
-      });
+      const fetchStart = Date.now();
+      const response = await Promise.race([
+        fetch(flaskUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+          }
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Flask request timeout after 15 seconds')), 15000)
+        )
+      ]) as Response;
+
+      const fetchTime = Date.now() - fetchStart;
+      console.log(`[Local Brick] Flask fetch completed in ${fetchTime}ms with status ${response.status}`);
 
       if (!response.ok) {
         throw new Error(`Flask server responded with ${response.status}: ${response.statusText}`);
       }
 
+      const htmlStart = Date.now();
       const html = await response.text();
-      console.log(`[Local Brick] Generated brick HTML (${html.length} chars)`);
+      const htmlTime = Date.now() - htmlStart;
+      console.log(`[Local Brick] Generated brick HTML (${html.length} chars) in ${htmlTime}ms`);
       
       // Debug: Show the actual onSubmit signature from Flask
       const onSubmitMatch = html.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
