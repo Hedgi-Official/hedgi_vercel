@@ -191,7 +191,17 @@ export function MercadoPagoBrickModal({
   };
 
   useEffect(() => {
+    console.log('[MercadoPago Brick Modal] useEffect ALWAYS triggered with:', {
+      isOpen,
+      iframeCreated: iframeCreated.current,
+      containerRefExists: !!containerRef.current,
+      amount,
+      hedgeData,
+      dependencies: [isOpen, amount, onPaymentSuccess, hedgeData]
+    });
+
     if (!isOpen) {
+      console.log('[MercadoPago Brick Modal] Modal is closed, resetting state');
       iframeCreated.current = false;
       setIsLoading(true);
       setError(null);
@@ -201,13 +211,7 @@ export function MercadoPagoBrickModal({
       return;
     }
 
-    console.log('[MercadoPago Brick Modal] useEffect triggered:', {
-      isOpen,
-      iframeCreated: iframeCreated.current,
-      containerRefExists: !!containerRef.current,
-      amount,
-      hedgeData
-    });
+    console.log('[MercadoPago Brick Modal] Modal is open, checking conditions');
 
     if (iframeCreated.current) {
       console.log('[MercadoPago Brick Modal] Iframe already created, skipping');
@@ -215,14 +219,26 @@ export function MercadoPagoBrickModal({
     }
 
     if (!containerRef.current) {
-      console.log('[MercadoPago Brick Modal] Container ref not ready, retrying in 100ms');
-      setTimeout(() => {
-        if (isOpen && !iframeCreated.current && containerRef.current) {
-          console.log('[MercadoPago Brick Modal] Container ref now ready, proceeding with iframe creation');
-          // Force re-run of the effect
-          setIsLoading(true);
+      console.log('[MercadoPago Brick Modal] Container ref not ready, DOM element missing');
+      console.log('[MercadoPago Brick Modal] Setting up retry mechanism...');
+      
+      let retryCount = 0;
+      const retryInterval = setInterval(() => {
+        retryCount++;
+        console.log(`[MercadoPago Brick Modal] Retry attempt ${retryCount} for container ref`);
+        
+        if (containerRef.current) {
+          console.log('[MercadoPago Brick Modal] Container ref now available, clearing interval');
+          clearInterval(retryInterval);
+          setIsLoading(true); // Force re-render to trigger useEffect again
+        } else if (retryCount >= 10) {
+          console.error('[MercadoPago Brick Modal] Container ref never became available after 10 retries');
+          clearInterval(retryInterval);
+          setError('Payment form container failed to initialize');
+          setIsLoading(false);
         }
-      }, 100);
+      }, 200);
+      
       return;
     }
 
@@ -284,7 +300,8 @@ export function MercadoPagoBrickModal({
         // Handle test message to confirm iframe is ready
         if (event.data && event.data.status === 'test' && event.data.message === 'iframe ready') {
           console.log('[MercadoPago Brick Modal] Iframe ready test message received, stopping loading');
-          clearTimeout(loadTimeout);
+          clearTimeout(fallbackTimeout);
+          clearTimeout(errorTimeout);
           setIsLoading(false);
           return;
         }
