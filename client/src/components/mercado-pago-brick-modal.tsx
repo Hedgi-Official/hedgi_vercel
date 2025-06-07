@@ -201,7 +201,28 @@ export function MercadoPagoBrickModal({
       return;
     }
 
-    if (iframeCreated.current || !containerRef.current) {
+    console.log('[MercadoPago Brick Modal] useEffect triggered:', {
+      isOpen,
+      iframeCreated: iframeCreated.current,
+      containerRefExists: !!containerRef.current,
+      amount,
+      hedgeData
+    });
+
+    if (iframeCreated.current) {
+      console.log('[MercadoPago Brick Modal] Iframe already created, skipping');
+      return;
+    }
+
+    if (!containerRef.current) {
+      console.log('[MercadoPago Brick Modal] Container ref not ready, retrying in 100ms');
+      setTimeout(() => {
+        if (isOpen && !iframeCreated.current && containerRef.current) {
+          console.log('[MercadoPago Brick Modal] Container ref now ready, proceeding with iframe creation');
+          // Force re-run of the effect
+          setIsLoading(true);
+        }
+      }, 100);
       return;
     }
 
@@ -225,12 +246,48 @@ export function MercadoPagoBrickModal({
       
       console.log('[MercadoPago Brick Modal] Iframe URL:', iframe.src);
       console.log('[MercadoPago Brick Modal] Transaction ID:', txIdRef.current);
+
+      // Add load event handlers
+      iframe.onload = () => {
+        console.log('[MercadoPago Brick Modal] Iframe loaded successfully');
+        // Don't set loading to false immediately - wait for Mercado Pago brick to be ready
+        console.log('[MercadoPago Brick Modal] Waiting for Mercado Pago brick initialization...');
+      };
+
+      iframe.onerror = (error) => {
+        console.error('[MercadoPago Brick Modal] Iframe load error:', error);
+        setError('Failed to load payment form');
+        setIsLoading(false);
+      };
+
+      // Add fallback mechanism - force loading to stop after iframe loads
+      const fallbackTimeout = setTimeout(() => {
+        console.log('[MercadoPago Brick Modal] Fallback: Force stopping loading after 5 seconds for iframe load');
+        setIsLoading(false);
+      }, 5000);
+
+      // Add final timeout for error state
+      const errorTimeout = setTimeout(() => {
+        if (isLoading) {
+          console.error('[MercadoPago Brick Modal] Final timeout after 15 seconds');
+          setError('Payment form initialization timeout. Please try again.');
+          setIsLoading(false);
+        }
+      }, 15000);
       
       const messageHandler = (event: MessageEvent) => {
         console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
         console.log('[MercadoPago Brick Modal] Event origin:', event.origin);
         console.log('[MercadoPago Brick Modal] Expected txId:', txIdRef.current);
         console.log('[MercadoPago Brick Modal] Received txId:', event.data?.txId);
+        
+        // Handle test message to confirm iframe is ready
+        if (event.data && event.data.status === 'test' && event.data.message === 'iframe ready') {
+          console.log('[MercadoPago Brick Modal] Iframe ready test message received, stopping loading');
+          clearTimeout(loadTimeout);
+          setIsLoading(false);
+          return;
+        }
         
         if (event.data && event.data.txId === txIdRef.current) {
           console.log('[MercadoPago Brick Modal] Message matches our txId:', txIdRef.current);

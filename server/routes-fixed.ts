@@ -163,16 +163,18 @@ export function registerRoutes(app: Express): Server {
                 window.parent.postMessage({ status: "error"`
       );
 
-      // Add a test postMessage when brick is ready
+      // Add a test postMessage when brick is ready - check if replacement worked
+      const beforeOnReadyReplace = updatedHtml.includes('onReady: () => console.log("[iframe] Brick ready for amount =", AMOUNT)');
       updatedHtml = updatedHtml.replace(
-        /onReady:\s*\(\)\s*=>\s*\{/,
+        /onReady:\s*\(\)\s*=>\s*console\.log\("\[iframe\] Brick ready for amount =", AMOUNT\)/,
         `onReady: () => {
+            console.log("[iframe] Brick ready for amount =", AMOUNT);
             console.log("[iframe] Brick ready, sending test postMessage");
-            setTimeout(() => {
-              console.log("[iframe] Sending delayed test postMessage");
-              window.parent.postMessage({ status: "test", message: "iframe ready", txId: TX_ID }, "*");
-            }, 1000);`
+            window.parent.postMessage({ status: "test", message: "iframe ready", txId: TX_ID }, "*");
+          }`
       );
+      const afterOnReadyReplace = updatedHtml.includes('window.parent.postMessage({ status: "test", message: "iframe ready"');
+      console.log(`[Brick Proxy] onReady replacement - Before: ${beforeOnReadyReplace}, After: ${afterOnReadyReplace}`);
 
       // Debug: Show the final onSubmit signature we're serving
       const finalOnSubmitMatch = updatedHtml.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
