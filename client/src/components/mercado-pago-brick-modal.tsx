@@ -219,28 +219,29 @@ export function MercadoPagoBrickModal({
     }
 
     if (!containerRef.current) {
-      console.log('[MercadoPago Brick Modal] Container ref not ready, DOM element missing');
-      console.log('[MercadoPago Brick Modal] Setting up retry mechanism...');
+      console.log('[MercadoPago Brick Modal] Container ref not ready, using setTimeout to wait for DOM');
       
-      let retryCount = 0;
-      const retryInterval = setInterval(() => {
-        retryCount++;
-        console.log(`[MercadoPago Brick Modal] Retry attempt ${retryCount} for container ref`);
-        
-        if (containerRef.current && !iframeCreated.current) {
-          console.log('[MercadoPago Brick Modal] Container ref now available, creating iframe immediately');
-          clearInterval(retryInterval);
-          
-          // Create iframe immediately instead of waiting for useEffect
-          createIframe();
-        } else if (retryCount >= 10) {
-          console.error('[MercadoPago Brick Modal] Container ref never became available after 10 retries');
-          clearInterval(retryInterval);
-          setError('Payment form container failed to initialize');
+      // Use setTimeout instead of setInterval for better reliability
+      const waitForContainer = (attemptCount = 0) => {
+        if (attemptCount >= 20) {
+          console.error('[MercadoPago Brick Modal] Container ref failed to initialize after 20 attempts');
+          setError('Payment form failed to load');
           setIsLoading(false);
+          return;
         }
-      }, 200);
+        
+        setTimeout(() => {
+          if (containerRef.current && !iframeCreated.current && isOpen) {
+            console.log(`[MercadoPago Brick Modal] Container ref ready after ${attemptCount + 1} attempts`);
+            createIframe();
+          } else if (isOpen && !iframeCreated.current) {
+            console.log(`[MercadoPago Brick Modal] Waiting for container, attempt ${attemptCount + 1}`);
+            waitForContainer(attemptCount + 1);
+          }
+        }, 100);
+      };
       
+      waitForContainer();
       return;
     }
 
@@ -465,7 +466,14 @@ export function MercadoPagoBrickModal({
           )}
           
           <div 
-            ref={containerRef}
+            ref={(el) => {
+              containerRef.current = el;
+              // Trigger iframe creation immediately when container becomes available
+              if (el && !iframeCreated.current && isOpen && amount) {
+                console.log('[MercadoPago Brick Modal] Container callback ref triggered, creating iframe');
+                setTimeout(() => createIframe(), 10);
+              }
+            }}
             className={isLoading || error || paymentResult || isProcessingTrade ? 'hidden' : 'block'}
           />
         </div>
