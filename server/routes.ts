@@ -345,7 +345,7 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // 1) Create a new trade (Simple proxy to Flask)
+  // 1) Create a new trade (Proxy to Flask AND save to database)
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
       console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
@@ -364,12 +364,38 @@ export function registerRoutes(app: Express): Server {
         return res.status(flaskRes.status).json({ error: errorText });
       }
 
-      const result = await flaskRes.json();
+      const result = await flaskRes.json() as any;
       console.log('[Express Proxy] Flask success:', result);
+
+      // Save the Flask trade to our local database for history tracking
+      try {
+        const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
+        
+        const newTrade = await db.insert(trades).values({
+          userId: userId,
+          ticket: `FLASK-${result.id}`,
+          broker: 'flask',
+          volume: result.volume?.toString() || '0.01',
+          symbol: result.symbol || 'USDBRL',
+          openTime: new Date(result.created_at || new Date()),
+          durationDays: result.metadata?.days || 7,
+          status: 'open',
+          flaskTradeId: result.id,
+          metadata: result.metadata || {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }).returning();
+        
+        console.log('[Express Proxy] Saved trade to local database - Flask ID:', result.id, 'DB ID:', newTrade[0]?.id);
+      } catch (dbError) {
+        console.error('[Express Proxy] Failed to save to local database:', dbError);
+        // Don't fail the request if database save fails - Flask trade was successful
+      }
+
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
-      res.status(500).json({ error: 'Proxy error: ' + error.message });
+      res.status(500).json({ error: 'Proxy error: ' + (error as any).message });
     }
   });
 
@@ -540,7 +566,91 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 1) Open trades → returns the simplified OpenTrade interface
+  // 1) Active trades → GET /api/trades (this is what the dashboard uses)
+  app.get('/api/trades', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
+    try {
+      console.log('[Express Proxy] Getting active trades from database');
+
+      // Get all trades for this user that have Flask IDs
+      const allTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, req.user.id),
+        orderBy: desc(trades.updatedAt),
+      });
+
+      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${req.user.id}`);
+
+      const activeTrades = [];
+
+      for (const trade of allTrades) {
+        // Skip trades without Flask IDs - we only get status from Flask
+        if (!trade.flaskTradeId) {
+          console.log(`[Express Proxy] Skipping trade ${trade.id} - no Flask ID`);
+          continue;
+        }
+
+        try {
+          // 1) Get current status from Flask (NEVER use database status)
+          const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+          if (!flaskRes.ok) {
+            console.log(`[Express Proxy] Failed to fetch Flask status for trade ${trade.id}`);
+            continue;
+          }
+
+          const flaskData = await flaskRes.json() as {
+            status: string;
+            closedAt?: string;
+          };
+
+          console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
+
+          // 2) Only include NON-completed trades in active trades
+          const isCompleted = ['failed','closed','executed','cancelled','completed']
+            .includes(flaskData.status.toLowerCase());
+
+          if (isCompleted) {
+            console.log(`[Express Proxy] Skipping completed trade ${trade.id} with status: ${flaskData.status}`);
+            continue;
+          }
+
+          // 3) Update database status but keep trade in active list
+          await db.update(trades)
+          .set({
+              status: flaskData.status, 
+              updatedAt: new Date() // Update the timestamp
+          })
+          .where(eq(trades.id, trade.id));
+
+          // 4) Create trade object for active trades display
+          const activeTrade = {
+            id: trade.id,
+            flaskTradeId: trade.flaskTradeId,
+            ticket: `FLASK-${trade.flaskTradeId}`,
+            symbol: trade.symbol,
+            volume: trade.volume?.toString() || '0.01',
+            openTime: trade.createdAt.toISOString(),
+            status: flaskData.status,  // Always from Flask
+            broker: trade.broker || 'activtrades',
+            durationDays: trade.durationDays || 7
+          };
+
+          activeTrades.push(activeTrade);
+          console.log(`[Express Proxy] Added active trade ${trade.id} to list`);
+
+        } catch (err) {
+          console.error(`[Express Proxy] Error processing trade ${trade.id}:`, err);
+        }
+      }
+
+      console.log(`[Express Proxy] Returning ${activeTrades.length} active trades`);
+      return res.json(activeTrades);
+    } catch (err) {
+      console.error('Error fetching active trades:', err);
+      return res.status(500).json({ error: 'Failed to fetch active trades' });
+    }
+  });
+
+  // 2) Open trades → returns the simplified OpenTrade interface
   app.get('/api/trades/open', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
