@@ -45,20 +45,26 @@ export function MercadoPagoBrickModal({
         const response = await fetch(`/api/payment-status/${txId}`);
         const data = await response.json();
         
-        if (data.status === 'approved' && data.id) {
+        // Check for successful payment - Flask returns status 500 with "Payment processed" message for success
+        if ((data.status === 'approved' && data.id) || 
+            (data.status === 500 && data.message === 'Payment processed')) {
           console.log('[MercadoPago Brick Modal] Payment approved via polling:', data);
+          
+          // For Flask 500 responses, use txId as payment ID since data.id is null
+          const paymentId = data.id || data.txId || txId;
+          
           setPaymentResult({
-            id: data.id,
+            id: paymentId,
             status: 'approved',
             message: data.message || 'Payment processed successfully',
-            txId: data.txId
+            txId: data.txId || txId
           });
           setIsLoading(false);
           setIsPollingPayment(false);
           
           // Automatically place trade with payment ID as token
           setIsProcessingTrade(true);
-          await placeTrade(data.id, hedgeData);
+          await placeTrade(paymentId, hedgeData);
           return;
         } else if (data.status === 'rejected') {
           console.log('[MercadoPago Brick Modal] Payment rejected via polling:', data);
