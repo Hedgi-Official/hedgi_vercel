@@ -57,9 +57,12 @@ export function MercadoPagoBrickModal({
           setIsLoading(false);
           setIsPollingPayment(false);
           
-          // Automatically place trade with payment ID as token
-          setIsProcessingTrade(true);
-          await placeTrade(data.id, hedgeData);
+          // Automatically place trade with payment ID as token (prevent duplicates)
+          if (!tradePlaced.current) {
+            tradePlaced.current = true;
+            setIsProcessingTrade(true);
+            await placeTrade(data.id, hedgeData);
+          }
           return;
         } else if (data.status === 'rejected') {
           console.log('[MercadoPago Brick Modal] Payment rejected via polling:', data);

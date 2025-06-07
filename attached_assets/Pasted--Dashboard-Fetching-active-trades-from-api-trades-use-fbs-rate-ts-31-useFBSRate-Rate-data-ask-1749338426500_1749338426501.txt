@@ -1,0 +1,18 @@
+[Dashboard] Fetching active trades from: /api/trades
+use-fbs-rate.ts:31 [useFBSRate] Rate data: {ask: 5.6109, bid: 5.6088000000000005, broker: 'fbs', swap_long: -58.99, swap_short: 11.97, …}
+mercado-pago-brick-modal.tsx:50 [MercadoPago Brick Modal] Payment approved via polling: {id: 1337148753, message: 'Payment processed', status: 'approved', txId: 'tx_1749338360103_yj42amal7', timestamp: 1749338377669}
+mercado-pago-brick-modal.tsx:125 [MercadoPago Brick Modal] Placing trade with payment ID as token: 1337148753
+mercado-pago-brick-modal.tsx:126 [MercadoPago Brick Modal] Original hedge data: {baseCurrency: 'BRL', targetCurrency: 'USD', amount: '10000', rate: '5.56495', duration: 7, …}
+mercado-pago-brick-modal.tsx:148 [MercadoPago Brick Modal] Trade payload with Flask structure: {symbol: 'USDBRL', direction: 'buy', volume: 0.1, metadata: {…}}
+dashboard.tsx:91 [Dashboard] Fetching trade history from: /api/trades/history
+mercado-pago-brick-modal.tsx:158 [MercadoPago Brick Modal] Trade placed successfully: {created_at: '2025-06-07T23:19:38.064118', direction: 'buy', id: 243, metadata: {…}, status: 'NEW', …}
+trade-history.tsx:34 Trade history received from backend: []
+trade-history.tsx:35 Sample trade data: undefined
+dashboard.tsx:69 [Dashboard] Active trades response status: 200
+dashboard.tsx:75 [Dashboard] Active trades data received: (5) [{…}, {…}, {…}, {…}, {…}]
+mercado-pago-brick-modal.tsx:195 [MercadoPago Brick Modal] useEffect ALWAYS triggered with: {isOpen: true, iframeCreated: true, containerRefExists: true, amount: '585', hedgeData: {…}, …}
+mercado-pago-brick-modal.tsx:216 [MercadoPago Brick Modal] Modal is open, checking conditions
+mercado-pago-brick-modal.tsx:219 [MercadoPago Brick Modal] Iframe already created, skipping
+mercado-pago-brick-modal.tsx:158 [MercadoPago Brick Modal] Trade placed successfully: {created_at: '2025-06-07T23:19:38.451210', direction: 'buy', id: 244, metadata: {…}, status: 'NEW', …}
+dashboard.tsx:93 [Dashboard] Trade history response status: 200
+dashboard.tsx:99 [Dashboard] Trade histo
