@@ -261,6 +261,25 @@ export function registerRoutes(app: Express): Server {
       
       console.log('[Process Payment] Received payment data:', paymentData);
       
+      // Transform the payment data to match Mercado Pago API format
+      const mpPayload = {
+        token: paymentData.token,
+        installments: paymentData.installments || 1,
+        transaction_amount: paymentData.transaction_amount,
+        description: paymentData.description || 'Hedgi Payment',
+        payment_method_id: 'visa', // or extract from token
+        payer: {
+          email: paymentData.payer?.email || 'customer@hedgi.com',
+          first_name: paymentData.payer?.first_name || 'Hedgi Customer',
+          identification: {
+            type: paymentData.payer?.identification?.type || 'CPF',
+            number: paymentData.payer?.identification?.number || '12345678909'
+          }
+        }
+      };
+      
+      console.log('[Process Payment] Transformed MP payload:', mpPayload);
+      
       // Call Mercado Pago Payments API
       const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
@@ -269,10 +288,10 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify(mpPayload)
       });
       
-      const mpResult = await mpResponse.json();
+      const mpResult = await mpResponse.json() as any;
       console.log('[Process Payment] Mercado Pago response:', mpResult);
       
       if (mpResult.status === 'approved') {
@@ -605,8 +624,13 @@ export function registerRoutes(app: Express): Server {
           console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
 
           // 2) Only include NON-completed trades in active trades
-          const isCompleted = ['failed','closed','executed','cancelled','completed']
-            .includes(flaskData.status.toLowerCase());
+          // "Pending (waiting for market to open)" should be considered active
+          const statusLower = flaskData.status.toLowerCase();
+          const isCompleted = statusLower.includes('closed') || 
+                             statusLower.includes('failed') || 
+                             statusLower.includes('cancelled') ||
+                             statusLower.includes('completed') ||
+                             statusLower.includes('filled');
 
           if (isCompleted) {
             console.log(`[Express Proxy] Skipping completed trade ${trade.id} with status: ${flaskData.status}`);
