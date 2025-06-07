@@ -180,6 +180,9 @@ export function registerRoutes(app: Express): Server {
         console.log(`[Local Brick] Final onSubmit signature: ${finalOnSubmitMatch[0]}`);
       }
 
+      const totalTime = Date.now() - startTime;
+      console.log(`[Local Brick] Complete proxy response in ${totalTime}ms for session ${sessionInfo.sessionId}, user ${sessionInfo.userId}`);
+      
       // 3) Return it as HTML so the iframe can render it
       res.setHeader("Content-Type", "text/html");
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -188,7 +191,13 @@ export function registerRoutes(app: Express): Server {
       res.setHeader("Expires", "0");
       res.send(updatedHtml);
     } catch (error) {
-      console.error("[Local Brick] Error creating brick:", error);
+      const errorTime = Date.now() - startTime;
+      console.error(`[Local Brick] Error creating brick after ${errorTime}ms:`, error);
+      console.error(`[Local Brick] Error details for session ${sessionInfo?.sessionId || 'unknown'}:`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        userId: sessionInfo?.userId || 'unknown'
+      });
       res.status(500).send(`
         <html>
           <body>
