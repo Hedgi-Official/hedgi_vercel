@@ -642,9 +642,10 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log('[Express Proxy] Getting trade history from database');
 
-      // Get only trades for the current authenticated user
+      // Get only trades for the current authenticated user, ordered by creation date DESC
       const allTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, userId)
+        where: eq(trades.userId, userId),
+        orderBy: (trades, { desc }) => [desc(trades.createdAt)]
       });
 
       console.log(`[Express Proxy] Found ${allTrades.length} trades for user ${userId}`);
