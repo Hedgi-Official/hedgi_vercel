@@ -227,10 +227,12 @@ export function MercadoPagoBrickModal({
         retryCount++;
         console.log(`[MercadoPago Brick Modal] Retry attempt ${retryCount} for container ref`);
         
-        if (containerRef.current) {
-          console.log('[MercadoPago Brick Modal] Container ref now available, clearing interval');
+        if (containerRef.current && !iframeCreated.current) {
+          console.log('[MercadoPago Brick Modal] Container ref now available, creating iframe immediately');
           clearInterval(retryInterval);
-          setIsLoading(true); // Force re-render to trigger useEffect again
+          
+          // Create iframe immediately instead of waiting for useEffect
+          createIframe();
         } else if (retryCount >= 10) {
           console.error('[MercadoPago Brick Modal] Container ref never became available after 10 retries');
           clearInterval(retryInterval);
@@ -239,6 +241,18 @@ export function MercadoPagoBrickModal({
         }
       }, 200);
       
+      return;
+    }
+
+    createIframe();
+  }, [isOpen, amount, onPaymentSuccess, hedgeData]);
+
+  const createIframe = () => {
+    if (iframeCreated.current || !containerRef.current) {
+      console.log('[MercadoPago Brick Modal] Skipping iframe creation:', {
+        iframeCreated: iframeCreated.current,
+        containerExists: !!containerRef.current
+      });
       return;
     }
 
@@ -284,11 +298,9 @@ export function MercadoPagoBrickModal({
 
       // Add final timeout for error state
       const errorTimeout = setTimeout(() => {
-        if (isLoading) {
-          console.error('[MercadoPago Brick Modal] Final timeout after 15 seconds');
-          setError('Payment form initialization timeout. Please try again.');
-          setIsLoading(false);
-        }
+        console.log('[MercadoPago Brick Modal] Checking loading state for timeout');
+        setError('Payment form initialization timeout. Please try again.');
+        setIsLoading(false);
       }, 15000);
       
       const messageHandler = (event: MessageEvent) => {
@@ -369,19 +381,14 @@ export function MercadoPagoBrickModal({
       
       window.addEventListener('message', messageHandler);
       window.addEventListener('message', globalHandler);
-      containerRef.current.appendChild(iframe);
-      
-      return () => {
-        window.removeEventListener('message', globalHandler);
-        window.removeEventListener('message', messageHandler);
-      };
+      containerRef.current!.appendChild(iframe);
       
     } catch (error) {
       console.error('[MercadoPago Brick Modal] Error creating iframe:', error);
       setError('Failed to initialize payment form.');
       setIsLoading(false);
     }
-  }, [isOpen, amount, onPaymentSuccess, hedgeData]);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
