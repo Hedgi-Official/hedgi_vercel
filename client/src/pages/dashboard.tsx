@@ -64,11 +64,15 @@ export default function Dashboard() {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
+      console.log('[Dashboard] Fetching active trades from:', `${serverUrl}/api/trades`);
       const response = await fetch(`${serverUrl}/api/trades`, { credentials: 'include' });
+      console.log('[Dashboard] Active trades response status:', response.status);
       if (!response.ok) {
+        console.log('[Dashboard] Active trades request failed with status:', response.status);
         return []; // Return empty array on error
       }
       const data = await response.json();
+      console.log('[Dashboard] Active trades data received:', data);
       return Array.isArray(data) ? data : []; // Ensure we always return an array
     },
     retry: false,
@@ -84,11 +88,15 @@ export default function Dashboard() {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
+      console.log('[Dashboard] Fetching trade history from:', `${serverUrl}/api/trades/history`);
       const response = await fetch(`${serverUrl}/api/trades/history`, { credentials: 'include' });
+      console.log('[Dashboard] Trade history response status:', response.status);
       if (!response.ok) {
+        console.log('[Dashboard] Trade history request failed with status:', response.status);
         return []; // Return empty array on error
       }
       const data = await response.json();
+      console.log('[Dashboard] Trade history data received:', data);
       return Array.isArray(data) ? data : []; // Ensure we always return an array
     },
     retry: false,
