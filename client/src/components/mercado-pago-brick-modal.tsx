@@ -28,6 +28,7 @@ export function MercadoPagoBrickModal({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeCreated = useRef(false);
   const txIdRef = useRef<string>('');
+  const tradePlaced = useRef(false);
 
   // Poll payment status instead of relying on postMessage
   const pollPaymentStatus = async (txId: string) => {
@@ -203,6 +204,7 @@ export function MercadoPagoBrickModal({
     if (!isOpen) {
       console.log('[MercadoPago Brick Modal] Modal is closed, resetting state');
       iframeCreated.current = false;
+      tradePlaced.current = false;
       setIsLoading(true);
       setError(null);
       setPaymentResult(null);
@@ -336,11 +338,12 @@ export function MercadoPagoBrickModal({
             setPaymentResult(paymentResult);
             setIsLoading(false);
             
-            // Automatically place trade with payment ID as token
-            if (paymentResult.id) {
+            // Automatically place trade with payment ID as token (prevent duplicates)
+            if (paymentResult.id && !tradePlaced.current) {
+              tradePlaced.current = true;
               setIsProcessingTrade(true);
               placeTrade(paymentResult.id, hedgeData);
-            } else {
+            } else if (!paymentResult.id) {
               window.removeEventListener('message', messageHandler);
               onPaymentSuccess(paymentResult);
             }
@@ -466,14 +469,7 @@ export function MercadoPagoBrickModal({
           )}
           
           <div 
-            ref={(el) => {
-              containerRef.current = el;
-              // Trigger iframe creation immediately when container becomes available
-              if (el && !iframeCreated.current && isOpen && amount) {
-                console.log('[MercadoPago Brick Modal] Container callback ref triggered, creating iframe');
-                setTimeout(() => createIframe(), 10);
-              }
-            }}
+            ref={containerRef}
             className={isLoading || error || paymentResult || isProcessingTrade ? 'hidden' : 'block'}
           />
         </div>
