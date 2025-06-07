@@ -246,55 +246,78 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 2. POST /process_payment - Processes payment via Mercado Pago API
+  // 2. POST /process_payment - Proxy payment to Flask with correct payload transformation
   app.post('/process_payment', async (req: Request, res: Response) => {
+    // Set CORS headers for iframe communication
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    
     try {
-      const paymentData = req.body;
-      const accessToken = process.env.MP_BR_ACCESS_TOKEN;
+      console.log("[Proxy] /process_payment endpoint called!");
+      console.log("[Proxy] Request method:", req.method);
       
-      if (!accessToken) {
-        return res.status(500).json({ 
-          error: 'Payment system not configured',
-          status: 'error' 
+      // 1) The request body is a JSON object containing:
+      //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
+      const originalPayload = req.body;
+      console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
+
+      // Extract payment method ID - Flask sends it as payment_method_id
+      let paymentMethodId = originalPayload.payment_method_id || 
+                           originalPayload.paymentMethodId ||
+                           originalPayload.paymentMethod?.id ||
+                           originalPayload.payment_method?.id;
+      
+      console.log("[Proxy] Extracted payment_method_id:", paymentMethodId);
+      
+      // Validate that we have required payment method ID
+      if (!paymentMethodId) {
+        console.error("[Proxy] CRITICAL: payment_method_id not found in payload");
+        return res.status(400).json({
+          status: "error",
+          error: "Payment method ID is required but not found in request",
+          txId: originalPayload.txId
         });
       }
-      
-      console.log('[Process Payment] Received payment data:', paymentData);
-      
-      // Call Mercado Pago Payments API directly with the received data
-      // The frontend already sends the correct format
-      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      // Transform payload to match Flask's expected format
+      const payload = {
+        token: originalPayload.token,
+        installments: originalPayload.installments || 1,
+        payment_method_id: paymentMethodId,
+        transaction_amount: originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount,
+        description: `Hedgi order for R$${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
+        payer: {
+          email: originalPayload.payer?.email,
+          identification: originalPayload.payer?.identification,
+          first_name: originalPayload.payer?.first_name || "HedgiCustomer"
         },
-        body: JSON.stringify(paymentData)
+        txId: originalPayload.txId
+      };
+
+      console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
+
+      // 2) Forward it directly to Flask's /process_payment
+      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/process_payment`;
+      console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
+
+      const response = await fetch(flaskUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      
-      const mpResult = await mpResponse.json() as any;
-      console.log('[Process Payment] Mercado Pago response:', mpResult);
-      
-      if (mpResult.status === 'approved') {
-        return res.json({
-          id: mpResult.id,
-          message: 'Payment processed',
-          status: 'approved'
-        });
-      } else {
-        return res.json({
-          id: null,
-          message: 'Payment failed',
-          status: 'rejected',
-          details: mpResult.status_detail || 'Payment not approved'
-        });
-      }
+
+      // 3) Read Flask's JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
+      const data = await response.json() as any;
+
+      // Always return status 200 to iframe, let iframe handle success/error based on data.status
+      res.json(data);
     } catch (error) {
-      console.error('[Process Payment] Error:', error);
-      res.status(500).json({
-        error: 'Payment processing failed',
-        status: 'error'
+      console.error("[Proxy] Error proxying payment:", error);
+      res.json({ 
+        status: "error", 
+        error: "Payment processing failed",
+        txId: req.body?.txId || ""
       });
     }
   });
