@@ -661,14 +661,18 @@ export function registerRoutes(app: Express): Server {
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
             .then(response => response.ok ? response.json() : null)
             .then(flaskData => {
+              console.log(`[Express Proxy] Flask status for trade ${trade.id} (Flask ${trade.flaskTradeId}):`, flaskData);
               if (flaskData && ['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
-                return {
+                const completedTrade = {
                   ...trade,
                   status: flaskData.status,
                   closedAt: flaskData.closedAt || new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 };
+                console.log(`[Express Proxy] Added completed trade ${trade.id} with status ${flaskData.status}`);
+                return completedTrade;
               }
+              console.log(`[Express Proxy] Trade ${trade.id} status ${flaskData?.status || 'unknown'} - not completed`);
               return null;
             })
             .catch(error => {
