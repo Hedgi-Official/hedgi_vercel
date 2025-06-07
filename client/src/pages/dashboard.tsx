@@ -156,31 +156,20 @@ export default function Dashboard() {
       const direction = amountNum > 0 ? 'buy' : 'sell';
       const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
 
-      // build the metadata you want to send (Flask expects specific structure)
-      const metadata = {
-        amount: Math.abs(amountNum), // Original amount for Flask
-        token: paymentToken || 'test-payment-token', // Payment token
-        broker: h.broker || 'activtrades', // Broker info
-        type: 'hedge', // Trade type
-        days: h.duration,
-        deviation: 5,
-        magic: 123456,
-        comment: 'Hedgi test trade',
-        margin: h.margin || 500 // Include margin from hedge calculation
-      };
-
-      // Flask expects this exact structure
+      // Flask expects only these core fields - keep it simple
       const payload = { 
         symbol, 
         direction, 
-        volume, 
-        metadata
+        volume,
+        broker: h.broker || 'activtrades',
+        deviation: 5,
+        magic: 123456,
+        comment: `Hedgi hedge - ${Math.abs(amountNum)} ${h.baseCurrency} - Token: ${paymentToken || 'test'}`
       };
 
       console.log('[Dashboard] sending payload:', payload);
       console.log('[Dashboard] payment token received:', paymentToken);
-      console.log('[Dashboard] payment token in metadata:', payload.metadata.token);
-      console.log('[Dashboard] margin in metadata:', payload.metadata.margin);
+      console.log('[Dashboard] payment token in comment:', payload.comment);
 
       // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
