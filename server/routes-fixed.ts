@@ -440,7 +440,7 @@ export function registerRoutes(app: Express): Server {
           userId: userId,
           ticket: `FLASK-${result.id}`,
           broker: 'flask',
-          volume: result.volume.toString(),
+          volume: result.volume, // Keep as numeric, not string
           symbol: result.symbol,
           openTime: new Date(result.created_at || new Date()),
           durationDays: result.metadata?.days || 7,
