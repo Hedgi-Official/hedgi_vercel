@@ -45,16 +45,12 @@ export function MercadoPagoBrickModal({
         const response = await fetch(`/api/payment-status/${txId}`);
         const data = await response.json();
         
-        // Check for successful payment - Flask returns status 500 with "Payment processed" message for success
-        if ((data.status === 'approved' && data.id) || 
-            (data.status === 500 && data.message === 'Payment processed')) {
+        // Only treat "approved" status as successful payment
+        if (data.status === 'approved' && data.id) {
           console.log('[MercadoPago Brick Modal] Payment approved via polling:', data);
           
-          // For Flask 500 responses, use txId as payment ID since data.id is null
-          const paymentId = data.id || data.txId || txId;
-          
           setPaymentResult({
-            id: paymentId,
+            id: data.id,
             status: 'approved',
             message: data.message || 'Payment processed successfully',
             txId: data.txId || txId
@@ -64,7 +60,7 @@ export function MercadoPagoBrickModal({
           
           // Automatically place trade with payment ID as token
           setIsProcessingTrade(true);
-          await placeTrade(paymentId, hedgeData);
+          await placeTrade(data.id, hedgeData);
           return;
         } else if (data.status === 'rejected') {
           console.log('[MercadoPago Brick Modal] Payment rejected via polling:', data);
@@ -75,11 +71,11 @@ export function MercadoPagoBrickModal({
           setIsLoading(false);
           setIsPollingPayment(false);
           return;
-        } else if (data.status === 'error') {
+        } else if (data.status === 500 || data.status === 'error') {
           console.log('[MercadoPago Brick Modal] Payment failed via polling:', data);
           setPaymentResult({ 
             status: 'error', 
-            error: data.error || 'Payment failed. Please try again.' 
+            error: data.message || data.error || 'Payment failed. Please try again.' 
           });
           setIsLoading(false);
           setIsPollingPayment(false);
