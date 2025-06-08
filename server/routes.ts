@@ -378,7 +378,7 @@ export function registerRoutes(app: Express): Server {
       let savedTrade = null;
       try {
         // Import raw SQLite database for direct operations
-        const Database = require('better-sqlite3');
+        const { default: Database } = await import('better-sqlite3');
         const sqlite = new Database('./hedgi.db');
         
         // Use prepared statement for insertion
