@@ -419,6 +419,91 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Active trades endpoint - returns trades that should be displayed in active section
+  app.get('/api/trades', async (req: Request, res: Response) => {
+    // Use authenticated user ID or fallback to user 2 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 2;
+    try {
+      console.log(`[Express Proxy] Getting active trades for user ${userId}`);
+
+      // Get all trades for this user that have Flask IDs
+      const allTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, userId),
+        orderBy: desc(trades.updatedAt),
+      });
+
+      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${userId}`);
+
+      const activeTrades = [];
+
+      for (const trade of allTrades) {
+        // Skip trades without Flask IDs
+        if (!trade.flaskTradeId) {
+          console.log(`[Express Proxy] Skipping trade ${trade.id} - no Flask ID`);
+          continue;
+        }
+
+        try {
+          // Get current status from Flask
+          const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
+          if (!flaskRes.ok) {
+            console.log(`[Express Proxy] Failed to fetch Flask status for trade ${trade.id}`);
+            continue;
+          }
+
+          const flaskData = await flaskRes.json() as {
+            status: string;
+            closedAt?: string;
+          };
+
+          console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
+
+          // Include trades that are NOT completed (show pending, new, executing trades)
+          const isCompleted = ['failed','closed','executed','cancelled','completed']
+            .includes(flaskData.status.toLowerCase());
+
+          if (!isCompleted) {
+            // Format trade for active trades display
+            activeTrades.push({
+              id: trade.id,
+              flaskTradeId: trade.flaskTradeId,
+              ticket: trade.ticket,
+              symbol: trade.symbol,
+              volume: trade.volume,
+              openTime: trade.openTime,
+              durationDays: trade.durationDays,
+              status: flaskData.status,
+              metadata: JSON.parse(trade.metadata || '{}'),
+              broker: trade.broker
+            });
+          } else {
+            console.log(`[Express Proxy] Skipping completed trade ${trade.id} with status: ${flaskData.status}`);
+          }
+        } catch (err) {
+          console.error(`[Express Proxy] Error checking status for trade ${trade.id}:`, err);
+          // Include trade with database status if Flask check fails
+          activeTrades.push({
+            id: trade.id,
+            flaskTradeId: trade.flaskTradeId,
+            ticket: trade.ticket,
+            symbol: trade.symbol,
+            volume: trade.volume,
+            openTime: trade.openTime,
+            durationDays: trade.durationDays,
+            status: trade.status,
+            metadata: JSON.parse(trade.metadata || '{}'),
+            broker: trade.broker
+          });
+        }
+      }
+
+      console.log(`[Express Proxy] Returning ${activeTrades.length} active trades for user ${userId}`);
+      return res.json(activeTrades);
+    } catch (err) {
+      console.error('Error fetching active trades:', err);
+      return res.status(500).json({ error: 'Failed to fetch active trades' });
+    }
+  });
 
   // 2) Poll status
   app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
