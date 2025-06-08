@@ -1,18 +1,15 @@
 // db/schema.ts
 import {
-  pgTable,
-  serial,
-  text,
-  real,
+  sqliteTable,
   integer,
-  boolean,
-  timestamp
-} from 'drizzle-orm/pg-core';
+  text,
+  real
+} from 'drizzle-orm/sqlite-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { relations } from 'drizzle-orm';
 
-export const users = pgTable('users', {
-  id:           serial('id').primaryKey(),
+export const users = sqliteTable('users', {
+  id:           integer('id').primaryKey({ autoIncrement: true }),
   username:     text('username').unique().notNull(),
   password:     text('password').notNull(),
   email:        text('email').unique().notNull(),
@@ -26,13 +23,13 @@ export const users = pgTable('users', {
   address:      text('address'),
   documentNumbers: text('document_numbers').default('{}'),
   additionalFields: text('additional_fields').default('{}'),
-  createdAt:    timestamp('created_at').defaultNow().notNull(),
-  googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
+  createdAt:    text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  googleCalendarEnabled: integer('google_calendar_enabled', { mode: 'boolean' }).default(false),
   googleRefreshToken: text('google_refresh_token'),
 });
 
-export const hedges = pgTable('hedges', {
-  id:               serial('id').primaryKey(),
+export const hedges = sqliteTable('hedges', {
+  id:               integer('id').primaryKey({ autoIncrement: true }),
   userId:           integer('user_id').references(() => users.id),
   baseCurrency:     text('base_currency').notNull(),
   targetCurrency:   text('target_currency').notNull(),
@@ -44,28 +41,28 @@ export const hedges = pgTable('hedges', {
   broker:           text('broker').default('tickmill'),
   tradeOrderNumber: text('trade_order_number'),
   tradeStatus:      text('trade_status'),
-  createdAt:        timestamp('created_at').defaultNow().notNull(),
-  completedAt:      timestamp('completed_at'),
+  createdAt:        text('created_at').default('CURRENT_TIMESTAMP').notNull(),
+  completedAt:      text('completed_at'),
   tradeDirection:   text('tradeDirection').notNull(),
 });
 
-export const trades = pgTable('trades', {
-  id:            serial('id').primaryKey(),
+export const trades = sqliteTable('trades', {
+  id:            integer('id').primaryKey({ autoIncrement: true }),
   userId:        integer('user_id').notNull(),
   ticket:        text('ticket').notNull(),
   broker:        text('broker').notNull(),
   volume:        real('volume').notNull(),
   symbol:        text('symbol').notNull(),
-  openTime:      timestamp('open_time').notNull(),
+  openTime:      text('open_time').notNull(),
   durationDays:  integer('duration_days').notNull(),
   status:        text('status').notNull().default('open'),
-  closedAt:      timestamp('closed_at'),
+  closedAt:      text('closed_at'),
   hedgeId:       integer('hedge_id'),
-  createdAt:     timestamp('created_at').defaultNow().notNull(),
-  updatedAt:     timestamp('updated_at').defaultNow().notNull(),
+  createdAt:     text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+  updatedAt:     text('updated_at').notNull().default('CURRENT_TIMESTAMP'),
   flaskTradeId:  integer('flask_trade_id'),
   metadata:      text('metadata').notNull().default('{}'),
-  enableRLS:     boolean('enable_rls').notNull().default(false),
+  enableRLS:     integer('enable_rls', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const userRelations = relations(users, ({ many }) => ({

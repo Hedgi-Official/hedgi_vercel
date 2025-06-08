@@ -371,26 +371,24 @@ export function registerRoutes(app: Express): Server {
       const flaskResult = await flaskRes.json();
       console.log('[Express Proxy] Flask success:', flaskResult);
 
-      // Save to PostgreSQL database using Drizzle ORM
+      // Save to SQLite database using Drizzle ORM
       const { symbol, direction, volume, metadata } = req.body;
       const currentTime = new Date().toISOString();
       
       let savedTrade = null;
       try {
-        // Create new trade record in PostgreSQL
+        // Create new trade record in SQLite
         const newTrade = {
           userId: Number(userId),
-          ticket: `FLASK-${flaskResult.id || Date.now()}`,
+          ticket: `FLASK-${(flaskResult as any).id || Date.now()}`,
           broker: metadata?.broker || 'flask',
           volume: Number(volume || 1.0),
           symbol: symbol || 'USDBRL',
           openTime: currentTime,
           durationDays: Number(metadata?.days || 30),
-          status: 'open',
-          flaskTradeId: Number(flaskResult.id),
+          status: 'open' as const,
+          flaskTradeId: Number((flaskResult as any).id),
           metadata: JSON.stringify(metadata || {}),
-          createdAt: currentTime,
-          updatedAt: currentTime,
           enableRLS: false
         };
 
@@ -400,12 +398,12 @@ export function registerRoutes(app: Express): Server {
         const [insertedTrade] = await db.insert(trades).values(newTrade).returning();
         savedTrade = insertedTrade;
         
-        console.log('[Express Proxy] Saved trade to PostgreSQL database:', savedTrade);
-      } catch (dbError) {
-        console.error('[Express Proxy] Failed to save to PostgreSQL database:', dbError);
+        console.log('[Express Proxy] Saved trade to SQLite database:', savedTrade);
+      } catch (dbError: any) {
+        console.error('[Express Proxy] Failed to save to SQLite database:', dbError);
         console.log('[Express Proxy] Database error details:', {
-          message: dbError.message,
-          stack: dbError.stack
+          message: dbError?.message,
+          stack: dbError?.stack
         });
         // Continue without failing the entire request
       }
