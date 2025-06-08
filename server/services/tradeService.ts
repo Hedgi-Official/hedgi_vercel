@@ -88,23 +88,36 @@ export class TradeService {
         }
       }
       
-      // Insert trade record
-      const newTrade = await db.insert(trades)
-        .values({
-          userId,
-          ticket,
-          broker,
-          volume: volume.toString(),
-          symbol,
-          openTime,
-          durationDays,
-          status: 'open',
-          hedgeId
-        })
-        .returning();
-        
-      console.log(`[TradeService] Created trade record:`, newTrade[0]);
-      return newTrade[0];
+      // Use raw SQLite for trade record insertion to avoid field mapping issues
+      const Database = require('better-sqlite3');
+      const sqlite = new Database('./hedgi.db');
+      
+      const insertStmt = sqlite.prepare(`
+        INSERT INTO trades (
+          user_id, ticket, broker, volume, symbol, open_time, 
+          duration_days, status, hedge_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const result = insertStmt.run(
+        userId,
+        ticket,
+        broker,
+        volume,
+        symbol,
+        openTime.toISOString(),
+        durationDays,
+        'open',
+        hedgeId || null
+      );
+
+      // Get the inserted trade
+      const selectStmt = sqlite.prepare('SELECT * FROM trades WHERE id = ?');
+      const newTrade = selectStmt.get(result.lastInsertRowid);
+      
+      sqlite.close();
+      console.log(`[TradeService] Created trade record:`, newTrade);
+      return newTrade;
     } catch (error) {
       console.error(`[TradeService] Error creating trade record:`, error);
       throw error;
