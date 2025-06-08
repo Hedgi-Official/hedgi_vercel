@@ -796,6 +796,21 @@ export function registerRoutes(app: Express): Server {
         'formData.'
       );
       
+      // Add debugging to see what MercadoPago actually provides
+      html = html.replace(
+        'onSubmit: async ({ selectedPaymentMethod, formData }) => {',
+        `onSubmit: async ({ selectedPaymentMethod, formData }) => {
+            console.log("[DEBUG] onSubmit called with:", { selectedPaymentMethod, formData });
+            console.log("[DEBUG] selectedPaymentMethod:", selectedPaymentMethod);
+            console.log("[DEBUG] formData keys:", Object.keys(formData || {}));`
+      );
+      
+      // Also add fallback for payment method detection
+      html = html.replace(
+        'payment_method_id: selectedPaymentMethod,',
+        `payment_method_id: selectedPaymentMethod || formData.payment_method_id || formData.paymentMethodId || "visa",`
+      );
+      
       console.log(`[Flask Proxy] Fixed payment method ID extraction in template`);
       
       // Set proper headers for iframe embedding
