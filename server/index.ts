@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupSimpleAuth } from "./simple-auth";
+import { setupWorkingAuth } from "./simple-auth-working";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -13,6 +13,9 @@ const server = createServer(app);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Setup working authentication system first
+setupWorkingAuth(app);
 
 // Add payment routes
 app.use('/', paymentRoutes);

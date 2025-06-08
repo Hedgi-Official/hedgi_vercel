@@ -29,7 +29,8 @@ interface BrokerRate {
 }
 
 export function registerRoutes(app: Express): Server {
-  setupAuth(app);
+  // Use working auth instead of the problematic database-dependent auth
+  setupWorkingAuth(app);
 
   // Mercado Pago API endpoints for modal popup
   app.get('/api/mp-public-key', async (req: Request, res: Response) => {
