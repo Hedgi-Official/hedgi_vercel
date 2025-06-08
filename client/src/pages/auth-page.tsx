@@ -52,11 +52,17 @@ const createRegisterSchema = (nation: string) => z.object({
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { login, register } = useUser();
+  const { login, register, user } = useUser();
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("login");
+
+  // Redirect logged-in users to dashboard
+  if (user) {
+    navigate("/dashboard");
+    return null;
+  }
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -123,10 +129,14 @@ export default function AuthPage() {
         // Invalidate user query to refresh authentication state
         await queryClient.invalidateQueries({ queryKey: ['user'] });
         
-        // Small delay to ensure state updates
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 100);
+        // Show success message
+        toast({
+          title: "Account created successfully!",
+          description: "Welcome to Hedgi. Redirecting to your dashboard...",
+        });
+        
+        // Redirect to dashboard immediately
+        navigate("/dashboard");
       } else {
         toast({
           variant: "destructive",
