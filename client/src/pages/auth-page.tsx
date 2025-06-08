@@ -218,6 +218,7 @@ export default function AuthPage() {
                   placeholder="Enter invite code (beta access)"
                   value={registerData.inviteCode}
                   onChange={(e) => setRegisterData({ ...registerData, inviteCode: e.target.value })}
+                  required
                 />
 
                 <>
