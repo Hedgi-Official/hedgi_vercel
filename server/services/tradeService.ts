@@ -89,7 +89,7 @@ export class TradeService {
       }
       
       // Insert trade record using raw SQLite to avoid data type issues
-      const Database = require('better-sqlite3');
+      const { default: Database } = await import('better-sqlite3');
       const sqlite = new Database('./hedgi.db');
       
       const insertStmt = sqlite.prepare(`
