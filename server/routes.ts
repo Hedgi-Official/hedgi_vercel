@@ -350,7 +350,61 @@ export function registerRoutes(app: Express): Server {
       const { txId } = req.params;
       console.log(`[Payment Status] Checking status for txId: ${txId}`);
       
-      // For now, return pending status - this needs integration with actual payment processing
+      // Extract payment ID from txId if it contains one
+      // TxId format: tx_timestamp_randomstring or direct payment ID
+      let paymentId = null;
+      
+      // Check if txId looks like a Mercado Pago payment ID (numeric)
+      if (/^\d+$/.test(txId)) {
+        paymentId = txId;
+      } else {
+        // For development/testing, check if payment was completed via the brick
+        // In production, this would need to track actual payment IDs
+        console.log(`[Payment Status] TxId ${txId} does not appear to be a payment ID, returning pending`);
+        return res.json({
+          status: "pending",
+          message: "Payment verification in progress",
+          txId: txId
+        });
+      }
+      
+      // If we have a payment ID, verify with Mercado Pago
+      if (paymentId && paymentService) {
+        try {
+          const paymentInfo = await paymentService.getPaymentInfo(paymentId);
+          console.log(`[Payment Status] Mercado Pago response for ${paymentId}:`, paymentInfo);
+          
+          if (paymentInfo.status === 'approved') {
+            return res.json({
+              status: "approved",
+              id: paymentInfo.id,
+              message: "Payment completed successfully",
+              txId: txId
+            });
+          } else if (paymentInfo.status === 'rejected') {
+            return res.json({
+              status: "rejected",
+              message: "Payment was rejected",
+              txId: txId
+            });
+          } else {
+            return res.json({
+              status: "pending",
+              message: `Payment status: ${paymentInfo.status}`,
+              txId: txId
+            });
+          }
+        } catch (mpError) {
+          console.error(`[Payment Status] Mercado Pago error for ${paymentId}:`, mpError);
+          return res.json({
+            status: "pending",
+            message: "Payment verification in progress",
+            txId: txId
+          });
+        }
+      }
+      
+      // Default to pending
       res.json({
         status: "pending",
         message: "Payment verification in progress",
