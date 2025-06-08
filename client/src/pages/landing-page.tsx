@@ -6,7 +6,7 @@ import { Header } from "@/components/header";
 import { Skyline } from "@/components/skyline";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import CurrencyNewsFeed from "@/components/CurrencyNewsFeed";
+/*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
@@ -79,9 +79,6 @@ export default function LandingPage() {
               </div>
             </div>
             
-          </div>
-          <div className="mt-12">
-            <CurrencyNewsFeed />
           </div>
           
         </section>
