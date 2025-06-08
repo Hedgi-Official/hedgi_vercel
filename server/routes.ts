@@ -345,11 +345,16 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // 1) Create a new trade (Simple proxy to Flask)
+  // 1) Create a new trade (Save to both Flask and local database)
   app.post('/api/trades', async (req: Request, res: Response) => {
-    try {
-      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
+    try {
+      console.log('[Express Proxy] Creating trade for user', req.user.id, 'with data:', req.body);
+
+      // Forward to Flask first
       const flaskRes = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -364,9 +369,33 @@ export function registerRoutes(app: Express): Server {
         return res.status(flaskRes.status).json({ error: errorText });
       }
 
-      const result = await flaskRes.json();
-      console.log('[Express Proxy] Flask success:', result);
-      res.json(result);
+      const flaskResult = await flaskRes.json();
+      console.log('[Express Proxy] Flask success:', flaskResult);
+
+      // Save to local database with proper SQLite data types
+      const { symbol, direction, volume, metadata } = req.body;
+      const currentTime = new Date().toISOString();
+      
+      const newTrade = await db.insert(trades).values({
+        userId: req.user.id,
+        ticket: `FLASK-${flaskResult.id || Date.now()}`,
+        broker: String(metadata?.broker || 'flask'),
+        volume: Number(volume || 1.0),
+        symbol: String(symbol || 'USDBRL'),
+        openTime: currentTime,
+        durationDays: Number(metadata?.days || 30),
+        status: 'open',
+        flaskTradeId: Number(flaskResult.id),
+        metadata: JSON.stringify(metadata || {})
+      }).returning();
+
+      console.log('[Express Proxy] Saved trade to database:', newTrade[0]);
+
+      res.json({
+        ...flaskResult,
+        localId: newTrade[0].id,
+        saved: true
+      });
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
       res.status(500).json({ error: 'Proxy error: ' + error.message });
