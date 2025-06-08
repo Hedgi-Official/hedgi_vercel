@@ -29,6 +29,12 @@ export function MercadoPagoBrickModal({
   const iframeCreated = useRef(false);
   const txIdRef = useRef<string>('');
   const tradePlaced = useRef(false);
+  let symbol: string;
+  if (hedgeData?.baseCurrency === 'BRL') {
+    symbol = 'R$ ';
+  } else {
+    symbol = '$';
+  }
 
   // Poll payment status instead of relying on postMessage
   const pollPaymentStatus = async (txId: string) => {
@@ -402,7 +408,7 @@ export function MercadoPagoBrickModal({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>
-            {t('payment.title')} - {i18n.language === 'pt' ? 'R$' : '$'}{amount}
+            {t('payment.title')} – {symbol}{amount}
           </DialogTitle>
         </DialogHeader>
         
