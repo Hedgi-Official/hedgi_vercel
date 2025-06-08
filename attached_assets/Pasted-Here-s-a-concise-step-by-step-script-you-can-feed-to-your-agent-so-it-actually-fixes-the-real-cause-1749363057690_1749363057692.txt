@@ -1,0 +1,53 @@
+Here’s a concise, step-by-step script you can feed to your agent so it actually fixes the real cause instead of looping through code changes:
+
+1. **Stop any automatic restarts**
+
+   * Disable or remove the “on error → restart” loop so you only restart **once**.
+
+2. **Detect the disabled database**
+
+   ```bash
+   # from your Repl console
+   curl -X POST http://localhost:5000/api/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"testuser","password":"testpass"}' -v
+   ```
+
+   * If you see `Control plane request failed: endpoint is disabled`, **do not** proceed to code edits yet.
+
+3. **Re-enable the DB in Replit**
+
+   * In the Replit sidebar click the 🗄️ **Database** icon.
+   * If it shows “disabled” or “not created,” click **Enable** (or **Create database**).
+   * Wait until your key/value store panel appears.
+
+4. **Refresh your secrets**
+
+   * Open the 🔒 **Secrets** pane and confirm your `DATABASE_URL` (or other DB credentials) are present and correct.
+
+5. **Restart the Repl exactly once**
+
+   * Hit **Stop** → **Run**.
+   * Watch the logs to confirm it connects successfully (no “endpoint is disabled” errors).
+
+6. **Verify the fix**
+
+   ```bash
+   curl -X POST http://localhost:5000/api/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"testuser","password":"testpass"}' -v
+   ```
+
+   * You should now get a 200 (or 400 for bad creds), **not** a 500.
+
+7. **Only after the DB is healthy:**
+
+   * If you still have issues (e.g. API routes being intercepted by Vite), then address them—**but only once** (reorder your Express routes, adjust the proxy, etc.).
+   * Don’t loop—apply the change, restart one last time, test, and then stop.
+
+8. **On success or failure, report back and exit**
+
+   * Success: “✅ Database re-enabled, login endpoint returns expected response.”
+   * Failure: “❌ Still seeing ‘endpoint is disabled’—please check the Replit DB pane or your external provider.”
+
+Embedding those steps in your agent will guarantee it breaks out of its endless loop, actually restores the database connection, and only then touches code if truly needed.
