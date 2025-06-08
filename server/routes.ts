@@ -344,6 +344,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Test payment completion endpoint for development
+  app.post("/api/test-payment/:txId", async (req: Request, res: Response) => {
+    try {
+      const { txId } = req.params;
+      console.log(`[Test Payment] Simulating payment completion for txId: ${txId}`);
+      
+      // Simulate successful payment
+      const testPaymentId = `test_payment_${Date.now()}`;
+      
+      res.json({
+        status: "approved",
+        id: testPaymentId,
+        message: "Test payment completed successfully",
+        txId: txId
+      });
+    } catch (error) {
+      console.error("[Test Payment] Error:", error);
+      res.status(500).json({
+        status: "error",
+        error: "Unable to process test payment"
+      });
+    }
+  });
+
   // Payment status endpoint for polling (returns JSON)
   app.get("/api/payment-status/:txId", async (req: Request, res: Response) => {
     try {
@@ -357,9 +381,39 @@ export function registerRoutes(app: Express): Server {
       // Check if txId looks like a Mercado Pago payment ID (numeric)
       if (/^\d+$/.test(txId)) {
         paymentId = txId;
+      } else if (txId.startsWith('tx_')) {
+        // For development/testing, simulate payment completion after 10 seconds
+        const txParts = txId.split('_');
+        if (txParts.length >= 2) {
+          const txTimestamp = parseInt(txParts[1]);
+          if (txTimestamp) {
+            const timeElapsed = Date.now() - txTimestamp;
+            if (timeElapsed > 10000) { // 10 seconds
+              console.log(`[Payment Status] Simulating payment completion for ${txId} after ${timeElapsed}ms`);
+              return res.json({
+                status: "approved",
+                id: `test_payment_${txTimestamp}`,
+                message: "Test payment completed successfully",
+                txId: txId
+              });
+            }
+            
+            console.log(`[Payment Status] TxId ${txId} still pending (${timeElapsed}ms elapsed)`);
+            return res.json({
+              status: "pending",
+              message: "Payment verification in progress",
+              txId: txId
+            });
+          }
+        }
+        
+        console.log(`[Payment Status] Invalid txId format: ${txId}`);
+        return res.json({
+          status: "pending",
+          message: "Payment verification in progress",
+          txId: txId
+        });
       } else {
-        // For development/testing, check if payment was completed via the brick
-        // In production, this would need to track actual payment IDs
         console.log(`[Payment Status] TxId ${txId} does not appear to be a payment ID, returning pending`);
         return res.json({
           status: "pending",

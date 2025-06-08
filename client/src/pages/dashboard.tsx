@@ -554,13 +554,24 @@ export default function Dashboard() {
         <div>
           <p className="font-medium">{trade.symbol} (Trade ID: {trade.flaskTradeId})</p>
           <p className="text-sm text-muted-foreground">
-            Volume: {trade.volume}
+            {(() => {
+              // Convert volume back to amount and format with base currency
+              const volume = parseFloat(trade.volume) || 0.01;
+              const amount = volume * 100000; // Convert back to original amount
+
+              // Extract base currency from symbol (e.g., USDBRL -> USD, EURUSD -> EUR)
+              const baseCurrency = trade.symbol ? trade.symbol.substring(0, 3) : 'USD';
+
+              // Get currency symbol
+              const currencySymbol = baseCurrency === 'USD' ? '$' : 
+                                   baseCurrency === 'EUR' ? '€' : 
+                                   baseCurrency === 'GBP' ? '£' : '';
+
+              return `${currencySymbol}${amount.toLocaleString('en-US')} ${baseCurrency}`;
+            })()}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Status: {displayStatus}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Opened: {new Date(trade.openTime).toLocaleString()}
           </p>
         </div>
         <div className="flex items-center gap-2">
