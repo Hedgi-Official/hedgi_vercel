@@ -1,8 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes-fixed";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupIsolatedAuth } from "./isolated-auth";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -14,8 +13,7 @@ const server = createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Setup isolated authentication system first
-setupIsolatedAuth(app);
+// Authentication will be setup in routes
 
 // Add payment routes
 app.use('/', paymentRoutes);
