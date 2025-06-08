@@ -776,9 +776,27 @@ export function registerRoutes(app: Express): Server {
       console.log(`[Flask Proxy] Parameters: amount=${amount}, txId=${txId}, lang=${lang}`);
       
       const response = await fetch(flaskUrl);
-      const html = await response.text();
+      let html = await response.text();
       
       console.log(`[Flask Proxy] Successfully fetched brick HTML (${html.length} characters)`);
+      
+      // Fix the payment method ID extraction in the Flask template
+      html = html.replace(
+        'onSubmit: async cardFormData => {',
+        'onSubmit: async ({ selectedPaymentMethod, formData }) => {'
+      );
+      
+      html = html.replace(
+        'payment_method_id: cardFormData.paymentMethodId,',
+        'payment_method_id: selectedPaymentMethod,'
+      );
+      
+      html = html.replace(
+        /cardFormData\./g,
+        'formData.'
+      );
+      
+      console.log(`[Flask Proxy] Fixed payment method ID extraction in template`);
       
       // Set proper headers for iframe embedding
       res.setHeader('Content-Type', 'text/html');
