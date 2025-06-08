@@ -34,7 +34,7 @@ const registerSchema = z.object({
     const age = today.getFullYear() - date.getFullYear();
     const monthDiff = today.getMonth() - date.getMonth();
     const dayDiff = today.getDate() - date.getDate();
-    
+
     const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
     return actualAge >= 18;
   }, "You must be at least 18 years old to use this service")
@@ -69,6 +69,7 @@ export default function AuthPage() {
     paymentIdentifier: "",
     cpf: "",
     birthdate: "",
+    inviteCode: "", // Added inviteCode field
   });
 
   const handleSubmit = async (action: "login" | "register") => {
@@ -106,7 +107,7 @@ export default function AuthPage() {
           },
           body: JSON.stringify(registerData),
         });
-        
+
         if (response.ok) {
           const responseData = await response.json();
           result = { ok: true, message: responseData.message || "Registration successful" };
@@ -121,10 +122,10 @@ export default function AuthPage() {
           title: "Success",
           description: action === "login" ? "Logged in successfully!" : "Account created successfully!",
         });
-        
+
         // Invalidate user query to refresh authentication state
         await queryClient.invalidateQueries({ queryKey: ['user'] });
-        
+
         // Navigate to dashboard
         navigate("/dashboard");
       } else {
@@ -212,6 +213,13 @@ export default function AuthPage() {
                   </p>
                 </div>
 
+                {/* Invite Code Field */}
+                <Input
+                  placeholder="Enter invite code (beta access)"
+                  value={registerData.inviteCode}
+                  onChange={(e) => setRegisterData({ ...registerData, inviteCode: e.target.value })}
+                />
+
                 <>
                   {/* Alpha launch: Brazil only country selection */}
                   <div className="space-y-2">
@@ -288,7 +296,7 @@ export default function AuthPage() {
                   value={registerData.phoneNumber}
                   onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
                 />
-                
+
                 {/* CPF Field */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CPF (Brazilian Tax ID)</label>

@@ -100,6 +100,18 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
+      // Check invite code first (for beta access)
+      const { inviteCode } = req.body;
+      if (inviteCode) {
+        const validCodes = process.env.BETA_INVITE_CODES?.split(',') || [];
+        if (!validCodes.includes(inviteCode)) {
+          return res.status(400).send("Invalid invite code");
+        }
+        // Remove used code to make it one-time use
+        const remainingCodes = validCodes.filter(code => code !== inviteCode);
+        process.env.BETA_INVITE_CODES = remainingCodes.join(',');
+      }
+
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
         return res
