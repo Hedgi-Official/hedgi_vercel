@@ -1,15 +1,19 @@
 // db/schema.ts
 import {
-  sqliteTable,
+  pgTable,
+  serial,
   integer,
   text,
-  real
-} from 'drizzle-orm/sqlite-core';
+  numeric,
+  timestamp,
+  jsonb,
+  boolean
+} from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { relations } from 'drizzle-orm';
 
-export const users = sqliteTable('users', {
-  id:           integer('id').primaryKey({ autoIncrement: true }),
+export const users = pgTable('users', {
+  id:           serial('id').primaryKey(),
   username:     text('username').unique().notNull(),
   password:     text('password').notNull(),
   email:        text('email').unique().notNull(),
@@ -18,51 +22,58 @@ export const users = sqliteTable('users', {
   nation:       text('nation'),
   paymentIdentifier: text('payment_identifier'),
   cpf:          text('cpf'),
-  ssn:          text('ssn'),
-  birthdate:    text('birthdate'),
+  birthdate:    timestamp('birthdate'),
   address:      text('address'),
-  documentNumbers: text('document_numbers').default('{}'),
-  additionalFields: text('additional_fields').default('{}'),
-  createdAt:    text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  googleCalendarEnabled: integer('google_calendar_enabled', { mode: 'boolean' }).default(false),
+  documentNumbers: jsonb('document_numbers').default({}), // For storing various document types
+  additionalFields: jsonb('additional_fields').default({}), // For future extensibility
+  createdAt:    timestamp('created_at').defaultNow().notNull(),
+  googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
   googleRefreshToken: text('google_refresh_token'),
 });
 
-export const hedges = sqliteTable('hedges', {
-  id:               integer('id').primaryKey({ autoIncrement: true }),
+export const hedges = pgTable('hedges', {
+  id:               serial('id').primaryKey(),
   userId:           integer('user_id').references(() => users.id),
   baseCurrency:     text('base_currency').notNull(),
   targetCurrency:   text('target_currency').notNull(),
-  amount:           real('amount').notNull(),
-  rate:             real('rate').notNull(),
-  duration:         integer('duration').notNull(),
-  margin:           real('margin'),
-  status:           text('status').notNull(),
-  broker:           text('broker').default('tickmill'),
-  tradeOrderNumber: text('trade_order_number'),
-  tradeStatus:      text('trade_status'),
-  createdAt:        text('created_at').default('CURRENT_TIMESTAMP').notNull(),
-  completedAt:      text('completed_at'),
-  tradeDirection:   text('tradeDirection').notNull(),
+  amount:           numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  rate:             numeric('rate',   { precision: 10, scale: 6 }).notNull(),
+  duration:         integer('duration').notNull(),          // in days
+  margin:           numeric('margin', { precision: 10, scale: 2 }), // optional
+  status:           text('status').notNull(),               // active, completed, cancelled
+  broker:           text('broker').default('tickmill'),     // default broker
+  tradeOrderNumber: text('trade_order_number'),             // stored as text to handle big numbers
+  tradeStatus:      text('trade_status'),                   // open, closed, etc
+  createdAt:        timestamp('created_at').defaultNow().notNull(),
+  completedAt:      timestamp('completed_at'),
+  tradeDirection:        text('tradeDirection').notNull(),
 });
 
-export const trades = sqliteTable('trades', {
-  id:            integer('id').primaryKey({ autoIncrement: true }),
+export const trades = pgTable('trades', {
+  id:            serial('id').primaryKey(),
   userId:        integer('user_id').notNull(),
   ticket:        text('ticket').notNull(),
   broker:        text('broker').notNull(),
-  volume:        real('volume').notNull(),
+  volume:        numeric('volume', { precision: 10, scale: 2 }).notNull(),
   symbol:        text('symbol').notNull(),
-  openTime:      text('open_time').notNull(),
+  openTime:      timestamp('open_time').notNull(),
   durationDays:  integer('duration_days').notNull(),
+
+  // Order status in the DB; use .default() instead of sql``  
   status:        text('status').notNull().default('open'),
-  closedAt:      text('closed_at'),
+  closedAt:      timestamp('closed_at'),
   hedgeId:       integer('hedge_id'),
-  createdAt:     text('created_at').notNull().default('CURRENT_TIMESTAMP'),
-  updatedAt:     text('updated_at').notNull().default('CURRENT_TIMESTAMP'),
+
+  // Basic timestamps
+  createdAt:     timestamp('created_at').notNull().defaultNow(),
+  updatedAt:     timestamp('updated_at').notNull().defaultNow(),
+
+  // ← Flask integration columns
   flaskTradeId:  integer('flask_trade_id'),
-  metadata:      text('metadata').notNull().default('{}'),
-  enableRLS:     integer('enable_rls', { mode: 'boolean' }).notNull().default(false),
+  metadata:      jsonb('metadata').notNull().default({}), // JSONB default empty object
+
+  // RLS flag if you need it
+  enableRLS:     boolean('enable_rls').notNull().default(false),
 });
 
 export const userRelations = relations(users, ({ many }) => ({
