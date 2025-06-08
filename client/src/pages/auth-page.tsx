@@ -23,7 +23,21 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   nation: z.string().min(1, "Please select your country"),
-  paymentIdentifier: z.string().min(1, "Payment identifier is required")
+  paymentIdentifier: z.string().min(1, "Payment identifier is required"),
+  cpf: z.string().min(1, "CPF is required").refine((val) => {
+    const cleanCPF = val.replace(/\D/g, '');
+    return cleanCPF.length === 11;
+  }, "CPF must have 11 digits"),
+  birthdate: z.string().min(1, "Birth date is required").refine((val) => {
+    const date = new Date(val);
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    const dayDiff = today.getDate() - date.getDate();
+    
+    const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
+    return actualAge >= 18;
+  }, "You must be at least 18 years old to use this service")
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -53,6 +67,8 @@ export default function AuthPage() {
     confirmPassword: "",
     nation: "",
     paymentIdentifier: "",
+    cpf: "",
+    birthdate: "",
   });
 
   const handleSubmit = async (action: "login" | "register") => {

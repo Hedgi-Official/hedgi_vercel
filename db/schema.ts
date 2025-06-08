@@ -21,6 +21,11 @@ export const users = pgTable('users', {
   phoneNumber:  text('phone_number'),
   nation:       text('nation'),
   paymentIdentifier: text('payment_identifier'),
+  cpf:          text('cpf'),
+  birthdate:    timestamp('birthdate'),
+  address:      text('address'),
+  documentNumbers: jsonb('document_numbers').default({}), // For storing various document types
+  additionalFields: jsonb('additional_fields').default({}), // For future extensibility
   createdAt:    timestamp('created_at').defaultNow().notNull(),
   googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
   googleRefreshToken: text('google_refresh_token'),
