@@ -88,36 +88,23 @@ export class TradeService {
         }
       }
       
-      // Use raw SQLite for trade record insertion to avoid field mapping issues
-      const Database = require('better-sqlite3');
-      const sqlite = new Database('./hedgi.db');
-      
-      const insertStmt = sqlite.prepare(`
-        INSERT INTO trades (
-          user_id, ticket, broker, volume, symbol, open_time, 
-          duration_days, status, hedge_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const result = insertStmt.run(
-        userId,
-        ticket,
-        broker,
-        volume,
-        symbol,
-        openTime.toISOString(),
-        durationDays,
-        'open',
-        hedgeId || null
-      );
-
-      // Get the inserted trade
-      const selectStmt = sqlite.prepare('SELECT * FROM trades WHERE id = ?');
-      const newTrade = selectStmt.get(result.lastInsertRowid);
-      
-      sqlite.close();
-      console.log(`[TradeService] Created trade record:`, newTrade);
-      return newTrade;
+      // Insert trade record
+      const newTrade = await db.insert(trades)
+        .values({
+          userId,
+          ticket,
+          broker,
+          volume: volume.toString(),
+          symbol,
+          openTime,
+          durationDays,
+          status: 'open',
+          hedgeId
+        })
+        .returning();
+        
+      console.log(`[TradeService] Created trade record:`, newTrade[0]);
+      return newTrade[0];
     } catch (error) {
       console.error(`[TradeService] Error creating trade record:`, error);
       throw error;
@@ -139,20 +126,11 @@ export class TradeService {
       });
       
       // Map to API response format with only non-sensitive fields
-      return openTrades.map(trade => {
-        let openTimeStr: string;
-        try {
-          openTimeStr = typeof trade.openTime === 'string' ? trade.openTime : new Date(trade.openTime).toISOString();
-        } catch (e) {
-          openTimeStr = new Date().toISOString(); // fallback to current time
-        }
-        
-        return {
-          symbol: trade.symbol,
-          volume: `${Number(trade.volume).toFixed(2)} lots`,
-          openTime: openTimeStr
-        };
-      });
+      return openTrades.map(trade => ({
+        symbol: trade.symbol,
+        volume: `${Number(trade.volume).toFixed(2)} lots`,
+        openTime: trade.openTime.toISOString()
+      }));
     } catch (error) {
       console.error(`[TradeService] Error fetching open trades:`, error);
       throw error;
@@ -177,8 +155,8 @@ export class TradeService {
       return closedTrades.map(trade => ({
         symbol: trade.symbol,
         volume: `${Number(trade.volume).toFixed(2)} lots`,
-        openTime: typeof trade.openTime === 'string' ? trade.openTime : new Date(trade.openTime).toISOString(),
-        closedAt: trade.closedAt ? (typeof trade.closedAt === 'string' ? trade.closedAt : new Date(trade.closedAt).toISOString()) : new Date().toISOString(),
+        openTime: trade.openTime.toISOString(),
+        closedAt: trade.closedAt?.toISOString() || new Date().toISOString(),
         status: trade.status
       }));
     } catch (error) {

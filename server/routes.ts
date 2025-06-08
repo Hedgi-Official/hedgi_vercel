@@ -378,7 +378,7 @@ export function registerRoutes(app: Express): Server {
       let savedTrade = null;
       try {
         // Import raw SQLite database for direct operations
-        const { default: Database } = await import('better-sqlite3');
+        const Database = require('better-sqlite3');
         const sqlite = new Database('./hedgi.db');
         
         // Use prepared statement for insertion
@@ -505,18 +505,17 @@ export function registerRoutes(app: Express): Server {
 
   // 4) History tab - returns ONLY ClosedTrade interface fields
   app.get('/api/trades/history', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 2 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 2;
+    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
       console.log('[Express Proxy] Getting trade history from database');
 
       // Get all trades for this user that have Flask IDs
       const allTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, userId),
+        where: eq(trades.userId, req.user.id),
         orderBy: desc(trades.updatedAt),
       });
 
-      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${userId}`);
+      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${req.user.id}`);
 
       // Interface matching exactly what React expects
       interface ClosedTrade {
@@ -598,12 +597,11 @@ export function registerRoutes(app: Express): Server {
 
   // 1) Open trades → returns the simplified OpenTrade interface
   app.get('/api/trades/open', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 2 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 2;
+    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
-      console.log(`[Express Proxy] Getting open trades for user ${userId}`);
-      const openTrades = await tradeService.getOpenTrades(userId);
-      console.log(`[Express Proxy] Found ${openTrades.length} open trades for user ${userId}`);
+      console.log(`[Express Proxy] Getting open trades for user ${req.user.id}`);
+      const openTrades = await tradeService.getOpenTrades(req.user.id);
+      console.log(`[Express Proxy] Found ${openTrades.length} open trades for user ${req.user.id}`);
       return res.json(openTrades);
     } catch (err) {
       console.error('Error fetching open trades:', err);

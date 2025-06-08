@@ -304,16 +304,16 @@ export function MercadoPagoBrickModal({
 
       // Add fallback mechanism - force loading to stop after iframe loads
       const fallbackTimeout = setTimeout(() => {
-        console.log('[MercadoPago Brick Modal] Fallback: Force stopping loading after 10 seconds for iframe load');
+        console.log('[MercadoPago Brick Modal] Fallback: Force stopping loading after 5 seconds for iframe load');
         setIsLoading(false);
-      }, 10000);
+      }, 5000);
 
       // Add final timeout for error state
       const errorTimeout = setTimeout(() => {
         console.log('[MercadoPago Brick Modal] Checking loading state for timeout');
         setError('Payment form initialization timeout. Please try again.');
         setIsLoading(false);
-      }, 60000);
+      }, 15000);
       
       const messageHandler = (event: MessageEvent) => {
         console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
