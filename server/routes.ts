@@ -20,6 +20,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const FLASK = process.env.FLASK_URL || 'http://3.145.164.47';
+
+// Cache for payment results to enable polling
+const paymentResultsCache = new Map<string, any>();
+
 interface BrokerRate {
   bid:      number;
   ask:      number;
@@ -344,6 +348,33 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Payment status endpoint for polling
+  app.get("/api/payment-status/:txId", async (req: Request, res: Response) => {
+    try {
+      const { txId } = req.params;
+      console.log(`[Payment Status] Checking status for txId: ${txId}`);
+      
+      // Check if payment result is cached (from payment processing)
+      const cachedResult = paymentResultsCache.get(txId);
+      if (cachedResult) {
+        console.log(`[Payment Status] Found cached result for ${txId}:`, cachedResult);
+        res.json(cachedResult);
+      } else {
+        console.log(`[Payment Status] No cached result for ${txId}, returning pending`);
+        res.json({
+          status: "pending",
+          message: "Payment verification in progress",
+          txId: txId
+        });
+      }
+    } catch (error) {
+      console.error("[Payment Status] Error checking payment status:", error);
+      res.status(500).json({
+        status: "error",
+        error: "Unable to check payment status"
+      });
+    }
+  });
 
   // 1) Create a new trade (Save to both Flask and local database)
   app.post('/api/trades', async (req: Request, res: Response) => {

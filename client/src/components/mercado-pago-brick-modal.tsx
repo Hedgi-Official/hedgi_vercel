@@ -49,7 +49,12 @@ export function MercadoPagoBrickModal({
       console.log(`[MercadoPago Brick Modal] Polling attempt ${attempts} for txId:`, txId);
       
       try {
-        const response = await fetch(`/api/payment-status/${txId}`);
+        const serverUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000'
+          : '';
+        const response = await fetch(`${serverUrl}/api/payment-status/${txId}`, {
+          credentials: 'include'
+        });
         const data = await response.json();
         
         if (data.status === 'approved' && data.id) {
@@ -156,9 +161,13 @@ export function MercadoPagoBrickModal({
       
       console.log('[MercadoPago Brick Modal] Trade payload with Flask structure:', tradePayload);
 
-      const response = await fetch('/api/trades', {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+      const response = await fetch(`${serverUrl}/api/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(tradePayload)
       });
 

@@ -1,0 +1,313 @@
+[MercadoPago Brick Modal] Polling attempt 16 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 17 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 18 for txId: tx_1749374883458_1590pskvz
+use-tickmill-rate.ts:17 [useTickmillRate] Fetching rate for USDBRL
+use-fbs-rate.ts:22 [useFBSRate] Fetching rate for USDBRL
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+use-tickmill-rate.ts:26 [useTickmillRate] Rate data: {ask: 5.60781, bid: 5.60159, broker: 'tickmill', swap_long: -148.81, swap_short: 69.23, …}
+use-fbs-rate.ts:31 [useFBSRate] Rate data: {ask: 5.6109, bid: 5.6088000000000005, broker: 'fbs', swap_long: -58.99, swap_short: 11.97, …}
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 19 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 20 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 21 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+mercado-pago-brick-modal.tsx:49 [MercadoPago Brick Modal] Polling attempt 22 for txId: tx_1749374883458_1590pskvz
+mercado-pago-brick-modal.tsx:115 [MercadoPago Brick Modal] Payment polling error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+poll @ mercado-pago-brick-modal.tsx:115
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+setTimeout
+poll @ mercado-pago-brick-modal.tsx:117
+await in poll
+pollPaymentStatus @ mercado-pago-brick-modal.tsx:129
+(anonymous) @ mercado-pago-brick-modal.tsx:380
+setTimeout
+iframe.onload @ mercado-pago-brick-modal.tsx:378Understand this error
+dashboard.tsx:67 [Dashboard] Fetching active trades from: /api/trades
