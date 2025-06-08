@@ -1,7 +1,10 @@
 import fetch from 'node-fetch';
+import { db } from "@db";
+import { users, hedges, trades } from "@db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { setupIsolatedAuth } from "./isolated-auth";
+import { setupAuth } from "./auth";
 import secondaryRateRouter from "./routes/secondary-rate";
 import chatRouter from "./routes/chat";
 import activtradesRouter from "./routes/activtrades-rate";
@@ -33,7 +36,7 @@ const crypto = {
 const FLASK = process.env.FLASK_URL || "https://electoral-fuzzy-divorce-proc.trycloudflare.com";
 
 export function registerRoutes(app: Express): Server {
-  setupIsolatedAuth(app);
+  setupAuth(app);
 
   // Local Mercado Pago brick endpoint to avoid CORS issues
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {

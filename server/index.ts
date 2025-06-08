@@ -1,7 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupSimpleAuth } from "./simple-auth";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -12,10 +13,6 @@ const server = createServer(app);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Register API routes first before any middleware
-import { setupWorkingAuth } from "./simple-auth-working";
-setupWorkingAuth(app);
 
 // Add payment routes
 app.use('/', paymentRoutes);
