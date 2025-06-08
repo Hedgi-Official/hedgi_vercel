@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupMemoryAuth } from "./memory-auth";
+import { setupIsolatedAuth } from "./isolated-auth";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -14,8 +14,8 @@ const server = createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Setup memory-based authentication system first
-setupMemoryAuth(app);
+// Setup isolated authentication system first
+setupIsolatedAuth(app);
 
 // Add payment routes
 app.use('/', paymentRoutes);
