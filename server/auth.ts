@@ -144,6 +144,10 @@ export function setupAuth(app: Express) {
           email: result.data.email,
           fullName: result.data.fullName,
           phoneNumber: result.data.phoneNumber || null,
+          nation: result.data.nation || null,
+          paymentIdentifier: result.data.paymentIdentifier || null,
+          cpf: result.data.cpf || null,
+          birthdate: result.data.birthdate ? new Date(result.data.birthdate) : null,
           password: hashedPassword,
           googleCalendarEnabled: false,
           googleRefreshToken: null

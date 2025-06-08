@@ -279,6 +279,34 @@ export default function AuthPage() {
                   value={registerData.phoneNumber}
                   onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
                 />
+                
+                {/* CPF Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">CPF (Brazilian Tax ID)</label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={registerData.cpf}
+                    onChange={(e) => {
+                      const formatted = formatCPF(e.target.value);
+                      setRegisterData({ ...registerData, cpf: formatted });
+                    }}
+                    maxLength={14}
+                  />
+                </div>
+
+                {/* Birthdate Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Date of Birth</label>
+                  <Input
+                    type="date"
+                    value={registerData.birthdate}
+                    onChange={(e) => setRegisterData({ ...registerData, birthdate: e.target.value })}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You must be at least 18 years old to use this service
+                  </p>
+                </div>
 
                 {/* Payment Identifier Field - Changes based on country */}
                 {registerData.nation && (
