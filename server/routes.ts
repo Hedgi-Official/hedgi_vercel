@@ -763,62 +763,26 @@ export function registerRoutes(app: Express): Server {
 
   // … leave other unrelated routes (e.g. /api/xtb/rates) here …
 
-  // Proxy endpoint for Flask brick to avoid CORS issues
+  // Local payment brick endpoint with proper payment method ID extraction
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {
     try {
       const amount = req.query.amount || 415;
       const txId = req.query.txId || "";
-      const lang = req.query.lang || "en-US";
       
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}`;
+      console.log(`[Payment Brick] Serving local payment form with amount=${amount}, txId=${txId}`);
       
-      console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
-      console.log(`[Flask Proxy] Parameters: amount=${amount}, txId=${txId}, lang=${lang}`);
+      // Read and serve our custom payment template
+      const fs = await import('fs');
+      const path = await import('path');
       
-      const response = await fetch(flaskUrl);
-      let html = await response.text();
-      
-      console.log(`[Flask Proxy] Successfully fetched brick HTML (${html.length} characters)`);
-      
-      // Fix the payment method ID extraction in the Flask template
-      html = html.replace(
-        'onSubmit: async cardFormData => {',
-        'onSubmit: async ({ selectedPaymentMethod, formData }) => {'
-      );
-      
-      html = html.replace(
-        'payment_method_id: cardFormData.paymentMethodId,',
-        'payment_method_id: selectedPaymentMethod,'
-      );
-      
-      html = html.replace(
-        /cardFormData\./g,
-        'formData.'
-      );
-      
-      // Add debugging to see what MercadoPago actually provides
-      html = html.replace(
-        'onSubmit: async ({ selectedPaymentMethod, formData }) => {',
-        `onSubmit: async ({ selectedPaymentMethod, formData }) => {
-            console.log("[DEBUG] onSubmit called with:", { selectedPaymentMethod, formData });
-            console.log("[DEBUG] selectedPaymentMethod:", selectedPaymentMethod);
-            console.log("[DEBUG] formData keys:", Object.keys(formData || {}));`
-      );
-      
-      // Also add fallback for payment method detection
-      html = html.replace(
-        'payment_method_id: selectedPaymentMethod,',
-        `payment_method_id: selectedPaymentMethod || formData.payment_method_id || formData.paymentMethodId || "visa",`
-      );
-      
-      console.log(`[Flask Proxy] Fixed payment method ID extraction in template`);
+      let html = fs.readFileSync(path.join(__dirname, 'templates', 'payment-brick.html'), 'utf8');
       
       // Set proper headers for iframe embedding
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
       res.send(html);
     } catch (error) {
-      console.error('[Flask Proxy] Error fetching brick:', error);
+      console.error('[Payment Brick] Error serving payment form:', error);
       res.status(500).send(`
         <html>
           <body>
