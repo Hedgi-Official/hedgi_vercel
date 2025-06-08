@@ -344,6 +344,26 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Payment status endpoint for polling (returns JSON)
+  app.get("/api/payment-status/:txId", async (req: Request, res: Response) => {
+    try {
+      const { txId } = req.params;
+      console.log(`[Payment Status] Checking status for txId: ${txId}`);
+      
+      // For now, return pending status - this needs integration with actual payment processing
+      res.json({
+        status: "pending",
+        message: "Payment verification in progress",
+        txId: txId
+      });
+    } catch (error) {
+      console.error("[Payment Status] Error checking payment status:", error);
+      res.status(500).json({
+        status: "error",
+        error: "Unable to check payment status"
+      });
+    }
+  });
 
   // 1) Create a new trade (Save to both Flask and local database)
   app.post('/api/trades', async (req: Request, res: Response) => {
@@ -648,13 +668,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Register routes
+  // Register routes - but exclude payment router to avoid conflicts
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
-  app.use(paymentRouter);
+  // app.use(paymentRouter); // Commented out to prevent conflicts with direct payment routes
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // List of supported symbols for exchange rates
