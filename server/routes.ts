@@ -6,6 +6,7 @@ import { eq, desc, inArray } from 'drizzle-orm';
 import type { Express, Request, Response } from 'express';
 import { createServer, Server } from 'http';
 import { setupAuth } from './auth';
+import { setupWorkingAuth } from './simple-auth-working';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
