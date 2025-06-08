@@ -26,19 +26,14 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-// Define the shape your Flask /trades endpoint returns:
+// Define the shape your /api/trades/open endpoint returns:
 type Trade = {
   id: number;
-  symbol: string;               // e.g. "USDMXN"
-  direction: 'BUY' | 'SELL';
-  volume: number;
-  status: string;
-  metadata?: {
-    days: number;
-    deviation: number;
-    magic: number;
-    comment: string;
-  };
+  symbol: string;               // e.g. "USDBRL"
+  volume: string;               // e.g. "0.10 lots"
+  openTime: string;             // ISO date string
+  status: string;               // Status from Flask API (e.g. "pending")
+  flaskTradeId: number;         // Trade ID in Flask system
 };
 
 export default function Dashboard() {
@@ -542,41 +537,30 @@ export default function Dashboard() {
     }
   };
 
-  // TradeItem component - simplified without individual status queries
-  const TradeItem = ({ trade, onClose }: { trade: any, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
-    // Use the status from the main trades query (which already fetches from Flask)
-    const displayStatus = trade.status || 'open';
+  // TradeItem component - displays trade with correct ID and status from Flask
+  const TradeItem = ({ trade, onClose }: { trade: Trade, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
+    // Use the status from Flask API
+    const displayStatus = trade.status || 'Unknown';
 
-    // Hide only CLOSED and FAILED trades from active section
+    // Hide completed trades from active section
     const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
 
     if (isCompleted) {
-      return null; // Don't render completed trades in active section
+      return null;
     }
 
     return (
       <div className="p-4 border rounded flex justify-between items-center">
         <div>
-          <p className="font-medium">{trade.symbol} (ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})</p>
+          <p className="font-medium">{trade.symbol} (Trade ID: {trade.flaskTradeId})</p>
           <p className="text-sm text-muted-foreground">
-            {trade.direction} {(() => {
-              // Convert volume back to amount and format with base currency
-              const volume = parseFloat(trade.volume) || 0.01;
-              const amount = volume * 100000; // Convert back to original amount
-
-              // Extract base currency from symbol (e.g., USDBRL -> USD, EURUSD -> EUR)
-              const baseCurrency = trade.symbol ? trade.symbol.substring(0, 3) : 'USD';
-
-              // Get currency symbol
-              const currencySymbol = baseCurrency === 'USD' ? '$' : 
-                                   baseCurrency === 'EUR' ? '€' : 
-                                   baseCurrency === 'GBP' ? '£' : '';
-
-              return `${currencySymbol}${amount.toLocaleString('en-US')} ${baseCurrency}`;
-            })()}
+            Volume: {trade.volume}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Status: {displayStatus}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Opened: {new Date(trade.openTime).toLocaleString()}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -585,10 +569,7 @@ export default function Dashboard() {
             size="icon"
             className="text-destructive hover:text-destructive/90"
             onClick={() => {
-              onClose(
-                trade.broker === 'flask' ? trade.flaskTradeId : null,
-                trade.id
-              );
+              onClose(trade.flaskTradeId, trade.id);
             }}
           >
             <X className="h-4 w-4" />
