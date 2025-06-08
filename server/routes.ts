@@ -371,29 +371,42 @@ export function registerRoutes(app: Express): Server {
       const flaskResult = await flaskRes.json();
       console.log('[Express Proxy] Flask success:', flaskResult);
 
-      // Save to local database with proper SQLite data types
+      // Save to local database using raw SQLite for guaranteed compatibility
       const { symbol, direction, volume, metadata } = req.body;
       const currentTime = new Date().toISOString();
       
-      const tradeData = {
-        userId: Number(userId),
-        ticket: `FLASK-${flaskResult.id || Date.now()}`,
-        broker: metadata?.broker || 'flask',
-        volume: Number(volume || 1.0),
-        symbol: symbol || 'USDBRL',
-        openTime: currentTime,
-        durationDays: Number(metadata?.days || 30),
-        status: 'open',
-        flaskTradeId: Number(flaskResult.id),
-        metadata: JSON.stringify(metadata || {})
-      };
-
-      console.log('[Express Proxy] Attempting to save trade to database with data:', tradeData);
-
       let savedTrade = null;
       try {
-        const newTrade = await db.insert(trades).values(tradeData).returning();
-        savedTrade = newTrade[0];
+        // Import raw SQLite database for direct operations
+        const Database = require('better-sqlite3');
+        const sqlite = new Database('./hedgi.db');
+        
+        // Use prepared statement for insertion
+        const insertStmt = sqlite.prepare(`
+          INSERT INTO trades (
+            user_id, ticket, broker, volume, symbol, open_time, 
+            duration_days, status, flask_trade_id, metadata
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const result = insertStmt.run(
+          Number(userId),
+          `FLASK-${flaskResult.id || Date.now()}`,
+          metadata?.broker || 'flask',
+          Number(volume || 1.0),
+          symbol || 'USDBRL',
+          currentTime,
+          Number(metadata?.days || 30),
+          'open',
+          Number(flaskResult.id),
+          JSON.stringify(metadata || {})
+        );
+
+        // Get the inserted trade
+        const selectStmt = sqlite.prepare('SELECT * FROM trades WHERE id = ?');
+        savedTrade = selectStmt.get(result.lastInsertRowid);
+        
+        sqlite.close();
         console.log('[Express Proxy] Saved trade to database:', savedTrade);
       } catch (dbError) {
         console.error('[Express Proxy] Failed to save to local database:', dbError);
