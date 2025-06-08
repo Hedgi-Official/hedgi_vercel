@@ -30,12 +30,9 @@ export interface TradeResponse {
 
 // Interface for the response from the GET /api/trades/open endpoint
 export interface OpenTradeResponse {
-  id: number;
   symbol: string;
   volume: string; // Formatted as "0.20 lots"
   openTime: string; // ISO formatted date
-  status: string; // Status from Flask API
-  flaskTradeId: number;
 }
 
 // Interface for the response from the GET /api/trades/closed endpoint
@@ -134,59 +131,28 @@ export class TradeService {
    */
   async getOpenTrades(userId: number): Promise<OpenTradeResponse[]> {
     try {
-      // Use raw SQLite for reliable data access
-      const { default: Database } = await import('better-sqlite3');
-      const sqlite = new Database('./hedgi.db');
+      const openTrades = await db.query.trades.findMany({
+        where: (trade, { eq, and }) => and(
+          eq(trade.userId, userId),
+          eq(trade.status, 'open')
+        )
+      });
       
-      const stmt = sqlite.prepare(`
-        SELECT id, flask_trade_id, symbol, volume, open_time, status 
-        FROM trades 
-        WHERE user_id = ? AND flask_trade_id IS NOT NULL
-        ORDER BY open_time DESC
-      `);
-      
-      const allTrades = stmt.all(userId);
-      sqlite.close();
-      
-      console.log(`[TradeService] Found ${allTrades.length} trades for user ${userId}`);
-      
-      const openTrades = [];
-      
-      // Check each trade's status with Flask
-      for (const trade of allTrades) {
+      // Map to API response format with only non-sensitive fields
+      return openTrades.map(trade => {
+        let openTimeStr: string;
         try {
-          const flaskResponse = await fetch(`${process.env.FLASK_URL || 'http://3.145.164.47'}/trades/${trade.flask_trade_id}/status`);
-          const flaskData = await flaskResponse.json();
-          
-          console.log(`[TradeService] Flask status for trade ${trade.id}: ${flaskData.status}`);
-          
-          // Only include trades that are still active (not closed)
-          if (flaskData.status && flaskData.status !== 'Closed') {
-            openTrades.push({
-              id: trade.id,
-              symbol: trade.symbol,
-              volume: `${Number(trade.volume).toFixed(2)} lots`,
-              openTime: trade.open_time,
-              status: flaskData.status,
-              flaskTradeId: trade.flask_trade_id
-            });
-          }
-        } catch (error) {
-          console.error(`[TradeService] Error fetching status for trade ${trade.id}:`, error);
-          // Include trade with unknown status if Flask is unreachable
-          openTrades.push({
-            id: trade.id,
-            symbol: trade.symbol,
-            volume: `${Number(trade.volume).toFixed(2)} lots`,
-            openTime: trade.open_time,
-            status: 'Unknown',
-            flaskTradeId: trade.flask_trade_id
-          });
+          openTimeStr = typeof trade.openTime === 'string' ? trade.openTime : new Date(trade.openTime).toISOString();
+        } catch (e) {
+          openTimeStr = new Date().toISOString(); // fallback to current time
         }
-      }
-      
-      console.log(`[TradeService] Returning ${openTrades.length} open trades`);
-      return openTrades;
+        
+        return {
+          symbol: trade.symbol,
+          volume: `${Number(trade.volume).toFixed(2)} lots`,
+          openTime: openTimeStr
+        };
+      });
     } catch (error) {
       console.error(`[TradeService] Error fetching open trades:`, error);
       throw error;

@@ -344,134 +344,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Test payment completion endpoint for development
-  app.post("/api/test-payment/:txId", async (req: Request, res: Response) => {
-    try {
-      const { txId } = req.params;
-      console.log(`[Test Payment] Simulating payment completion for txId: ${txId}`);
-      
-      // Simulate successful payment
-      const testPaymentId = `test_payment_${Date.now()}`;
-      
-      res.json({
-        status: "approved",
-        id: testPaymentId,
-        message: "Test payment completed successfully",
-        txId: txId
-      });
-    } catch (error) {
-      console.error("[Test Payment] Error:", error);
-      res.status(500).json({
-        status: "error",
-        error: "Unable to process test payment"
-      });
-    }
-  });
-
-  // Payment status endpoint for polling (returns JSON)
-  app.get("/api/payment-status/:txId", async (req: Request, res: Response) => {
-    try {
-      const { txId } = req.params;
-      console.log(`[Payment Status] Checking status for txId: ${txId}`);
-      
-      // Extract payment ID from txId if it contains one
-      // TxId format: tx_timestamp_randomstring or direct payment ID
-      let paymentId = null;
-      
-      // Check if txId looks like a Mercado Pago payment ID (numeric)
-      if (/^\d+$/.test(txId)) {
-        paymentId = txId;
-      } else if (txId.startsWith('tx_')) {
-        // For development/testing, simulate payment completion after 10 seconds
-        const txParts = txId.split('_');
-        if (txParts.length >= 2) {
-          const txTimestamp = parseInt(txParts[1]);
-          if (txTimestamp) {
-            const timeElapsed = Date.now() - txTimestamp;
-            if (timeElapsed > 10000) { // 10 seconds
-              console.log(`[Payment Status] Simulating payment completion for ${txId} after ${timeElapsed}ms`);
-              return res.json({
-                status: "approved",
-                id: `test_payment_${txTimestamp}`,
-                message: "Test payment completed successfully",
-                txId: txId
-              });
-            }
-            
-            console.log(`[Payment Status] TxId ${txId} still pending (${timeElapsed}ms elapsed)`);
-            return res.json({
-              status: "pending",
-              message: "Payment verification in progress",
-              txId: txId
-            });
-          }
-        }
-        
-        console.log(`[Payment Status] Invalid txId format: ${txId}`);
-        return res.json({
-          status: "pending",
-          message: "Payment verification in progress",
-          txId: txId
-        });
-      } else {
-        console.log(`[Payment Status] TxId ${txId} does not appear to be a payment ID, returning pending`);
-        return res.json({
-          status: "pending",
-          message: "Payment verification in progress",
-          txId: txId
-        });
-      }
-      
-      // If we have a payment ID, verify with Mercado Pago
-      if (paymentId && paymentService) {
-        try {
-          const paymentInfo = await paymentService.getPaymentInfo(paymentId);
-          console.log(`[Payment Status] Mercado Pago response for ${paymentId}:`, paymentInfo);
-          
-          if (paymentInfo.status === 'approved') {
-            return res.json({
-              status: "approved",
-              id: paymentInfo.id,
-              message: "Payment completed successfully",
-              txId: txId
-            });
-          } else if (paymentInfo.status === 'rejected') {
-            return res.json({
-              status: "rejected",
-              message: "Payment was rejected",
-              txId: txId
-            });
-          } else {
-            return res.json({
-              status: "pending",
-              message: `Payment status: ${paymentInfo.status}`,
-              txId: txId
-            });
-          }
-        } catch (mpError) {
-          console.error(`[Payment Status] Mercado Pago error for ${paymentId}:`, mpError);
-          return res.json({
-            status: "pending",
-            message: "Payment verification in progress",
-            txId: txId
-          });
-        }
-      }
-      
-      // Default to pending
-      res.json({
-        status: "pending",
-        message: "Payment verification in progress",
-        txId: txId
-      });
-    } catch (error) {
-      console.error("[Payment Status] Error checking payment status:", error);
-      res.status(500).json({
-        status: "error",
-        error: "Unable to check payment status"
-      });
-    }
-  });
 
   // 1) Create a new trade (Save to both Flask and local database)
   app.post('/api/trades', async (req: Request, res: Response) => {
@@ -776,13 +648,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Register routes - but exclude payment router to avoid conflicts
+  // Register routes
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
-  // app.use(paymentRouter); // Commented out to prevent conflicts with direct payment routes
+  app.use(paymentRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 
   // List of supported symbols for exchange rates

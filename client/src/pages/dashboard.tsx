@@ -26,14 +26,19 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-// Define the shape your /api/trades/open endpoint returns:
+// Define the shape your Flask /trades endpoint returns:
 type Trade = {
   id: number;
-  symbol: string;               // e.g. "USDBRL"
-  volume: string;               // e.g. "0.10 lots"
-  openTime: string;             // ISO date string
-  status: string;               // Status from Flask API (e.g. "pending")
-  flaskTradeId: number;         // Trade ID in Flask system
+  symbol: string;               // e.g. "USDMXN"
+  direction: 'BUY' | 'SELL';
+  volume: number;
+  status: string;
+  metadata?: {
+    days: number;
+    deviation: number;
+    magic: number;
+    comment: string;
+  };
 };
 
 export default function Dashboard() {
@@ -54,13 +59,13 @@ export default function Dashboard() {
 
   // Fetch active trades with 10-second polling
   const { data: activeTrades = [] } = useQuery<Trade[]>({
-    queryKey: ['/api/trades/open'],
+    queryKey: ['/api/trades'],
     queryFn: async () => {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
-      console.log('[Dashboard] Fetching active trades from:', `${serverUrl}/api/trades/open`);
-      const response = await fetch(`${serverUrl}/api/trades/open`, { credentials: 'include' });
+      console.log('[Dashboard] Fetching active trades from:', `${serverUrl}/api/trades`);
+      const response = await fetch(`${serverUrl}/api/trades`, { credentials: 'include' });
       console.log('[Dashboard] Active trades response status:', response.status);
       if (!response.ok) {
         console.log('[Dashboard] Active trades request failed with status:', response.status);
@@ -537,24 +542,24 @@ export default function Dashboard() {
     }
   };
 
-  // TradeItem component - displays trade with correct ID and status from Flask
-  const TradeItem = ({ trade, onClose }: { trade: Trade, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
-    // Use the status from Flask API
-    const displayStatus = trade.status || 'Unknown';
+  // TradeItem component - simplified without individual status queries
+  const TradeItem = ({ trade, onClose }: { trade: any, onClose: (flaskTradeId: number | null, dbTradeId: number) => void }) => {
+    // Use the status from the main trades query (which already fetches from Flask)
+    const displayStatus = trade.status || 'open';
 
-    // Hide completed trades from active section
+    // Hide only CLOSED and FAILED trades from active section
     const isCompleted = ['FAILED', 'CLOSED', 'failed', 'closed'].includes(displayStatus.toUpperCase());
 
     if (isCompleted) {
-      return null;
+      return null; // Don't render completed trades in active section
     }
 
     return (
       <div className="p-4 border rounded flex justify-between items-center">
         <div>
-          <p className="font-medium">{trade.symbol} (Trade ID: {trade.flaskTradeId})</p>
+          <p className="font-medium">{trade.symbol} (ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})</p>
           <p className="text-sm text-muted-foreground">
-            {(() => {
+            {trade.direction} {(() => {
               // Convert volume back to amount and format with base currency
               const volume = parseFloat(trade.volume) || 0.01;
               const amount = volume * 100000; // Convert back to original amount
@@ -580,7 +585,10 @@ export default function Dashboard() {
             size="icon"
             className="text-destructive hover:text-destructive/90"
             onClick={() => {
-              onClose(trade.flaskTradeId, trade.id);
+              onClose(
+                trade.broker === 'flask' ? trade.flaskTradeId : null,
+                trade.id
+              );
             }}
           >
             <X className="h-4 w-4" />
