@@ -767,9 +767,13 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/proxy/brick", async (req: Request, res: Response) => {
     try {
       const amount = req.query.amount || 415;
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}`;
+      const txId = req.query.txId || "";
+      const lang = req.query.lang || "en-US";
+      
+      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}`;
       
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
+      console.log(`[Flask Proxy] Parameters: amount=${amount}, txId=${txId}, lang=${lang}`);
       
       const response = await fetch(flaskUrl);
       const html = await response.text();
