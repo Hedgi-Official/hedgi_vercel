@@ -126,7 +126,7 @@ export default function AuthPage() {
         await queryClient.invalidateQueries({ queryKey: ['user'] });
         
         // Navigate to dashboard
-        navigate("/");
+        navigate("/dashboard");
       } else {
         toast({
           variant: "destructive",
