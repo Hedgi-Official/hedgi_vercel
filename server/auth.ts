@@ -162,11 +162,14 @@ export function setupAuth(app: Express) {
         return res.json({
           message: "Registration successful",
           user: { 
-            id: newUser.id, 
-            username: newUser.username,
-            email: newUser.email,
-            fullName: newUser.fullName,
-            phoneNumber: newUser.phoneNumber
+            id: createdUser.id, 
+            username: createdUser.username,
+            email: createdUser.email,
+            fullName: createdUser.fullName,
+            phoneNumber: createdUser.phoneNumber,
+            nation: createdUser.nation,
+            paymentIdentifier: createdUser.paymentIdentifier,
+            cpf: createdUser.cpf
           },
         });
       });

@@ -95,7 +95,11 @@ export const tradeRelations = relations(trades, ({ one }) => ({
   }),
 }));
 
-export const insertUserSchema   = createInsertSchema(users);
+import { z } from 'zod';
+
+export const insertUserSchema = createInsertSchema(users).extend({
+  birthdate: z.union([z.string(), z.date()]).optional()
+});
 export const selectUserSchema   = createSelectSchema(users);
 export type User     = typeof users.$inferSelect;
 export type NewUser  = typeof users.$inferInsert;

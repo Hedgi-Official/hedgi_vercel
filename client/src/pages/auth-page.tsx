@@ -98,16 +98,22 @@ export default function AuthPage() {
         const responseData = await response.json();
         result = { ok: response.ok, message: responseData.message };
       } else {
-        // Use the working signup endpoint
-        const response = await fetch('/signup', {
+        // Use the proper authentication endpoint with session management
+        const response = await fetch('/api/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(registerData),
         });
-        const responseData = await response.json();
-        result = { ok: response.ok, message: responseData.message };
+        
+        if (response.ok) {
+          const responseData = await response.json();
+          result = { ok: true, message: responseData.message || "Registration successful" };
+        } else {
+          const errorText = await response.text();
+          result = { ok: false, message: errorText };
+        }
       }
 
       if (result.ok) {
