@@ -22,7 +22,7 @@ const crypto = {
 
 export function setupWorkingAuth(app: Express) {
   // Working registration endpoint with age validation
-  app.post("/signup", async (req: Request, res: Response) => {
+  app.post("/api/register", async (req: Request, res: Response) => {
     try {
       const { 
         fullName, 

@@ -13,7 +13,9 @@ const server = createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Authentication will be setup in routes
+// Register API routes first before any middleware
+import { setupWorkingAuth } from "./simple-auth-working";
+setupWorkingAuth(app);
 
 // Add payment routes
 app.use('/', paymentRoutes);
