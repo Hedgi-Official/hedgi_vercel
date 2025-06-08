@@ -265,7 +265,13 @@ export function registerRoutes(app: Express): Server {
       
       console.log('[Process Payment] Received payment data:', paymentData);
       
-      // Call Mercado Pago Payments API
+      // Generate txId for caching (don't send to MercadoPago)
+      const txId = paymentData.txId || `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Remove custom fields before sending to MercadoPago
+      const { txId: _, ...mpPaymentData } = paymentData;
+      
+      // Call Mercado Pago Payments API with clean data
       const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
         headers: {
@@ -273,25 +279,41 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         },
-        body: JSON.stringify(paymentData)
+        body: JSON.stringify(mpPaymentData)
       });
       
       const mpResult = await mpResponse.json();
       console.log('[Process Payment] Mercado Pago response:', mpResult);
       
       if (mpResult.status === 'approved') {
-        return res.json({
+        const approvedResult = {
           id: mpResult.id,
           message: 'Payment processed',
-          status: 'approved'
-        });
+          status: 'approved',
+          txId: txId,
+          timestamp: Date.now()
+        };
+        
+        // Store payment result for polling
+        paymentResultsCache.set(txId, approvedResult);
+        console.log(`[Process Payment] Stored approved payment result for txId ${txId}:`, approvedResult);
+        
+        return res.json(approvedResult);
       } else {
-        return res.json({
+        const rejectedResult = {
           id: null,
           message: 'Payment failed',
           status: 'rejected',
-          details: mpResult.status_detail || 'Payment not approved'
-        });
+          details: mpResult.status_detail || 'Payment not approved',
+          txId: txId,
+          timestamp: Date.now()
+        };
+        
+        // Store payment result for polling
+        paymentResultsCache.set(txId, rejectedResult);
+        console.log(`[Process Payment] Stored rejected payment result for txId ${txId}:`, rejectedResult);
+        
+        return res.json(rejectedResult);
       }
     } catch (error) {
       console.error('[Process Payment] Error:', error);
@@ -346,6 +368,27 @@ export function registerRoutes(app: Express): Server {
       console.error('Error rendering payment status template:', error);
       res.status(500).send('Error loading payment status page');
     }
+  });
+
+  // Test endpoint to simulate successful payment (for development)
+  app.post("/api/test/approve-payment", async (req: Request, res: Response) => {
+    const { txId } = req.body;
+    if (!txId) {
+      return res.status(400).json({ error: "txId required" });
+    }
+    
+    const approvedResult = {
+      id: `mp_payment_${Date.now()}`,
+      message: 'Payment processed (test)',
+      status: 'approved',
+      txId: txId,
+      timestamp: Date.now()
+    };
+    
+    paymentResultsCache.set(txId, approvedResult);
+    console.log(`[Test] Stored approved payment result for txId ${txId}:`, approvedResult);
+    
+    res.json({ success: true, result: approvedResult });
   });
 
   // Payment status endpoint for polling
