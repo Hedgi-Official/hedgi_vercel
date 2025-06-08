@@ -1,13 +1,13 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "@db/schema";
-import { existsSync } from "fs";
 
-// Use SQLite for local development
-const dbPath = "./hedgi.db";
-const sqlite = new Database(dbPath);
+// Use PostgreSQL from environment
+const connectionString = process.env.DATABASE_URL;
 
-// Enable foreign keys
-sqlite.pragma('foreign_keys = ON');
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is required");
+}
 
-export const db = drizzle(sqlite, { schema });
+const client = postgres(connectionString);
+export const db = drizzle(client, { schema });
