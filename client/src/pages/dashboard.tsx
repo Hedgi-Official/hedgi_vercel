@@ -59,13 +59,13 @@ export default function Dashboard() {
 
   // Fetch active trades with 10-second polling
   const { data: activeTrades = [] } = useQuery<Trade[]>({
-    queryKey: ['/api/trades'],
+    queryKey: ['/api/trades/open'],
     queryFn: async () => {
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
-      console.log('[Dashboard] Fetching active trades from:', `${serverUrl}/api/trades`);
-      const response = await fetch(`${serverUrl}/api/trades`, { credentials: 'include' });
+      console.log('[Dashboard] Fetching active trades from:', `${serverUrl}/api/trades/open`);
+      const response = await fetch(`${serverUrl}/api/trades/open`, { credentials: 'include' });
       console.log('[Dashboard] Active trades response status:', response.status);
       if (!response.ok) {
         console.log('[Dashboard] Active trades request failed with status:', response.status);
