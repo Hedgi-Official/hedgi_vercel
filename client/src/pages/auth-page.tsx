@@ -111,13 +111,16 @@ export default function AuthPage() {
       }
 
       if (result.ok) {
+        toast({
+          title: "Success",
+          description: action === "login" ? "Logged in successfully!" : "Account created successfully!",
+        });
+        
         // Invalidate user query to refresh authentication state
         await queryClient.invalidateQueries({ queryKey: ['user'] });
         
-        // Small delay to ensure state updates
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 100);
+        // Navigate to dashboard
+        navigate("/");
       } else {
         toast({
           variant: "destructive",

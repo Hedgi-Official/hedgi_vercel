@@ -352,11 +352,23 @@ export function registerRoutes(app: Express): Server {
   // Working registration endpoint that bypasses schema conflicts
   app.post("/signup", async (req: Request, res: Response) => {
     try {
-      const { fullName, email, username, password, phoneNumber, nation, paymentIdentifier } = req.body;
+      const { fullName, email, username, password, phoneNumber, nation, paymentIdentifier, cpf, birthdate } = req.body;
 
       // Basic validation
-      if (!fullName || !email || !username || !password || !nation || !paymentIdentifier) {
+      if (!fullName || !email || !username || !password || !nation || !paymentIdentifier || !cpf || !birthdate) {
         return res.status(400).json({ message: "All required fields must be provided" });
+      }
+
+      // Age validation
+      const birthDate = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
+      
+      if (actualAge < 18) {
+        return res.status(400).json({ message: "You must be at least 18 years old to use this service" });
       }
 
       // Hash the password
@@ -399,22 +411,37 @@ export function registerRoutes(app: Express): Server {
           password: hashedPassword,
           nation,
           paymentIdentifier,
+          cpf,
+          birthdate: new Date(birthdate),
           googleCalendarEnabled: false,
           googleRefreshToken: null,
         })
         .returning();
 
-      return res.json({
-        message: "Registration successful",
-        user: {
-          id: newUser.id,
-          username: newUser.username,
-          email: newUser.email,
-          fullName: newUser.fullName,
-          phoneNumber: newUser.phoneNumber,
-          nation: newUser.nation,
-          paymentIdentifier: newUser.paymentIdentifier,
-        },
+      // Log the user in after successful registration using session
+      req.login = req.login || ((user, callback) => {
+        req.user = user;
+        if (callback) callback();
+      });
+
+      req.login(newUser, (err) => {
+        if (err) {
+          console.error("Login after registration failed:", err);
+          return res.status(500).json({ message: "Registration successful but login failed" });
+        }
+        
+        return res.json({
+          message: "Registration successful",
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            fullName: newUser.fullName,
+            phoneNumber: newUser.phoneNumber,
+            nation: newUser.nation,
+            paymentIdentifier: newUser.paymentIdentifier,
+          },
+        });
       });
 
     } catch (error: any) {
