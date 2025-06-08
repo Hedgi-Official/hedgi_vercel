@@ -22,10 +22,11 @@ export const users = pgTable('users', {
   nation:       text('nation'),
   paymentIdentifier: text('payment_identifier'),
   cpf:          text('cpf'),
+  ssn:          text('ssn'),
   birthdate:    timestamp('birthdate'),
   address:      text('address'),
-  documentNumbers: jsonb('document_numbers').default({}), // For storing various document types
-  additionalFields: jsonb('additional_fields').default({}), // For future extensibility
+  documentNumbers: jsonb('document_numbers').default({}), // For storing various document types (passport, driver's license, etc.)
+  additionalFields: jsonb('additional_fields').default({}), // For future extensibility (custom fields per country)
   createdAt:    timestamp('created_at').defaultNow().notNull(),
   googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
   googleRefreshToken: text('google_refresh_token'),

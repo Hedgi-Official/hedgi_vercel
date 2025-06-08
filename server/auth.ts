@@ -147,6 +147,7 @@ export function setupAuth(app: Express) {
           nation: result.data.nation || null,
           paymentIdentifier: result.data.paymentIdentifier || null,
           cpf: result.data.cpf || null,
+          ssn: result.data.ssn || null,
           birthdate: result.data.birthdate ? new Date(result.data.birthdate) : null,
           password: hashedPassword,
           googleCalendarEnabled: false,
@@ -162,11 +163,11 @@ export function setupAuth(app: Express) {
         return res.json({
           message: "Registration successful",
           user: { 
-            id: newUser.id, 
-            username: newUser.username,
-            email: newUser.email,
-            fullName: newUser.fullName,
-            phoneNumber: newUser.phoneNumber
+            id: createdUser.id, 
+            username: createdUser.username,
+            email: createdUser.email,
+            fullName: createdUser.fullName,
+            phoneNumber: createdUser.phoneNumber
           },
         });
       });

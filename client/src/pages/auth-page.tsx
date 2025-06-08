@@ -15,7 +15,7 @@ import { Flag } from "lucide-react";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
-const registerSchema = z.object({
+const createRegisterSchema = (nation: string) => z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().optional(),
@@ -24,10 +24,17 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   nation: z.string().min(1, "Please select your country"),
   paymentIdentifier: z.string().min(1, "Payment identifier is required"),
-  cpf: z.string().min(1, "CPF is required").refine((val) => {
-    const cleanCPF = val.replace(/\D/g, '');
-    return cleanCPF.length === 11;
-  }, "CPF must have 11 digits"),
+  // CPF is only required for Brazil
+  cpf: nation === "BR" 
+    ? z.string().min(1, "CPF is required").refine((val) => {
+        const cleanCPF = val.replace(/\D/g, '');
+        return cleanCPF.length === 11;
+      }, "CPF must have 11 digits")
+    : z.string().optional(),
+  // SSN could be added for US users in the future
+  ssn: nation === "US" 
+    ? z.string().optional() // Make optional for now, can be required later
+    : z.string().optional(),
   birthdate: z.string().min(1, "Birth date is required").refine((val) => {
     const date = new Date(val);
     const today = new Date();
@@ -68,12 +75,14 @@ export default function AuthPage() {
     nation: "",
     paymentIdentifier: "",
     cpf: "",
+    ssn: "",
     birthdate: "",
   });
 
   const handleSubmit = async (action: "login" | "register") => {
     try {
       if (action === "register") {
+        const registerSchema = createRegisterSchema(registerData.nation);
         const validationResult = registerSchema.safeParse(registerData);
         if (!validationResult.success) {
           toast({
@@ -204,7 +213,7 @@ export default function AuthPage() {
                 </div>
 
                 <>
-                  {/* Alpha launch: Brazil only country selection */}
+                  {/* Multi-country selection for international expansion */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center gap-2">
                       <Flag className="h-4 w-4" />
@@ -216,32 +225,9 @@ export default function AuthPage() {
                         setRegisterData({ 
                           ...registerData, 
                           nation: value,
-                          paymentIdentifier: "" // Reset payment identifier when country changes
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('auth.Choose your country')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Original multi-country selection (commented for future expansion):
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Flag className="h-4 w-4" />
-                      {t('auth.Select your country')}
-                    </label>
-                    <Select
-                      value={registerData.nation}
-                      onValueChange={(value) => {
-                        setRegisterData({ 
-                          ...registerData, 
-                          nation: value,
-                          paymentIdentifier: "" // Reset payment identifier when country changes
+                          paymentIdentifier: "", // Reset payment identifier when country changes
+                          cpf: "", // Reset country-specific fields
+                          ssn: ""
                         });
                       }}
                     >
@@ -251,10 +237,12 @@ export default function AuthPage() {
                       <SelectContent>
                         <SelectItem value="BR">🇧🇷 Brazil</SelectItem>
                         <SelectItem value="US">🇺🇸 United States</SelectItem>
+                        {/* Easy to add more countries: */}
+                        {/* <SelectItem value="MX">🇲🇽 Mexico</SelectItem> */}
+                        {/* <SelectItem value="AR">🇦🇷 Argentina</SelectItem> */}
                       </SelectContent>
                     </Select>
                   </div>
-                  */}
 
                   <Input
                     placeholder={t('auth.Enter your full name')}
@@ -280,19 +268,42 @@ export default function AuthPage() {
                   onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
                 />
                 
-                {/* CPF Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">CPF (Brazilian Tax ID)</label>
-                  <Input
-                    placeholder="000.000.000-00"
-                    value={registerData.cpf}
-                    onChange={(e) => {
-                      const formatted = formatCPF(e.target.value);
-                      setRegisterData({ ...registerData, cpf: formatted });
-                    }}
-                    maxLength={14}
-                  />
-                </div>
+                {/* Country-specific ID fields */}
+                {registerData.nation === "BR" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">CPF (Brazilian Tax ID)</label>
+                    <Input
+                      placeholder="000.000.000-00"
+                      value={registerData.cpf}
+                      onChange={(e) => {
+                        const formatted = formatCPF(e.target.value);
+                        setRegisterData({ ...registerData, cpf: formatted });
+                      }}
+                      maxLength={14}
+                    />
+                  </div>
+                )}
+                
+                {registerData.nation === "US" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">SSN (Optional)</label>
+                    <Input
+                      placeholder="000-00-0000"
+                      value={registerData.ssn}
+                      onChange={(e) => {
+                        const formatted = e.target.value.replace(/\D/g, '')
+                          .replace(/(\d{3})(\d)/, '$1-$2')
+                          .replace(/(\d{3}-\d{2})(\d)/, '$1-$2')
+                          .slice(0, 11);
+                        setRegisterData({ ...registerData, ssn: formatted });
+                      }}
+                      maxLength={11}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Social Security Number (optional for now)
+                    </p>
+                  </div>
+                )}
 
                 {/* Birthdate Field */}
                 <div className="space-y-2">
