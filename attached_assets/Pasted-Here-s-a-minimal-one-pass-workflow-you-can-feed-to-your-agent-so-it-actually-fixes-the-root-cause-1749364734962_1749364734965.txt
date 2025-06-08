@@ -1,0 +1,62 @@
+Here’s a minimal, “one‐pass” workflow you can feed to your agent so it actually fixes the root cause (the disabled Replit DB) and then stops:
+
+```js
+// Pseudocode for your agent’s main routine
+
+let hasRestarted = false;
+
+async function main() {
+  // 1) Health-check the database
+  const dbTest = await runShell(
+    `curl -s -X POST http://localhost:5000/api/login \
+      -H "Content-Type: application/json" \
+      -d '{"username":"testuser","password":"testpass"}'`
+  );
+  if (dbTest.includes("endpoint is disabled")) {
+    send("⚠️ Database endpoint is disabled in Replit. Please open the Replit sidebar ▶️ Database pane and click **Enable**.");
+    return;   // stop here—don’t loop
+  }
+
+  // 2) If we haven’t yet, do exactly one restart
+  if (!hasRestarted) {
+    send("🔄 Database is healthy. Restarting the Repl to pick up config.");
+    await runShell("killall node || true");   // or your Repl’s stop/run command
+    await sleep(2000);
+    await runShell("npm start");              // or your usual Run command
+    hasRestarted = true;
+    return;   // give Repl time to come up before proceeding
+  }
+
+  // 3) Verify the login endpoint now works
+  const loginTest = await runShell(
+    `curl -s -o /dev/null -w "%{http_code}" \
+      -X POST http://localhost:5000/api/login \
+      -H "Content-Type: application/json" \
+      -d '{"username":"testuser","password":"testpass"}'`
+  );
+  if (loginTest === "200" || loginTest === "400") {
+    send("✅ Authentication fixed! Login endpoint now returns “" + loginTest + "”.");
+  } else {
+    send("❌ Still getting HTTP " + loginTest + " on login—double-check Replit DB or your secrets.");
+  }
+}
+```
+
+### Explanation
+
+1. **Single DB check at the top**
+
+   * If the DB is still disabled, the agent **stops** immediately with a clear message (“Enable the Database pane in Replit”).
+
+2. **One—and only one—Repl restart**
+
+   * Guards with `hasRestarted` so it never restarts more than once.
+   * Yields control back to you while the Repl comes back up.
+
+3. **Final verification**
+
+   * Hits the login endpoint again.
+   * If it’s returning 200 (or the expected 400 for “bad creds”), reports success and exits.
+   * Otherwise reports failure and exits—no more loops.
+
+Feed your agent that exact logic (in whatever syntax it consumes), and it’ll break out of the endless restart loop, re-enable or point out the disabled database, and then verify the fix exactly once.
