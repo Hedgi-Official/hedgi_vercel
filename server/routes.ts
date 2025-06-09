@@ -432,31 +432,92 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
       const tradeIdParam = req.params.tradeId;
-      console.log(`[Express Proxy] Attempting to close trade with ID: ${tradeIdParam}`);
+      console.log(`[Express Proxy] === CLOSE TRADE DEBUG ===`);
+      console.log(`[Express Proxy] Received trade ID parameter: "${tradeIdParam}" (type: ${typeof tradeIdParam})`);
+      console.log(`[Express Proxy] User ID: ${req.user.id}`);
+      console.log(`[Express Proxy] Request body:`, req.body);
+      
+      // First, let's see ALL trades for this user to understand what we have
+      const allUserTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, req.user.id)
+      });
+      
+      console.log(`[Express Proxy] All trades for user ${req.user.id}:`, 
+        allUserTrades.map(t => ({
+          dbId: t.id,
+          flaskId: t.flaskTradeId,
+          ticket: t.ticket,
+          symbol: t.symbol,
+          status: t.status,
+          broker: t.broker
+        }))
+      );
       
       // Try to find trade by Flask trade ID first (since frontend sends Flask ID)
       let trade = await db.query.trades.findFirst({
         where: eq(trades.flaskTradeId, Number(tradeIdParam))
       });
       
+      console.log(`[Express Proxy] Search by Flask ID ${tradeIdParam}:`, trade ? `Found trade DB ID ${trade.id}` : 'Not found');
+      
       // If not found by Flask ID, try by database ID for backward compatibility
       if (!trade) {
         trade = await db.query.trades.findFirst({
           where: eq(trades.id, Number(tradeIdParam))
         });
+        console.log(`[Express Proxy] Search by DB ID ${tradeIdParam}:`, trade ? `Found trade Flask ID ${trade.flaskTradeId}` : 'Not found');
       }
       
-      if (!trade || trade.userId !== req.user.id) {
-        console.log(`[Express Proxy] Trade ${tradeIdParam} not found for user ${req.user.id}`);
-        return res.status(404).json({ error: 'Trade not found' });
+      // If still not found, try by ticket number as last resort
+      if (!trade) {
+        trade = await db.query.trades.findFirst({
+          where: eq(trades.ticket, tradeIdParam)
+        });
+        console.log(`[Express Proxy] Search by ticket ${tradeIdParam}:`, trade ? `Found trade DB ID ${trade.id}` : 'Not found');
       }
       
-      console.log(`[Express Proxy] Found trade with Flask ID: ${trade.flaskTradeId}, DB ID: ${trade.id}`);
+      if (!trade) {
+        console.error(`[Express Proxy] TRADE NOT FOUND - ID: ${tradeIdParam} for user ${req.user.id}`);
+        return res.status(404).json({ 
+          error: 'Trade not found',
+          debug: {
+            searchedId: tradeIdParam,
+            userId: req.user.id,
+            availableTradeIds: allUserTrades.map(t => t.id),
+            availableFlaskIds: allUserTrades.map(t => t.flaskTradeId),
+            availableTickets: allUserTrades.map(t => t.ticket)
+          }
+        });
+      }
+      
+      if (trade.userId !== req.user.id) {
+        console.error(`[Express Proxy] TRADE OWNERSHIP MISMATCH - Trade user: ${trade.userId}, Request user: ${req.user.id}`);
+        return res.status(403).json({ error: 'Trade not found' });
+      }
+      
+      console.log(`[Express Proxy] SUCCESS - Found trade:`, {
+        dbId: trade.id,
+        flaskId: trade.flaskTradeId,
+        ticket: trade.ticket,
+        symbol: trade.symbol,
+        broker: trade.broker,
+        status: trade.status
+      });
+
+      // If no Flask trade ID, we can't forward to Flask
+      if (!trade.flaskTradeId) {
+        console.error(`[Express Proxy] Trade ${trade.id} has no Flask trade ID`);
+        return res.status(400).json({ error: 'Trade cannot be closed via Flask (no Flask ID)' });
+      }
+
+      console.log(`[Express Proxy] Forwarding close request to Flask: ${FLASK}/trades/${trade.flaskTradeId}/close`);
 
       const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      console.log(`[Express Proxy] Flask response status: ${flaskRes.status}`);
       
       if (!flaskRes.ok) {
         const errorText = await flaskRes.text();
