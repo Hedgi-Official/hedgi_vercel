@@ -12,7 +12,7 @@ import fbsRouter from "./routes/fbs-rate";
 import paymentRouter from "./routes/payment";
 import simulateRouter from "./routes/simulate";
 
-const FLASK = process.env.FLASK_URL || "https://electoral-fuzzy-divorce-proc.trycloudflare.com";
+const FLASK = process.env.FLASK_URL;
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);

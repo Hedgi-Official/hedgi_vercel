@@ -19,7 +19,7 @@ import { paymentService } from "./services/paymentService";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const FLASK = process.env.FLASK_URL || 'http://3.145.164.47';
+const FLASK = process.env.FLASK_URL;
 interface BrokerRate {
   bid:      number;
   ask:      number;
@@ -116,7 +116,7 @@ export function registerRoutes(app: Express): Server {
       console.log('[Flask Brick Proxy] Request:', { amount, hedgeData });
       
       // Get Flask URL from environment (keeping it secure)
-      const flaskUrl = process.env.FLASK_URL || 'http://3.145.164.47';
+      const flaskUrl = process.env.FLASK_URL;
       
       // Forward request to Flask /brick endpoint with just amount parameter
       const brickUrl = `${flaskUrl}/brick?amount=${amount}`;

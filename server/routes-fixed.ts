@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || "https://electoral-fuzzy-divorce-proc.trycloudflare.com";
+const FLASK = process.env.FLASK_URL;
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
