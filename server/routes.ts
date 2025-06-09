@@ -429,50 +429,83 @@ export function registerRoutes(app: Express): Server {
 
   // 3) Close early - Updated to handle Flask trade IDs properly
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+    console.log('[CLOSE DEBUG] Request received for trade:', req.params.tradeId);
+    console.log('[CLOSE DEBUG] User authenticated:', req.isAuthenticated());
+    console.log('[CLOSE DEBUG] User object:', req.user);
+    
     if (!req.isAuthenticated()) {
-          return res.status(401).json({ error: 'Authentication required' });
-        }
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
-      const userId       = req.user.id;
-      const flaskTradeId = Number(req.params.flaskTradeId);
+    try {
+      const userId = req.user.id;
+      const flaskTradeId = Number(req.params.tradeId);
+      
+      console.log('[CLOSE DEBUG] User ID:', userId, 'Flask Trade ID:', flaskTradeId, typeof flaskTradeId);
+      
+      // Dump out all user's trades for debugging
+      const allUserTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, userId)
+      });
+      console.log(
+        '[CLOSE DEBUG] User trades count:', allUserTrades.length,
+        'allUserTrades:',
+        allUserTrades.map(t => ({
+          dbId: t.id,
+          flaskTradeId: t.flaskTradeId,
+          ticket: t.ticket,
+          symbol: t.symbol,
+          status: t.status,
+          userId: t.userId
+        }))
+      );
 
-      // 2) Single lookup by flaskTradeId + owner
-    const trade = await db.query.trades.findFirst({
-      where: and(
-        eq(trades.flaskTradeId, flaskTradeId),
-        eq(trades.userId,       userId)
-      )
-    });
+      // Single lookup by flaskTradeId + owner
+      const trade = await db.query.trades.findFirst({
+        where: and(
+          eq(trades.flaskTradeId, flaskTradeId),
+          eq(trades.userId, userId)
+        )
+      });
 
       if (!trade) {
-        return res
-          .status(404)
-          .json({ error: 'Trade not found or not yours' });
+        return res.status(404).json({ 
+          error: 'Trade not found or not yours',
+          debug: {
+            searchedId: flaskTradeId,
+            availableDBIds: allUserTrades.map(t => t.id),
+            availableFlaskIds: allUserTrades.map(t => t.flaskTradeId),
+            tickets: allUserTrades.map(t => t.ticket)
+          }
+        });
       }
 
-      // 3) Forward to Flask
-      try {
-        const flaskRes = await fetch(
-          `${FLASK}/trades/${flaskTradeId}/close`,
-          { method: 'POST' }
-        );
+      console.log(`[Express Proxy] Found trade with Flask ID: ${trade.flaskTradeId}, DB ID: ${trade.id}`);
 
-        if (!flaskRes.ok) {
-          const errorText = await flaskRes.text();
-          return res
-            .status(flaskRes.status)
-            .json({ error: errorText });
+      // Forward to Flask
+      const flaskRes = await fetch(
+        `${FLASK}/trades/${flaskTradeId}/close`,
+        { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
         }
+      );
 
-        const result = await flaskRes.json();
-        return res.json(result);
-
-      } catch (err) {
-        console.error('Error closing trade on Flask:', err);
-        return res.status(500).json({ error: 'Failed to close trade' });
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error('[Express Proxy] Flask close error:', errorText);
+        return res.status(flaskRes.status).json({ error: errorText });
       }
+
+      const result = await flaskRes.json();
+      console.log('[Express Proxy] Flask close response:', result);
+      return res.json(result);
+
+    } catch (err) {
+      console.error('Error closing trade on Flask:', err);
+      return res.status(500).json({ error: 'Failed to close trade' });
     }
-    );
+  });
 
   // 4) History tab - returns ONLY ClosedTrade interface fields
   app.get('/api/trades/history', async (req: Request, res: Response) => {
