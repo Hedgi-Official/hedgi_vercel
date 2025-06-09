@@ -429,8 +429,10 @@ export function registerRoutes(app: Express): Server {
 
   // 3) Close early - Secure endpoint requiring authentication
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 7 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
+    if (!req.isAuthenticated() || !req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
     
     try {
       const flaskTradeId = Number(req.params.tradeId);
@@ -567,8 +569,10 @@ export function registerRoutes(app: Express): Server {
 
   // Main GET /api/trades endpoint - returns active trades for dashboard
   app.get('/api/trades', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 7 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
+    if (!req.isAuthenticated() || !req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const userId = req.user.id;
     
     try {
       console.log('[Express Proxy] Getting active trades from database for user:', userId);
