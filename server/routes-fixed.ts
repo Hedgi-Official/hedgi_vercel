@@ -596,25 +596,13 @@ export function registerRoutes(app: Express): Server {
     }
 
     try {
-      const tradeId = req.params.tradeId;
-      console.log(`[Express Proxy] Closing trade ID: ${tradeId} for user: ${req.user.id}`);
+      const flaskTradeId = req.params.tradeId;
+      console.log(`[Express Proxy] User ${req.user.id} closing Flask trade ${flaskTradeId}`);
 
-      const trade = await db.query.trades.findFirst({
-        where: (t, { eq, and }) => and(
-          eq(t.id, parseInt(tradeId)),
-          eq(t.userId, req.user.id)
-        )
-      });
-
-      if (!trade) {
-        console.log(`[Express Proxy] Trade ${tradeId} not found for user ${req.user.id}`);
-        return res.status(404).json({ error: 'Trade not found' });
-      }
-
-      const response = await fetch(`${FLASK}/trades/${tradeId}/close`, {
+      // Direct call to Flask close endpoint using Flask trade ID
+      const response = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {

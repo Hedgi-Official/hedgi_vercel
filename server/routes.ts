@@ -429,31 +429,21 @@ export function registerRoutes(app: Express): Server {
 
   // 3) Close early - Secure endpoint requiring authentication
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+    console.log('[CLOSE ENDPOINT] Route hit - tradeId:', req.params.tradeId);
+    console.log('[CLOSE ENDPOINT] Authentication check:', req.isAuthenticated());
+    console.log('[CLOSE ENDPOINT] User:', req.user);
+    
     if (!req.isAuthenticated() || !req.user?.id) {
+      console.log('[CLOSE ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
     const userId = req.user.id;
     
     try {
-      const flaskTradeId = Number(req.params.tradeId);
-      console.log(`[CLOSE] Attempting to close Flask trade ${flaskTradeId} for user ${userId}`);
+      const flaskTradeId = req.params.tradeId;
+      console.log(`[CLOSE] User ${userId} closing Flask trade ${flaskTradeId}`);
       
-      // Verify trade exists in database 
-      const trade = await db.query.trades.findFirst({
-        where: and(
-          eq(trades.flaskTradeId, flaskTradeId),
-          eq(trades.userId, userId)
-        )
-      });
-
-      if (!trade) {
-        console.log(`[CLOSE] Trade ${flaskTradeId} not found for user ${userId}`);
-        return res.status(404).json({ error: 'Trade not found' });
-      }
-
-      console.log(`[CLOSE] Found trade - DB ID: ${trade.id}, Flask ID: ${trade.flaskTradeId}`);
-
-      // Forward to Flask
+      // Direct call to Flask close endpoint
       const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -480,6 +470,7 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
       console.log('[Express Proxy] Getting trade history from database');
+      console.log('Cookies:', req.headers.cookie);
 
       // Get all trades for this user that have Flask IDs
       const allTrades = await db.query.trades.findMany({
@@ -569,7 +560,12 @@ export function registerRoutes(app: Express): Server {
 
   // Main GET /api/trades endpoint - returns active trades for dashboard
   app.get('/api/trades', async (req: Request, res: Response) => {
+    console.log('[TRADES ENDPOINT] Route hit');
+    console.log('[TRADES ENDPOINT] Authentication check:', req.isAuthenticated());
+    console.log('[TRADES ENDPOINT] User:', req.user);
+    
     if (!req.isAuthenticated() || !req.user?.id) {
+      console.log('[TRADES ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
     const userId = req.user.id;
