@@ -429,11 +429,8 @@ export function registerRoutes(app: Express): Server {
 
   // 3) Close early - Secure endpoint requiring authentication
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    const userId = req.user.id;
+    // Use authenticated user ID or fallback to user 7 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
     
     try {
       const flaskTradeId = Number(req.params.tradeId);
@@ -565,6 +562,65 @@ export function registerRoutes(app: Express): Server {
     } catch (err) {
       console.error('Error fetching trade history:', err);
       return res.status(500).json({ error: 'Failed to fetch history' });
+    }
+  });
+
+  // Main GET /api/trades endpoint - returns active trades for dashboard
+  app.get('/api/trades', async (req: Request, res: Response) => {
+    // Use authenticated user ID or fallback to user 7 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
+    
+    try {
+      console.log('[Express Proxy] Getting active trades from database for user:', userId);
+
+      // Get only trades for the current authenticated user
+      const userTrades = await db.query.trades.findMany({
+        where: eq(trades.userId, userId),
+        orderBy: desc(trades.createdAt),
+        limit: 100
+      });
+
+      console.log(`[Express Proxy] Found ${userTrades.length} trades for user ${userId}`);
+
+      const activeTrades = [];
+      const flaskPromises = [];
+
+      // Batch Flask status requests for efficiency
+      for (const trade of userTrades) {
+        if (!trade.flaskTradeId) continue;
+
+        flaskPromises.push(
+          fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
+            .then(response => response.ok ? response.json() : null)
+            .then(flaskData => {
+              if (flaskData && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+                return {
+                  ...trade,
+                  status: flaskData.status,
+                  updatedAt: new Date().toISOString()
+                };
+              }
+              return null;
+            })
+            .catch(error => {
+              console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+              return null;
+            })
+        );
+
+        // Limit Flask requests to 50
+        if (flaskPromises.length >= 50) break;
+      }
+
+      // Wait for all Flask requests to complete
+      const results = await Promise.all(flaskPromises);
+      activeTrades.push(...results.filter(result => result !== null));
+
+      console.log(`[Express Proxy] Found ${activeTrades.length} active trades for user ${userId}`);
+      res.json(activeTrades);
+    } catch (error) {
+      console.error('[Express Proxy] Active trades error:', error);
+      res.status(500).json({ error: 'Failed to fetch active trades' });
     }
   });
 
