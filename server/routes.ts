@@ -427,10 +427,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 3) Close early - Match the active trades endpoint pattern
+  // 3) Close early - Secure endpoint requiring authentication
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 7 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userId = req.user.id;
     
     try {
       const flaskTradeId = Number(req.params.tradeId);
