@@ -427,20 +427,45 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 3) Close early
+  // 3) Close early - Updated to handle Flask trade IDs properly
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
     try {
-      const t = await db.query.trades.findFirst({
-        where: eq(trades.id, Number(req.params.tradeId))
+      const tradeIdParam = req.params.tradeId;
+      console.log(`[Express Proxy] Attempting to close trade with ID: ${tradeIdParam}`);
+      
+      // Try to find trade by Flask trade ID first (since frontend sends Flask ID)
+      let trade = await db.query.trades.findFirst({
+        where: eq(trades.flaskTradeId, Number(tradeIdParam))
       });
-      if (!t || t.userId !== req.user.id) return res.status(404).json({ error: 'Trade not found' });
+      
+      // If not found by Flask ID, try by database ID for backward compatibility
+      if (!trade) {
+        trade = await db.query.trades.findFirst({
+          where: eq(trades.id, Number(tradeIdParam))
+        });
+      }
+      
+      if (!trade || trade.userId !== req.user.id) {
+        console.log(`[Express Proxy] Trade ${tradeIdParam} not found for user ${req.user.id}`);
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+      
+      console.log(`[Express Proxy] Found trade with Flask ID: ${trade.flaskTradeId}, DB ID: ${trade.id}`);
 
-      const flaskRes = await fetch(`${FLASK}/trades/${t.flaskTradeId}/close`, {
+      const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error('[Express Proxy] Flask close error:', errorText);
+        return res.status(flaskRes.status).json({ error: errorText });
+      }
+      
       const result = await flaskRes.json();
+      console.log('[Express Proxy] Flask close response:', result);
       return res.json(result);
     } catch (err) {
       console.error('Error closing trade:', err);
