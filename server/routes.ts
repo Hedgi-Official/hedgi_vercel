@@ -427,19 +427,16 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 3) Close early - Direct Flask proxy for trade closing
+  // 3) Close early - Match the active trades endpoint pattern
   app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
-    console.log('[CLOSE DEBUG] Request received for trade:', req.params.tradeId);
+    // Use authenticated user ID or fallback to user 7 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
     
     try {
       const flaskTradeId = Number(req.params.tradeId);
-      console.log('[CLOSE DEBUG] Flask Trade ID:', flaskTradeId, typeof flaskTradeId);
+      console.log(`[CLOSE] Attempting to close Flask trade ${flaskTradeId} for user ${userId}`);
       
-      // Use fallback user ID for testing (same as used in other endpoints)
-      const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
-      console.log('[CLOSE DEBUG] Using User ID:', userId);
-      
-      // Verify trade exists and belongs to user
+      // Verify trade exists in database 
       const trade = await db.query.trades.findFirst({
         where: and(
           eq(trades.flaskTradeId, flaskTradeId),
@@ -447,56 +444,31 @@ export function registerRoutes(app: Express): Server {
         )
       });
 
-      console.log('[CLOSE DEBUG] Found trade:', trade ? {
-        dbId: trade.id,
-        flaskTradeId: trade.flaskTradeId,
-        userId: trade.userId,
-        status: trade.status
-      } : 'None');
-
       if (!trade) {
-        // Get all trades for debugging
-        const allUserTrades = await db.query.trades.findMany({
-          where: eq(trades.userId, userId)
-        });
-        console.log('[CLOSE DEBUG] Available trades:', allUserTrades.map(t => ({
-          dbId: t.id,
-          flaskTradeId: t.flaskTradeId,
-          userId: t.userId
-        })));
-        
-        return res.status(404).json({ 
-          error: 'Trade not found',
-          debug: {
-            searchedFlaskId: flaskTradeId,
-            userId: userId,
-            availableFlaskIds: allUserTrades.map(t => t.flaskTradeId)
-          }
-        });
+        console.log(`[CLOSE] Trade ${flaskTradeId} not found for user ${userId}`);
+        return res.status(404).json({ error: 'Trade not found' });
       }
 
-      // Forward directly to Flask
-      console.log(`[CLOSE DEBUG] Forwarding to Flask: ${FLASK}/trades/${flaskTradeId}/close`);
-      const flaskRes = await fetch(
-        `${FLASK}/trades/${flaskTradeId}/close`,
-        { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      console.log(`[CLOSE] Found trade - DB ID: ${trade.id}, Flask ID: ${trade.flaskTradeId}`);
+
+      // Forward to Flask
+      const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
       if (!flaskRes.ok) {
         const errorText = await flaskRes.text();
-        console.error('[Express Proxy] Flask close error:', errorText);
+        console.error(`[CLOSE] Flask error for trade ${flaskTradeId}:`, errorText);
         return res.status(flaskRes.status).json({ error: errorText });
       }
 
       const result = await flaskRes.json();
-      console.log('[Express Proxy] Flask close success:', result);
+      console.log(`[CLOSE] Successfully closed Flask trade ${flaskTradeId}`);
       return res.json(result);
 
     } catch (err) {
-      console.error('Error closing trade:', err);
+      console.error('[CLOSE] Error:', err);
       return res.status(500).json({ error: 'Failed to close trade' });
     }
   });
