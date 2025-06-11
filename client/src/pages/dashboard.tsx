@@ -567,10 +567,9 @@ export default function Dashboard() {
 
     return (
       <div className="p-4 border rounded flex justify-between items-center">
-        <div>
-          <p className="font-medium">{trade.symbol} (ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})</p>
-          <p className="text-sm text-muted-foreground">
-            {trade.direction} {(() => {
+        <div className="flex-1">
+          <p className="font-medium mb-2">
+            Hedging {(() => {
               // Convert volume back to amount and format with base currency
               const volume = parseFloat(trade.volume) || 0.01;
               const amount = volume * 100000; // Convert back to original amount
@@ -583,23 +582,46 @@ export default function Dashboard() {
                                    baseCurrency === 'EUR' ? '€' : 
                                    baseCurrency === 'GBP' ? '£' : '';
 
-              return `${currencySymbol}${amount.toLocaleString('en-US')} ${baseCurrency}`;
-            })()}
+              return `${currencySymbol}${amount.toLocaleString('en-US')}`;
+            })()} ({trade.symbol} - ID: {trade.broker === 'flask' ? trade.flaskTradeId : trade.id})
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Status: {displayStatus}
-          </p>
-          {trade.current_value && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Current Value: {typeof trade.current_value === 'number' 
-                ? trade.current_value.toLocaleString('en-US', { 
-                    style: 'currency', 
-                    currency: 'USD', 
-                    minimumFractionDigits: 2 
-                  })
-                : trade.current_value}
-            </p>
-          )}
+          
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Hedged Amount:</span>
+              <span className="font-medium">
+                {(() => {
+                  const volume = parseFloat(trade.volume) || 0.01;
+                  const amount = volume * 100000;
+                  const baseCurrency = trade.symbol ? trade.symbol.substring(0, 3) : 'USD';
+                  const currencySymbol = baseCurrency === 'USD' ? '$' : 
+                                         baseCurrency === 'EUR' ? '€' : 
+                                         baseCurrency === 'GBP' ? '£' : '';
+                  return `${currencySymbol}${amount.toLocaleString('en-US')}`;
+                })()}
+              </span>
+            </div>
+            
+            {trade.current_value && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Position:</span>
+                <span className="font-medium">
+                  {typeof trade.current_value === 'number' 
+                    ? trade.current_value.toLocaleString('en-US', { 
+                        style: 'currency', 
+                        currency: 'USD', 
+                        minimumFractionDigits: 2 
+                      })
+                    : trade.current_value}
+                </span>
+              </div>
+            )}
+            
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Status:</span>
+              <span className="font-medium">{displayStatus}</span>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button

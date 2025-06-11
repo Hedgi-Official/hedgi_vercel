@@ -123,38 +123,57 @@ export function TradeHistory() {
                     key={`history-${index}`}
                     className="p-4 border rounded flex justify-between items-center"
                   >
-                    <div>
-                      <p className="font-medium">{trade.symbol} (ID: {displayId})</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(() => {
-                          // Convert volume back to amount (volume * 100,000)
+                    <div className="flex-1">
+                      <p className="font-medium mb-2">
+                        Hedged {(() => {
                           const volume = parseFloat(trade.volume || '0');
                           const amount = volume * 100000;
-
-                          // Extract base currency from symbol (e.g., USDBRL -> USD)
                           const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
                           const currencySymbol = baseCurrency === 'USD' ? '$' : 
                                                baseCurrency === 'EUR' ? '€' : 
                                                baseCurrency === 'BRL' ? 'R$' : 
                                                baseCurrency === 'MXN' ? '$' : '';
-
-                          return `${currencySymbol}${amount.toLocaleString('en-US')} ${baseCurrency}`;
-                        })()}
+                          return `${currencySymbol}${amount.toLocaleString('en-US')}`;
+                        })()} ({trade.symbol} - ID: {displayId})
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Status: {trade.status || 'Unknown'}
-                      </p>
-                      {trade.current_value && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Current Value: {typeof trade.current_value === 'number' 
-                            ? trade.current_value.toLocaleString('en-US', { 
-                                style: 'currency', 
-                                currency: 'USD', 
-                                minimumFractionDigits: 2 
-                              })
-                            : trade.current_value}
-                        </p>
-                      )}
+                      
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Hedged Amount:</span>
+                          <span className="font-medium">
+                            {(() => {
+                              const volume = parseFloat(trade.volume || '0');
+                              const amount = volume * 100000;
+                              const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
+                              const currencySymbol = baseCurrency === 'USD' ? '$' : 
+                                                   baseCurrency === 'EUR' ? '€' : 
+                                                   baseCurrency === 'BRL' ? 'R$' : 
+                                                   baseCurrency === 'MXN' ? '$' : '';
+                              return `${currencySymbol}${amount.toLocaleString('en-US')}`;
+                            })()}
+                          </span>
+                        </div>
+                        
+                        {trade.current_value && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Current Position:</span>
+                            <span className="font-medium">
+                              {typeof trade.current_value === 'number' 
+                                ? trade.current_value.toLocaleString('en-US', { 
+                                    style: 'currency', 
+                                    currency: 'USD', 
+                                    minimumFractionDigits: 2 
+                                  })
+                                : trade.current_value}
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Status:</span>
+                          <span className="font-medium">{trade.status || 'Unknown'}</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
                       <div className="text-xs mt-1">
