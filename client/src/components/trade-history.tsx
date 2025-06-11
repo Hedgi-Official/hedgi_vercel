@@ -76,14 +76,14 @@ export function TradeHistory() {
     <Card className="mt-4">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Trade History</CardTitle>
+          <CardTitle>{t('Trade History')}</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setExpanded(false)}
             className="flex items-center gap-1"
           >
-            <span>Hide</span>
+            <span>{t('Hide')}</span>
             <ChevronUp className="h-4 w-4" />
           </Button>
         </div>
@@ -103,7 +103,7 @@ export function TradeHistory() {
 
         {/* Closed trades section */}
         <div>
-          <h3 className="text-lg font-semibold mb-2">Past Trades</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('Past Trades')}</h3>
           {tradeHistory.length === 0 ? (
             <p className="text-muted-foreground text-sm">No past trades found.</p>
           ) : (
@@ -123,10 +123,10 @@ export function TradeHistory() {
                 return (
                   <div
                     key={`history-${index}`}
-                    className="p-4 border rounded flex justify-between items-center"
+                    className="p-4 border rounded"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium mb-2">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-medium">
                         {t('Hedged')} {(() => {
                           const volume = parseFloat(trade.volume || '0');
                           const amount = volume * 100000;
@@ -138,48 +138,46 @@ export function TradeHistory() {
                           return `${currencySymbol}${amount.toLocaleString('en-US')}`;
                         })()} ({trade.symbol} - ID: {displayId})
                       </p>
-                      
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
-                          <span className="font-medium">
-                            {(() => {
-                              const volume = parseFloat(trade.volume || '0');
-                              const amount = volume * 100000;
-                              const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
-                              const currencySymbol = baseCurrency === 'USD' ? '$' : 
-                                                   baseCurrency === 'EUR' ? '€' : 
-                                                   baseCurrency === 'BRL' ? 'R$' : 
-                                                   baseCurrency === 'MXN' ? '$' : '';
-                              return `${currencySymbol}${amount.toLocaleString('en-US')}`;
-                            })()}
-                          </span>
-                        </div>
-                        
-                        {trade.current_value && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">{t('Current Position')}:</span>
-                            <span className="font-medium">
-                              {typeof trade.current_value === 'number' 
-                                ? trade.current_value.toLocaleString('en-US', { 
-                                    style: 'currency', 
-                                    currency: 'USD', 
-                                    minimumFractionDigits: 2 
-                                  })
-                                : trade.current_value}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">{t('Status')}:</span>
-                          <span className="font-medium">{trade.status || 'Unknown'}</span>
-                        </div>
+                      <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">
+                        {trade.closedAt ? formatDate(trade.closedAt) : 'No date available'}
                       </div>
                     </div>
-                    <div className="text-sm text-muted-foreground text-right">
-                      <div className="text-xs mt-1">
-                        {trade.closedAt ? formatDate(trade.closedAt) : 'No date available'}
+                    
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
+                        <span className="font-medium">
+                          {(() => {
+                            const volume = parseFloat(trade.volume || '0');
+                            const amount = volume * 100000;
+                            const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
+                            const currencySymbol = baseCurrency === 'USD' ? '$' : 
+                                                 baseCurrency === 'EUR' ? '€' : 
+                                                 baseCurrency === 'BRL' ? 'R$' : 
+                                                 baseCurrency === 'MXN' ? '$' : '';
+                            return `${currencySymbol}${amount.toLocaleString('en-US')}`;
+                          })()}
+                        </span>
+                      </div>
+                      
+                      {trade.current_value && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{t('Current Position')}:</span>
+                          <span className="font-medium">
+                            {typeof trade.current_value === 'number' 
+                              ? trade.current_value.toLocaleString('en-US', { 
+                                  style: 'currency', 
+                                  currency: 'USD', 
+                                  minimumFractionDigits: 2 
+                                })
+                              : trade.current_value}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('Status')}:</span>
+                        <span className="font-medium">{trade.status || 'Unknown'}</span>
                       </div>
                     </div>
                   </div>
