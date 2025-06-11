@@ -66,7 +66,7 @@ export function TradeHistory() {
         className="mt-4 w-full flex justify-between"
         onClick={() => setExpanded(true)}
       >
-        <span>Show Trade History</span>
+        <span>{t('Show Trade History')}</span>
         <ChevronDown className="h-4 w-4" />
       </Button>
     );
