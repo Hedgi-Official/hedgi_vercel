@@ -604,7 +604,7 @@ export default function Dashboard() {
             
             {trade.current_value && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Position:</span>
+                <span className="text-muted-foreground">{t('Current Position')}:</span>
                 <span className="font-medium">
                   {typeof trade.current_value === 'number' 
                     ? trade.current_value.toLocaleString('en-US', { 
@@ -618,7 +618,7 @@ export default function Dashboard() {
             )}
             
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Status:</span>
+              <span className="text-muted-foreground">{t('Status')}:</span>
               <span className="font-medium">{displayStatus}</span>
             </div>
           </div>

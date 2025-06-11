@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 // Interface for closed trades returned from API
 interface ClosedTrade {
@@ -18,6 +19,7 @@ interface ClosedTrade {
 
 export function TradeHistory() {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useTranslation();
 
   // Fetch trade history when expanded
   const {
@@ -125,7 +127,7 @@ export function TradeHistory() {
                   >
                     <div className="flex-1">
                       <p className="font-medium mb-2">
-                        Hedged {(() => {
+                        {t('Hedged')} {(() => {
                           const volume = parseFloat(trade.volume || '0');
                           const amount = volume * 100000;
                           const baseCurrency = trade.symbol?.substring(0, 3) || 'USD';
@@ -139,7 +141,7 @@ export function TradeHistory() {
                       
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Hedged Amount:</span>
+                          <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
                           <span className="font-medium">
                             {(() => {
                               const volume = parseFloat(trade.volume || '0');
@@ -156,7 +158,7 @@ export function TradeHistory() {
                         
                         {trade.current_value && (
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Current Position:</span>
+                            <span className="text-muted-foreground">{t('Current Position')}:</span>
                             <span className="font-medium">
                               {typeof trade.current_value === 'number' 
                                 ? trade.current_value.toLocaleString('en-US', { 
