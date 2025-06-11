@@ -388,7 +388,7 @@ export default function Dashboard() {
       console.log(`[Dashboard] === CLOSE TRADE DEBUG ===`);
       console.log(`[Dashboard] Attempting to close trade with position: "${position}" (type: ${typeof position})`);
       console.log(`[Dashboard] Broker: "${broker}"`);
-      console.log(`[Dashboard] Trade object:`, trade);
+      console.log(`[Dashboard] Hedge object:`, hedge);
 
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
@@ -589,6 +589,17 @@ export default function Dashboard() {
           <p className="text-xs text-muted-foreground mt-1">
             Status: {displayStatus}
           </p>
+          {trade.current_value && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Current Value: {typeof trade.current_value === 'number' 
+                ? trade.current_value.toLocaleString('en-US', { 
+                    style: 'currency', 
+                    currency: 'USD', 
+                    minimumFractionDigits: 2 
+                  })
+                : trade.current_value}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button

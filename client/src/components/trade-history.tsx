@@ -13,6 +13,7 @@ interface ClosedTrade {
   openTime: string;
   closedAt: string;
   status: string;
+  current_value?: number | string;
 }
 
 export function TradeHistory() {
@@ -143,6 +144,17 @@ export function TradeHistory() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Status: {trade.status || 'Unknown'}
                       </p>
+                      {trade.current_value && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Current Value: {typeof trade.current_value === 'number' 
+                            ? trade.current_value.toLocaleString('en-US', { 
+                                style: 'currency', 
+                                currency: 'USD', 
+                                minimumFractionDigits: 2 
+                              })
+                            : trade.current_value}
+                        </p>
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
                       <div className="text-xs mt-1">
