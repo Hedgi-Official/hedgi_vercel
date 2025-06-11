@@ -622,8 +622,11 @@ export function registerRoutes(app: Express): Server {
 
   // 4. Get active trades → GET /api/trades (returns non-CLOSED/FAILED trades for current user only)
   app.get('/api/trades', async (req: Request, res: Response) => {
-    // Use authenticated user ID or fallback to user 7 for testing
-    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
+    if (!req.isAuthenticated() || !req.user?.id) {
+      console.log('[Express Proxy] User not authenticated for /api/trades');
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    const userId = req.user.id;
     
     try {
       console.log(`[Express Proxy] Getting active trades for user ${userId}`);
@@ -652,6 +655,7 @@ export function registerRoutes(app: Express): Server {
                 return {
                   ...trade,
                   status: flaskData.status,
+                  current_value: flaskData.current_value, // Include current_value from Flask
                   updatedAt: new Date().toISOString()
                 };
               }
