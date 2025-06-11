@@ -628,12 +628,19 @@ export function registerRoutes(app: Express): Server {
     try {
       console.log(`[Express Proxy] Getting active trades for user ${userId}`);
 
-      // Get only trades for the current authenticated user
-      const userTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, userId),
-        orderBy: desc(trades.createdAt),
-        limit: 100
-      });
+      // Get only trades for the current authenticated user with error handling
+      let userTrades;
+      try {
+        userTrades = await db.query.trades.findMany({
+          where: eq(trades.userId, userId),
+          orderBy: desc(trades.createdAt),
+          limit: 100
+        });
+      } catch (dbError) {
+        console.error('[Express Proxy] Database connection error:', dbError.message);
+        // Return empty array if database is temporarily unavailable
+        return res.json([]);
+      }
 
       console.log(`[Express Proxy] Found ${userTrades.length} trades for user ${userId}`);
 
@@ -692,10 +699,17 @@ export function registerRoutes(app: Express): Server {
       console.log('[Express Proxy] Getting trade history from database');
 
       // Get only trades for the current authenticated user, ordered by creation date DESC
-      const allTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, userId),
-        orderBy: (trades, { desc }) => [desc(trades.createdAt)]
-      });
+      let allTrades;
+      try {
+        allTrades = await db.query.trades.findMany({
+          where: eq(trades.userId, userId),
+          orderBy: (trades, { desc }) => [desc(trades.createdAt)]
+        });
+      } catch (dbError) {
+        console.error('[Express Proxy] Database connection error in trade history:', dbError.message);
+        // Return empty array if database is temporarily unavailable
+        return res.json([]);
+      }
 
       console.log(`[Express Proxy] Found ${allTrades.length} trades for user ${userId}`);
 
