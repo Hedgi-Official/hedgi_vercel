@@ -172,7 +172,7 @@ export function TradeHistory() {
                         )}
                         
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status:</span>
+                          <span className="text-muted-foreground">{t('Status')}:</span>
                           <span className="font-medium">{trade.status || 'Unknown'}</span>
                         </div>
                       </div>
