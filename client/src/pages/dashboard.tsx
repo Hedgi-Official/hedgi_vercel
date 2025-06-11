@@ -569,7 +569,7 @@ export default function Dashboard() {
       <div className="p-4 border rounded flex justify-between items-center">
         <div className="flex-1">
           <p className="font-medium mb-2">
-            Hedging {(() => {
+            {t('Hedging')} {(() => {
               // Convert volume back to amount and format with base currency
               const volume = parseFloat(trade.volume) || 0.01;
               const amount = volume * 100000; // Convert back to original amount
@@ -588,7 +588,7 @@ export default function Dashboard() {
           
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Hedged Amount:</span>
+              <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
               <span className="font-medium">
                 {(() => {
                   const volume = parseFloat(trade.volume) || 0.01;
