@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/hooks/use-user";
+import { useLocation } from "wouter";
 
 // Generate a unique session ID for this chat session
 const generateSessionId = () => {
@@ -15,6 +17,8 @@ const generateSessionId = () => {
 };
 
 export default function UsingHedgi() {
+  const [, navigate] = useLocation();
+  const { user, logout } = useUser();
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(generateSessionId());
@@ -26,6 +30,11 @@ export default function UsingHedgi() {
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
     {type: 'bot', content: 'Hello! I\'m HedgiBot. I can help you understand how to set up and manage currency hedges. For what event would you like to hedge?'}
   ]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {

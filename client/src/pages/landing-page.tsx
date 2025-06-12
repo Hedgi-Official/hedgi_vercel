@@ -10,12 +10,17 @@ import { useTranslation } from "react-i18next";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
-  const { user } = useUser();
+  const { user, logout } = useUser();
   const { t } = useTranslation();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showAuthButton={!user} username={user?.username} />
+      <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
       <main className="container mx-auto px-4 py-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
