@@ -45,7 +45,9 @@ export default function LandingPage() {
           </div>
         </div>
         
-        <section className="mt-32">
+        {/* TEMPORARILY HIDDEN - Why Hedgi Section */}
+        {false && (
+          <section className="mt-32">
           <div className="container mx-auto px-4 lg:px-0">
             <div className="flex flex-col md:flex-row items-start">
               {/* Left Column: “Why Hedgi” */}
@@ -81,7 +83,9 @@ export default function LandingPage() {
             
           </div>
           
-        </section>
+          </section>
+        )}
+        {/* END TEMPORARILY HIDDEN - Why Hedgi Section */
         
       </main>
     </div>
