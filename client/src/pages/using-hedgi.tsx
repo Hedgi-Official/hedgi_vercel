@@ -174,7 +174,7 @@ export default function UsingHedgi() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen flex flex-col bg-background">
-        <Header showAuthButton />
+        <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6 text-center">Using Hedgi</h1>

@@ -18,12 +18,21 @@ import {
   Check
 } from "lucide-react";
 import { CurrencySimulator } from "@/components/currency-simulator";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useUser } from "@/hooks/use-user";
 
 export default function WhatIsHedge() {
+  const [, navigate] = useLocation();
+  const { user, logout } = useUser();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
   return (
     <>
-      <Header showAuthButton />
+      <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
       {/* Seção Hero */}
       <section className="bg-gradient-to-b from-background to-muted py-16 px-4">

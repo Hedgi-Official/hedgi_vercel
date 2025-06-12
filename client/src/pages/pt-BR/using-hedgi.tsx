@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/hooks/use-user";
+import { useLocation } from "wouter";
 
 // Generate a unique session ID for this chat session
 const generateSessionId = () => {
@@ -15,6 +17,8 @@ const generateSessionId = () => {
 };
 
 export default function UsingHedgi() {
+  const [, navigate] = useLocation();
+  const { user, logout } = useUser();
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(generateSessionId());
@@ -26,6 +30,11 @@ export default function UsingHedgi() {
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
     {type: 'bot', content: 'Olá! Eu sou o HedgiBot. Posso te ajudar a entender como configurar e gerenciar hedge cambial. Para qual evento você gostaria de fazer hedge?'}
   ]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -165,7 +174,7 @@ export default function UsingHedgi() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen flex flex-col bg-background">
-        <Header showAuthButton />
+        <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6 text-center">Usando A Hedgi</h1>
