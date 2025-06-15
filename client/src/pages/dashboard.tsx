@@ -739,11 +739,7 @@ export default function Dashboard() {
                       key={trade.id} 
                       trade={trade} 
                       onClose={(flaskTradeId, dbTradeId) => {
-                        if (flaskTradeId) {
-                          closeFlaskTrade(flaskTradeId, dbTradeId);
-                        } else {
-                          initiateHedgeClose(trade as unknown as Hedge);
-                        }
+                        showCloseConfirmation(flaskTradeId, dbTradeId, trade);
                       }}
                     />
                   );
@@ -821,6 +817,26 @@ export default function Dashboard() {
             <AlertDialogCancel onClick={cancelHedgeDeletion}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmHedgeDeletion}>
               Yes, remove it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmation Dialog for Trade Close */}
+      <AlertDialog open={closeConfirmDialogOpen} onOpenChange={setCloseConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('simulator.confirmCloseTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('simulator.confirmCloseMessage')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelTradeClose}>
+              {t('simulator.confirmCloseNo')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTradeClose}>
+              {t('simulator.confirmCloseYes')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
