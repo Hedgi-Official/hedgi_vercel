@@ -133,6 +133,10 @@ const enUS = {
     payment: {
       title: 'Payment',
       mercadoPagoUnavailable: 'Mercado Pago is temporarily unavailable. Please try again in a few hours.'
+    },
+    lifestyle: {
+      tagline: 'Protect your currency, so you can live the life you want — without the stress.',
+      description: 'Take control of your financial future and enjoy peace of mind, knowing your currency is protected against market volatility.'
     }
   }
 };
@@ -269,6 +273,10 @@ const ptBR = {
     payment: {
       title: 'Pagamento',
       mercadoPagoUnavailable: 'Mercado Pago está temporariamente indisponível. Tente novamente em algumas horas.'
+    },
+    lifestyle: {
+      tagline: 'Proteja sua moeda, para que você possa viver a vida que deseja — sem o estresse.',
+      description: 'Assuma o controle do seu futuro financeiro e desfrute de tranquilidade, sabendo que sua moeda está protegida contra a volatilidade do mercado.'
     }
   }
 };
