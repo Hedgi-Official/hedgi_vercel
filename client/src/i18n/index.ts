@@ -107,7 +107,11 @@ const enUS = {
         bought: 'Bought',
         sold: 'Sold'
       },
-      tradeOrderNumber: 'Trade Order'
+      tradeOrderNumber: 'Trade Order',
+      confirmCloseTitle: 'Confirm Trade Closure',
+      confirmCloseMessage: 'Are you sure you want to close this trade?',
+      confirmCloseYes: 'Yes, Close Trade',
+      confirmCloseNo: 'No, Keep Trade'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -250,7 +254,11 @@ const ptBR = {
         bought: 'Comprou',
         sold: 'Vendeu'
       },
-      tradeOrderNumber: 'Ordem de Negociação'
+      tradeOrderNumber: 'Ordem de Negociação',
+      confirmCloseTitle: 'Confirmar Fechamento da Negociação',
+      confirmCloseMessage: 'Tem certeza de que deseja fechar esta negociação?',
+      confirmCloseYes: 'Sim, Fechar Negociação',
+      confirmCloseNo: 'Não, Manter Negociação'
     },
     'What is a Hedge?': 'O que é um Hedge?',
     'What is Hedging?': 'O que é Hedging?',

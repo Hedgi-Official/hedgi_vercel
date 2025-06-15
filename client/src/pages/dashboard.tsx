@@ -51,6 +51,10 @@ export default function Dashboard() {
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
   const [hedgeToDelete, setHedgeToDelete] = React.useState<Hedge | null>(null);
+  
+  // State for trade close confirmation dialog
+  const [closeConfirmDialogOpen, setCloseConfirmDialogOpen] = React.useState(false);
+  const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any} | null>(null);
 
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
@@ -496,6 +500,31 @@ export default function Dashboard() {
   const cancelHedgeDeletion = () => {
     setHedgeToDelete(null);
     setConfirmDialogOpen(false);
+  };
+
+  // Show confirmation dialog for closing trade
+  const showCloseConfirmation = (flaskTradeId: number | null, dbTradeId: number, trade: any) => {
+    setTradeToClose({ flaskTradeId, dbTradeId, trade });
+    setCloseConfirmDialogOpen(true);
+  };
+
+  // Confirm trade closure
+  const confirmTradeClose = () => {
+    if (tradeToClose) {
+      if (tradeToClose.flaskTradeId) {
+        closeFlaskTrade(tradeToClose.flaskTradeId, tradeToClose.dbTradeId);
+      } else {
+        initiateHedgeClose(tradeToClose.trade as unknown as Hedge);
+      }
+      setTradeToClose(null);
+    }
+    setCloseConfirmDialogOpen(false);
+  };
+
+  // Cancel trade closure
+  const cancelTradeClose = () => {
+    setTradeToClose(null);
+    setCloseConfirmDialogOpen(false);
   };
 
   const deleteHedgeMutation = useMutation({
