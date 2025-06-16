@@ -112,7 +112,8 @@ const enUS = {
         'CANCELLED': 'Cancelled',
         'FAILED': 'Failed',
         'COMPLETED': 'Completed',
-        'ACTIVE': 'Active'
+        'ACTIVE': 'Active',
+        'CLOSE_REQUESTED': 'Close Requested'
       },
       buyWith: 'Buy {target} with {base}',
       sellFor: 'Sell {target} for {base}',
@@ -262,7 +263,8 @@ const ptBR = {
         'CANCELLED': 'Cancelado',
         'FAILED': 'Falhou',
         'COMPLETED': 'Concluído',
-        'ACTIVE': 'Ativo'
+        'ACTIVE': 'Ativo',
+        'CLOSE_REQUESTED': 'Fechamento Solicitado'
       },
       buyWith: 'Comprar {target} com {base}',
       sellFor: 'Vender {target} por {base}',
