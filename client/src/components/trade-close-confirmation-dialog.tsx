@@ -122,13 +122,13 @@ export function TradeCloseConfirmationDialog({
               {loading && (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="ml-2">{t('Loading trade data...', 'Loading trade data...')}</span>
+                  <span className="ml-2">{t('simulator.loadingTradeData', 'Loading trade data...')}</span>
                 </div>
               )}
               
               {error && (
                 <div className="text-red-600 text-sm">
-                  {t('Error loading trade data. Proceed with caution.', 'Error loading trade data. Proceed with caution.')}
+                  {t('simulator.errorLoadingTradeData', 'Error loading trade data. Proceed with caution.')}
                 </div>
               )}
               
@@ -140,28 +140,28 @@ export function TradeCloseConfirmationDialog({
                   
                   <div className="bg-muted/50 p-3 rounded-lg space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span>{t('Entry Price', 'Entry Price')}:</span>
+                      <span>{t('simulator.entryPrice', 'Entry Price')}:</span>
                       <span className="font-medium">
                         {formatCurrency(spreadData.entry_price, currencyPair)}
                       </span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span>{t('Current Price', 'Current Price')}:</span>
+                      <span>{t('simulator.currentPrice', 'Current Price')}:</span>
                       <span className="font-medium">
                         {formatCurrency(spreadData.current_price, currencyPair)}
                       </span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span>{t('Margin', 'Margin')}:</span>
+                      <span>{t('simulator.margin', 'Margin')}:</span>
                       <span className="font-medium">
                         {formatCurrency(spreadData.margin, currencyPair)}
                       </span>
                     </div>
                     
                     <div className="flex justify-between border-t pt-2">
-                      <span className="font-medium">{t('You will receive', 'You will receive')}:</span>
+                      <span className="font-medium">{t('simulator.confirmYouWillReceive', 'You will receive')}:</span>
                       <span className={`font-bold ${spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(spreadData.return, currencyPair)}
                       </span>

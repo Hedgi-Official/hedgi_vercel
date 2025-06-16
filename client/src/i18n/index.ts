@@ -114,7 +114,7 @@ const enUS = {
       confirmCloseNo: 'No, Keep Trade',
       entryPrice: 'Entry Price',
       currentPrice: 'Current Price',
-      youWillReceive: 'You will receive',
+      confirmYouWillReceive: 'You will receive',
       loadingTradeData: 'Loading trade data...',
       errorLoadingTradeData: 'Error loading trade data. Proceed with caution.'
     },
@@ -270,7 +270,7 @@ const ptBR = {
       confirmCloseNo: 'Não, Manter Negociação',
       entryPrice: 'Preço de Entrada',
       currentPrice: 'Preço Atual',
-      youWillReceive: 'Você receberá',
+      confirmYouWillReceive: 'Você receberá',
       loadingTradeData: 'Carregando dados da negociação...',
       errorLoadingTradeData: 'Erro ao carregar dados da negociação. Proceda com cautela.'
     },

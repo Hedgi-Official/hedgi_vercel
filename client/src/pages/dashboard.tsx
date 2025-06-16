@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { TradeCloseConfirmationDialog } from "@/components/trade-close-confirmation-dialog";
 
 
 // Define the shape your Flask /trades endpoint returns:
@@ -54,7 +55,7 @@ export default function Dashboard() {
   
   // State for trade close confirmation dialog
   const [closeConfirmDialogOpen, setCloseConfirmDialogOpen] = React.useState(false);
-  const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any} | null>(null);
+  const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any, currencyPair: string} | null>(null);
 
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
@@ -504,7 +505,9 @@ export default function Dashboard() {
 
   // Show confirmation dialog for closing trade
   const showCloseConfirmation = (flaskTradeId: number | null, dbTradeId: number, trade: any) => {
-    setTradeToClose({ flaskTradeId, dbTradeId, trade });
+    // Extract currency pair from trade data
+    const currencyPair = trade.symbol || `${trade.targetCurrency}${trade.baseCurrency}` || 'USDBRL';
+    setTradeToClose({ flaskTradeId, dbTradeId, trade, currencyPair });
     setCloseConfirmDialogOpen(true);
   };
 
