@@ -55,6 +55,16 @@ export default function Dashboard() {
   // State for trade close confirmation dialog
   const [closeConfirmDialogOpen, setCloseConfirmDialogOpen] = React.useState(false);
   const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any} | null>(null);
+  const [spreadData, setSpreadData] = React.useState<{
+    broker_fee: number;
+    current_price: number;
+    direction: string;
+    entry_price: number;
+    margin: number;
+    pnl: number;
+    return: number;
+  } | null>(null);
+  const [loadingSpread, setLoadingSpread] = React.useState(false);
 
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
@@ -503,8 +513,34 @@ export default function Dashboard() {
   };
 
   // Show confirmation dialog for closing trade
-  const showCloseConfirmation = (flaskTradeId: number | null, dbTradeId: number, trade: any) => {
+  const showCloseConfirmation = async (flaskTradeId: number | null, dbTradeId: number, trade: any) => {
     setTradeToClose({ flaskTradeId, dbTradeId, trade });
+    setLoadingSpread(true);
+    setSpreadData(null);
+    
+    // Fetch spread data if we have a Flask trade ID
+    if (flaskTradeId) {
+      try {
+        const serverUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000'
+          : '';
+        
+        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/spread`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const spreadInfo = await response.json();
+          setSpreadData(spreadInfo);
+        } else {
+          console.warn('[Dashboard] Failed to fetch spread data:', response.status);
+        }
+      } catch (error) {
+        console.error('[Dashboard] Error fetching spread data:', error);
+      }
+    }
+    
+    setLoadingSpread(false);
     setCloseConfirmDialogOpen(true);
   };
 
@@ -822,21 +858,69 @@ export default function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmation Dialog for Trade Close */}
+      {/* Enhanced Confirmation Dialog for Trade Close with Spread Information */}
       <AlertDialog open={closeConfirmDialogOpen} onOpenChange={setCloseConfirmDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('simulator.confirmCloseTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('simulator.confirmCloseMessage')}
-            </AlertDialogDescription>
+            <AlertDialogTitle>
+              {t('simulator.confirmCloseTitle', 'Are you sure you want to close this trade?')}
+            </AlertDialogTitle>
+            {loadingSpread && (
+              <AlertDialogDescription>
+                {t('Loading trade details...', 'Loading trade details...')}
+              </AlertDialogDescription>
+            )}
+            {!loadingSpread && spreadData && (
+              <div className="space-y-3 mt-4">
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {t('Entry Rate', 'Entry Rate')}:
+                    </span>
+                    <span className="font-medium">{spreadData.entry_price.toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {t('Current Rate', 'Current Rate')}:
+                    </span>
+                    <span className="font-medium">{spreadData.current_price.toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {t('Margin paid at open', 'Margin paid at open')}:
+                    </span>
+                    <span className="font-medium">${spreadData.margin.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between items-center font-bold">
+                      <span className="text-sm">
+                        {t('You will receive', 'You will receive')}:
+                      </span>
+                      <span className={`text-lg ${spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${spreadData.return.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!loadingSpread && !spreadData && tradeToClose?.flaskTradeId && (
+              <AlertDialogDescription>
+                {t('Unable to load trade details. Do you still want to close this trade?', 'Unable to load trade details. Do you still want to close this trade?')}
+              </AlertDialogDescription>
+            )}
+            {!loadingSpread && !tradeToClose?.flaskTradeId && (
+              <AlertDialogDescription>
+                {t('simulator.confirmCloseMessage', 'This action cannot be undone.')}
+              </AlertDialogDescription>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelTradeClose}>
-              {t('simulator.confirmCloseNo')}
+              {t('Dont close', "Don't close")}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmTradeClose}>
-              {t('simulator.confirmCloseYes')}
+            <AlertDialogAction onClick={confirmTradeClose} disabled={loadingSpread}>
+              {t('Close trade', 'Close trade')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

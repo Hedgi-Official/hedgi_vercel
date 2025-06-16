@@ -113,6 +113,14 @@ const enUS = {
       confirmCloseYes: 'Yes, Close Trade',
       confirmCloseNo: 'No, Keep Trade'
     },
+    'Entry Rate': 'Entry Rate',
+    'Current Rate': 'Current Rate',
+    'Margin paid at open': 'Margin paid at open',
+    'You will receive': 'You will receive',
+    'Loading trade details...': 'Loading trade details...',
+    'Unable to load trade details. Do you still want to close this trade?': 'Unable to load trade details. Do you still want to close this trade?',
+    'Dont close': "Don't close",
+    'Close trade': 'Close trade',
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
       'EURUSD': 'EUR/USD - Euro/US Dollar',
