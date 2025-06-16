@@ -185,7 +185,7 @@ export function TradeHistory() {
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('Status')}:</span>
-                        <span className="font-medium">{t(`simulator.tradeStatus.${(trade.status || 'UNKNOWN').toUpperCase()}`, trade.status || 'Unknown')}</span>
+                        <span className="font-medium">{getTranslatedStatus(trade.status || 'Unknown')}</span>
                       </div>
                     </div>
                   </div>
