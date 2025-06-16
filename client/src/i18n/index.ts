@@ -109,9 +109,14 @@ const enUS = {
       },
       tradeOrderNumber: 'Trade Order',
       confirmCloseTitle: 'Confirm Trade Closure',
-      confirmCloseMessage: 'Are you sure you want to close this trade?',
+      confirmCloseMessage: 'Are you sure you want to close this hedge?',
       confirmCloseYes: 'Yes, Close Trade',
-      confirmCloseNo: 'No, Keep Trade'
+      confirmCloseNo: 'No, Keep Trade',
+      entryPrice: 'Entry Price',
+      currentPrice: 'Current Price',
+      youWillReceive: 'You will receive',
+      loadingTradeData: 'Loading trade data...',
+      errorLoadingTradeData: 'Error loading trade data. Proceed with caution.'
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
@@ -260,9 +265,14 @@ const ptBR = {
       },
       tradeOrderNumber: 'Ordem de Negociação',
       confirmCloseTitle: 'Confirmar Fechamento da Negociação',
-      confirmCloseMessage: 'Tem certeza de que deseja fechar esta negociação?',
+      confirmCloseMessage: 'Tem certeza de que deseja fechar este hedge?',
       confirmCloseYes: 'Sim, Fechar Negociação',
-      confirmCloseNo: 'Não, Manter Negociação'
+      confirmCloseNo: 'Não, Manter Negociação',
+      entryPrice: 'Preço de Entrada',
+      currentPrice: 'Preço Atual',
+      youWillReceive: 'Você receberá',
+      loadingTradeData: 'Carregando dados da negociação...',
+      errorLoadingTradeData: 'Erro ao carregar dados da negociação. Proceda com cautela.'
     },
     'What is a Hedge?': 'O que é um Hedge?',
     'What is Hedging?': 'O que é Hedging?',
