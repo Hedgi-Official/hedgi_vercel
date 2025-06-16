@@ -342,8 +342,8 @@ export function CurrencySimulator({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {tradeDirection === 'buy' ?
-                      `Buy ${targetCurrency} with ${baseCurrency}` :
-                      `Sell ${targetCurrency} for ${baseCurrency}`}
+                      t('simulator.buyWith', { target: targetCurrency, base: baseCurrency }) :
+                      t('simulator.sellFor', { target: targetCurrency, base: baseCurrency })}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -382,7 +382,7 @@ export function CurrencySimulator({
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center">
                   <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                  Margin ({baseCurrency})
+                  {t('simulator.margin')} ({baseCurrency})
                 </label>
                 <Input
                   type="text"

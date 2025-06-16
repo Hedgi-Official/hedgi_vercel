@@ -103,6 +103,19 @@ const enUS = {
         completed: 'Completed',
         cancelled: 'Cancelled'
       },
+      tradeStatus: {
+        'EXECUTED': 'Executed',
+        'NEW': 'New',
+        'PENDING': 'Pending',
+        'OPEN': 'Open',
+        'CLOSED': 'Closed',
+        'CANCELLED': 'Cancelled',
+        'FAILED': 'Failed',
+        'COMPLETED': 'Completed',
+        'ACTIVE': 'Active'
+      },
+      buyWith: 'Buy {target} with {base}',
+      sellFor: 'Sell {target} for {base}',
       hedgeTitles: {
         bought: 'Bought',
         sold: 'Sold'
@@ -251,6 +264,8 @@ const ptBR = {
         'COMPLETED': 'Concluído',
         'ACTIVE': 'Ativo'
       },
+      buyWith: 'Comprar {target} com {base}',
+      sellFor: 'Vender {target} por {base}',
       willMakePayment: 'Farei um pagamento em',
       willReceive: 'Receberei',
       convertTo: 'e converterei para',

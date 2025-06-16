@@ -496,8 +496,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {tradeDirection === 'buy' ?
-                        `Buy ${targetCurrency} with ${baseCurrency}` :
-                        `Sell ${targetCurrency} for ${baseCurrency}`}
+                        t('simulator.buyWith', { target: targetCurrency, base: baseCurrency }) :
+                        t('simulator.sellFor', { target: targetCurrency, base: baseCurrency })}
                     </p>
                   </div>
                   <div className="space-y-1">
