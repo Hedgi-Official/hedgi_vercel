@@ -100,7 +100,7 @@ export function CurrencySimulator({
         Math.abs(
           volumeInLots *
             (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
-            businessDays
+            businessDays * (7/5)
         ) + spreadCost;
     }
 
