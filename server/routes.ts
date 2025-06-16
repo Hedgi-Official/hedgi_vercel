@@ -469,6 +469,7 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
     console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
     console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
+    console.log('[SPREAD ENDPOINT] FLASK URL:', FLASK);
     
     if (!req.isAuthenticated() || !req.user?.id) {
       console.log('[SPREAD ENDPOINT] Authentication failed');
@@ -477,13 +478,20 @@ export function registerRoutes(app: Express): Server {
     
     try {
       const flaskTradeId = req.params.tradeId;
-      console.log(`[SPREAD] Getting spread data for Flask trade ${flaskTradeId}`);
+      const flaskUrl = `${FLASK}/trades/${flaskTradeId}/spread`;
+      console.log(`[SPREAD] Fetching from URL: ${flaskUrl}`);
       
       // Direct call to Flask spread endpoint
-      const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/spread`, {
+      const flaskRes = await fetch(flaskUrl, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Accept': 'application/json',
+          'Content-Type': 'application/json' 
+        }
       });
+
+      console.log(`[SPREAD] Flask response status: ${flaskRes.status}`);
+      console.log(`[SPREAD] Flask response headers:`, Object.fromEntries(flaskRes.headers.entries()));
 
       if (!flaskRes.ok) {
         const errorText = await flaskRes.text();
@@ -491,8 +499,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(flaskRes.status).json({ error: errorText });
       }
 
-      const result = await flaskRes.json();
+      const responseText = await flaskRes.text();
+      console.log(`[SPREAD] Flask raw response:`, responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`[SPREAD] Failed to parse JSON:`, parseError);
+        return res.status(500).json({ error: 'Invalid response format from Flask' });
+      }
+
       console.log(`[SPREAD] Successfully got spread data for Flask trade ${flaskTradeId}:`, result);
+      res.setHeader('Content-Type', 'application/json');
       return res.json(result);
 
     } catch (err) {

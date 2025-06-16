@@ -620,6 +620,61 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // 3.5. Get trade spread info → GET /api/trades/:tradeId/spread (proxy to Flask)
+  app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
+    console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
+    console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
+    console.log('[SPREAD ENDPOINT] FLASK URL:', FLASK);
+    
+    if (!req.isAuthenticated()) {
+      console.log('[SPREAD ENDPOINT] Authentication failed');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+      const flaskTradeId = req.params.tradeId;
+      const flaskUrl = `${FLASK}/trades/${flaskTradeId}/spread`;
+      console.log(`[SPREAD] Fetching from URL: ${flaskUrl}`);
+      
+      // Direct call to Flask spread endpoint
+      const flaskRes = await fetch(flaskUrl, {
+        method: 'GET',
+        headers: { 
+          'Accept': 'application/json',
+          'Content-Type': 'application/json' 
+        }
+      });
+
+      console.log(`[SPREAD] Flask response status: ${flaskRes.status}`);
+      console.log(`[SPREAD] Flask response headers:`, Object.fromEntries(flaskRes.headers.entries()));
+
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error(`[SPREAD] Flask error for trade ${flaskTradeId}:`, errorText);
+        return res.status(flaskRes.status).json({ error: errorText });
+      }
+
+      const responseText = await flaskRes.text();
+      console.log(`[SPREAD] Flask raw response:`, responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`[SPREAD] Failed to parse JSON:`, parseError);
+        return res.status(500).json({ error: 'Invalid response format from Flask' });
+      }
+
+      console.log(`[SPREAD] Successfully got spread data for Flask trade ${flaskTradeId}:`, result);
+      res.setHeader('Content-Type', 'application/json');
+      return res.json(result);
+
+    } catch (err) {
+      console.error('[SPREAD] Error:', err);
+      return res.status(500).json({ error: 'Failed to get spread data' });
+    }
+  });
+
   // 4. Get active trades → GET /api/trades (returns non-CLOSED/FAILED trades for current user only)
   app.get('/api/trades', async (req: Request, res: Response) => {
     // Use authenticated user ID or fallback to user 7 for testing
