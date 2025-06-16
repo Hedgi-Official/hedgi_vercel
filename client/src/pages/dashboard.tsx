@@ -521,12 +521,15 @@ export default function Dashboard() {
     // Fetch spread data if we have a Flask trade ID
     if (flaskTradeId) {
       try {
-        const serverUrl = window.location.hostname === 'localhost' 
-          ? 'http://localhost:5000'
-          : '';
+        // Call the Flask API directly through the cloudflare tunnel
+        const flaskUrl = 'https://electoral-fuzzy-divorce-proc.trycloudflare.com';
         
-        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/spread`, {
-          credentials: 'include'
+        const response = await fetch(`${flaskUrl}/trades/${flaskTradeId}/spread`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         });
         
         if (response.ok) {
