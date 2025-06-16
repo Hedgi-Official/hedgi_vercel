@@ -83,7 +83,7 @@ export default function Dashboard() {
     console.log('[getCurrencySymbol] Base currency:', baseCurrency);
     
     const currencyMap: { [key: string]: string } = {
-      'BRL': 'R$',
+      'BRL': 'R$ ',
       'USD': '$',
       'EUR': '€',
       'MXN': '$',
@@ -931,7 +931,7 @@ export default function Dashboard() {
                   <div className="border-t pt-2">
                     <div className="flex justify-between items-center font-bold">
                       <span className="text-sm">
-                        {t('You will receive', 'You will receive')}:
+                        {t('You will receive')}:
                       </span>
                       <span className={`text-lg ${spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {getCurrencySymbol(tradeToClose?.trade)}{spreadData.return.toFixed(2)}
