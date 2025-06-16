@@ -521,11 +521,14 @@ export default function Dashboard() {
     // Fetch spread data if we have a Flask trade ID
     if (flaskTradeId) {
       try {
-        // Call the Flask API directly through the cloudflare tunnel
-        const flaskUrl = 'https://electoral-fuzzy-divorce-proc.trycloudflare.com';
+        // Call the Express proxy endpoint which forwards to Flask
+        const serverUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000'
+          : '';
         
-        const response = await fetch(`${flaskUrl}/trades/${flaskTradeId}/spread`, {
+        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/spread`, {
           method: 'GET',
+          credentials: 'include',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'

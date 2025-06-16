@@ -465,6 +465,42 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // 3.5) Get trade spread info → GET /api/trades/:tradeId/spread (proxy to Flask)
+  app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
+    console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
+    console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
+    
+    if (!req.isAuthenticated() || !req.user?.id) {
+      console.log('[SPREAD ENDPOINT] Authentication failed');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    try {
+      const flaskTradeId = req.params.tradeId;
+      console.log(`[SPREAD] Getting spread data for Flask trade ${flaskTradeId}`);
+      
+      // Direct call to Flask spread endpoint
+      const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/spread`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error(`[SPREAD] Flask error for trade ${flaskTradeId}:`, errorText);
+        return res.status(flaskRes.status).json({ error: errorText });
+      }
+
+      const result = await flaskRes.json();
+      console.log(`[SPREAD] Successfully got spread data for Flask trade ${flaskTradeId}:`, result);
+      return res.json(result);
+
+    } catch (err) {
+      console.error('[SPREAD] Error:', err);
+      return res.status(500).json({ error: 'Failed to get spread data' });
+    }
+  });
+
   // 4) History tab - returns ONLY ClosedTrade interface fields
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
