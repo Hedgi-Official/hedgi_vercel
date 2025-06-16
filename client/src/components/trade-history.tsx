@@ -21,6 +21,14 @@ export function TradeHistory() {
   const [expanded, setExpanded] = useState(false);
   const { t } = useTranslation();
 
+  // Helper function to get translated trade status
+  const getTranslatedStatus = (status: string): string => {
+    const statusKey = `simulator.tradeStatus.${status.toUpperCase()}`;
+    const translated = t(statusKey);
+    // If translation key equals original key, translation doesn't exist, return original status
+    return translated === statusKey ? status : translated;
+  };
+
   // Fetch trade history when expanded
   const {
     data: tradeHistory = [],
@@ -177,7 +185,7 @@ export function TradeHistory() {
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('Status')}:</span>
-                        <span className="font-medium">{trade.status || 'Unknown'}</span>
+                        <span className="font-medium">{t(`simulator.tradeStatus.${(trade.status || 'UNKNOWN').toUpperCase()}`, trade.status || 'Unknown')}</span>
                       </div>
                     </div>
                   </div>

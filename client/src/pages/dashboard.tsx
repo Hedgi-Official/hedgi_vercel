@@ -96,6 +96,14 @@ export default function Dashboard() {
     return result;
   };
 
+  // Helper function to get translated trade status
+  const getTranslatedStatus = (status: string): string => {
+    const statusKey = `simulator.tradeStatus.${status.toUpperCase()}`;
+    const translated = t(statusKey);
+    // If translation key equals original key, translation doesn't exist, return original status
+    return translated === statusKey ? status : translated;
+  };
+
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
   const [pendingHedgeData, setPendingHedgeData] = React.useState<any>(null);
@@ -721,7 +729,7 @@ export default function Dashboard() {
             
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t('Status')}:</span>
-              <span className="font-medium">{displayStatus}</span>
+              <span className="font-medium">{getTranslatedStatus(displayStatus)}</span>
             </div>
           </div>
         </div>
