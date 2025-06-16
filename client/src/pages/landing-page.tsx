@@ -52,72 +52,80 @@ export default function LandingPage() {
         
         {/* Lifestyle Trust Section */}
         <section className="mt-32 mb-16">
-          <div className="relative w-full h-[500px] rounded-2xl overflow-hidden shadow-2xl">
-            {/* Background Image Collage using SVG */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-green-50">
-              <svg className="w-full h-full object-cover" viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg">
-                {/* Cafe scene with laptop */}
-                <rect x="0" y="0" width="400" height="500" fill="url(#cafeGradient)" />
-                <circle cx="200" cy="250" r="80" fill="#4F46E5" opacity="0.1" />
-                <rect x="150" y="220" width="100" height="60" rx="8" fill="#6366F1" opacity="0.8" />
-                <rect x="160" y="230" width="80" height="40" rx="4" fill="#E0E7FF" />
-                
-                {/* Travel/airplane silhouette */}
-                <rect x="400" y="0" width="400" height="500" fill="url(#skyGradient)" />
-                <path d="M500 200 L520 190 L650 200 L680 190 L700 200 L680 210 L650 220 L520 210 Z" fill="#1E40AF" opacity="0.6" />
-                <circle cx="600" cy="150" r="40" fill="#FEF3C7" opacity="0.8" />
-                
-                {/* Remote work/relaxation scene */}
-                <rect x="800" y="0" width="400" height="500" fill="url(#relaxGradient)" />
-                <circle cx="1000" cy="200" r="60" fill="#10B981" opacity="0.2" />
-                <rect x="950" y="180" width="100" height="40" rx="20" fill="#059669" opacity="0.6" />
-                <circle cx="1100" cy="300" r="30" fill="#F59E0B" opacity="0.4" />
-                
-                {/* Happy people silhouettes */}
-                <circle cx="200" cy="180" r="25" fill="#4338CA" opacity="0.7" />
-                <rect x="185" y="205" width="30" height="60" rx="15" fill="#4338CA" opacity="0.7" />
-                
-                <circle cx="600" cy="320" r="25" fill="#0891B2" opacity="0.7" />
-                <rect x="585" y="345" width="30" height="60" rx="15" fill="#0891B2" opacity="0.7" />
-                
-                <circle cx="1000" cy="350" r="25" fill="#059669" opacity="0.7" />
-                <rect x="985" y="375" width="30" height="60" rx="15" fill="#059669" opacity="0.7" />
-                
-                {/* Gradients */}
-                <defs>
-                  <linearGradient id="cafeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FEF3C7" />
-                    <stop offset="100%" stopColor="#FDE68A" />
-                  </linearGradient>
-                  <linearGradient id="skyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#DBEAFE" />
-                    <stop offset="100%" stopColor="#BFDBFE" />
-                  </linearGradient>
-                  <linearGradient id="relaxGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#D1FAE5" />
-                    <stop offset="100%" stopColor="#A7F3D0" />
-                  </linearGradient>
-                </defs>
-              </svg>
+          <div className="relative w-full min-h-[600px] rounded-2xl overflow-hidden shadow-2xl">
+            {/* Image Collage Grid */}
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+              {/* Couple picnic - relaxed happiness */}
+              <div className="relative overflow-hidden">
+                <img 
+                  src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440.jpg" 
+                  alt="Happy couple enjoying a picnic" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              {/* Laughing man in nature - confidence */}
+              <div className="relative overflow-hidden">
+                <img 
+                  src="/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg" 
+                  alt="Confident man laughing outdoors" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              {/* Woman reading with dog - peaceful lifestyle */}
+              <div className="relative overflow-hidden md:col-span-2 lg:col-span-1">
+                <img 
+                  src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647.jpg" 
+                  alt="Woman reading peacefully with her dog" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              {/* Family walking - security and future */}
+              <div className="relative overflow-hidden md:col-span-2 lg:col-span-2">
+                <img 
+                  src="/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441.jpg" 
+                  alt="Family walking together in nature" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              {/* Golfer - pursuing passions */}
+              <div className="relative overflow-hidden">
+                <img 
+                  src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441.jpg" 
+                  alt="Person playing golf, pursuing hobbies" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
             </div>
             
             {/* Content Overlay */}
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-              <div className="text-center text-white max-w-4xl px-8">
-                <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+            <div className="absolute inset-0 flex items-center justify-center" 
+                 style={{
+                   background: 'linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35))'
+                 }}>
+              <div className="text-center text-gray-900 max-w-4xl px-8">
+                <h2 className="text-4xl md:text-6xl font-bold mb-8 leading-tight">
                   {t('lifestyle.tagline')}
                 </h2>
-                <p className="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto leading-relaxed">
+                <p className="text-xl md:text-2xl opacity-80 max-w-3xl mx-auto leading-relaxed">
                   {t('lifestyle.description')}
                 </p>
               </div>
             </div>
             
-            {/* Decorative elements */}
-            <div className="absolute top-10 left-10 w-4 h-4 bg-white/30 rounded-full animate-pulse"></div>
-            <div className="absolute top-20 right-16 w-6 h-6 bg-white/20 rounded-full animate-pulse delay-1000"></div>
-            <div className="absolute bottom-16 left-20 w-3 h-3 bg-white/40 rounded-full animate-pulse delay-500"></div>
-            <div className="absolute bottom-10 right-10 w-5 h-5 bg-white/25 rounded-full animate-pulse delay-1500"></div>
+            {/* Subtle decorative elements */}
+            <div className="absolute top-8 left-8 w-3 h-3 bg-white/40 rounded-full animate-pulse"></div>
+            <div className="absolute top-16 right-12 w-2 h-2 bg-white/30 rounded-full animate-pulse delay-1000"></div>
+            <div className="absolute bottom-12 left-16 w-2 h-2 bg-white/35 rounded-full animate-pulse delay-500"></div>
+            <div className="absolute bottom-8 right-8 w-3 h-3 bg-white/40 rounded-full animate-pulse delay-1500"></div>
           </div>
         </section>
         
