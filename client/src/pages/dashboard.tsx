@@ -24,7 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { TradeCloseConfirmationDialog } from "@/components/trade-close-confirmation-dialog";
 
 
 // Define the shape your Flask /trades endpoint returns:
@@ -55,7 +54,7 @@ export default function Dashboard() {
   
   // State for trade close confirmation dialog
   const [closeConfirmDialogOpen, setCloseConfirmDialogOpen] = React.useState(false);
-  const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any, currencyPair: string} | null>(null);
+  const [tradeToClose, setTradeToClose] = React.useState<{flaskTradeId: number | null, dbTradeId: number, trade: any} | null>(null);
 
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
@@ -505,9 +504,7 @@ export default function Dashboard() {
 
   // Show confirmation dialog for closing trade
   const showCloseConfirmation = (flaskTradeId: number | null, dbTradeId: number, trade: any) => {
-    // Extract currency pair from trade data
-    const currencyPair = trade.symbol || `${trade.targetCurrency}${trade.baseCurrency}` || 'USDBRL';
-    setTradeToClose({ flaskTradeId, dbTradeId, trade, currencyPair });
+    setTradeToClose({ flaskTradeId, dbTradeId, trade });
     setCloseConfirmDialogOpen(true);
   };
 
@@ -763,8 +760,7 @@ export default function Dashboard() {
 
                   // Calculate payment amount using actual hedge costs and margin
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  // Note: cost property might not exist in all hedge payloads, using margin as fallback
-                  const hedgeCost = (hedgePayload as any).cost ? Number((hedgePayload as any).cost) : margin * 0.5;
+                  const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
                   const paymentAmount = Number((margin + hedgeCost).toFixed(2));
 
                   console.log("💰 [Dashboard] Payment calculation:");
@@ -901,14 +897,6 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Trade Close Confirmation Dialog */}
-      <TradeCloseConfirmationDialog
-        open={closeConfirmDialogOpen}
-        onClose={cancelTradeClose}
-        onConfirm={confirmTradeClose}
-        tradeId={tradeToClose?.flaskTradeId || null}
-        currencyPair={tradeToClose?.currencyPair || 'USDBRL'}
-      />
 
     </div>
   );

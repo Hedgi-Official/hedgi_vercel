@@ -558,57 +558,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get spread data for trade confirmation dialog
-  app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
-    console.log('[SPREAD ENDPOINT] Route hit for trade:', req.params.tradeId);
-    
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    try {
-      const tradeId = req.params.tradeId;
-      
-      // Verify trade belongs to authenticated user
-      const trade = await db.query.trades.findFirst({
-        where: eq(trades.id, Number(tradeId))
-      });
-
-      if (!trade || trade.userId !== req.user.id) {
-        return res.status(404).json({ error: 'Trade not found' });
-      }
-
-      // Use Flask trade ID if available, otherwise use database trade ID
-      const flaskTradeId = trade.flaskTradeId || tradeId;
-      
-      // Forward request to Flask API
-      const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/spread`);
-      
-      if (!flaskRes.ok) {
-        const errorText = await flaskRes.text();
-        console.error('[SPREAD ENDPOINT] Flask error:', errorText);
-        
-        // Check if this is a Flask API configuration issue
-        if (errorText.includes('NoneType') || errorText.includes('entry_price')) {
-          return res.status(503).json({ 
-            error: 'Trade data incomplete. The Flask API requires additional configuration to provide spread data for this trade.',
-            details: 'Please ensure the trade has been executed and has valid entry price data.'
-          });
-        }
-        
-        return res.status(flaskRes.status).json({ error: `Flask API error: ${errorText}` });
-      }
-
-      const spreadData = await flaskRes.json();
-      console.log('[SPREAD ENDPOINT] Flask spread data:', spreadData);
-      
-      res.json(spreadData);
-    } catch (error) {
-      console.error('[SPREAD ENDPOINT] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch spread data from Flask API' });
-    }
-  });
-
   // Main GET /api/trades endpoint - returns active trades for dashboard
   app.get('/api/trades', async (req: Request, res: Response) => {
     console.log('[TRADES ENDPOINT] Route hit');
