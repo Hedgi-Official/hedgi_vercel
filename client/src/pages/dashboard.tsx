@@ -66,6 +66,25 @@ export default function Dashboard() {
   } | null>(null);
   const [loadingSpread, setLoadingSpread] = React.useState(false);
 
+  // Helper function to get currency symbol based on trading pair
+  const getCurrencySymbol = (tradingPair: string): string => {
+    if (!tradingPair) return '$';
+    
+    // Extract base currency from trading pair (e.g., USDBRL -> BRL)
+    const baseCurrency = tradingPair.slice(-3);
+    
+    const currencyMap: { [key: string]: string } = {
+      'BRL': 'R$',
+      'USD': '$',
+      'EUR': '€',
+      'MXN': '$',
+      'GBP': '£',
+      'JPY': '¥'
+    };
+    
+    return currencyMap[baseCurrency] || '$';
+  };
+
   // State for Mercado Pago Brick modal popup
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
   const [pendingHedgeData, setPendingHedgeData] = React.useState<any>(null);
@@ -895,7 +914,7 @@ export default function Dashboard() {
                     <span className="text-sm text-muted-foreground">
                       {t('Margin paid at open', 'Margin paid at open')}:
                     </span>
-                    <span className="font-medium">${spreadData.margin.toFixed(2)}</span>
+                    <span className="font-medium">{getCurrencySymbol(tradeToClose?.trade?.baseCurrency + tradeToClose?.trade?.targetCurrency || '')}{spreadData.margin.toFixed(2)}</span>
                   </div>
                   <div className="border-t pt-2">
                     <div className="flex justify-between items-center font-bold">
@@ -903,7 +922,7 @@ export default function Dashboard() {
                         {t('You will receive', 'You will receive')}:
                       </span>
                       <span className={`text-lg ${spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ${spreadData.return.toFixed(2)}
+                        {getCurrencySymbol(tradeToClose?.trade?.baseCurrency + tradeToClose?.trade?.targetCurrency || '')}{spreadData.return.toFixed(2)}
                       </span>
                     </div>
                   </div>
