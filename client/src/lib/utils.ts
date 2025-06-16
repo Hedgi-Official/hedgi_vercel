@@ -25,3 +25,21 @@ export function calculateBusinessDays(startDate: Date, durationInDays: number): 
 
   return businessDays;
 }
+
+export function countWednesdaysInNextDays(days: number): number {
+  let wednesdayCount = 0;
+  const today = new Date();
+  
+  // Check each day from today up to the specified number of days
+  for (let i = 0; i < days; i++) {
+    const currentDate = new Date(today);
+    currentDate.setDate(today.getDate() + i);
+    
+    // Wednesday is day 3 (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.)
+    if (currentDate.getDay() === 3) {
+      wednesdayCount++;
+    }
+  }
+  
+  return wednesdayCount;
+}
