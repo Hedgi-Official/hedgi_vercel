@@ -89,6 +89,7 @@ export function CurrencySimulator({
       tradeDirection
     );
 
+    const wednesdays = countWednesdaysInNextDays(duration)
     const businessDays = calculateBusinessDays(new Date(), duration);
 
     // compute hedge cost
