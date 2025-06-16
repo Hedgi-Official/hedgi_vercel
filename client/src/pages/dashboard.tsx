@@ -763,7 +763,8 @@ export default function Dashboard() {
 
                   // Calculate payment amount using actual hedge costs and margin
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
+                  // Note: cost property might not exist in all hedge payloads, using margin as fallback
+                  const hedgeCost = (hedgePayload as any).cost ? Number((hedgePayload as any).cost) : margin * 0.5;
                   const paymentAmount = Number((margin + hedgeCost).toFixed(2));
 
                   console.log("💰 [Dashboard] Payment calculation:");
@@ -900,6 +901,14 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Trade Close Confirmation Dialog */}
+      <TradeCloseConfirmationDialog
+        open={closeConfirmDialogOpen}
+        onClose={cancelTradeClose}
+        onConfirm={confirmTradeClose}
+        tradeId={tradeToClose?.flaskTradeId || null}
+        currencyPair={tradeToClose?.currencyPair || 'USDBRL'}
+      />
 
     </div>
   );

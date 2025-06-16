@@ -48,7 +48,7 @@ interface TradeCloseConfirmationDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  tradeId: number | null;
+  tradeId: number | null | undefined;
   currencyPair: string;
 }
 
@@ -82,7 +82,7 @@ export function TradeCloseConfirmationDialog({
         ? 'http://localhost:5000'
         : '';
       
-      const response = await fetch(`${serverUrl}/api/flask/${tradeId}/trades/${tradeId}/spread`, {
+      const response = await fetch(`${serverUrl}/api/trades/${tradeId}/spread`, {
         credentials: 'include'
       });
       

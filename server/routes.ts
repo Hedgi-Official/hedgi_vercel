@@ -558,6 +558,36 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get spread data for trade confirmation dialog
+  app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
+    console.log('[SPREAD ENDPOINT] Route hit for trade:', req.params.tradeId);
+    
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const tradeId = req.params.tradeId;
+      
+      // Forward request to Flask API
+      const flaskRes = await fetch(`${FLASK}/trades/${tradeId}/spread`);
+      
+      if (!flaskRes.ok) {
+        const errorText = await flaskRes.text();
+        console.error('[SPREAD ENDPOINT] Flask error:', errorText);
+        return res.status(flaskRes.status).json({ error: `Flask API error: ${errorText}` });
+      }
+
+      const spreadData = await flaskRes.json();
+      console.log('[SPREAD ENDPOINT] Flask spread data:', spreadData);
+      
+      res.json(spreadData);
+    } catch (error) {
+      console.error('[SPREAD ENDPOINT] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch spread data' });
+    }
+  });
+
   // Main GET /api/trades endpoint - returns active trades for dashboard
   app.get('/api/trades', async (req: Request, res: Response) => {
     console.log('[TRADES ENDPOINT] Route hit');
