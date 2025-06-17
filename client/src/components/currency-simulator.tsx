@@ -386,10 +386,18 @@ export function CurrencySimulator({
                   <Briefcase className="mr-2 h-4 w-4 text-primary" />
                   {t('simulator.margin')} ({baseCurrency})
                 </label>
+                <div className="text-sm text-black mb-2">
+                  {t('simulator.marginRecommendation')}
+                </div>
                 <Input
                   type="text"
                   value={(margin ?? simulation.costDetails.hedgeCost * 2).toFixed(2)}
-                  onChange={e => setMargin(parseFloat(e.target.value) || 0)}
+                  onChange={e => {
+                    const inputValue = parseFloat(e.target.value) || 0;
+                    const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
+                    const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
+                    setMargin(finalValue);
+                  }}
                 />
               </div>
 

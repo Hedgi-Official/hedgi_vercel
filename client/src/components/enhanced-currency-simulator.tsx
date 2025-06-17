@@ -440,6 +440,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     <TrendingUp className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.margin')} ({baseCurrency})
                   </label>
+                  <div className="text-sm text-black mb-2">
+                    {t('simulator.marginRecommendation')}
+                  </div>
                   <Input
                     type="text"
                     value={margin ? margin.toFixed(2) : (amount * 0.05).toFixed(2)}
@@ -447,9 +450,19 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                       // Remove all non-numeric characters except decimal point
                       const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
                       // Parse the value
-                      const numValue = cleanedValue === '' ? null : parseFloat(cleanedValue);
-                      // Update state
-                      setMargin(numValue || (amount * 0.05));
+                      const inputValue = cleanedValue === '' ? 0 : parseFloat(cleanedValue);
+                      
+                      // Calculate minimum margin (20% of hedge cost) if simulation exists
+                      if (simulation) {
+                        const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
+                        const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
+                        setMargin(finalValue);
+                      } else {
+                        // Fallback when no simulation (use 5% of amount as before)
+                        const minimumMargin = Math.round((amount * 0.05 * 0.2) * 100) / 100;
+                        const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
+                        setMargin(finalValue);
+                      }
                     }}
                     min={0}
                     placeholder="Enter margin amount"
