@@ -290,7 +290,7 @@ export function registerRoutes(app: Express): Server {
       console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
       // 2) Forward it directly to Flask’s /process_payment
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/process_payment`;
+      const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/process_payment`;
       console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
