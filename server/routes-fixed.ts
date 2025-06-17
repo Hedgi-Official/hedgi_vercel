@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL;
+const FLASK = process.env.FLASK_URL || 'https://boot-wilson-productivity-gsm.trycloudflare.com';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -63,7 +63,7 @@ export function registerRoutes(app: Express): Server {
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
       const cacheBuster = Date.now();
-      const flaskUrl = `https://electoral-fuzzy-divorce-proc.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
+      const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const fetchStart = Date.now();
@@ -81,10 +81,10 @@ export function registerRoutes(app: Express): Server {
             "Expires": "0"
           }
         }),
-        new Promise((_, reject) => 
+        new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Flask request timeout after 15 seconds')), 15000)
         )
-      ]) as Response;
+      ]);
 
       const fetchTime = Date.now() - fetchStart;
       console.log(`[Local Brick] Flask fetch completed in ${fetchTime}ms with status ${response.status}`);
@@ -195,10 +195,11 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       const errorTime = Date.now() - startTime;
       console.error(`[Local Brick] Error creating brick after ${errorTime}ms:`, error);
-      console.error(`[Local Brick] Error details for session ${sessionInfo?.sessionId || 'unknown'}:`, {
+      console.error(`[Local Brick] Error details:`, {
         errorMessage: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        userId: sessionInfo?.userId || 'unknown'
+        sessionId: req.sessionID || 'unknown',
+        userId: (req as any).user?.id || 'unknown'
       });
       res.status(500).send(`
         <html>
