@@ -572,10 +572,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   </div>
                 </div>
 
-                {/* Update margin based on simulation results */}
+                {/* Update margin based on simulation results only if no user input */}
                 {simulation && (() => {
-                  // Set margin to 2x hedge cost if we have a simulation result
-                  if (!margin || margin < simulation.costDetails.hedgeCost * 2) {
+                  // Only set default margin if user hasn't entered a custom value
+                  if (margin === null && marginInput === '') {
                     setMargin(simulation.costDetails.hedgeCost * 2);
                   }
                   return null;
