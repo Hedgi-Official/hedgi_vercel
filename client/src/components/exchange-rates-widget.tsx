@@ -96,6 +96,9 @@ export function ExchangeRatesWidget() {
               {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
               {renderRateCard("FBS Rate", fbsRate, fbsError)}
             </div>
+            <div className="text-sm text-black mt-4 p-3 bg-muted/50 rounded-lg">
+              {t('Market Hours Notice')}
+            </div>
           </div>
         )}
       </CardContent>
