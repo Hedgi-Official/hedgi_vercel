@@ -448,13 +448,32 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     type="text"
                     value={marginInput || (margin ?? (amount * 0.05)).toString()}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      let value = e.target.value;
+                      
+                      // Allow only numbers and decimal point
+                      value = value.replace(/[^\d.]/g, '');
+                      
+                      // Remove leading zeros except when followed by decimal point
+                      if (value.length > 1 && value.startsWith('0') && value[1] !== '.') {
+                        value = value.replace(/^0+/, '');
+                      }
+                      
+                      // Ensure only one decimal point
+                      const parts = value.split('.');
+                      if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                      }
+                      
                       setMarginInput(value);
                       
-                      // Update margin state only if it's a valid number
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue)) {
-                        setMargin(numValue);
+                      // Update margin state only if it's a valid number or empty
+                      if (value === '') {
+                        setMargin(0);
+                      } else {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                          setMargin(numValue);
+                        }
                       }
                     }}
                     onBlur={(e) => {
