@@ -395,7 +395,13 @@ export function CurrencySimulator({
                   min="0"
                   value={margin ?? simulation.costDetails.hedgeCost * 2}
                   onChange={e => {
-                    const inputValue = parseFloat(e.target.value);
+                    const value = e.target.value;
+                    // Allow empty string for deletion
+                    if (value === '') {
+                      setMargin(0);
+                      return;
+                    }
+                    const inputValue = parseFloat(value);
                     // Allow intermediate values during typing, only set if valid number
                     if (!isNaN(inputValue)) {
                       setMargin(inputValue);

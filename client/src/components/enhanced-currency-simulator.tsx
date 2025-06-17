@@ -449,7 +449,13 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     min="0"
                     value={margin ?? (amount * 0.05)}
                     onChange={(e) => {
-                      const inputValue = parseFloat(e.target.value);
+                      const value = e.target.value;
+                      // Allow empty string for deletion
+                      if (value === '') {
+                        setMargin(0);
+                        return;
+                      }
+                      const inputValue = parseFloat(value);
                       // Allow intermediate values during typing, only set if valid number
                       if (!isNaN(inputValue)) {
                         setMargin(inputValue);
