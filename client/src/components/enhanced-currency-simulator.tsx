@@ -135,9 +135,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       breakEvenRate
     };
 
-    // Set default margin as 2x the hedge cost
-    const defaultMargin = Math.round(hedgeCost * 2);
+    // Reset margin to default 2x hedgeCost and clear input field
+    const defaultMargin = Math.round(hedgeCost * 2 * 100) / 100; // Round to nearest cent
     setMargin(defaultMargin);
+    setMarginInput(''); // Clear input to show calculated default
 
     setSimulation(simulationResult);
   };

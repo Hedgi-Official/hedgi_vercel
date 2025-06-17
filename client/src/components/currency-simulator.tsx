@@ -114,8 +114,10 @@ export function CurrencySimulator({
         ? (currentRate ? currentRate.ask : result.rate) * (1 + costPct / 100)
         : (currentRate ? currentRate.bid : result.rate) * (1 - costPct / 100);
 
-    // default margin 2x hedgeCost
-    setMargin(Math.round(hedgeCost * 2));
+    // Reset margin to default 2x hedgeCost and clear input field
+    const defaultMargin = Math.round(hedgeCost * 2 * 100) / 100; // Round to nearest cent
+    setMargin(defaultMargin);
+    setMarginInput(''); // Clear input to show calculated default
 
     setSimulation({
       ...result,
