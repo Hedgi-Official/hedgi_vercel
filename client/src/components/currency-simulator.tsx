@@ -67,6 +67,7 @@ export function CurrencySimulator({
   // const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [margin, setMargin] = useState<number | null>(null);
+  const [marginInput, setMarginInput] = useState<string>('');
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
@@ -390,29 +391,24 @@ export function CurrencySimulator({
                   {t('simulator.marginRecommendation')}
                 </div>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={margin ?? simulation.costDetails.hedgeCost * 2}
+                  type="text"
+                  value={marginInput || (margin ?? simulation.costDetails.hedgeCost * 2).toString()}
                   onChange={e => {
                     const value = e.target.value;
-                    // Allow empty string for deletion
-                    if (value === '') {
-                      setMargin(0);
-                      return;
-                    }
-                    const inputValue = parseFloat(value);
-                    // Allow intermediate values during typing, only set if valid number
-                    if (!isNaN(inputValue)) {
-                      setMargin(inputValue);
+                    setMarginInput(value);
+                    
+                    // Update margin state only if it's a valid number
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                      setMargin(numValue);
                     }
                   }}
                   onBlur={e => {
-                    // Apply minimum margin validation when user finishes editing
                     const inputValue = parseFloat(e.target.value) || 0;
                     const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
                     const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
                     setMargin(finalValue);
+                    setMarginInput(finalValue.toFixed(2));
                   }}
                 />
               </div>
