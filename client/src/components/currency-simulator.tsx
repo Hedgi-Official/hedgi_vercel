@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
-import { calculateBusinessDays } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
+
 
 export interface TradeResponse {
   ask: number;
@@ -101,7 +102,7 @@ export function CurrencySimulator({
         Math.abs(
           volumeInLots *
             (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
-            businessDays * (7/5)
+            (businessDays + wednesdays*2) * 1.1
         ) + spreadCost;
     }
 
