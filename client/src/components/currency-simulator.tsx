@@ -390,9 +390,19 @@ export function CurrencySimulator({
                   {t('simulator.marginRecommendation')}
                 </div>
                 <Input
-                  type="text"
-                  value={(margin ?? simulation.costDetails.hedgeCost * 2).toFixed(2)}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={margin ?? simulation.costDetails.hedgeCost * 2}
                   onChange={e => {
+                    const inputValue = parseFloat(e.target.value);
+                    // Allow intermediate values during typing, only set if valid number
+                    if (!isNaN(inputValue)) {
+                      setMargin(inputValue);
+                    }
+                  }}
+                  onBlur={e => {
+                    // Apply minimum margin validation when user finishes editing
                     const inputValue = parseFloat(e.target.value) || 0;
                     const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
                     const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;

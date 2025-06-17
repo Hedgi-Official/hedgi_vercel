@@ -444,13 +444,20 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     {t('simulator.marginRecommendation')}
                   </div>
                   <Input
-                    type="text"
-                    value={margin ? margin.toFixed(2) : (amount * 0.05).toFixed(2)}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={margin ?? (amount * 0.05)}
                     onChange={(e) => {
-                      // Remove all non-numeric characters except decimal point
-                      const cleanedValue = e.target.value.replace(/[^0-9.]/g, '');
-                      // Parse the value
-                      const inputValue = cleanedValue === '' ? 0 : parseFloat(cleanedValue);
+                      const inputValue = parseFloat(e.target.value);
+                      // Allow intermediate values during typing, only set if valid number
+                      if (!isNaN(inputValue)) {
+                        setMargin(inputValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Apply minimum margin validation when user finishes editing
+                      const inputValue = parseFloat(e.target.value) || 0;
                       
                       // Calculate minimum margin (20% of hedge cost) if simulation exists
                       if (simulation) {
@@ -464,7 +471,6 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                         setMargin(finalValue);
                       }
                     }}
-                    min={0}
                     placeholder="Enter margin amount"
                   />
                 </div>
