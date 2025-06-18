@@ -476,6 +476,8 @@ export function registerRoutes(app: Express): Server {
         }
       });
 
+      console.log('[Express Proxy] User data fetched:', user);
+
       // Prepare the payload with PIX key in metadata
       const payload = {
         ...req.body,
