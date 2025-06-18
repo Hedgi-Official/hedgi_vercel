@@ -1,7 +1,7 @@
 // server/routes.ts
 import fetch from 'node-fetch';
 import { db } from '@db';
-import { trades } from '@db/schema';        // ← import the real trades table
+import { trades, users } from '@db/schema';        // ← import the real trades table and users
 import { eq, desc, inArray, and} from 'drizzle-orm';
 import type { Express, Request, Response } from 'express';
 import { createServer, Server } from 'http';
@@ -345,15 +345,44 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  // 1) Create a new trade (Simple proxy to Flask)
+  // 1) Create a new trade (Enhanced proxy to Flask with PIX key in metadata)
   app.post('/api/trades', async (req: Request, res: Response) => {
+    // Check authentication
+    if (!req.isAuthenticated() || !req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     try {
-      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
+      const userId = req.user.id;
+      console.log('[Express Proxy] Creating trade for user:', userId);
+
+      // Fetch user's PIX key from database
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: {
+          paymentIdentifier: true
+        }
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Prepare the payload with PIX key in metadata
+      const payload = {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          pixKey: user.paymentIdentifier || null
+        }
+      };
+
+      console.log('[Express Proxy] Forwarding trade request to Flask with metadata:', payload);
 
       const flaskRes = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(payload)
       });
 
       console.log('[Express Proxy] Flask response status:', flaskRes.status);
