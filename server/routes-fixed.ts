@@ -462,15 +462,35 @@ export function registerRoutes(app: Express): Server {
 
   // **SIMPLE FLASK PROXY ENDPOINTS**
 
-  // 1. Create a new trade → POST /api/trades (proxy to Flask)
+  // 1. Create a new trade → POST /api/trades (proxy to Flask with PIX key)
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
-      console.log('[Express Proxy] Forwarding trade request to Flask:', req.body);
+      // Get user ID from session or default (for authenticated requests)
+      const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default user for testing
+      
+      // Fetch user's PIX key from database
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: {
+          paymentIdentifier: true
+        }
+      });
+
+      // Prepare the payload with PIX key in metadata
+      const payload = {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          pixKey: user?.paymentIdentifier || null
+        }
+      };
+
+      console.log('[Express Proxy] Forwarding trade request to Flask with PIX key:', payload);
 
       const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(payload)
       });
 
       console.log('[Express Proxy] Flask response status:', response.status);
