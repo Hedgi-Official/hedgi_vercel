@@ -20,8 +20,16 @@ router.get('/api/fbs-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?broker=fbs&symbol=${symbol}`, {
-        signal: controller.signal
+      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=fbs`;
+      console.log(`[FBS] Fetching from: ${flaskUrl}`);
+      
+      const response = await fetch(flaskUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Replit/1.0'
+        }
       });
       
       clearTimeout(timeoutId);

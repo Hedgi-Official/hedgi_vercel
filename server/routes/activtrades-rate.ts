@@ -18,13 +18,17 @@ router.get('/api/activtrades-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout
       
-      const response = await fetch(`https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?broker=activetrades&symbol=${symbol}`, {
+      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=activetrades`;
+      console.log(`[ActivTrades] Fetching from: ${flaskUrl}`);
+      
+      const response = await fetch(flaskUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Replit/1.0'
         }
       });
       
