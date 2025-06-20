@@ -77,7 +77,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
           'User-Agent': 'curl/8.11.1',
           'X-Request-ID': requestId
         },
-        timeout: 10000
+        // timeout: 10000 // Remove timeout as it's not supported by node-fetch
       });
       
       console.log(`[Tickmill] Success for ${symbol}: bid=${data.bid}, ask=${data.ask}`);
