@@ -17,10 +17,10 @@ router.get('/api/activtrades-rate', async (req, res) => {
     console.log(`[ActivTrades] Fetching rate for ${symbol}...`);
     
     try {
-      // Use exact same format as your working curl command
       const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=activetrades`;
-      console.log(`[ActivTrades] Fetching from: ${flaskUrl}`);
+      console.log(`[ActivTrades] Making request to: ${flaskUrl}`);
       
+      const startTime = Date.now();
       const response = await fetch(flaskUrl, {
         method: 'GET',
         headers: {
@@ -28,17 +28,28 @@ router.get('/api/activtrades-rate', async (req, res) => {
           'User-Agent': 'curl/8.11.1'
         }
       });
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`[ActivTrades] Response received in ${elapsed}ms, status: ${response.status}`);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`[ActivTrades] HTTP error ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('[ActivTrades] Rate data:', data);
+      console.log('[ActivTrades] Response data:', JSON.stringify(data, null, 2));
+      
       res.json(data);
       
     } catch (fetchError) {
-      console.error('[ActivTrades] Fetch error:', fetchError);
+      console.error('[ActivTrades] Error details:', {
+        message: fetchError.message,
+        stack: fetchError.stack,
+        name: fetchError.name
+      });
+      
       res.json({
         bid: 0,
         ask: 0,
@@ -46,7 +57,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
         swap_short: 0,
         broker: "activtrades",
         symbol: symbol,
-        error: "Failed to fetch rate from ActivTrades API"
+        error: `Connection failed: ${fetchError.message}`
       });
     }
   } catch (error) {
