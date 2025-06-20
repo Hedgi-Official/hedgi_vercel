@@ -763,6 +763,7 @@ export function registerRoutes(app: Express): Server {
   // Register routes
   app.use(secondaryRateRouter);
   app.use(chatRouter);
+  app.use(unifiedRatesRouter);
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);

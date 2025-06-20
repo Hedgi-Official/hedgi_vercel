@@ -14,11 +14,11 @@ router.get('/api/fbs-rate', async (req, res) => {
       return;
     }
 
-    console.log(`[FBS] Fetching rate for ${symbol}...`);
+    console.log(`[FBS] Called at ${Date.now()} for ${symbol}`);
     
     try {
       const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=fbs`;
-      console.log(`[FBS] Making request to: ${flaskUrl}`);
+      console.log(`[FBS] Full URL: ${flaskUrl}`);
       
       const startTime = Date.now();
       const response = await fetch(flaskUrl, {
@@ -30,25 +30,27 @@ router.get('/api/fbs-rate', async (req, res) => {
       });
       
       const elapsed = Date.now() - startTime;
-      console.log(`[FBS] Response received in ${elapsed}ms, status: ${response.status}`);
+      console.log(`[FBS] Response: ${response.status} in ${elapsed}ms`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[FBS] HTTP error ${response.status}:`, errorText);
+        console.error(`[FBS] HTTP error:`, errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('[FBS] Response data:', JSON.stringify(data, null, 2));
+      console.log('[FBS] Data received:', data);
       
-      res.json(data);
+      // Validate data structure before sending
+      if (data && typeof data === 'object' && 'bid' in data && 'ask' in data) {
+        res.json(data);
+      } else {
+        console.error('[FBS] Invalid data structure:', data);
+        throw new Error('Invalid response format from Flask');
+      }
       
     } catch (fetchError) {
-      console.error('[FBS] Error details:', {
-        message: fetchError.message,
-        stack: fetchError.stack,
-        name: fetchError.name
-      });
+      console.error('[FBS] Fetch failed:', fetchError.message);
       
       res.json({
         bid: 0,
@@ -57,7 +59,7 @@ router.get('/api/fbs-rate', async (req, res) => {
         swap_short: 0,
         broker: "fbs",
         symbol: symbol,
-        error: `Connection failed: ${fetchError.message}`
+        error: `Failed to fetch rate from FBS API`
       });
     }
   } catch (error) {
