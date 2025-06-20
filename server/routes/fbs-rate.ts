@@ -20,7 +20,7 @@ router.get('/api/fbs-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?broker=fbs&symbol=${symbol}`, {
+      const response = await fetch(`http://3.145.164.47/symbol_info?broker=fbs&symbol=${symbol}`, {
         signal: controller.signal
       });
       
