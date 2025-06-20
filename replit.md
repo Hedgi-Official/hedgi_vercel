@@ -2,7 +2,7 @@
 
 ## Overview
 
-Hedgi is a comprehensive currency hedging platform that allows users to protect their currency positions against exchange rate fluctuations. The application provides real-time exchange rates, hedge management, and professional trading capabilities through integration with multiple forex brokers.
+Hedgi is a comprehensive currency hedging platform that allows users to protect their currency positions against exchange rate fluctuations. The application provides real-time exchange rates, hedge management, and professional trading capabilities through integration with multiple forex brokers via HTTPS Flask API.
 
 ## System Architecture
 
@@ -30,7 +30,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 ## Key Components
 
 ### Trading Integration
-- **Broker API**: Direct integration with external broker API at `http://3.145.164.47`
+- **Broker API**: Direct integration with external broker API at `https://digit-tricks-dense-fundamental.trycloudflare.com`
 - **Supported Brokers**: Tickmill, ActivTrades, FBS
 - **Trade Management**: Real-time trade execution, monitoring, and closure
 - **Currency Pairs**: USDBRL, EURUSD, USDMXN support
@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- June 20, 2025. Updated all Flask API calls to use new HTTPS URL: https://digit-tricks-dense-fundamental.trycloudflare.com
 - June 18, 2025. Enhanced /api/trades endpoint to include user's PIX key in metadata
 - June 16, 2025. Enhanced trade close confirmation dialog with detailed spread information
 - June 15, 2025. Initial setup
