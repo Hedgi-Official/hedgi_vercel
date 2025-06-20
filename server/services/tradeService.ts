@@ -42,7 +42,7 @@ export interface ClosedTradeResponse extends OpenTradeResponse {
 }
 
 export class TradeService {
-  private readonly TRADE_API_URL = 'https://digit-tricks-dense-fundamental.trycloudflare.com';
+  private readonly TRADE_API_URL = 'http://3.145.164.47';
   
   /**
    * Creates a trade record from the MT5 response

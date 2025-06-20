@@ -561,7 +561,11 @@ export default function Dashboard() {
     if (flaskTradeId) {
       try {
         // Call the Express proxy endpoint which forwards to Flask
-        const response = await fetch(`/api/trades/${flaskTradeId}/spread`, {
+        const serverUrl = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000'
+          : '';
+        
+        const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/spread`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -753,7 +757,11 @@ export default function Dashboard() {
     try {
       console.log('[Dashboard] Closing Flask trade ID:', flaskTradeId);
 
-      const response = await fetch(`/api/trades/${flaskTradeId}/close`, {
+      const serverUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000'
+        : '';
+
+      const response = await fetch(`${serverUrl}/api/trades/${flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'

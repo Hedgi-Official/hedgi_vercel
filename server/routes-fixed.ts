@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || 'https://digit-tricks-dense-fundamental.trycloudflare.com';
+const FLASK = process.env.FLASK_URL || '  https://digit-tricks-dense-fundamental.trycloudflare.com';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);

@@ -9,7 +9,6 @@ import { setupAuth } from './auth';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
-
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';
@@ -20,7 +19,7 @@ import { paymentService } from "./services/paymentService";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const FLASK = process.env.FLASK_URL || 'https://digit-tricks-dense-fundamental.trycloudflare.com';
+const FLASK = process.env.FLASK_URL;
 interface BrokerRate {
   bid:      number;
   ask:      number;
@@ -760,129 +759,14 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add a simple test route to verify our router is working
-  app.get('/api/test-route', (req, res) => {
-    console.log('[TEST] Test route hit!');
-    res.json({ message: 'Routes are working', timestamp: Date.now() });
-  });
-
-  // Debug middleware to log all requests
-  app.use((req, res, next) => {
-    console.log(`[DEBUG] ${req.method} ${req.path} - Query:`, req.query);
-    next();
-  });
-
-  // Register routes - put broker rate routes first for priority  
+  // Register routes
+  app.use(secondaryRateRouter);
+  app.use(chatRouter);
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
-  app.use(secondaryRateRouter);
-  app.use(chatRouter);
   app.use(paymentRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
-
-  // Add direct working routes using the exact same approach as our successful test
-  app.get('/api/activtrades-rate', async (req, res) => {
-    const symbol = req.query.symbol as string;
-    console.log(`[DIRECT-ActivTrades] Processing ${symbol}`);
-    
-    if (!symbol || !['USDBRL', 'EURUSD', 'USDMXN'].includes(symbol)) {
-      return res.status(400).json({ error: 'Invalid symbol' });
-    }
-    
-    try {
-      const url = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=activetrades`;
-      console.log(`[DIRECT-ActivTrades] Fetching: ${url}`);
-      
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'curl/8.11.1' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`[DIRECT-ActivTrades] Success:`, data);
-      res.json(data);
-      
-    } catch (error) {
-      console.error(`[DIRECT-ActivTrades] Error:`, error.message);
-      res.json({
-        bid: 0, ask: 0, swap_long: 0, swap_short: 0,
-        broker: "activtrades", symbol: symbol,
-        error: "Failed to fetch rate from ActivTrades API"
-      });
-    }
-  });
-
-  app.get('/api/tickmill-rate', async (req, res) => {
-    const symbol = req.query.symbol as string;
-    console.log(`[DIRECT-Tickmill] Processing ${symbol}`);
-    
-    if (!symbol || !['USDBRL', 'EURUSD', 'USDMXN'].includes(symbol)) {
-      return res.status(400).json({ error: 'Invalid symbol' });
-    }
-    
-    try {
-      const url = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=tickmill`;
-      console.log(`[DIRECT-Tickmill] Fetching: ${url}`);
-      
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'curl/8.11.1' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`[DIRECT-Tickmill] Success:`, data);
-      res.json(data);
-      
-    } catch (error) {
-      console.error(`[DIRECT-Tickmill] Error:`, error.message);
-      res.json({
-        bid: 0, ask: 0, swap_long: 0, swap_short: 0,
-        broker: "tickmill", symbol: symbol,
-        error: "Failed to fetch rate from Tickmill API"
-      });
-    }
-  });
-
-  app.get('/api/fbs-rate', async (req, res) => {
-    const symbol = req.query.symbol as string;
-    console.log(`[DIRECT-FBS] Processing ${symbol}`);
-    
-    if (!symbol || !['USDBRL', 'EURUSD', 'USDMXN'].includes(symbol)) {
-      return res.status(400).json({ error: 'Invalid symbol' });
-    }
-    
-    try {
-      const url = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=fbs`;
-      console.log(`[DIRECT-FBS] Fetching: ${url}`);
-      
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'curl/8.11.1' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`[DIRECT-FBS] Success:`, data);
-      res.json(data);
-      
-    } catch (error) {
-      console.error(`[DIRECT-FBS] Error:`, error.message);
-      res.json({
-        bid: 0, ask: 0, swap_long: 0, swap_short: 0,
-        broker: "fbs", symbol: symbol,
-        error: "Failed to fetch rate from FBS API"
-      });
-    }
-  });
 
   // List of supported symbols for exchange rates
   const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];

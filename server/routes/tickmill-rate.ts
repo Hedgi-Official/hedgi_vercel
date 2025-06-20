@@ -1,49 +1,71 @@
 import { Router } from 'express';
+import fetch from 'node-fetch';
 
 const router = Router();
 
 const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
 
 router.get('/api/tickmill-rate', async (req, res) => {
-  const symbol = req.query.symbol as string;
-
-  if (!symbol || !SUPPORTED_PAIRS.includes(symbol)) {
-    return res.status(400).json({ error: 'Invalid or missing symbol parameter' });
-  }
-
-  console.log(`[Tickmill] Processing request for ${symbol}`);
-
   try {
-    const url = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=tickmill`;
-    console.log(`[Tickmill] Fetching: ${url}`);
-    
-    // Use the exact same approach as our working test
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'curl/8.11.1' }
-    });
-    
-    console.log(`[Tickmill] Response status: ${response.status}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const symbol = req.query.symbol as string;
+
+    if (!symbol || !SUPPORTED_PAIRS.includes(symbol)) {
+      res.status(400).json({ error: 'Invalid or missing symbol parameter' });
+      return;
     }
+
+    console.log(`[Tickmill] Fetching rate for ${symbol}...`);
     
-    const data = await response.json();
-    console.log(`[Tickmill] Success! Data:`, data);
-    
-    res.json(data);
-    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
+      
+      const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        console.log('[Tickmill] Rate data:', data);
+        res.json(data);
+      } else {
+        console.log("[Tickmill] Received non-JSON response. Returning fallback response.");
+        res.json({
+          bid: 0,
+          ask: 0,
+          swap_long: 0,
+          swap_short: 0,
+          broker: "tickmill",
+          symbol: symbol,
+          error: "Tickmill rate API unavailable due to service issue"
+        });
+      }
+    } catch (fetchError) {
+      console.error('[Tickmill] Fetch error:', fetchError);
+      res.json({
+        bid: 0,
+        ask: 0,
+        swap_long: 0,
+        swap_short: 0,
+        broker: "tickmill",
+        symbol: symbol,
+        error: "Failed to fetch rate from Tickmill API"
+      });
+    }
   } catch (error) {
-    console.error(`[Tickmill] Error:`, error.message);
-    res.json({
-      bid: 0,
-      ask: 0,
-      swap_long: 0,
-      swap_short: 0,
-      broker: "tickmill",
-      symbol: symbol,
-      error: "Failed to fetch rate from Tickmill API"
-    });
+    console.error('[Tickmill] Error processing request:', error);
+    res.status(500).json({ error: 'Failed to process request' });
   }
 });
 
