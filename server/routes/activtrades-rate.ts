@@ -25,9 +25,8 @@ router.get('/api/activtrades-rate', async (req, res) => {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'curl/8.11.1'  // Match your working curl user agent
-        },
-        timeout: 10000
+          'User-Agent': 'curl/8.11.1'
+        }
       });
 
       if (!response.ok) {
