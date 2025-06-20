@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
+import { httpAgent } from '../tunnelAgent.js';
 
 const router = Router();
 

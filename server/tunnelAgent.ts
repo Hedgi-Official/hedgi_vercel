@@ -1,4 +1,5 @@
 import { Agent as HttpsAgent } from 'node:https';
+import { Agent as HttpAgent } from 'node:http';
 
 /** Cloudflare tunnel: one agent per host, keep sockets open ≥ 30 s */
 export const cfAgent = new HttpsAgent({
@@ -9,8 +10,8 @@ export const cfAgent = new HttpsAgent({
   timeout: 60_000     // hard kill if CF really hangs
 });
 
-/** Regular HTTP agent for non-tunnel endpoints */
-export const httpAgent = new HttpsAgent({
+/** Regular HTTP agent for non-tunnel endpoints (EC2 broker APIs) */
+export const httpAgent = new HttpAgent({
   keepAlive: true,
   keepAliveMsecs: 15_000,
   maxSockets: 5,

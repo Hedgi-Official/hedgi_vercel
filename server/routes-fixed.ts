@@ -5,6 +5,7 @@ import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
+import { cfAgent } from './tunnelAgent.js';
 import secondaryRateRouter from "./routes/secondary-rate";
 import chatRouter from "./routes/chat";
 import activtradesRouter from "./routes/activtrades-rate";
@@ -498,8 +499,7 @@ export function registerRoutes(app: Express): Server {
         },
         body: JSON.stringify(payload),
         // Use reusable HTTPS agent for Cloudflare tunnel
-        agent: cfAgent,
-        timeout: 5000
+        agent: cfAgent
       });
 
       console.log('[Express Proxy] Flask response status:', response.status);
