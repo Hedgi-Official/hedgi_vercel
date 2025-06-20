@@ -18,7 +18,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout for slow TLS
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=activetrades&symbol=${symbol}`, {
         signal: controller.signal,

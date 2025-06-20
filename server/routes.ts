@@ -788,7 +788,7 @@ export function registerRoutes(app: Express): Server {
           console.log(`[Exchange Rates] Fetching rate for ${symbol}`);
           // Use fetch with a timeout for safety
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
 
           // Fetch from the activtrades endpoint which returns real data
           const response = await fetch(`http://localhost:${req.socket.localPort}/api/activtrades-rate?symbol=${symbol}`, {
