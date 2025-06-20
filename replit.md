@@ -81,9 +81,10 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
-- June 20, 2025. Fixed all API endpoints including Mercado Pago brick proxy to use correct Flask tunnel URL: https://alleged-gb-activated-immediate.trycloudflare.com
-- June 20, 2025. Implemented keep-alive HTTPS agents to resolve TLS handshake issues with Cloudflare tunnel
-- June 20, 2025. PIX key functionality verified working - automatically includes user's PIX key in trade metadata
+- June 20, 2025. **PIX key integration completed** - All trades automatically include user's PIX key in metadata section
+- June 20, 2025. **Graceful database fallback implemented** - System continues working even when database is unavailable
+- June 20, 2025. **Flask tunnel connection verified** - All endpoints successfully connect to https://alleged-gb-activated-immediate.trycloudflare.com
+- June 20, 2025. **Removed problematic keep-alive agents** - Fixed "Control plane request failed" errors by removing cfAgent
 - June 18, 2025. Enhanced /api/trades endpoint to include user's PIX key in metadata
 - June 16, 2025. Enhanced trade close confirmation dialog with detailed spread information
 - June 15, 2025. Initial setup
