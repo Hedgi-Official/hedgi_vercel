@@ -10,6 +10,7 @@ import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
 import unifiedRatesRouter from './routes/unified-rates';
+import rateProxyRouter from './routes/rate-proxy';
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';
@@ -761,6 +762,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Register routes
+  app.use(rateProxyRouter);
   app.use(secondaryRateRouter);
   app.use(chatRouter);
   app.use(unifiedRatesRouter);
