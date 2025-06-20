@@ -19,7 +19,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for EC2 connectivity
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Normal timeout with keep-alive
       
       const response = await fetch(`https://alleged-gb-activated-immediate.trycloudflare.com/symbol_info?broker=activetrades&symbol=${symbol}`, {
         signal: controller.signal,
@@ -29,8 +29,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
         // Use reusable HTTPS agent with keep-alive for Cloudflare tunnel
-        agent: cfAgent,
-        timeout: 5000
+        agent: cfAgent
       });
       
       clearTimeout(timeoutId);

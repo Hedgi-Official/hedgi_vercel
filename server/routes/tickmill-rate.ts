@@ -19,7 +19,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for EC2 connectivity
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Normal timeout with keep-alive
       
       const response = await fetch(`https://alleged-gb-activated-immediate.trycloudflare.com/symbol_info?broker=tickmill&symbol=${symbol}`, {
         signal: controller.signal,
