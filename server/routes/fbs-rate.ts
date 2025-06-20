@@ -28,8 +28,7 @@ router.get('/api/fbs-rate', async (req, res) => {
           'Content-Type': 'application/json',
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
-        // Use reusable HTTPS agent with keep-alive for Cloudflare tunnel
-        agent: cfAgent
+
       });
       
       clearTimeout(timeoutId);

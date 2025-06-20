@@ -82,7 +82,7 @@ export function registerRoutes(app: Express): Server {
             "Pragma": "no-cache",
             "Expires": "0"
           },
-          agent: cfAgent
+
         }),
         new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Flask request timeout after 15 seconds')), 15000)
@@ -498,9 +498,7 @@ export function registerRoutes(app: Express): Server {
           'Content-Type': 'application/json',
           'User-Agent': 'Hedgi-Trade-Proxy/1.0'
         },
-        body: JSON.stringify(payload),
-        // Use reusable HTTPS agent for Cloudflare tunnel
-        agent: cfAgent
+        body: JSON.stringify(payload)
       });
 
       console.log('[Express Proxy] Flask response status:', response.status);
@@ -580,9 +578,7 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: 'Trade not found' });
       }
 
-      const response = await fetch(`${FLASK}/trades/${tradeId}/status`, {
-        agent: cfAgent
-      });
+      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -635,8 +631,7 @@ export function registerRoutes(app: Express): Server {
       // Direct call to Flask close endpoint using Flask trade ID
       const response = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        agent: cfAgent
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
@@ -676,8 +671,7 @@ export function registerRoutes(app: Express): Server {
         headers: { 
           'Accept': 'application/json',
           'Content-Type': 'application/json' 
-        },
-        agent: cfAgent
+        }
       });
 
       console.log(`[SPREAD] Flask response status: ${flaskRes.status}`);
