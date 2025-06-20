@@ -24,8 +24,12 @@ router.get('/api/tickmill-rate', async (req, res) => {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
+        },
+        // Add TLS/connection options for better reliability
+        agent: false,
+        timeout: 15000
       });
       
       clearTimeout(timeoutId);

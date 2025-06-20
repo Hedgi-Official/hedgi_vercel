@@ -21,7 +21,15 @@ router.get('/api/fbs-rate', async (req, res) => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=fbs&symbol=${symbol}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
+        },
+        // Add TLS/connection options for better reliability
+        agent: false,
+        timeout: 15000
       });
       
       clearTimeout(timeoutId);

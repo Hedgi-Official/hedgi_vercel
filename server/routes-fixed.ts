@@ -492,8 +492,14 @@ export function registerRoutes(app: Express): Server {
 
       const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Trade-Proxy/1.0'
+        },
+        body: JSON.stringify(payload),
+        // Add options to handle Cloudflare tunnel TLS issues
+        agent: false,
+        timeout: 10000
       });
 
       console.log('[Express Proxy] Flask response status:', response.status);
