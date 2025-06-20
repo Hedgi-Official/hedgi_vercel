@@ -19,7 +19,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Back to normal timeout with keep-alive
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for EC2 connectivity
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
         signal: controller.signal,
@@ -29,8 +29,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
         // Use reusable HTTP agent with keep-alive
-        agent: httpAgent,
-        timeout: 5000
+        agent: httpAgent
       });
       
       clearTimeout(timeoutId);

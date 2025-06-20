@@ -29,8 +29,7 @@ router.get('/api/fbs-rate', async (req, res) => {
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
         // Use reusable HTTP agent with keep-alive
-        agent: httpAgent,
-        timeout: 5000
+        agent: httpAgent
       });
       
       clearTimeout(timeoutId);
