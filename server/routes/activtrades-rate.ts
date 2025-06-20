@@ -1,9 +1,46 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
 const SUPPORTED_PAIRS = ['USDBRL', 'EURUSD', 'USDMXN'];
+const activeRequests = new Map();
+
+// Retry with exponential backoff for Flask startup timing
+async function fetchWithRetry(url: string, options: any, maxRetries = 3): Promise<any> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check for valid data (not 0/0 fake quotes)
+      if (data && data.bid > 0 && data.ask > 0) {
+        return data;
+      }
+      
+      if (attempt === maxRetries) {
+        throw new Error('Flask returned invalid rates (0/0) - may need warm-up time');
+      }
+      
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      console.log(`[ActivTrades] Attempt ${attempt} failed, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+    }
+  }
+}
 
 router.get('/api/activtrades-rate', async (req, res) => {
   try {
@@ -14,31 +51,40 @@ router.get('/api/activtrades-rate', async (req, res) => {
       return;
     }
 
-    console.log(`[ActivTrades] Fetching rate for ${symbol}...`);
+    // Prevent duplicate requests with UUID
+    const requestId = randomUUID();
+    const requestKey = `activtrades-${symbol}`;
+    
+    if (activeRequests.has(requestKey)) {
+      console.log(`[ActivTrades] Duplicate request blocked for ${symbol}`);
+      res.status(429).json({ error: 'Request in progress, please wait' });
+      return;
+    }
+    
+    activeRequests.set(requestKey, requestId);
     
     try {
-      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=activetrades`;
-      console.log(`[ActivTrades] Requesting: ${flaskUrl}`);
+      console.log(`[ActivTrades] Fetching rate for ${symbol} (ID: ${requestId})`);
       
-      const response = await fetch(flaskUrl, {
+      // Ensure query parameters are properly encoded
+      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${encodeURIComponent(symbol)}&broker=activetrades`;
+      console.log(`[ActivTrades] URL: ${flaskUrl}`);
+      
+      const data = await fetchWithRetry(flaskUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'curl/8.11.1'
-        }
+          'User-Agent': 'curl/8.11.1',
+          'X-Request-ID': requestId
+        },
+        timeout: 10000
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('[ActivTrades] Rate data:', data);
+      
+      console.log(`[ActivTrades] Success for ${symbol}: bid=${data.bid}, ask=${data.ask}`);
       res.json(data);
       
     } catch (fetchError) {
-      console.error('[ActivTrades] Fetch error:', fetchError);
-      // Return a structured fallback response
+      console.error(`[ActivTrades] Failed for ${symbol}:`, fetchError.message);
       res.json({
         bid: 0,
         ask: 0,
@@ -46,12 +92,15 @@ router.get('/api/activtrades-rate', async (req, res) => {
         swap_short: 0,
         broker: "activtrades",
         symbol: symbol,
-        error: "Failed to fetch rate from ActivTrades API"
+        error: `Flask connection failed: ${fetchError.message}`
       });
+    } finally {
+      activeRequests.delete(requestKey);
     }
+    
   } catch (error) {
-    console.error('[ActivTrades] Error processing request:', error);
-    res.status(500).json({ error: 'Failed to process request' });
+    console.error('[ActivTrades] Route error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
