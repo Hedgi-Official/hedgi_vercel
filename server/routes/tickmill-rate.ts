@@ -18,7 +18,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout for slow TLS
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // Further increased timeout for slow TLS
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
         signal: controller.signal,

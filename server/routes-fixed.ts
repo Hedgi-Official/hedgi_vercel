@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || 'https://alleged-gb-activated-immediate.trycloudflare.com';
+const FLASK = process.env.FLASK_URL || 'https://digit-tricks-dense-fundamental.trycloudflare.com';
 
 console.log("[BOOT] Using FLASK_URL =", FLASK);
 export function registerRoutes(app: Express): Server {
