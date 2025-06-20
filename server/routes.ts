@@ -9,6 +9,7 @@ import { setupAuth } from './auth';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
+import unifiedRatesRouter from './routes/unified-rates';
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';

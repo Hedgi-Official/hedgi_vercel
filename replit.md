@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- June 20, 2025. Fixed Flask API integration with queue-based system, updated all URLs to HTTPS
 - June 20, 2025. Updated all Flask API calls to use new HTTPS URL: https://digit-tricks-dense-fundamental.trycloudflare.com
 - June 18, 2025. Enhanced /api/trades endpoint to include user's PIX key in metadata
 - June 16, 2025. Enhanced trade close confirmation dialog with detailed spread information
