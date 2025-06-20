@@ -1,0 +1,99 @@
+Let’s step back and confirm the **simple, mechanical things** that must all line-up before we hunt exotic bugs.
+
+---
+
+## 1  Is the front-end really pointing at the tunnel you just created?
+
+```txt
+Newest tunnel  → https://alleged-gb-activated-immediate.trycloudflare.com
+```
+
+* In **server startup logs** you should still see
+  `"[BOOT] Using FLASK_URL = https://alleged-gb-activated-immediate.trycloudflare.com"`.
+* In the browser’s **Network tab** every failing request URL must start with that host.
+  *If you still see the old `boot-wilson-productivity-gsm…` host, rebuild / redeploy the web container or restart `npm run dev` so the new env-var is picked up.*
+
+---
+
+## 2  Does Node itself reach the tunnel *right now*?
+
+From the same directory that runs Express:
+
+```bash
+node - <<'JS'
+  const fetch = (...a) => import('node-fetch').then(m => m.default(...a));
+  (async () => {
+    try {
+      const r = await fetch(
+        'https://alleged-gb-activated-immediate.trycloudflare.com/ping',
+        { timeout: 10_000 }
+      );
+      console.log('status', r.status, 'body', await r.text());
+    } catch (e) {
+      console.error('NODE FETCH ERROR', e);
+    }
+  })();
+JS
+```
+
+* **Works?** Great → problem is in the router code path.
+* **Fails immediately** (ENOTFOUND / certificate / handshake) → DNS or TLS trust issue in Node’s runtime.
+  *Try again with `NODE_TLS_REJECT_UNAUTHORIZED=0 node …` to see if it’s only the cert check.*
+
+---
+
+## 3  Can you reach plain **HTTP** on the EC2 from inside the VM?
+
+Quick sanity check that Waitress is answering:
+
+```bash
+curl -v http://127.0.0.1:80/ping
+```
+
+If that hangs, the Flask process itself (or Windows firewall) is the culprit, not Cloudflare.
+
+---
+
+## 4  Cloudflared metrics page
+
+While a request is spinning in the browser, open
+
+```
+http://127.0.0.1:20241/metrics
+```
+
+Look for lines like:
+
+```
+cloudflared_ingress_request_duration_seconds_sum{ingress_rule="0"}  …
+cloudflared_ingress_response_status{status="200"}  …
+cloudflared_ingress_response_status{status="504"}  …
+```
+
+*If you see 504/timeout increments but no 200s, the tunnel **received** the request but could not open the localhost :80 socket – double-check Waitress/Windows firewall again.*
+
+---
+
+## 5  Attach keep-alive only *after* the tunnel is proven reachable
+
+Adding
+
+```ts
+import https from 'node:https';
+const cfAgent = new https.Agent({ keepAlive: true });
+await fetch(url, { agent: cfAgent, timeout: 15_000 });
+```
+
+won’t fix a fundamental connectivity problem, but it will remove the 300-500 ms handshake once connectivity works.
+
+---
+
+### Typical “can’t connect at all” causes we’ve seen
+
+| Symptom                                                                       | Fix                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflared log shows **“Unable to reach origin … connectex: refused”**       | Waitress not listening on `0.0.0.0:80`, or Windows firewall blocking. Use `serve(app, host="::", port=80)` and allow inbound TCP 80 in the EC2 security group + Windows Defender.                    |
+| Node fetch error **CERT\_HAS\_EXPIRED / UNABLE\_TO\_VERIFY\_LEAF\_SIGNATURE** | Node cannot build the trust chain for Cloudflare’s `trycloudflare.com` cert. Either upgrade Node (ships with newer CA store) or temporarily set `NODE_TLS_REJECT_UNAUTHORIZED=0` while you diagnose. |
+| Node fetch error **ECONNREFUSED 104.16.23x.x:443**                            | Same IPs curl uses → local machine-level firewall or outbound rules blocking Node but not curl (rare on Linux, common on Windows if “curl.exe” is in the allow-list).                                |
+
+Work through ① → ⑤; once the Node test in step 2 succeeds consistently, wire the keep-alive agent into your router and you should be back to sub-100 ms calls.

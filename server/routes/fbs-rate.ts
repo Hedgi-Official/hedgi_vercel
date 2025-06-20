@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
-import { httpAgent } from '../tunnelAgent.js';
+import { cfAgent } from '../tunnelAgent.js';
 
 const router = Router();
 
@@ -21,15 +21,15 @@ router.get('/api/fbs-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`http://3.145.164.47/symbol_info?broker=fbs&symbol=${symbol}`, {
+      const response = await fetch(`https://alleged-gb-activated-immediate.trycloudflare.com/symbol_info?broker=fbs&symbol=${symbol}`, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
-        // Use reusable HTTP agent with keep-alive
-        agent: httpAgent
+        // Use reusable HTTPS agent with keep-alive for Cloudflare tunnel
+        agent: cfAgent
       });
       
       clearTimeout(timeoutId);
