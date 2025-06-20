@@ -760,7 +760,13 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Register routes - put broker rate routes first for priority
+  // Debug middleware to log all requests
+  app.use((req, res, next) => {
+    console.log(`[DEBUG] ${req.method} ${req.path} - Query:`, req.query);
+    next();
+  });
+
+  // Register routes - put broker rate routes first for priority  
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
