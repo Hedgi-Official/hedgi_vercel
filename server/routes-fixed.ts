@@ -33,7 +33,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || 'https://boot-wilson-productivity-gsm.trycloudflare.com';
+const FLASK = process.env.FLASK_URL || 'https://digit-tricks-dense-fundamental.trycloudflare.com';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -290,7 +290,7 @@ export function registerRoutes(app: Express): Server {
       console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
       // 2) Forward it directly to Flask’s /process_payment
-      const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/process_payment`;
+      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/process_payment`;
       console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {

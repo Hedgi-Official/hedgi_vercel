@@ -7,7 +7,7 @@ async function testTradeApi() {
     
     // 1. Open a trade 
     console.log('Attempting to open a trade with tickmill...');
-    const openResponse = await fetch('boot-wilson-productivity-gsm.trycloudflare.com/trade', {
+    const openResponse = await fetch('https://digit-tricks-dense-fundamental.trycloudflare.com/trade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -39,7 +39,7 @@ async function testTradeApi() {
           position: tradeOrderNumber
         }));
         
-        const closeResponse = await fetch('boot-wilson-productivity-gsm.trycloudflare.com/close_trade', {
+        const closeResponse = await fetch('https://digit-tricks-dense-fundamental.trycloudflare.com/close_trade', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
