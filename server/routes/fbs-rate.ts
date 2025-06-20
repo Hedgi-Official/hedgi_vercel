@@ -34,7 +34,17 @@ router.get('/api/fbs-rate', async (req, res) => {
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
         console.log('[FBS] Rate data:', data);
-        res.json(data);
+        
+        // Check if the data contains valid rates (non-zero bid/ask)
+        if (data.bid > 0 && data.ask > 0) {
+          res.json(data);
+        } else {
+          // Flask responded but rates are zero - return structured response
+          res.json({
+            ...data,
+            error: "FBS rates currently unavailable (bid/ask = 0)"
+          });
+        }
       } else {
         console.log("Received HTML instead of JSON. Returning fallback response.");
         // Return a structured error that can be handled by the client

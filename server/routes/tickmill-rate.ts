@@ -38,7 +38,17 @@ router.get('/api/tickmill-rate', async (req, res) => {
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
         console.log('[Tickmill] Rate data:', data);
-        res.json(data);
+        
+        // Check if the data contains valid rates (non-zero bid/ask)
+        if (data.bid > 0 && data.ask > 0) {
+          res.json(data);
+        } else {
+          // Flask responded but rates are zero - return structured response
+          res.json({
+            ...data,
+            error: "Tickmill rates currently unavailable (bid/ask = 0)"
+          });
+        }
       } else {
         console.log("[Tickmill] Received non-JSON response. Returning fallback response.");
         res.json({
