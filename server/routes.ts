@@ -9,8 +9,7 @@ import { setupAuth } from './auth';
 import activtradesRouter from './routes/activtrades-rate';
 import tickmillRouter from './routes/tickmill-rate';
 import fbsRouter from './routes/fbs-rate';
-import unifiedRatesRouter from './routes/unified-rates';
-import rateProxyRouter from './routes/rate-proxy';
+
 import secondaryRateRouter from './routes/secondary-rate';
 import chatRouter from './routes/chat';
 import paymentRouter from './routes/payment';
@@ -761,14 +760,12 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Register routes
-  app.use(rateProxyRouter);
-  app.use(secondaryRateRouter);
-  app.use(chatRouter);
-  app.use(unifiedRatesRouter);
+  // Register routes - put broker rate routes first for priority
   app.use(activtradesRouter);
   app.use(tickmillRouter);
   app.use(fbsRouter);
+  app.use(secondaryRateRouter);
+  app.use(chatRouter);
   app.use(paymentRouter);
   // app.use(xtbRouter); // Removed - we're using direct routes below
 

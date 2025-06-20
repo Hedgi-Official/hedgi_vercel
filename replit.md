@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- June 20, 2025. Resolved Vite routing conflicts and simplified Flask API integration for queue-based system
 - June 20, 2025. Implemented direct rate proxy to resolve Flask connection issues with queue-based system
 - June 20, 2025. Fixed Flask API integration with queue-based system, updated all URLs to HTTPS
 - June 20, 2025. Updated all Flask API calls to use new HTTPS URL: https://digit-tricks-dense-fundamental.trycloudflare.com

@@ -14,13 +14,12 @@ router.get('/api/activtrades-rate', async (req, res) => {
       return;
     }
 
-    console.log(`[ActivTrades] Called at ${Date.now()} for ${symbol}`);
+    console.log(`[ActivTrades] Fetching rate for ${symbol}...`);
     
     try {
       const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=activetrades`;
-      console.log(`[ActivTrades] Full URL: ${flaskUrl}`);
+      console.log(`[ActivTrades] Requesting: ${flaskUrl}`);
       
-      const startTime = Date.now();
       const response = await fetch(flaskUrl, {
         method: 'GET',
         headers: {
@@ -28,30 +27,18 @@ router.get('/api/activtrades-rate', async (req, res) => {
           'User-Agent': 'curl/8.11.1'
         }
       });
-      
-      const elapsed = Date.now() - startTime;
-      console.log(`[ActivTrades] Response: ${response.status} in ${elapsed}ms`);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[ActivTrades] HTTP error:`, errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('[ActivTrades] Data received:', data);
-      
-      // Validate data structure before sending
-      if (data && typeof data === 'object' && 'bid' in data && 'ask' in data) {
-        res.json(data);
-      } else {
-        console.error('[ActivTrades] Invalid data structure:', data);
-        throw new Error('Invalid response format from Flask');
-      }
+      console.log('[ActivTrades] Rate data:', data);
+      res.json(data);
       
     } catch (fetchError) {
-      console.error('[ActivTrades] Fetch failed:', fetchError.message);
-      
+      console.error('[ActivTrades] Fetch error:', fetchError);
+      // Return a structured fallback response
       res.json({
         bid: 0,
         ask: 0,
@@ -59,7 +46,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
         swap_short: 0,
         broker: "activtrades",
         symbol: symbol,
-        error: `Failed to fetch rate from ActivTrades API`
+        error: "Failed to fetch rate from ActivTrades API"
       });
     }
   } catch (error) {
