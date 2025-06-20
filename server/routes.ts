@@ -19,7 +19,7 @@ import { paymentService } from "./services/paymentService";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const FLASK = process.env.FLASK_URL;
+const FLASK = process.env.FLASK_URL || 'https://digit-tricks-dense-fundamental.trycloudflare.com';
 interface BrokerRate {
   bid:      number;
   ask:      number;
