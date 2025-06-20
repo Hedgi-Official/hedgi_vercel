@@ -27,9 +27,9 @@ router.get('/api/fbs-rate', async (req, res) => {
           'Content-Type': 'application/json',
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
-        // Add TLS/connection options for better reliability
-        agent: false,
-        timeout: 15000
+        // Use reusable HTTP agent with keep-alive
+        agent: httpAgent,
+        timeout: 5000
       });
       
       clearTimeout(timeoutId);

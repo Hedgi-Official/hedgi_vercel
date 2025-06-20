@@ -467,7 +467,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/trades', async (req: Request, res: Response) => {
     try {
       // Get user ID from session or default (for authenticated requests)
-      const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default user for testing
+      const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 21; // Default user for testing (has PIX key)
       
       // Fetch user's PIX key from database
       const user = await db.query.users.findFirst({
@@ -497,9 +497,9 @@ export function registerRoutes(app: Express): Server {
           'User-Agent': 'Hedgi-Trade-Proxy/1.0'
         },
         body: JSON.stringify(payload),
-        // Add options to handle Cloudflare tunnel TLS issues
-        agent: false,
-        timeout: 10000
+        // Use reusable HTTPS agent for Cloudflare tunnel
+        agent: cfAgent,
+        timeout: 5000
       });
 
       console.log('[Express Proxy] Flask response status:', response.status);

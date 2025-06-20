@@ -82,6 +82,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 
 ## Changelog
 - June 20, 2025. Updated Flask URL to https://alleged-gb-activated-immediate.trycloudflare.com and increased API timeouts to 15 seconds
+- June 20, 2025. Fixed TLS handshake issues with Cloudflare tunnel by adding proper fetch configuration
 - June 18, 2025. Enhanced /api/trades endpoint to include user's PIX key in metadata
 - June 16, 2025. Enhanced trade close confirmation dialog with detailed spread information
 - June 15, 2025. Initial setup

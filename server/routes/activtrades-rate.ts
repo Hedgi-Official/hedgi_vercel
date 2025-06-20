@@ -18,7 +18,7 @@ router.get('/api/activtrades-rate', async (req, res) => {
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // Further increased timeout for slow TLS
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Back to normal timeout with keep-alive
       
       const response = await fetch(`http://3.145.164.47/symbol_info?broker=activetrades&symbol=${symbol}`, {
         signal: controller.signal,
@@ -27,9 +27,9 @@ router.get('/api/activtrades-rate', async (req, res) => {
           'Content-Type': 'application/json',
           'User-Agent': 'Hedgi-Rate-Fetcher/1.0'
         },
-        // Add TLS/connection options for better reliability
-        agent: false,
-        timeout: 15000
+        // Use reusable HTTP agent with keep-alive
+        agent: httpAgent,
+        timeout: 5000
       });
       
       clearTimeout(timeoutId);
