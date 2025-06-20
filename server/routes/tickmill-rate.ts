@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
+import { rateCache } from '../utils/rateCache';
 
 const router = Router();
 
@@ -17,54 +18,40 @@ router.get('/api/tickmill-rate', async (req, res) => {
     console.log(`[Tickmill] Fetching rate for ${symbol}...`);
     
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout
-      
-      const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=tickmill`;
-      console.log(`[Tickmill] Fetching from: ${flaskUrl}`);
-      
-      const response = await fetch(flaskUrl, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'Hedgi-Replit/1.0'
-        }
-      });
-      
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-        console.log('[Tickmill] Rate data:', data);
+      const result = await rateCache.getRate('tickmill', symbol, async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         
-        // Check if the data contains valid rates (non-zero bid/ask)
-        if (data.bid > 0 && data.ask > 0) {
-          res.json(data);
-        } else {
-          // Flask responded but rates are zero - return structured response
-          res.json({
-            ...data,
-            error: "Tickmill rates currently unavailable (bid/ask = 0)"
-          });
-        }
-      } else {
-        console.log("[Tickmill] Received non-JSON response. Returning fallback response.");
-        res.json({
-          bid: 0,
-          ask: 0,
-          swap_long: 0,
-          swap_short: 0,
-          broker: "tickmill",
-          symbol: symbol,
-          error: "Tickmill rate API unavailable due to service issue"
+        const flaskUrl = `https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?symbol=${symbol}&broker=tickmill`;
+        console.log(`[Tickmill] Making Flask request to: ${flaskUrl}`);
+        
+        const response = await fetch(flaskUrl, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Hedgi-Replit/1.0',
+            'Connection': 'keep-alive'
+          }
         });
-      }
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Non-JSON response received");
+        }
+
+        const data = await response.json();
+        console.log('[Tickmill] Flask response:', data);
+        
+        return data;
+      });
+
+      res.json(result);
     } catch (fetchError) {
       console.error('[Tickmill] Fetch error:', fetchError);
       res.json({
