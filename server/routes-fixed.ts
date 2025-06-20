@@ -65,7 +65,7 @@ export function registerRoutes(app: Express): Server {
       // 2) Forward both to Flask’s /brick endpoint
       //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
       const cacheBuster = Date.now();
-      const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
+      const flaskUrl = `${FLASK}/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
       const fetchStart = Date.now();
@@ -81,7 +81,8 @@ export function registerRoutes(app: Express): Server {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
             "Expires": "0"
-          }
+          },
+          agent: cfAgent
         }),
         new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Flask request timeout after 15 seconds')), 15000)
@@ -292,7 +293,7 @@ export function registerRoutes(app: Express): Server {
       console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
 
       // 2) Forward it directly to Flask’s /process_payment
-      const flaskUrl = `https://alleged-gb-activated-immediate.trycloudflare.com/process_payment`;
+      const flaskUrl = `${FLASK}/process_payment`;
       console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
 
       const response = await fetch(flaskUrl, {
