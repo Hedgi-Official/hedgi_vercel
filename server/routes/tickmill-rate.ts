@@ -20,7 +20,7 @@ router.get('/api/tickmill-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced timeout
       
-      const response = await fetch(`http://3.145.164.47/symbol_info?broker=tickmill&symbol=${symbol}`, {
+      const response = await fetch(`https://digit-tricks-dense-fundamental.trycloudflare.com/symbol_info?broker=tickmill&symbol=${symbol}`, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
