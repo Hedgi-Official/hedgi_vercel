@@ -580,7 +580,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: 'Trade not found' });
       }
 
-      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
+      const response = await fetch(`${FLASK}/trades/${tradeId}/status`, {
+        agent: cfAgent
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -633,7 +635,8 @@ export function registerRoutes(app: Express): Server {
       // Direct call to Flask close endpoint using Flask trade ID
       const response = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        agent: cfAgent
       });
 
       if (!response.ok) {
@@ -673,7 +676,8 @@ export function registerRoutes(app: Express): Server {
         headers: { 
           'Accept': 'application/json',
           'Content-Type': 'application/json' 
-        }
+        },
+        agent: cfAgent
       });
 
       console.log(`[SPREAD] Flask response status: ${flaskRes.status}`);
