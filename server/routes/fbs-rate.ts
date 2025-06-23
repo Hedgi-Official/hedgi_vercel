@@ -21,7 +21,7 @@ router.get('/api/fbs-rate', async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // Normal timeout with keep-alive
       
-      const response = await fetch(`https://alleged-gb-activated-immediate.trycloudflare.com/symbol_info?broker=fbs&symbol=${symbol}`, {
+      const response = await fetch(`${process.env.FLASK_URL}/symbol_info?broker=fbs&symbol=${symbol}`, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',

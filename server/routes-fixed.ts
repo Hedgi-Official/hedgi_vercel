@@ -34,7 +34,7 @@ const crypto = {
   },
 };
 
-const FLASK = process.env.FLASK_URL || 'https://alleged-gb-activated-immediate.trycloudflare.com';
+const FLASK = process.env.FLASK_URL;
 
 console.log("[BOOT] Using FLASK_URL =", FLASK);
 export function registerRoutes(app: Express): Server {
@@ -45,8 +45,8 @@ export function registerRoutes(app: Express): Server {
     const startTime = Date.now();
     try {
       // 1) Read amount, txId, and locale from the query string
-      const amount = req.query.amount || 415;
-      const txId   = req.query.txId   || "";  // will be a UUID set by React
+      const amount = req.query.amount;
+      const txId   = req.query.txId;  // will be a UUID set by React
       const lang = req.query.lang || "en-US"; // Default to English
 
       // Debug user session and account info
