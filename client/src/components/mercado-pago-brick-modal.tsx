@@ -41,7 +41,7 @@ export function MercadoPagoBrickModal({
     console.log('[MercadoPago Brick Modal] Starting payment status polling for txId:', txId);
     setIsPollingPayment(true);
     
-    const maxAttempts = 60; // Poll for 60 seconds
+    const maxAttempts = 80; // Poll for 80 seconds
     let attempts = 0;
     
     const poll = async () => {
@@ -313,7 +313,7 @@ export function MercadoPagoBrickModal({
         console.log('[MercadoPago Brick Modal] Checking loading state for timeout');
         setError('Payment form initialization timeout. Please try again.');
         setIsLoading(false);
-      }, 15000);
+      }, 80000);
       
       const messageHandler = (event: MessageEvent) => {
         console.log('[MercadoPago Brick Modal] Received postMessage:', event.data);
