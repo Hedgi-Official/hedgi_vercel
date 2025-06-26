@@ -202,10 +202,10 @@ export default function Dashboard() {
     mutationFn: async ({ hedgeData: h, paymentToken }) => {
       // h is now the exact object your simulator gives you
 
-      // parse numeric amount & derive direction
+      // parse numeric amount & use actual selected direction
       const amountNum = parseFloat(h.amount);
       const volume    = Math.abs(amountNum) / 100000;
-      const direction = amountNum > 0 ? 'buy' : 'sell';
+      const direction = h.tradeDirection; // Use the actual direction selected by user
       const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
 
       // Flask expects this exact structure based on working curl example
