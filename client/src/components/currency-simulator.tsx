@@ -338,8 +338,8 @@ export function CurrencySimulator({
           {/* Results & Place Hedge */}
           {simulation && (
             <>
-              {/* Current Rate and Break-Even Rate Display */}
-              <div className="grid grid-cols-2 gap-4 pt-4">
+              {/* Current Rate, Break-Even Rate, and Stop Loss Rate Display */}
+              <div className="grid grid-cols-3 gap-4 pt-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-2xl font-bold">
@@ -360,6 +360,33 @@ export function CurrencySimulator({
                     {(() => {
                       const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
                       const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                    })()}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Stop Loss Rate</p>
+                  <p className="text-2xl font-bold">
+                    {(() => {
+                      const entryPrice = simulation.rate;
+                      const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
+                      const volume = amount;
+                      // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
+                      const stopLossRate = tradeDirection === 'sell' ? 
+                        Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                        Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                      return stopLossRate.toFixed(4);
+                    })()} {`${targetCurrency}/${baseCurrency}`}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {(() => {
+                      const entryPrice = simulation.rate;
+                      const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
+                      const volume = amount;
+                      const stopLossRate = tradeDirection === 'sell' ? 
+                        Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                        Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                      const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;
                       return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
                     })()}
                   </p>

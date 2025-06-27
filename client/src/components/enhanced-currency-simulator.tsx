@@ -562,7 +562,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                         const entryPrice = simulation.rate;
                         const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
                         const volume = amount;
-                        const stopLossRate = Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                        // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
+                        const stopLossRate = tradeDirection === 'sell' ? 
+                          Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                          Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                         return stopLossRate.toFixed(4);
                       })()} {`${targetCurrency}/${baseCurrency}`}
                     </p>
@@ -571,7 +574,9 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                         const entryPrice = simulation.rate;
                         const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
                         const volume = amount;
-                        const stopLossRate = Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                        const stopLossRate = tradeDirection === 'sell' ? 
+                          Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                          Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                         const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;
                         return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
                       })()}
