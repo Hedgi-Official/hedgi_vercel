@@ -137,8 +137,8 @@ export function MercadoPagoBrickModal({
       // Use the original hedge amount, not the payment amount
       const hedgeAmount = hedgeData?.amount ? parseFloat(hedgeData.amount) : 10000;
       const volume = hedgeAmount / 100000; // Correct volume calculation based on hedge amount
-      const symbol = tradeData?.symbol || 'USDBRL';
-      const direction = tradeData?.direction || 'buy';
+      const symbol = `${hedgeData?.targetCurrency}${hedgeData?.baseCurrency}` || 'USDBRL';
+      const direction = hedgeData?.tradeDirection || 'buy';
       
       // Flask expects this exact structure based on working curl example
       const tradePayload = {
