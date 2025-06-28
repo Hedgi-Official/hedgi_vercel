@@ -237,7 +237,7 @@ export default function WhatIsHedge() {
             </Card>
           </div>
           
-          <p className="text-lg text-center mb-8 text-muted-foreground">
+          <p className="text-lg text-justify mb-8 text-muted-foreground">
             Unfortunately, most financial institutions do not offer hedging solutions tailored to 
             the unique needs and scale of individual customers.
           </p>
@@ -267,7 +267,7 @@ export default function WhatIsHedge() {
             Introducing Hedgi: Hedging Solutions Designed for You
           </h2>
           
-          <p className="text-lg text-center mb-8">
+          <p className="text-lg text-justify mb-8">
             At Hedgi, we believe everyone deserves access to financial peace of mind. That's why we've built 
             hedging solutions specifically tailored to individuals, making it easy, transparent, and affordable 
             to protect your money against currency risks.
@@ -296,7 +296,7 @@ export default function WhatIsHedge() {
             </div>
           </div>
           
-          <p className="text-lg text-center mb-8">
+          <p className="text-lg text-justify mb-8">
             Take control of your financial future and protect yourself from currency volatility. 
             Hedging isn't just for large institutions anymore—it's for you.
           </p>
