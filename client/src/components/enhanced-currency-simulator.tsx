@@ -363,25 +363,31 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center">
                     <DollarSign className="mr-2 h-4 w-4 text-primary" />
-                    {t('simulator.amount')} {targetCurrency}
+                    {t('simulator.amount')} {targetCurrency} {t('simulator.multiplesOf1000')}
                   </label>
                   <Input
-                    type="text"
-                    value={amount ? amount.toLocaleString('en-US', {
-                      maximumFractionDigits: 0,
-                      useGrouping: true
-                    }) : ''}
-                    onChange={(e) => {
-                      // Remove all non-numeric characters
-                      const numericValue = e.target.value.replace(/[^\d]/g, '');
-                      // Convert to number or default to 0 if no input
-                      const numValue = numericValue ? parseInt(numericValue, 10) : 0;
-                      // Update state
-                      setAmount(numValue);
+                    type="number"
+                    step={1000}
+                    min={0}
+                    defaultValue={amount}
+                    onChange={e => {
+                      const v = e.currentTarget.valueAsNumber;
+                      if (!isNaN(v)) setAmount(v);
                     }}
-                    min={1000}
-                    max={1000000}
+                    onBlur={e => {
+                      const raw = parseFloat(e.currentTarget.value);
+                      // if they left it blank or non-numeric, revert to last valid
+                      if (isNaN(raw)) {
+                        e.currentTarget.value = amount.toString();
+                        return;
+                      }
+                      // snap to nearest 1,000 (use round for closest multiple)
+                      const snapped = Math.round(raw / 1000) * 1000;
+                      setAmount(snapped);
+                      e.currentTarget.value = snapped.toString();
+                    }}
                     placeholder={t('simulator.amountField')}
+                    required
                   />
                 </div>
               </TooltipTrigger>
