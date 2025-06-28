@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
-import { calculateBusinessDays } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
@@ -89,28 +89,25 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       tradeDirection
     );
 
+    const wednesdays = countWednesdaysInNextDays(duration);
     const businessDays = calculateBusinessDays(new Date(), duration);
 
     let hedgeCost = 0;
     if (currentRate && swapValues) {
-      const { bid, ask } = currentRate;
-      const { swapLong, swapShort } = swapValues;
-      const spreadCost = (ask - bid) * amount;
-
-      // Volume in lots (standard lot is 100,000 units)
+      const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
-
-      // Using the formula: Cost = abs(Volume × swap_rate × Days)
-      if (tradeDirection === 'buy') {
-        hedgeCost = Math.abs(volumeInLots * swapLong * businessDays) + spreadCost;
-      } else {
-        hedgeCost = Math.abs(volumeInLots * swapShort * businessDays) + spreadCost;
-      }
+      hedgeCost =
+        Math.abs(
+          volumeInLots *
+            (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
+            (businessDays + wednesdays*2) * 1.1
+        ) + spreadCost;
 
       console.log('[EnhancedCurrencySimulator] Calculated hedge cost:', {
         volumeInLots,
         businessDays,
-        swapRate: tradeDirection === 'buy' ? swapLong : swapShort,
+        wednesdays,
+        swapRate: tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort,
         spreadCost,
         totalCost: hedgeCost
       });
