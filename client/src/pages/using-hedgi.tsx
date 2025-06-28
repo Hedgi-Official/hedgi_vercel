@@ -179,7 +179,7 @@ export default function UsingHedgi() {
         <main className="flex-1 container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6 text-center">Using Hedgi</h1>
 
-          <p className="text-center text-muted-foreground mb-10 max-w-3xl mx-auto">
+          <p className="text-justify text-muted-foreground mb-10 max-w-3xl mx-auto">
             Hedgi offers two intuitive tools to help you effortlessly manage currency risks. 
             Use our simulator for direct interaction or chat with our AI assistant for guided help.
           </p>
