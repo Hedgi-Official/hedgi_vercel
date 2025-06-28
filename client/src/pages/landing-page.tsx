@@ -116,7 +116,8 @@ export default function LandingPage() {
                 <h2 className="text-4xl md:text-6xl font-bold mb-10 leading-tight drop-shadow-sm whitespace-pre-line">
                   {t('lifestyle.tagline')}
                 </h2>
-                <p className="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto leading-relaxed drop-shadow-sm">
+                <p className="text-xl md:text-2xl opacity-95 max-w-3xl mx-auto leading-relaxed text-shadow-lg" 
+                   style={{ textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 255, 255, 0.8)' }}>
                   {t('lifestyle.description')}
                 </p>
               </div>
