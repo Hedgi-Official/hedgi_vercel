@@ -90,7 +90,7 @@ export default function LandingPage() {
                 <img 
                   src="/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441.jpg" 
                   alt="Family walking together in nature" 
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  className="w-full h-full object-cover object-top transition-transform duration-700 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -109,13 +109,13 @@ export default function LandingPage() {
             {/* Content Overlay */}
             <div className="absolute inset-0 flex items-center justify-center" 
                  style={{
-                   background: 'linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35))'
+                   background: 'linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45))'
                  }}>
               <div className="text-center text-gray-900 max-w-4xl px-8">
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 leading-tight">
+                <h2 className="text-4xl md:text-6xl font-bold mb-10 leading-tight drop-shadow-sm">
                   {t('lifestyle.tagline')}
                 </h2>
-                <p className="text-xl md:text-2xl opacity-80 max-w-3xl mx-auto leading-relaxed">
+                <p className="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto leading-relaxed drop-shadow-sm">
                   {t('lifestyle.description')}
                 </p>
               </div>
