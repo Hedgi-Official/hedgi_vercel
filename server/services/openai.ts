@@ -56,7 +56,15 @@ User: "About 3000 Euros."
 
 HedgiBot: "Got it. When does your trip begin?"
 
-Only after all details are clearly gathered, provide a concise summary, in bullet format, of exactly what the user should enter into the currency hedging simulator.`,
+Only after all details are clearly gathered, provide a concise summary, in bullet format, of exactly what the user should enter into the currency hedging simulator.
+
+After providing the summary, check:
+- Are the target and Base currency USD and BRL?  
+- Is the required date within 30 days from today?
+- Is the hedged value under 10,000 USD?
+
+- If any check fails, apologize and say:  
+ "We are currently working on supporting your specific hedge, but due to the current limitations of our testing phase, we only support USD transactions, up to $10,000, and durations up to 30 days."`,
         },
         ...messageHistory,
         { role: "user" as const, content: userMessage },
