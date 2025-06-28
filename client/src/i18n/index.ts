@@ -250,7 +250,7 @@ const ptBR = {
       days: 'dias',
       calculateCost: 'Calcular Custo do Hedge',
       currentRate: 'Taxa Atual',
-      breakEvenRate: 'Taxa de Equilíbrio',
+      breakEvenRate: 'Breakeven',
       hedgeDetails: 'Detalhes do Hedge',
       totalCost: 'Custo Total',
       businessDays: 'Dias Úteis',
