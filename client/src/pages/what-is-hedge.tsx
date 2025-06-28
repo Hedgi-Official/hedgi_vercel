@@ -112,7 +112,7 @@ export default function WhatIsHedge() {
             </Card>
           </div>
           
-          <p className="text-lg text-center text-muted-foreground">
+          <p className="text-lg text-justify text-muted-foreground">
             This sophisticated approach has traditionally been reserved for large corporations and financial institutions, 
             which have access to specialized financial products and teams of financial experts.
           </p>
