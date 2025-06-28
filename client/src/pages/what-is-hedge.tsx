@@ -62,7 +62,7 @@ export default function WhatIsHedge() {
             </div>
           </div>
           
-          <p className="text-lg md:text-xl text-center mb-8">
+          <p className="text-lg md:text-xl text-justify mb-8">
             Hedging is a financial strategy designed to minimize risk by protecting against fluctuations in prices, 
             interest rates, currencies, or other market uncertainties. Simply put, hedging acts like insurance, 
             shielding investors, companies, and individuals from unexpected financial losses caused by volatile 
