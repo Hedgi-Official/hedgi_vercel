@@ -62,7 +62,7 @@ export default function WhatIsHedge() {
             </div>
           </div>
 
-          <p className="text-lg md:text-xl text-center mb-8">
+          <p className="text-lg md:text-xl text-justify mb-8">
             Hedging é uma estratégia financeira utilizada para reduzir o risco causado por flutuações de preços, taxas de juros, 
             moedas ou outras incertezas de mercado. Simplificando, o hedging funciona como um seguro, protegendo investidores, 
             empresas e indivíduos contra perdas financeiras inesperadas devido à volatilidade do mercado.
@@ -111,7 +111,7 @@ export default function WhatIsHedge() {
             </Card>
           </div>
 
-          <p className="text-lg text-center text-muted-foreground">
+          <p className="text-lg text-justify text-muted-foreground">
             Historicamente, essas estratégias sofisticadas eram reservadas para grandes empresas e instituições financeiras, 
             que têm acesso a produtos financeiros específicos e equipes especializadas.
           </p>
@@ -177,15 +177,15 @@ export default function WhatIsHedge() {
           <h2 className="text-3xl font-bold mb-8 text-center">Exemplo: Viagem em família para a Disney</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <Card className="border-destructive">
+            <Card className="border-destructive flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <ArrowDown className="mr-2 h-5 w-5 text-destructive" />
                   Sem Hedging
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4">
+              <CardContent className="flex flex-col flex-grow">
+                <p className="mb-4 flex-grow">
                   Uma família brasileira planeja uma viagem à Disney, que hoje custa R$ 30 mil. 
                   Se o dólar subir, o custo pode aumentar significativamente até a data da viagem.
                 </p>
@@ -206,15 +206,15 @@ export default function WhatIsHedge() {
               </CardContent>
             </Card>
 
-            <Card className="border-green-500">
+            <Card className="border-green-500 flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Check className="mr-2 h-5 w-5 text-green-500" />
                   Com Hedging
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4">
+              <CardContent className="flex flex-col flex-grow">
+                <p className="mb-4 flex-grow">
                   A família trava a taxa de câmbio atual, garantindo que o custo da viagem permaneça estável, 
                   independentemente das variações do mercado.
                 </p>
@@ -236,7 +236,7 @@ export default function WhatIsHedge() {
             </Card>
           </div>
 
-          <p className="text-lg text-center mb-8 text-muted-foreground">
+          <p className="text-lg text-justify mb-8 text-muted-foreground">
             Infelizmente, a maioria das instituições financeiras não oferece soluções de hedging adaptadas 
             às necessidades específicas e à escala dos clientes individuais.
           </p>
@@ -266,7 +266,7 @@ export default function WhatIsHedge() {
             Conheça a Hedgi: Soluções de Hedging Feitas para Você
           </h2>
 
-          <p className="text-lg text-center mb-8">
+          <p className="text-lg text-justify mb-8">
             Na Hedgi, acreditamos que todas as pessoas merecem ter tranquilidade financeira. Por isso, 
             criamos soluções de hedging especialmente desenhadas para indivíduos.
           </p>
@@ -294,7 +294,7 @@ export default function WhatIsHedge() {
             </div>
           </div>
 
-          <p className="text-lg text-center mb-8">
+          <p className="text-lg text-justify mb-8">
             Assuma o controle do seu futuro financeiro e proteja-se da volatilidade cambial. 
             Hedging não é mais exclusividade de grandes instituições—agora é para você também.
           </p>
