@@ -178,15 +178,15 @@ export default function WhatIsHedge() {
           <h2 className="text-3xl font-bold mb-8 text-center">Example: Hedging a Family Trip to Disney World</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <Card className="border-destructive">
+            <Card className="border-destructive flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <ArrowDown className="mr-2 h-5 w-5 text-destructive" />
                   Without Hedging
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4">
+              <CardContent className="flex flex-col flex-grow">
+                <p className="mb-4 flex-grow">
                   A Brazilian family plans a trip to Disney World, costing R$30,000 at today's exchange rate. 
                   If the US dollar appreciates, the same trip might later cost R$35,000 or more.
                 </p>
@@ -207,15 +207,15 @@ export default function WhatIsHedge() {
               </CardContent>
             </Card>
             
-            <Card className="border-green-500">
+            <Card className="border-green-500 flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Check className="mr-2 h-5 w-5 text-green-500" />
                   With Hedging
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="mb-4">
+              <CardContent className="flex flex-col flex-grow">
+                <p className="mb-4 flex-grow">
                   The family locks in today's exchange rate, guaranteeing their trip will cost exactly 
                   R$30,000 regardless of future currency movements.
                 </p>
