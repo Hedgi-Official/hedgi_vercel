@@ -681,7 +681,9 @@ export function registerRoutes(app: Express): Server {
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
             .then(response => response.ok ? response.json() : null)
             .then((flaskData: any) => {
+              console.log(`[Express Proxy] Flask status for trade ${trade.id} (Flask ${trade.flaskTradeId}):`, flaskData);
               if (flaskData && flaskData.status && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+                console.log(`[Express Proxy] Trade ${trade.id} status ${flaskData.status} - not completed`);
                 return {
                   ...trade,
                   status: flaskData.status,
