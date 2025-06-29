@@ -701,10 +701,8 @@ export function registerRoutes(app: Express): Server {
                 closedAt?: string;
               };
               // Include all active statuses, exclude only clearly closed ones
-              const closedStatuses = ['closed', 'failed'];
-              const isClosed = closedStatuses.some(status => 
-                statusResponse.status.toLowerCase().includes(status.toLowerCase())
-              );
+              const statusLower = statusResponse.status.toLowerCase();
+              const isClosed = statusLower.includes('closed') && !statusLower.includes('closing');
               
               if (statusResponse && statusResponse.status && !isClosed) {
                 const result = {
