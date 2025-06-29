@@ -701,6 +701,9 @@ export default function Dashboard() {
               <span className="text-muted-foreground">{t('Trade Direction')}:</span>
               <span className="font-medium">
                 {(() => {
+                  // Temporary debug logging
+                  console.log('[TradeItem] Raw trade data:', trade);
+                  
                   // Extract trade direction from metadata or direct fields
                   let direction = trade.direction || trade.tradeDirection;
                   
@@ -711,8 +714,12 @@ export default function Dashboard() {
                         ? JSON.parse(trade.metadata) 
                         : trade.metadata;
                       
+                      console.log('[TradeItem] Parsed metadata:', metadata);
+                      
                       // The direction is stored in metadata when the trade is created
                       direction = metadata.direction || metadata.tradeDirection;
+                      
+                      console.log('[TradeItem] Direction from metadata:', direction);
                     } catch (e) {
                       console.warn('[TradeItem] Could not parse metadata:', e);
                     }
@@ -723,6 +730,8 @@ export default function Dashboard() {
                   
                   const symbol = trade.symbol || 'USDBRL';
                   const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
+                  
+                  console.log('[TradeItem] Final direction for display:', direction, 'Target currency:', targetCurrency);
                   
                   // Map direction to readable labels
                   if (direction.toLowerCase() === 'buy') {
