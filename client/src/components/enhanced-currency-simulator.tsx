@@ -199,24 +199,26 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   };
 
   const getTradeDirectionHelp = () => {
-    const buyTitle = `Buy ${targetCurrency}:`;
-    const sellTitle = `Sell ${targetCurrency}:`;
+    const buyTitle = `${t('simulator.buy')} ${targetCurrency}:`;
+    const sellTitle = `${t('simulator.sell')} ${targetCurrency}:`;
     const buyText = t('simulator.tradeDirectionHelp')
       .split('\n\n')[0]
-      .replace('Buy USD:', '')
-      .replace('USD', targetCurrency);
+      .replace(/^(Comprar USD:|Buy USD:)/, '')
+      .replace(/USD/g, targetCurrency)
+      .trim();
     const sellText = t('simulator.tradeDirectionHelp')
       .split('\n\n')[1]
-      .replace('Sell USD:', '')
-      .replace('USD', targetCurrency);
+      .replace(/^(Vender USD:|Sell USD:)/, '')
+      .replace(/USD/g, targetCurrency)
+      .trim();
 
     return (
       <>
         <p className="text-sm text-foreground mb-2">
-          <span className="font-bold">{buyTitle}</span>{buyText}
+          <span className="font-bold">{buyTitle}</span> {buyText}
         </p>
         <p className="text-sm text-foreground">
-          <span className="font-bold">{sellTitle}</span>{sellText}
+          <span className="font-bold">{sellTitle}</span> {sellText}
         </p>
       </>
     );
