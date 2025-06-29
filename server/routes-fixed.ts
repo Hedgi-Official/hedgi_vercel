@@ -748,6 +748,7 @@ export function registerRoutes(app: Express): Server {
                   ...trade,
                   status: flaskData.status,
                   current_value: flaskData.current_value, // Include current_value from Flask
+                  direction: flaskData.direction, // Include direction from Flask
                   updatedAt: new Date().toISOString()
                 };
               }
