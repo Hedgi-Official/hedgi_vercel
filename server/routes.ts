@@ -680,8 +680,8 @@ export function registerRoutes(app: Express): Server {
         flaskPromises.push(
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
             .then(response => response.ok ? response.json() : null)
-            .then(flaskData => {
-              if (flaskData && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+            .then((flaskData: any) => {
+              if (flaskData && flaskData.status && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
                 return {
                   ...trade,
                   status: flaskData.status,

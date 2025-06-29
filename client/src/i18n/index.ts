@@ -60,7 +60,6 @@ const enUS = {
       title: 'Currency Hedge Placement',
       targetCurrency: 'Target Currency',
       baseCurrency: 'Base Currency',
-      tradeDirection: 'Trade Direction',
       buy: 'Buy',
       sell: 'Sell',
       buyHelp: 'I will make a payment in',
@@ -123,6 +122,9 @@ const enUS = {
         bought: 'Bought',
         sold: 'Sold'
       },
+      tradeDirection: 'Direction',
+      buyUSD: 'Buy USD',
+      sellUSD: 'Sell USD',
       tradeOrderNumber: 'Trade Order',
       confirmCloseTitle: 'Confirm Trade Closure',
       confirmCloseMessage: 'Are you sure you want to close this trade?',
@@ -298,6 +300,9 @@ const ptBR = {
         bought: 'Comprou',
         sold: 'Vendeu'
       },
+      tradeDirection: 'Direção',
+      buyUSD: 'Comprar USD',
+      sellUSD: 'Vender USD',
       tradeOrderNumber: 'Ordem de Negociação',
       confirmCloseTitle: 'Confirmar Fechamento da Negociação',
       confirmCloseMessage: 'Tem certeza de que deseja fechar esta negociação?',

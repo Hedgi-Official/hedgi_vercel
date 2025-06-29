@@ -184,6 +184,17 @@ export function TradeHistory() {
                         </div>
                       )}
                       
+                      {trade.direction && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">{t('simulator.tradeDirection')}:</span>
+                          <span className="font-medium">
+                            {trade.direction === 'BUY' ? t('simulator.buyUSD') : 
+                             trade.direction === 'SELL' ? t('simulator.sellUSD') : 
+                             trade.direction}
+                          </span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('Status')}:</span>
                         <span className="font-medium">{getTranslatedStatus(trade.status || 'Unknown')}</span>
