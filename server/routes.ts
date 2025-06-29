@@ -689,6 +689,7 @@ export function registerRoutes(app: Express): Server {
       // Batch Flask status requests for efficiency
       for (const trade of userTrades) {
         if (!trade.flaskTradeId) continue;
+        console.log(`[Express Proxy] Processing trade ${trade.id} (Flask ${trade.flaskTradeId}) for active trades`);
 
         flaskPromises.push(
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
@@ -700,8 +701,14 @@ export function registerRoutes(app: Express): Server {
                 current_value?: number;
                 closedAt?: string;
               };
-              const excludedStatuses = ['CLOSED', 'FAILED', 'closed', 'failed'];
-              const isExcluded = excludedStatuses.some(status => statusResponse.status.toLowerCase().includes(status.toLowerCase()));
+              // Only exclude clearly closed/failed statuses
+              const excludedStatuses = ['CLOSED', 'FAILED'];
+              const isExcluded = excludedStatuses.some(status => {
+                const statusLower = statusResponse.status.toLowerCase();
+                const excludeLower = status.toLowerCase();
+                // Only exclude if the status is exactly these words or ends with them
+                return statusLower === excludeLower || statusLower.endsWith(` ${excludeLower}`);
+              });
               console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}): status="${statusResponse.status}", excluded=${isExcluded}`);
               if (statusResponse && statusResponse.status && !isExcluded) {
                 console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}) direction from Flask: ${statusResponse.direction}`);
