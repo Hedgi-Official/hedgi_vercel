@@ -20,15 +20,6 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const FLASK = process.env.FLASK_URL;
-
-// Interface for Flask status response
-interface FlaskStatusResponse {
-  status: string;
-  direction?: string;
-  current_value?: number;
-  closedAt?: string;
-}
-
 interface BrokerRate {
   bid:      number;
   ask:      number;
@@ -605,12 +596,7 @@ export function registerRoutes(app: Express): Server {
             continue;
           }
 
-          const flaskData = await flaskRes.json() as {
-            status: string;
-            direction?: string;
-            current_value?: number;
-            closedAt?: string;
-          };
+          const flaskData = await flaskRes.json() as FlaskStatusResponse;
 
           console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
 
@@ -638,9 +624,7 @@ export function registerRoutes(app: Express): Server {
             volume: trade.volume?.toString() || '0.01',
             openTime: trade.createdAt.toISOString(),
             status: flaskData.status,  // Always from Flask
-            closedAt: flaskData.closedAt || new Date().toISOString(),  // Flask date or current time
-            direction: flaskData.direction, // Include direction from Flask
-            current_value: flaskData.current_value // Include current_value from Flask
+            closedAt: flaskData.closedAt || new Date().toISOString()  // Flask date or current time
           };
 
           historyTrades.push(closedTrade);
@@ -694,37 +678,21 @@ export function registerRoutes(app: Express): Server {
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
             .then(response => response.ok ? response.json() : null)
             .then(flaskData => {
-              const statusResponse = flaskData as {
-                status: string;
-                direction?: string;
-                current_value?: number;
-                closedAt?: string;
-              };
-              
-              // Always include direction data from Flask, regardless of status
-              const result = {
-                ...trade,
-                status: statusResponse?.status || trade.status,
-                direction: statusResponse?.direction, // Always add direction from Flask
-                current_value: statusResponse?.current_value,
-                updatedAt: new Date().toISOString()
-              };
-              
-              // Only exclude trades that are explicitly "CLOSED" for active trades
-              const isClosed = statusResponse?.status?.toLowerCase() === 'closed';
-              if (!isClosed) {
-                console.log(`[Active Trade] ${trade.id}: direction=${result.direction}, status=${result.status}`);
-                return result;
+              const statusResponse = flaskData as FlaskStatusResponse;
+              if (statusResponse && statusResponse.status && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(statusResponse.status)) {
+                return {
+                  ...trade,
+                  status: statusResponse.status,
+                  direction: statusResponse.direction, // Include direction from Flask
+                  current_value: statusResponse.current_value, // Include current_value from Flask
+                  updatedAt: new Date().toISOString()
+                };
               }
               return null;
             })
             .catch(error => {
               console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-              // Even if Flask fails, return the trade with available data
-              return {
-                ...trade,
-                updatedAt: new Date().toISOString()
-              };
+              return null;
             })
         );
 

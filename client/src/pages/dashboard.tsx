@@ -701,20 +701,18 @@ export default function Dashboard() {
               <span className="text-muted-foreground">{t('Trade Direction')}:</span>
               <span className="font-medium">
                 {(() => {
-                  // Use direction from Flask API response (preferred) or fallback to metadata
-                  let direction = trade.direction; // This comes from Flask status response
+                  // Extract trade direction from metadata or direct fields
+                  let direction = trade.direction || trade.tradeDirection;
                   
-                  console.log(`[TradeItem] Trade ${trade.id} (Flask ${trade.flaskTradeId}) direction from API:`, direction);
-                  console.log(`[TradeItem] Full trade object:`, trade);
-                  
-                  // Fallback to metadata if Flask direction is not available
+                  // Check metadata field (where trade direction is typically stored)
                   if (!direction && trade.metadata) {
                     try {
                       const metadata = typeof trade.metadata === 'string' 
                         ? JSON.parse(trade.metadata) 
                         : trade.metadata;
+                      
+                      // The direction is stored in metadata when the trade is created
                       direction = metadata.direction || metadata.tradeDirection;
-                      console.log(`[TradeItem] Direction from metadata:`, direction);
                     } catch (e) {
                       console.warn('[TradeItem] Could not parse metadata:', e);
                     }
@@ -722,13 +720,12 @@ export default function Dashboard() {
                   
                   // Default to 'buy' if still not found
                   direction = direction || 'buy';
-                  console.log(`[TradeItem] Final direction used:`, direction);
                   
                   const symbol = trade.symbol || 'USDBRL';
                   const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
                   
-                  // Map direction to readable labels with currency
-                  if (direction.toUpperCase() === 'BUY') {
+                  // Map direction to readable labels
+                  if (direction.toLowerCase() === 'buy') {
                     return `${t('simulator.buy')} ${targetCurrency}`;
                   } else {
                     return `${t('simulator.sell')} ${targetCurrency}`;
