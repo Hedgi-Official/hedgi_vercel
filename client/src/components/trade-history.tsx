@@ -14,6 +14,7 @@ interface ClosedTrade {
   openTime: string;
   closedAt: string;
   status: string;
+  direction?: string;
   current_value?: number | string;
 }
 
