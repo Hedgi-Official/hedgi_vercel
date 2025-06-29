@@ -395,37 +395,6 @@ export function registerRoutes(app: Express): Server {
 
       const result = await flaskRes.json();
       console.log('[Express Proxy] Flask success:', result);
-
-      // Save the Flask trade to our local database for tracking
-      try {
-        const dbUserId = req.user.id;
-        console.log('[Express Proxy] Saving trade to database with metadata:', {
-          userId: dbUserId,
-          flaskTradeId: result.id,
-          volume: result.volume,
-          symbol: result.symbol,
-          metadata: payload.metadata // This includes the direction
-        });
-        
-        const insertResult = await db.insert(trades).values({
-          userId: dbUserId,
-          ticket: `FLASK-${result.id}`,
-          broker: 'flask',
-          volume: result.volume,
-          symbol: result.symbol,
-          openTime: new Date(result.created_at || new Date()),
-          durationDays: payload.metadata?.days || 7,
-          status: 'open',
-          flaskTradeId: result.id,
-          metadata: payload.metadata || {} // Store the original direction here
-        }).returning();
-        
-        console.log('[Express Proxy] Successfully saved trade to database:', insertResult);
-      } catch (dbError) {
-        console.error('[Express Proxy] Failed to save to database:', dbError);
-        // Don't fail the request if database save fails
-      }
-
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
