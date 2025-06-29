@@ -732,7 +732,7 @@ export default function Dashboard() {
               <span className="font-medium">
                 {trade.direction === 'BUY' ? t('simulator.buyUSD') : 
                  trade.direction === 'SELL' ? t('simulator.sellUSD') : 
-                 trade.direction || 'Debug: ' + JSON.stringify({hasDirection: !!trade.direction, keys: Object.keys(trade)})}
+                 'Loading...'}
               </span>
             </div>
             
