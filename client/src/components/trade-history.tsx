@@ -153,6 +153,25 @@ export function TradeHistory() {
                     
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
+                        <span className="text-muted-foreground">{t('Trade Direction')}:</span>
+                        <span className="font-medium">
+                          {(() => {
+                            // Use direction from Flask response
+                            const direction = trade.direction || 'BUY'; // Fallback to BUY if not available
+                            const symbol = trade.symbol || 'USDBRL';
+                            const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
+                            
+                            // Map direction to readable labels with currency
+                            if (direction.toUpperCase() === 'BUY') {
+                              return `${t('simulator.buy')} ${targetCurrency}`;
+                            } else {
+                              return `${t('simulator.sell')} ${targetCurrency}`;
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
                         <span className="font-medium">
                           {(() => {

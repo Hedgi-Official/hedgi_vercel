@@ -701,17 +701,15 @@ export default function Dashboard() {
               <span className="text-muted-foreground">{t('Trade Direction')}:</span>
               <span className="font-medium">
                 {(() => {
-                  // Extract trade direction from metadata or direct fields
-                  let direction = trade.direction || trade.tradeDirection;
+                  // Use direction from Flask API response (preferred) or fallback to metadata
+                  let direction = trade.direction; // This comes from Flask status response
                   
-                  // Check metadata field (where trade direction is typically stored)
+                  // Fallback to metadata if Flask direction is not available
                   if (!direction && trade.metadata) {
                     try {
                       const metadata = typeof trade.metadata === 'string' 
                         ? JSON.parse(trade.metadata) 
                         : trade.metadata;
-                      
-                      // The direction is stored in metadata when the trade is created
                       direction = metadata.direction || metadata.tradeDirection;
                     } catch (e) {
                       console.warn('[TradeItem] Could not parse metadata:', e);
@@ -724,8 +722,8 @@ export default function Dashboard() {
                   const symbol = trade.symbol || 'USDBRL';
                   const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
                   
-                  // Map direction to readable labels
-                  if (direction.toLowerCase() === 'buy') {
+                  // Map direction to readable labels with currency
+                  if (direction.toUpperCase() === 'BUY') {
                     return `${t('simulator.buy')} ${targetCurrency}`;
                   } else {
                     return `${t('simulator.sell')} ${targetCurrency}`;
