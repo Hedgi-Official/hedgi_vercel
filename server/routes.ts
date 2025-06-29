@@ -573,6 +573,7 @@ export function registerRoutes(app: Express): Server {
         openTime: string;
         closedAt: string;
         status: string;
+        direction?: string;
       }
 
       const historyTrades: ClosedTrade[] = [];
@@ -595,6 +596,8 @@ export function registerRoutes(app: Express): Server {
           const flaskData = await flaskRes.json() as {
             status: string;
             closedAt?: string;
+            direction?: string;
+            current_value?: number;
           };
 
           console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
@@ -623,6 +626,7 @@ export function registerRoutes(app: Express): Server {
             volume: trade.volume?.toString() || '0.01',
             openTime: trade.createdAt.toISOString(),
             status: flaskData.status,  // Always from Flask
+            direction: flaskData.direction, // Include direction from Flask
             closedAt: flaskData.closedAt || new Date().toISOString()  // Flask date or current time
           };
 
@@ -681,6 +685,8 @@ export function registerRoutes(app: Express): Server {
                 return {
                   ...trade,
                   status: flaskData.status,
+                  direction: flaskData.direction, // Include direction from Flask
+                  current_value: flaskData.current_value, // Include current value if available
                   updatedAt: new Date().toISOString()
                 };
               }
