@@ -700,18 +700,19 @@ export function registerRoutes(app: Express): Server {
                 current_value?: number;
                 closedAt?: string;
               };
-              // Include all active statuses, exclude only clearly closed ones
-              const statusLower = statusResponse.status.toLowerCase();
-              const isClosed = statusLower.includes('closed') && !statusLower.includes('closing');
               
-              if (statusResponse && statusResponse.status && !isClosed) {
-                const result = {
-                  ...trade,
-                  status: statusResponse.status,
-                  direction: statusResponse.direction, // Always include direction from Flask
-                  current_value: statusResponse.current_value,
-                  updatedAt: new Date().toISOString()
-                };
+              // Always include direction data from Flask, regardless of status
+              const result = {
+                ...trade,
+                status: statusResponse?.status || trade.status,
+                direction: statusResponse?.direction, // Always add direction from Flask
+                current_value: statusResponse?.current_value,
+                updatedAt: new Date().toISOString()
+              };
+              
+              // Only exclude trades that are explicitly "CLOSED" for active trades
+              const isClosed = statusResponse?.status?.toLowerCase() === 'closed';
+              if (!isClosed) {
                 console.log(`[Active Trade] ${trade.id}: direction=${result.direction}, status=${result.status}`);
                 return result;
               }
@@ -719,7 +720,11 @@ export function registerRoutes(app: Express): Server {
             })
             .catch(error => {
               console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
-              return null;
+              // Even if Flask fails, return the trade with available data
+              return {
+                ...trade,
+                updatedAt: new Date().toISOString()
+              };
             })
         );
 
