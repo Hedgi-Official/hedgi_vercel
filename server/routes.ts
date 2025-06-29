@@ -47,7 +47,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/payment-preference', async (req: Request, res: Response) => {
     try {
       const { amount, hedgeData } = req.body;
-      
+
       const preference = {
         id: `hedge_${Date.now()}`,
         amount: parseFloat(amount),
@@ -55,7 +55,7 @@ export function registerRoutes(app: Express): Server {
         description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
         metadata: hedgeData
       };
-      
+
       res.json(preference);
     } catch (error) {
       console.error('Error creating payment preference:', error);
@@ -66,9 +66,9 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/process-payment', async (req: Request, res: Response) => {
     try {
       const { hedgeData, amount, ...paymentData } = req.body;
-      
+
       console.log('[MP Process Payment] Processing payment for amount:', amount);
-      
+
       const mpResult = await paymentService.processPayment({
         token: paymentData.token,
         transaction_amount: parseFloat(amount),
@@ -112,16 +112,16 @@ export function registerRoutes(app: Express): Server {
   app.get('/flask-brick-proxy', async (req: Request, res: Response) => {
     try {
       const { amount, hedgeData } = req.query;
-      
+
       console.log('[Flask Brick Proxy] Request:', { amount, hedgeData });
-      
+
       // Get Flask URL from environment (keeping it secure)
       const flaskUrl = process.env.FLASK_URL;
-      
+
       // Forward request to Flask /brick endpoint with just amount parameter
       const brickUrl = `${flaskUrl}/brick?amount=${amount}`;
       console.log('[Flask Brick Proxy] Fetching from:', brickUrl);
-      
+
       const brickResponse = await fetch(brickUrl, {
         method: 'GET',
         headers: {
@@ -129,16 +129,16 @@ export function registerRoutes(app: Express): Server {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
       });
-      
+
       console.log('[Flask Brick Proxy] Response status:', brickResponse.status);
-      
+
       if (!brickResponse.ok) {
         throw new Error(`Flask brick endpoint returned ${brickResponse.status}: ${brickResponse.statusText}`);
       }
-      
+
       let html = await brickResponse.text();
       console.log('[Flask Brick Proxy] HTML length:', html.length);
-      
+
       // Inject message passing code to communicate payment results back to parent
       const messageScript = `
         <script>
@@ -149,25 +149,25 @@ export function registerRoutes(app: Express): Server {
               paymentResult: paymentResult
             }, '*');
           };
-          
+
           window.notifyPaymentError = function(error) {
             window.parent.postMessage({
               type: 'PAYMENT_ERROR',
               error: error
             }, '*');
           };
-          
+
           window.notifyPaymentProcessing = function() {
             window.parent.postMessage({
               type: 'PAYMENT_PROCESSING'
             }, '*');
           };
-          
+
           // Override console.log to capture payment completion
           const originalLog = console.log;
           console.log = function(...args) {
             originalLog.apply(console, args);
-            
+
             // Look for payment completion patterns
             const message = args.join(' ');
             if (message.includes('Payment') && message.includes('approved')) {
@@ -191,10 +191,10 @@ export function registerRoutes(app: Express): Server {
           };
         </script>
       `;
-      
+
       // Inject the script before closing </body> tag
       html = html.replace('</body>', `${messageScript}</body>`);
-      
+
       // Set proper headers to prevent iframe restrictions
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('X-Frame-Options', 'ALLOWALL');
@@ -218,26 +218,26 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Mercado Pago Brick Integration Endpoints
-  
+
   // 1. GET /payment?amount=<AMOUNT> - Renders payment form with cardPayment Brick
   app.get('/payment', (req: Request, res: Response) => {
     const amount = req.query.amount as string;
     const publicKey = process.env.MP_BR_PUBLIC_KEY;
-    
+
     if (!amount || isNaN(Number(amount))) {
       return res.status(400).send('Invalid amount parameter');
     }
-    
+
     if (!publicKey) {
       return res.status(500).send('Payment system not configured');
     }
-    
+
     try {
       const template = readFileSync(join(__dirname, 'templates/payment.html'), 'utf8');
       const html = template
         .replace(/{{AMOUNT}}/g, amount)
         .replace(/{{PUBLIC_KEY}}/g, publicKey);
-      
+
       res.setHeader('Content-Type', 'text/html');
       res.send(html);
     } catch (error) {
@@ -251,16 +251,16 @@ export function registerRoutes(app: Express): Server {
     try {
       const paymentData = req.body;
       const accessToken = process.env.MP_BR_ACCESS_TOKEN;
-      
+
       if (!accessToken) {
         return res.status(500).json({ 
           error: 'Payment system not configured',
           status: 'error' 
         });
       }
-      
+
       console.log('[Process Payment] Received payment data:', paymentData);
-      
+
       // Call Mercado Pago Payments API
       const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
@@ -271,10 +271,10 @@ export function registerRoutes(app: Express): Server {
         },
         body: JSON.stringify(paymentData)
       });
-      
+
       const mpResult = await mpResponse.json();
       console.log('[Process Payment] Mercado Pago response:', mpResult);
-      
+
       if (mpResult.status === 'approved') {
         return res.json({
           id: mpResult.id,
@@ -302,16 +302,16 @@ export function registerRoutes(app: Express): Server {
   app.get('/payment_status/:paymentId', (req: Request, res: Response) => {
     const { paymentId } = req.params;
     const publicKey = process.env.MP_BR_PUBLIC_KEY;
-    
+
     if (!publicKey) {
       return res.status(500).send('Payment system not configured');
     }
-    
+
     const isFailure = paymentId === 'failure';
-    
+
     try {
       const template = readFileSync(join(__dirname, 'templates/payment_status.html'), 'utf8');
-      
+
       if (isFailure) {
         const html = template
           .replace(/{{#if isFailure}}/g, '')
@@ -319,7 +319,7 @@ export function registerRoutes(app: Express): Server {
           .replace(/{{\/if}}/g, '')
           .replace(/{{AMOUNT}}/g, req.query.amount as string || '100')
           .replace(/{{PUBLIC_KEY}}/g, publicKey);
-        
+
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
       } else {
@@ -334,7 +334,7 @@ export function registerRoutes(app: Express): Server {
           .replace(/{{DIRECTION}}/g, 'buy')
           .replace(/{{DAYS}}/g, '7')
           .replace(/{{MARGIN}}/g, '500');
-        
+
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
       }
@@ -461,17 +461,17 @@ export function registerRoutes(app: Express): Server {
     console.log('[CLOSE ENDPOINT] Route hit - tradeId:', req.params.tradeId);
     console.log('[CLOSE ENDPOINT] Authentication check:', req.isAuthenticated());
     console.log('[CLOSE ENDPOINT] User:', req.user);
-    
+
     if (!req.isAuthenticated() || !req.user?.id) {
       console.log('[CLOSE ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
     const userId = req.user.id;
-    
+
     try {
       const flaskTradeId = req.params.tradeId;
       console.log(`[CLOSE] User ${userId} closing Flask trade ${flaskTradeId}`);
-      
+
       // Direct call to Flask close endpoint
       const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
@@ -499,17 +499,17 @@ export function registerRoutes(app: Express): Server {
     console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
     console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
     console.log('[SPREAD ENDPOINT] FLASK URL:', FLASK);
-    
+
     if (!req.isAuthenticated() || !req.user?.id) {
       console.log('[SPREAD ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     try {
       const flaskTradeId = req.params.tradeId;
       const flaskUrl = `${FLASK}/trades/${flaskTradeId}/spread`;
       console.log(`[SPREAD] Fetching from URL: ${flaskUrl}`);
-      
+
       // Direct call to Flask spread endpoint
       const flaskRes = await fetch(flaskUrl, {
         method: 'GET',
@@ -647,13 +647,13 @@ export function registerRoutes(app: Express): Server {
     console.log('[TRADES ENDPOINT] Route hit');
     console.log('[TRADES ENDPOINT] Authentication check:', req.isAuthenticated());
     console.log('[TRADES ENDPOINT] User:', req.user);
-    
+
     if (!req.isAuthenticated() || !req.user?.id) {
       console.log('[TRADES ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
     const userId = req.user.id;
-    
+
     try {
       console.log('[Express Proxy] Getting active trades from database for user:', userId);
 
@@ -681,6 +681,8 @@ export function registerRoutes(app: Express): Server {
                 return {
                   ...trade,
                   status: flaskData.status,
+                  current_value: flaskData.current_value,
+                  direction: flaskData.direction,
                   updatedAt: new Date().toISOString()
                 };
               }
@@ -729,14 +731,14 @@ export function registerRoutes(app: Express): Server {
     try {
       const amount = req.query.amount || 415;
       const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/brick?amount=${amount}`;
-      
+
       console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
-      
+
       const response = await fetch(flaskUrl);
       const html = await response.text();
-      
+
       console.log(`[Flask Proxy] Successfully fetched brick HTML (${html.length} characters)`);
-      
+
       // Set proper headers for iframe embedding
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('X-Frame-Options', 'SAMEORIGIN');
