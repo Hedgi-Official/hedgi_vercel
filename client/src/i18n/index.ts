@@ -115,8 +115,7 @@ const enUS = {
         'FAILED': 'Failed',
         'COMPLETED': 'Completed',
         'ACTIVE': 'Active',
-        'CLOSE_REQUESTED': 'Close Requested',
-        'Pending (waiting for market to open before closing)': 'Pending (waiting for market to open before closing)'
+        'CLOSE_REQUESTED': 'Close Requested'
       },
       buyWith: 'Buy {target} with {base}',
       sellFor: 'Sell {target} for {base}',
@@ -272,8 +271,7 @@ const ptBR = {
         'FAILED': 'Falhou',
         'COMPLETED': 'Concluído',
         'ACTIVE': 'Ativo',
-        'CLOSE_REQUESTED': 'Fechamento Solicitado',
-        'Pending (waiting for market to open before closing)': 'Pendente (Aguardando abertura do mercado para encerramento da ordem)'
+        'CLOSE_REQUESTED': 'Fechamento Solicitado'
       },
       buyWith: 'Comprar {target} com {base}',
       sellFor: 'Vender {target} por {base}',
