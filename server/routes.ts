@@ -689,7 +689,6 @@ export function registerRoutes(app: Express): Server {
       // Batch Flask status requests for efficiency
       for (const trade of userTrades) {
         if (!trade.flaskTradeId) continue;
-        console.log(`[Express Proxy] Processing trade ${trade.id} (Flask ${trade.flaskTradeId}) for active trades`);
 
         flaskPromises.push(
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
@@ -701,25 +700,21 @@ export function registerRoutes(app: Express): Server {
                 current_value?: number;
                 closedAt?: string;
               };
-              // Only exclude clearly closed/failed statuses
-              const excludedStatuses = ['CLOSED', 'FAILED'];
-              const isExcluded = excludedStatuses.some(status => {
-                const statusLower = statusResponse.status.toLowerCase();
-                const excludeLower = status.toLowerCase();
-                // Only exclude if the status is exactly these words or ends with them
-                return statusLower === excludeLower || statusLower.endsWith(` ${excludeLower}`);
-              });
-              console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}): status="${statusResponse.status}", excluded=${isExcluded}`);
-              if (statusResponse && statusResponse.status && !isExcluded) {
-                console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}) direction from Flask: ${statusResponse.direction}`);
+              // Include all active statuses, exclude only clearly closed ones
+              const closedStatuses = ['closed', 'failed'];
+              const isClosed = closedStatuses.some(status => 
+                statusResponse.status.toLowerCase().includes(status.toLowerCase())
+              );
+              
+              if (statusResponse && statusResponse.status && !isClosed) {
                 const result = {
                   ...trade,
                   status: statusResponse.status,
-                  direction: statusResponse.direction, // Include direction from Flask
-                  current_value: statusResponse.current_value, // Include current_value from Flask
+                  direction: statusResponse.direction, // Always include direction from Flask
+                  current_value: statusResponse.current_value,
                   updatedAt: new Date().toISOString()
                 };
-                console.log(`[Express Proxy] Trade ${trade.id} final direction in result: ${result.direction}`);
+                console.log(`[Active Trade] ${trade.id}: direction=${result.direction}, status=${result.status}`);
                 return result;
               }
               return null;
