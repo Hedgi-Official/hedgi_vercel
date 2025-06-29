@@ -57,7 +57,7 @@ const enUS = {
       'Choose your country': 'Choose your country'
     },
     simulator: {
-      title: 'Currency Hedge Simulator',
+      title: 'Currency Hedge Placement',
       targetCurrency: 'Target Currency',
       baseCurrency: 'Base Currency',
       tradeDirection: 'Trade Direction',
@@ -232,7 +232,7 @@ const ptBR = {
       'MXNBRL': 'MXN/BRL - Peso Mexicano/Real Brasileiro'
     },
     simulator: {
-      title: 'Simulador de Hedge Cambial',
+      title: 'Execução de Hedge Cambial',
       targetCurrency: 'Moeda Alvo',
       baseCurrency: 'Moeda Base',
       tradeDirection: 'Direção da Operação',
