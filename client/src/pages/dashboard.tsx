@@ -698,6 +698,43 @@ export default function Dashboard() {
           
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Trade Direction')}:</span>
+              <span className="font-medium">
+                {(() => {
+                  // Extract trade direction from metadata or direct fields
+                  let direction = trade.direction || trade.tradeDirection;
+                  
+                  // Check metadata field (where trade direction is typically stored)
+                  if (!direction && trade.metadata) {
+                    try {
+                      const metadata = typeof trade.metadata === 'string' 
+                        ? JSON.parse(trade.metadata) 
+                        : trade.metadata;
+                      
+                      // The direction is stored in metadata when the trade is created
+                      direction = metadata.direction || metadata.tradeDirection;
+                    } catch (e) {
+                      console.warn('[TradeItem] Could not parse metadata:', e);
+                    }
+                  }
+                  
+                  // Default to 'buy' if still not found
+                  direction = direction || 'buy';
+                  
+                  const symbol = trade.symbol || 'USDBRL';
+                  const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
+                  
+                  // Map direction to readable labels
+                  if (direction.toLowerCase() === 'buy') {
+                    return `${t('simulator.buy')} ${targetCurrency}`;
+                  } else {
+                    return `${t('simulator.sell')} ${targetCurrency}`;
+                  }
+                })()}
+              </span>
+            </div>
+            
+            <div className="flex justify-between">
               <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
               <span className="font-medium">
                 {(() => {
