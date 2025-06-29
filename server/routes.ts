@@ -573,7 +573,11 @@ export function registerRoutes(app: Express): Server {
         openTime: string;
         closedAt: string;
         status: string;
+        direction?: string;
+        current_value?: number;
       }
+
+
 
       const historyTrades: ClosedTrade[] = [];
 
@@ -592,10 +596,7 @@ export function registerRoutes(app: Express): Server {
             continue;
           }
 
-          const flaskData = await flaskRes.json() as {
-            status: string;
-            closedAt?: string;
-          };
+          const flaskData = await flaskRes.json() as FlaskStatusResponse;
 
           console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
 
@@ -677,10 +678,13 @@ export function registerRoutes(app: Express): Server {
           fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
             .then(response => response.ok ? response.json() : null)
             .then(flaskData => {
-              if (flaskData && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+              const statusResponse = flaskData as FlaskStatusResponse;
+              if (statusResponse && statusResponse.status && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(statusResponse.status)) {
                 return {
                   ...trade,
-                  status: flaskData.status,
+                  status: statusResponse.status,
+                  direction: statusResponse.direction, // Include direction from Flask
+                  current_value: statusResponse.current_value, // Include current_value from Flask
                   updatedAt: new Date().toISOString()
                 };
               }
