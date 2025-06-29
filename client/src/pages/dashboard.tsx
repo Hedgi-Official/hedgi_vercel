@@ -698,25 +698,6 @@ export default function Dashboard() {
           
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('Trade Direction')}:</span>
-              <span className="font-medium">
-                {(() => {
-                  // Use direction from Flask status response (prioritize this over legacy metadata)
-                  const direction = trade.direction || 'BUY'; // Flask provides 'BUY' or 'SELL'
-                  const symbol = trade.symbol || 'USDBRL';
-                  const targetCurrency = symbol.substring(3); // Last 3 characters (e.g., BRL from USDBRL)
-                  
-                  // Map Flask direction to readable labels with target currency
-                  if (direction.toUpperCase() === 'BUY') {
-                    return `${t('simulator.buy')} ${targetCurrency}`;
-                  } else {
-                    return `${t('simulator.sell')} ${targetCurrency}`;
-                  }
-                })()}
-              </span>
-            </div>
-            
-            <div className="flex justify-between">
               <span className="text-muted-foreground">{t('Hedged Amount')}:</span>
               <span className="font-medium">
                 {(() => {
