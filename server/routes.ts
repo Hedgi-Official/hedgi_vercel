@@ -700,14 +700,20 @@ export function registerRoutes(app: Express): Server {
                 current_value?: number;
                 closedAt?: string;
               };
-              if (statusResponse && statusResponse.status && !['CLOSED', 'FAILED', 'closed', 'failed'].includes(statusResponse.status)) {
-                return {
+              const excludedStatuses = ['CLOSED', 'FAILED', 'closed', 'failed'];
+              const isExcluded = excludedStatuses.some(status => statusResponse.status.toLowerCase().includes(status.toLowerCase()));
+              console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}): status="${statusResponse.status}", excluded=${isExcluded}`);
+              if (statusResponse && statusResponse.status && !isExcluded) {
+                console.log(`[Express Proxy] Trade ${trade.id} (Flask ${trade.flaskTradeId}) direction from Flask: ${statusResponse.direction}`);
+                const result = {
                   ...trade,
                   status: statusResponse.status,
                   direction: statusResponse.direction, // Include direction from Flask
                   current_value: statusResponse.current_value, // Include current_value from Flask
                   updatedAt: new Date().toISOString()
                 };
+                console.log(`[Express Proxy] Trade ${trade.id} final direction in result: ${result.direction}`);
+                return result;
               }
               return null;
             })

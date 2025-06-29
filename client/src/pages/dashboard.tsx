@@ -704,6 +704,9 @@ export default function Dashboard() {
                   // Use direction from Flask API response (preferred) or fallback to metadata
                   let direction = trade.direction; // This comes from Flask status response
                   
+                  console.log(`[TradeItem] Trade ${trade.id} (Flask ${trade.flaskTradeId}) direction from API:`, direction);
+                  console.log(`[TradeItem] Full trade object:`, trade);
+                  
                   // Fallback to metadata if Flask direction is not available
                   if (!direction && trade.metadata) {
                     try {
@@ -711,6 +714,7 @@ export default function Dashboard() {
                         ? JSON.parse(trade.metadata) 
                         : trade.metadata;
                       direction = metadata.direction || metadata.tradeDirection;
+                      console.log(`[TradeItem] Direction from metadata:`, direction);
                     } catch (e) {
                       console.warn('[TradeItem] Could not parse metadata:', e);
                     }
@@ -718,6 +722,7 @@ export default function Dashboard() {
                   
                   // Default to 'buy' if still not found
                   direction = direction || 'buy';
+                  console.log(`[TradeItem] Final direction used:`, direction);
                   
                   const symbol = trade.symbol || 'USDBRL';
                   const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
