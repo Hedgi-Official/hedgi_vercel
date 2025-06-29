@@ -730,7 +730,7 @@ export default function Dashboard() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t('Direction')}:</span>
               <span className="font-medium">
-                {trade.direction === 'BUY' ? 'Buy USD' : trade.direction === 'SELL' ? 'Sell USD' : 'Unknown'}
+                {trade.direction === 'BUY' ? t('Buy USD') : trade.direction === 'SELL' ? t('Sell USD') : 'Unknown'}
               </span>
             </div>
             
