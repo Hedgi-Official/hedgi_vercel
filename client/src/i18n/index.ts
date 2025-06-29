@@ -237,7 +237,6 @@ const ptBR = {
       title: 'Execução de Hedge Cambial',
       targetCurrency: 'Moeda Alvo',
       baseCurrency: 'Moeda Base',
-      tradeDirection: 'Direção da Operação',
       buy: 'Comprar',
       sell: 'Vender',
       buyHelp: 'Farei um pagamento em',

@@ -81,6 +81,8 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- June 29, 2025. **Trade direction field added** - Active and previous trades now display "Buy USD" or "Sell USD" direction from Flask server's /status endpoint
+- June 29, 2025. **Dashboard simulator renamed** - Changed from "Currency Hedge Simulator" to "Currency Hedge Placement" (EN) and "Execução de Hedge Cambial" (PT)
 - June 20, 2025. **PIX key integration completed** - All trades automatically include user's PIX key in metadata section
 - June 20, 2025. **Graceful database fallback implemented** - System continues working even when database is unavailable
 - June 20, 2025. **Flask tunnel connection verified** - All endpoints successfully connect to https://alleged-gb-activated-immediate.trycloudflare.com
