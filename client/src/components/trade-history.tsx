@@ -15,7 +15,6 @@ interface ClosedTrade {
   closedAt: string;
   status: string;
   current_value?: number | string;
-  direction?: string;
 }
 
 export function TradeHistory() {
@@ -169,25 +168,6 @@ export function TradeHistory() {
                         </span>
                       </div>
                       
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('Trade Direction')}:</span>
-                        <span className="font-medium">
-                          {(() => {
-                            // Use direction from Flask status response
-                            const direction = trade.direction || 'BUY'; // Flask provides 'BUY' or 'SELL'
-                            const symbol = trade.symbol || 'USDBRL';
-                            const targetCurrency = symbol.substring(3); // Last 3 characters (e.g., BRL from USDBRL)
-                            
-                            // Map Flask direction to readable labels with target currency
-                            if (direction.toUpperCase() === 'BUY') {
-                              return `${t('simulator.buy')} ${targetCurrency}`;
-                            } else {
-                              return `${t('simulator.sell')} ${targetCurrency}`;
-                            }
-                          })()}
-                        </span>
-                      </div>
-
                       {trade.current_value && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">{t('Current Position')}:</span>
