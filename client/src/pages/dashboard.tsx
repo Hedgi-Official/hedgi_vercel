@@ -701,31 +701,13 @@ export default function Dashboard() {
               <span className="text-muted-foreground">{t('Trade Direction')}:</span>
               <span className="font-medium">
                 {(() => {
-                  // Extract trade direction from metadata or direct fields
-                  let direction = trade.direction || trade.tradeDirection;
-                  
-                  // Check metadata field (where trade direction is typically stored)
-                  if (!direction && trade.metadata) {
-                    try {
-                      const metadata = typeof trade.metadata === 'string' 
-                        ? JSON.parse(trade.metadata) 
-                        : trade.metadata;
-                      
-                      // The direction is stored in metadata when the trade is created
-                      direction = metadata.direction || metadata.tradeDirection;
-                    } catch (e) {
-                      console.warn('[TradeItem] Could not parse metadata:', e);
-                    }
-                  }
-                  
-                  // Default to 'buy' if still not found
-                  direction = direction || 'buy';
-                  
+                  // Use direction from Flask status response (prioritize this over legacy metadata)
+                  const direction = trade.direction || 'BUY'; // Flask provides 'BUY' or 'SELL'
                   const symbol = trade.symbol || 'USDBRL';
-                  const targetCurrency = symbol.substring(0, 3); // First 3 characters (e.g., USD from USDBRL)
+                  const targetCurrency = symbol.substring(3); // Last 3 characters (e.g., BRL from USDBRL)
                   
-                  // Map direction to readable labels
-                  if (direction.toLowerCase() === 'buy') {
+                  // Map Flask direction to readable labels with target currency
+                  if (direction.toUpperCase() === 'BUY') {
                     return `${t('simulator.buy')} ${targetCurrency}`;
                   } else {
                     return `${t('simulator.sell')} ${targetCurrency}`;

@@ -20,6 +20,15 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const FLASK = process.env.FLASK_URL;
+
+// Interface for Flask status response
+interface FlaskStatusResponse {
+  status: string;
+  direction?: string;
+  current_value?: number;
+  closedAt?: string;
+}
+
 interface BrokerRate {
   bid:      number;
   ask:      number;
@@ -624,7 +633,9 @@ export function registerRoutes(app: Express): Server {
             volume: trade.volume?.toString() || '0.01',
             openTime: trade.createdAt.toISOString(),
             status: flaskData.status,  // Always from Flask
-            closedAt: flaskData.closedAt || new Date().toISOString()  // Flask date or current time
+            closedAt: flaskData.closedAt || new Date().toISOString(),  // Flask date or current time
+            direction: flaskData.direction, // Include direction from Flask
+            current_value: flaskData.current_value // Include current_value from Flask
           };
 
           historyTrades.push(closedTrade);
