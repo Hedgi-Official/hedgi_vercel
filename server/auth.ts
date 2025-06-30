@@ -102,15 +102,15 @@ export function setupAuth(app: Express) {
     try {
       // Check invite code first (for beta access)
       const { inviteCode } = req.body;
-      const validCodes = process.env.BETA_INVITE_CODES?.split(',') || [];
+      const validCodes = process.env.BETA_INVITE_CODES?.split(',').map(code => code.trim()) || [];
       
       // Require invite code for beta access
-      if (!inviteCode || !validCodes.includes(inviteCode)) {
+      if (!inviteCode || !validCodes.includes(inviteCode.trim())) {
         return res.status(400).send("Valid invite code required for beta access");
       }
       
       // Remove used code to make it one-time use
-      const remainingCodes = validCodes.filter(code => code !== inviteCode);
+      const remainingCodes = validCodes.filter(code => code !== inviteCode.trim());
       process.env.BETA_INVITE_CODES = remainingCodes.join(',');
 
       const result = insertUserSchema.safeParse(req.body);
