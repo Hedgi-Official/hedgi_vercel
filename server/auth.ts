@@ -8,6 +8,7 @@ import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq, sql } from "drizzle-orm";
+import fs from 'node:fs';
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -98,20 +99,88 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Helper functions for reading and writing to .env file
+  const readEnvFile = () => {
+    try {
+      return fs.readFileSync(".env", "utf-8");
+    } catch (error) {
+      console.error("Error reading .env file:", error);
+      return "";
+    }
+  };
+
+  const writeEnvFile = (data: string) => {
+    try {
+      fs.writeFileSync(".env", data, "utf-8");
+    } catch (error) {
+      console.error("Error writing to .env file:", error);
+    }
+  };
+
+  const removeInviteCodeFromEnv = (usedCode: string) => {
+    try {
+      console.log(`[removeInviteCodeFromEnv] Attempting to remove code: "${usedCode}"`);
+
+      const envContent = readEnvFile();
+      console.log(`[removeInviteCodeFromEnv] Current .env content length: ${envContent.length}`);
+
+      const lines = envContent.split('\n');
+      console.log(`[removeInviteCodeFromEnv] Found ${lines.length} lines in .env file`);
+
+      const updatedLines = lines.map(line => {
+        if (line.startsWith('BETA_INVITE_CODES=')) {
+          const currentCodes = line.substring('BETA_INVITE_CODES='.length);
+          console.log(`[removeInviteCodeFromEnv] Current codes in file: "${currentCodes}"`);
+
+          const codeArray = currentCodes.split(',').map(code => code.trim());
+          console.log(`[removeInviteCodeFromEnv] Parsed code array:`, codeArray);
+
+          const remainingCodes = codeArray.filter(code => code !== usedCode.trim());
+          console.log(`[removeInviteCodeFromEnv] Remaining codes after removal:`, remainingCodes);
+
+          const newLine = `BETA_INVITE_CODES=${remainingCodes.join(', ')}`;
+          console.log(`[removeInviteCodeFromEnv] New line: "${newLine}"`);
+          return newLine;
+        }
+        return line;
+      });
+
+      console.log(`[removeInviteCodeFromEnv] Writing updated content to .env file`);
+      writeEnvFile(updatedLines.join('\n'));
+
+      // Update the runtime environment variable as well
+      const newEnvValue = updatedLines
+        .find(line => line.startsWith('BETA_INVITE_CODES='))
+        ?.substring('BETA_INVITE_CODES='.length) || '';
+
+      process.env.BETA_INVITE_CODES = newEnvValue;
+      console.log(`[removeInviteCodeFromEnv] Updated runtime env variable: "${newEnvValue}"`);
+      console.log(`[removeInviteCodeFromEnv] Successfully removed invite code: ${usedCode}`);
+    } catch (error) {
+      console.error('[removeInviteCodeFromEnv] Error removing invite code from .env:', error);
+    }
+  };
+
+
   app.post("/api/register", async (req, res, next) => {
     try {
       // Check invite code first (for beta access)
       const { inviteCode } = req.body;
+      console.log(`[register] Received invite code: "${inviteCode}"`);
+
       const validCodes = process.env.BETA_INVITE_CODES?.split(',').map(code => code.trim()) || [];
-      
+      console.log(`[register] Valid codes from environment:`, validCodes);
+
       // Require invite code for beta access
       if (!inviteCode || !validCodes.includes(inviteCode.trim())) {
+        console.log(`[register] Invalid invite code: "${inviteCode}" not found in valid codes`);
         return res.status(400).send("Valid invite code required for beta access");
       }
-      
-      // Remove used code to make it one-time use
-      const remainingCodes = validCodes.filter(code => code !== inviteCode.trim());
-      process.env.BETA_INVITE_CODES = remainingCodes.join(',');
+
+      console.log(`[register] Valid invite code found, proceeding with registration`);
+
+      // Remove used code from .env file to make it truly one-time use
+      removeInviteCodeFromEnv(inviteCode.trim());
 
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
