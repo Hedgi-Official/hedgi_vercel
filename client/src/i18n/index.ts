@@ -297,6 +297,19 @@ const ptBR = {
         completed: 'Concluído',
         cancelled: 'Cancelado'
       },
+      tradeStatus: {
+        'EXECUTED': 'Executado',
+        'NEW': 'Novo',
+        'PENDING': 'Pendente',
+        'OPEN': 'Aberto',
+        'CLOSED': 'Fechado',
+        'CANCELLED': 'Cancelado',
+        'FAILED': 'Falhou',
+        'COMPLETED': 'Concluído',
+        'ACTIVE': 'Ativo',
+        'CLOSE_REQUESTED': 'Fechamento Solicitado',
+        'PENDING (WAITING FOR MARKET TO OPEN BEFORE CLOSING)': 'Pendente (Aguardando abertura do mercado para encerramento da ordem)'
+      },
       hedgeTitles: {
         bought: 'Comprou',
         sold: 'Vendeu'
