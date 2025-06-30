@@ -122,21 +122,20 @@ export function setupAuth(app: Express) {
       console.log(`[removeInviteCodeFromEnv] Attempting to remove code: "${usedCode}"`);
 
       const envContent = readEnvFile();
-      console.log(`[removeInviteCodeFromEnv] Current .env content length: ${envContent.length}`);
 
       const lines = envContent.split('\n');
-      console.log(`[removeInviteCodeFromEnv] Found ${lines.length} lines in .env file`);
+      
 
       const updatedLines = lines.map(line => {
         if (line.startsWith('BETA_INVITE_CODES=')) {
           const currentCodes = line.substring('BETA_INVITE_CODES='.length);
-          console.log(`[removeInviteCodeFromEnv] Current codes in file: "${currentCodes}"`);
+          
 
           const codeArray = currentCodes.split(',').map(code => code.trim());
-          console.log(`[removeInviteCodeFromEnv] Parsed code array:`, codeArray);
+          
 
           const remainingCodes = codeArray.filter(code => code !== usedCode.trim());
-          console.log(`[removeInviteCodeFromEnv] Remaining codes after removal:`, remainingCodes);
+          
 
           const newLine = `BETA_INVITE_CODES=${remainingCodes.join(', ')}`;
           console.log(`[removeInviteCodeFromEnv] New line: "${newLine}"`);
@@ -154,8 +153,6 @@ export function setupAuth(app: Express) {
         ?.substring('BETA_INVITE_CODES='.length) || '';
 
       process.env.BETA_INVITE_CODES = newEnvValue;
-      console.log(`[removeInviteCodeFromEnv] Updated runtime env variable: "${newEnvValue}"`);
-      console.log(`[removeInviteCodeFromEnv] Successfully removed invite code: ${usedCode}`);
     } catch (error) {
       console.error('[removeInviteCodeFromEnv] Error removing invite code from .env:', error);
     }
