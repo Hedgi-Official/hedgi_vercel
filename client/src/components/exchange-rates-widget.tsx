@@ -63,7 +63,7 @@ export function ExchangeRatesWidget() {
   return (
     <Card className="bg-background shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-2">
             {t('Live Exchange Rates')}
             {(isLoadingActivTrades || isLoadingTickmill || isLoadingFBS) && 
@@ -71,7 +71,7 @@ export function ExchangeRatesWidget() {
             }
           </div>
           <Select value={selectedPair} onValueChange={setSelectedPair}>
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full sm:w-[280px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -91,7 +91,7 @@ export function ExchangeRatesWidget() {
           </div>
         ) : (
           <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
               {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
               {renderRateCard("FBS Rate", fbsRate, fbsError)}
