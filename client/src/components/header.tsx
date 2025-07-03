@@ -31,7 +31,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2" onClick={closeMobileMenu}>
-            <img src="/Hedgi.png?v=3" alt="Hedgi Logo" className="h-10 w-auto rounded-lg" />
+            <img src="/Hedgi.png?v=4" alt="Hedgi Logo" className="h-10 w-auto rounded-lg" />
           </Link>
 
           {/* Desktop Navigation */}
