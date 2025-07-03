@@ -34,27 +34,27 @@ export function ExchangeRatesWidget() {
     // Check if we have a rate with an error message (from server-side error handling)
     if (rate && rate.error) {
       return (
-        <div className="space-y-2 p-4 rounded-lg border flex flex-col h-full">
-          <div className="text-sm text-muted-foreground h-10 flex items-center justify-center text-center leading-tight">{title}</div>
-          <div className="text-destructive text-sm flex-1 flex items-center justify-center text-center">{rate.error}</div>
+        <div className="p-2 md:p-4 rounded-lg border flex flex-col h-full">
+          <div className="text-xs md:text-sm text-muted-foreground h-8 md:h-10 flex items-center justify-center text-center leading-tight">{title}</div>
+          <div className="text-destructive text-xs md:text-sm flex-1 flex items-center justify-center text-center">{rate.error}</div>
         </div>
       );
     }
 
     return (
-      <div className="space-y-2 p-4 rounded-lg border flex flex-col h-full">
-        <div className="text-sm text-muted-foreground h-10 flex items-center justify-center text-center leading-tight">{title}</div>
-        <div className="space-y-2 flex-1">
-          <div className="text-2xl font-bold">
+      <div className="p-2 md:p-4 rounded-lg border flex flex-col h-full">
+        <div className="text-xs md:text-sm text-muted-foreground h-8 md:h-10 flex items-center justify-center text-center leading-tight">{title}</div>
+        <div className="space-y-1 md:space-y-2 flex-1">
+          <div className="text-lg md:text-2xl font-bold">
             {rate ? rate.bid.toFixed(4) : 'Loading...'}
           </div>
-          <div className="text-sm text-muted-foreground">{t('Bid Price')}</div>
+          <div className="text-xs md:text-sm text-muted-foreground">{t('Bid Price')}</div>
         </div>
-        <div className="space-y-2">
-          <div className="text-2xl font-bold">
+        <div className="space-y-1 md:space-y-2">
+          <div className="text-lg md:text-2xl font-bold">
             {rate ? rate.ask.toFixed(4) : 'Loading...'}
           </div>
-          <div className="text-sm text-muted-foreground">{t('Ask Price')}</div>
+          <div className="text-xs md:text-sm text-muted-foreground">{t('Ask Price')}</div>
         </div>
       </div>
     );
@@ -91,7 +91,7 @@ export function ExchangeRatesWidget() {
           </div>
         ) : (
           <div className="grid gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
               {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
               {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
               {renderRateCard("FBS Rate", fbsRate, fbsError)}
