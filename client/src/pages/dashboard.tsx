@@ -806,8 +806,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <Header username={user?.username} onLogout={handleLogout} />
 
-      <main className="container mx-auto py-8 relative z-10">
-        <div className="grid gap-8">
+      <main className="container mx-auto px-4 py-8 relative z-10">
+        <div className="grid gap-6 md:gap-8">
           {/* Live Exchange Rates Widget */}
           <ExchangeRatesWidget />
 

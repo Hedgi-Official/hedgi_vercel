@@ -183,7 +183,7 @@ export function CurrencySimulator({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Alpha launch: BRL/USD currency selectors only */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Globe className="mr-2 h-4 w-4 text-primary" />
@@ -339,10 +339,10 @@ export function CurrencySimulator({
           {simulation && (
             <>
               {/* Current Rate, Break-Even Rate, and Stop Loss Rate Display */}
-              <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl md:text-2xl font-bold">
                     {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -353,7 +353,7 @@ export function CurrencySimulator({
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl md:text-2xl font-bold">
                     {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -366,7 +366,7 @@ export function CurrencySimulator({
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Stop Loss Rate</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl md:text-2xl font-bold">
                     {(() => {
                       const entryPrice = simulation.rate;
                       const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);

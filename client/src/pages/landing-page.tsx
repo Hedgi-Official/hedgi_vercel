@@ -22,30 +22,30 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
-      <main className="container mx-auto px-4 py-20 relative z-10">
+      <main className="container mx-auto px-4 py-8 md:py-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left side - Hero content */}
           <div>
-            <h1 className="text-7xl font-bold leading-tight mb-6">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
               {t('Protect the value')}
               <br />
               {t('of your')} <TypingEffect />
             </h1>
             <Skyline />
-            <p className="text-xl mb-8 text-muted-foreground max-w-xl">
+            <p className="text-lg md:text-xl mb-8 text-muted-foreground max-w-xl">
               {t('Professional currency hedging made simple')}
             </p>
             <Button 
               size="lg" 
               onClick={() => navigate('/auth')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
             >
               {t('Start Hedging Now')}
             </Button>
           </div>
 
           {/* Right side - Currency Simulator */}
-          <div className="lg:mt-0">
+          <div className="lg:mt-0 mt-8">
             <CurrencySimulator showGraph={false} />
           </div>
         </div>

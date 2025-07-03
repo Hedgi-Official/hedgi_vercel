@@ -41,19 +41,19 @@ export default function WhatIsHedge() {
           
           {/* Currency animation visual */}
           <div className="flex justify-center items-center mb-8 py-6">
-            <div className="relative flex items-center space-x-4 p-4 rounded-lg bg-card shadow-md">
-              <div className="text-3xl font-bold text-primary flex items-center">
+            <div className="relative flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 p-4 rounded-lg bg-card shadow-md">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-primary flex items-center">
                 <span>USD</span>
-                <div className="mx-4 flex flex-col">
-                  <TrendingUp className="h-6 w-6 text-primary animate-pulse" />
-                  <TrendingDown className="h-6 w-6 text-destructive animate-pulse" />
+                <div className="mx-2 sm:mx-4 flex flex-col">
+                  <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-primary animate-pulse" />
+                  <TrendingDown className="h-4 w-4 sm:h-6 sm:w-6 text-destructive animate-pulse" />
                 </div>
                 <span>BRL</span>
               </div>
-              <ArrowRight className="h-8 w-8" />
+              <ArrowRight className="h-6 w-6 sm:h-8 sm:w-8 rotate-90 sm:rotate-0" />
               <div className="flex items-center space-x-2">
-                <Shield className="h-10 w-10 text-primary" />
-                <div className="text-3xl font-bold">
+                <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold">
                   <span>USD</span>
                   <span className="mx-2">=</span>
                   <span>BRL</span>
