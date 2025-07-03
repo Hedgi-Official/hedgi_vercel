@@ -7,8 +7,13 @@
     @apply border-border;
   }
 
+  html {
+    @apply overflow-x-hidden;
+  }
+
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
+    min-width: 320px; /* Prevent layout from breaking on very small screens */
   }
 }
 
