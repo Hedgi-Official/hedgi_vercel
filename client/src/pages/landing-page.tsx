@@ -23,16 +23,16 @@ export default function LandingPage() {
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
       <main className="container mx-auto px-4 py-8 md:py-20 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-start">
           {/* Left side - Hero content */}
           <div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
               {t('Protect the value')}
               <br />
               {t('of your')} <TypingEffect />
             </h1>
             <Skyline />
-            <p className="text-lg md:text-xl mb-8 text-muted-foreground max-w-xl">
+            <p className="text-xl md:text-xl mb-8 text-muted-foreground max-w-xl">
               {t('Professional currency hedging made simple')}
             </p>
             <Button 
