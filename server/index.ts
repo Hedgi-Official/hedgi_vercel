@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   // Simple authentication is now handled in the main routes file
 
   // Initialize routes first to ensure API endpoints are ready
-  const server = registerRoutes(app);
+  registerRoutes(app);
   log("Routes registered successfully");
 
   // Setup Vite or static serving based on environment
@@ -84,17 +84,23 @@ app.use((req, res, next) => {
 
   // Bind server to port with better error handling and logging
   const PORT = parseInt(process.env.PORT || '5000', 10);
+  let serverStarted = false;
 
   const startServer = (port: number) => {
+    if (serverStarted) return;
+    
     log(`Attempting to start server on port ${port}...`);
-    server.listen(port, "0.0.0.0", () => {
+    const serverInstance = server.listen(port, "0.0.0.0", () => {
+      serverStarted = true;
       log(`Server successfully bound and listening on port ${port}`);
       log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
-    }).on('error', (e: any) => {
-      if (e.code === 'EADDRINUSE') {
+    });
+    
+    serverInstance.on('error', (e: any) => {
+      if (e.code === 'EADDRINUSE' && !serverStarted) {
         log(`Port ${port} is busy, trying ${port + 1}...`);
         startServer(port + 1);
-      } else {
+      } else if (!serverStarted) {
         log(`Server error: ${e.message}`);
         throw e;  // Rethrow non-port-related errors
       }
