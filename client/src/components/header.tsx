@@ -28,14 +28,14 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
   return (
     <nav className="bg-background border-b">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2" onClick={closeMobileMenu}>
+          <Link href="/" className="flex items-center space-x-2 mr-8" onClick={closeMobileMenu}>
             <img src="/Hedgi.png?v=4" alt="Hedgi Logo" className="h-10 w-auto rounded-lg" />
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Desktop Navigation - Left Aligned */}
+          <div className="hidden md:flex items-center space-x-4 flex-1">
             <Link href={user ? "/dashboard" : "/"}>
               <Button variant="ghost">
                 {t('Home')}
