@@ -35,7 +35,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
           </Link>
 
           {/* Desktop Navigation - Left Aligned */}
-          <div className="hidden md:flex items-center space-x-4 flex-1 ml-8">
+          <div className="hidden md:flex items-center space-x-4 flex-1 ml-4">
             <Link href={user ? "/dashboard" : "/"}>
               <Button variant="ghost">
                 {t('Home')}
