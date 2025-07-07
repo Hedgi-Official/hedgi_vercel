@@ -473,7 +473,7 @@ export function registerRoutes(app: Express): Server {
       
       // Fetch user's PIX key and email from database with graceful fallback
       let pixKey = null;
-      let userEmail = null;
+      let mail = null;
       try {
         const user = await db.query.users.findFirst({
           where: eq(users.id, userId),
@@ -483,9 +483,9 @@ export function registerRoutes(app: Express): Server {
           }
         });
         pixKey = user?.paymentIdentifier || null;
-        userEmail = user?.email || null;
+        mail = user?.email || null;
         console.log('[Express Proxy] User PIX key fetched from database:', pixKey);
-        console.log('[Express Proxy] User email fetched from database:', userEmail);
+        console.log('[Express Proxy] User email fetched from database:', mail);
       } catch (dbError) {
         console.error('[Express Proxy] Database unavailable, using fallback PIX key:', dbError.message);
         // Use fallback PIX key for user 21 when database is unavailable
@@ -499,7 +499,7 @@ export function registerRoutes(app: Express): Server {
         metadata: {
           ...req.body.metadata,
           pixKey: pixKey,
-          userEmail: userEmail
+          mail: mail
         }
       };
 
@@ -550,7 +550,7 @@ export function registerRoutes(app: Express): Server {
           flaskTradeId: result.id,
           metadata: {
             ...result.metadata,
-            userEmail: userEmail
+            mail: mail
           }
         }).returning();
         
