@@ -1,6 +1,6 @@
 export function Skyline() {
   return (
-    <div className="w-full h-24 mt-4 mb-8">
+    <div className="w-full h-24 mt-4 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
       <svg
         viewBox="0 0 800 100"
         className="w-full h-full text-foreground/10"
