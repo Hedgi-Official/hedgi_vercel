@@ -18,6 +18,7 @@ import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 import { UnderConstruction } from "@/components/under-construction";
 import { Header } from "@/components/header";
+import { CacheManager } from "@/components/cache-manager";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -61,6 +62,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
+      <CacheManager />
       <Toaster />
     </QueryClientProvider>
   );
