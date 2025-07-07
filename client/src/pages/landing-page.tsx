@@ -26,7 +26,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Left side - Hero content */}
           <div>
-            <h1 className="text-6xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
               {t('Protect the value')}
               <br />
               {t('of your')} <TypingEffect />
@@ -37,13 +37,7 @@ export default function LandingPage() {
             </p>
             <Button 
               size="lg" 
-              onClick={() => {
-                if (user) {
-                  navigate('/dashboard');
-                } else {
-                  navigate('/auth');
-                }
-              }}
+              onClick={() => navigate('/auth')}
               className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
             >
               {t('Start Hedging Now')}
