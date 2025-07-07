@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- July 7, 2025. **Fixed critical application startup issues** - Resolved duplicate key error in i18n translations and React Query context initialization problem
 - June 20, 2025. **PIX key integration completed** - All trades automatically include user's PIX key in metadata section
 - June 20, 2025. **Graceful database fallback implemented** - System continues working even when database is unavailable
 - June 20, 2025. **Flask tunnel connection verified** - All endpoints successfully connect to https://alleged-gb-activated-immediate.trycloudflare.com

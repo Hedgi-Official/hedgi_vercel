@@ -261,18 +261,6 @@ const ptBR = {
       margin: 'Margem',
       marginHelp: 'A margem é um valor adicional que você paga para manter sua posição aberta em caso de movimentos adversos do mercado. Se não for consumida, ela é devolvida a você após o fechamento do seu hedge.\n\nA margem padrão é definida como 2x o custo do hedge para fornecer proteção suficiente para sua posição.',
       marginRecommendation: 'Margem recomendada é 2x os custos de hedge, Margem mínima é 20% dos custos de hedge',
-      tradeStatus: {
-        'EXECUTED': 'Executado',
-        'NEW': 'Novo',
-        'PENDING': 'Pendente',
-        'OPEN': 'Aberto',
-        'CLOSED': 'Fechado',
-        'CANCELLED': 'Cancelado',
-        'FAILED': 'Falhou',
-        'COMPLETED': 'Concluído',
-        'ACTIVE': 'Ativo',
-        'CLOSE_REQUESTED': 'Fechamento Solicitado'
-      },
       buyWith: 'Comprar {target} com {base}',
       sellFor: 'Vender {target} por {base}',
       willMakePayment: 'Farei um pagamento em',

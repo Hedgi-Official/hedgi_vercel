@@ -58,11 +58,6 @@ async function fetchUser(): Promise<User | null> {
 
 export function useUser() {
   const queryClient = useQueryClient();
-  
-  // Safety check to ensure QueryClient is available
-  if (!queryClient) {
-    throw new Error("useUser must be used within a QueryClientProvider");
-  }
 
   const { data: user, error, isLoading } = useQuery<User | null, Error>({
     queryKey: ['user'],
