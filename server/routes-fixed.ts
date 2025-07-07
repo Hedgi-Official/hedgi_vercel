@@ -471,17 +471,21 @@ export function registerRoutes(app: Express): Server {
       // Get user ID from session or default (for authenticated requests)
       const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 21; // Default user for testing (has PIX key)
       
-      // Fetch user's PIX key from database with graceful fallback
+      // Fetch user's PIX key and email from database with graceful fallback
       let pixKey = null;
+      let userEmail = null;
       try {
         const user = await db.query.users.findFirst({
           where: eq(users.id, userId),
           columns: {
-            paymentIdentifier: true
+            paymentIdentifier: true,
+            email: true
           }
         });
         pixKey = user?.paymentIdentifier || null;
+        userEmail = user?.email || null;
         console.log('[Express Proxy] User PIX key fetched from database:', pixKey);
+        console.log('[Express Proxy] User email fetched from database:', userEmail);
       } catch (dbError) {
         console.error('[Express Proxy] Database unavailable, using fallback PIX key:', dbError.message);
         // Use fallback PIX key for user 21 when database is unavailable
@@ -489,12 +493,13 @@ export function registerRoutes(app: Express): Server {
         console.log('[Express Proxy] Using fallback PIX key:', pixKey);
       }
 
-      // Prepare the payload with PIX key in metadata
+      // Prepare the payload with PIX key and user email in metadata
       const payload = {
         ...req.body,
         metadata: {
           ...req.body.metadata,
-          pixKey: pixKey
+          pixKey: pixKey,
+          userEmail: userEmail
         }
       };
 
@@ -543,7 +548,10 @@ export function registerRoutes(app: Express): Server {
           durationDays: result.metadata?.days || 7,
           status: 'open',
           flaskTradeId: result.id,
-          metadata: result.metadata || {}
+          metadata: {
+            ...result.metadata,
+            userEmail: userEmail
+          }
         }).returning();
         
         console.log('[Express Proxy] Successfully saved trade to local database:', insertResult);
