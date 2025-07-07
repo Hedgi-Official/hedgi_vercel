@@ -73,10 +73,31 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static assets with proper MIME types for Chrome
+  app.use(express.static(distPath, {
+    setHeaders: (res, path) => {
+      if (path.endsWith('.js') || path.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      } else if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      } else if (path.endsWith('.html')) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      }
+    },
+    // Ensure proper caching headers
+    maxAge: 0,
+    etag: false
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Handle SPA routing - serve index.html for non-asset routes
+  app.get("*", (req, res) => {
+    // Don't serve index.html for actual static assets
+    const ext = path.extname(req.path);
+    if (ext && ext !== '.html') {
+      return res.status(404).send('Not Found');
+    }
+
+    // Serve index.html for all routes (including root)
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
