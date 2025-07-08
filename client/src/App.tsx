@@ -40,6 +40,9 @@ function Router() {
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
       </Route>
+      <Route path="/profile">
+        {user ? <UnderConstruction title="Profile" /> : <AuthPage />}
+      </Route>
       <Route path="/what-is-hedge">
         {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
       </Route>

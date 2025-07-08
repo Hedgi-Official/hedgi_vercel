@@ -3,8 +3,15 @@ import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/language-selector";
 import { useTranslation } from "react-i18next";
 import { useUser } from "@/hooks/use-user";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   showAuthButton?: boolean;
@@ -56,12 +63,27 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
           <div className="hidden md:flex items-center gap-4">
             <LanguageSelector />
             {username ? (
-              <>
-                <span className="text-foreground text-sm">{t('Welcome')}, {username}</span>
-                <Button variant="outline" onClick={onLogout}>
-                  {t('Logout')}
-                </Button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {username}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                      <User className="h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="flex items-center gap-2 cursor-pointer">
+                    <LogOut className="h-4 w-4" />
+                    {t('Logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : showAuthButton && (
               <Button variant="outline" asChild>
                 <Link href="/auth">{t('Get Started')}</Link>
@@ -115,6 +137,16 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
                     <div className="px-4 py-2 text-sm text-foreground">
                       {t('Welcome')}, {username}
                     </div>
+                    <Link href="/profile">
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start" 
+                        onClick={closeMobileMenu}
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Profile
+                      </Button>
+                    </Link>
                     <Button 
                       variant="outline" 
                       className="w-full justify-start" 
@@ -123,6 +155,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
                         closeMobileMenu();
                       }}
                     >
+                      <LogOut className="h-4 w-4 mr-2" />
                       {t('Logout')}
                     </Button>
                   </>
