@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag, Eye, EyeOff, ArrowLeft, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
@@ -58,123 +58,223 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <Header showAuthButton={false} username={user?.username} onLogout={handleLogout} />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-center">Profile</h1>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                User Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate("/dashboard")}
+                className="hover:bg-muted/50"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </div>
+            
+            <div className="text-center">
+              <div className="relative inline-block mb-4">
+                <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                  {user.fullName 
+                    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                    : user.username.slice(0, 2).toUpperCase()
+                  }
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-background border-2 border-background rounded-full flex items-center justify-center">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
               
-              {/* Full Name */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Full Name</span>
-                </div>
-                <span className="text-muted-foreground">{user.fullName || "Not provided"}</span>
-              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
+                {user.fullName || user.username}
+              </h1>
+              <p className="text-muted-foreground">
+                Member since {formatDate(user.createdAt || new Date())}
+              </p>
+            </div>
+          </div>
 
-              {/* Username */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Username</span>
-                </div>
-                <span className="text-muted-foreground">{user.username}</span>
-              </div>
-
-              {/* Email */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Email</span>
-                </div>
-                <span className="text-muted-foreground">{user.email}</span>
-              </div>
-
-              {/* Phone Number */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Phone Number</span>
-                </div>
-                <span className="text-muted-foreground">{user.phoneNumber || "Not provided"}</span>
-              </div>
-
-              {/* Country */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <Flag className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Country</span>
-                </div>
-                <span className="text-muted-foreground">
-                  {user.nation ? getCountryName(user.nation) : "Not provided"}
-                </span>
-              </div>
-
-              {/* PIX Key / Payment Identifier */}
-              <div className="flex items-center justify-between py-3 border-b">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
-                  </span>
-                </div>
-                <span className="text-muted-foreground">{user.paymentIdentifier || "Not provided"}</span>
-              </div>
-
-              {/* CPF (for Brazilian users) */}
-              {user.nation === "BR" && (
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">CPF</span>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Personal Information Card */}
+            <div className="lg:col-span-2">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    Personal Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  
+                  {/* Full Name */}
+                  <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="font-medium">Full Name</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">{user.fullName || "Not provided"}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{formatCPF(user.cpf || "", showFullCPF)}</span>
-                    {user.cpf && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFullCPF(!showFullCPF)}
-                        className="h-6 w-6 p-0"
-                      >
-                        {showFullCPF ? (
-                          <EyeOff className="h-3 w-3" />
-                        ) : (
-                          <Eye className="h-3 w-3" />
+
+                  {/* Username */}
+                  <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                        <User className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="font-medium">Username</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">@{user.username}</span>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="font-medium">Email</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">{user.email}</span>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                        <Phone className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="font-medium">Phone Number</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">{user.phoneNumber || "Not provided"}</span>
+                  </div>
+
+                  {/* Birth Date */}
+                  <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                        <Calendar className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                      </div>
+                      <span className="font-medium">Birth Date</span>
+                    </div>
+                    <span className="text-muted-foreground font-medium">{formatDate(user.birthdate)}</span>
+                  </div>
+
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Location & Financial Info Card */}
+            <div className="space-y-6">
+              
+              {/* Location Card */}
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <MapPin className="h-5 w-5 text-primary" />
+                    </div>
+                    Location
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-6">
+                    <div className="text-4xl mb-3">
+                      {user.nation === 'BR' ? '🇧🇷' : user.nation === 'US' ? '🇺🇸' : '🌍'}
+                    </div>
+                    <p className="font-medium text-lg">
+                      {user.nation ? getCountryName(user.nation) : "Not provided"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Financial Information Card */}
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    Financial Info
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  
+                  {/* PIX Key / Payment Identifier */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <CreditCard className="h-3 w-3" />
+                      {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg border text-sm font-mono break-all">
+                      {user.paymentIdentifier || "Not provided"}
+                    </div>
+                  </div>
+
+                  {/* CPF (for Brazilian users) */}
+                  {user.nation === "BR" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <CreditCard className="h-3 w-3" />
+                        CPF
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 p-3 bg-muted/50 rounded-lg border text-sm font-mono">
+                          {formatCPF(user.cpf || "", showFullCPF)}
+                        </div>
+                        {user.cpf && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowFullCPF(!showFullCPF)}
+                            className="px-3"
+                          >
+                            {showFullCPF ? (
+                              <EyeOff className="h-3 w-3" />
+                            ) : (
+                              <Eye className="h-3 w-3" />
+                            )}
+                          </Button>
                         )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+                      </div>
+                    </div>
+                  )}
 
-              {/* Birth Date */}
-              <div className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Birth Date</span>
-                </div>
-                <span className="text-muted-foreground">{formatDate(user.birthdate)}</span>
-              </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
-            </CardContent>
-          </Card>
-
+          {/* Account Actions */}
           <div className="mt-8 flex justify-center">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
-            </Button>
+            <div className="flex gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/dashboard")}
+                className="px-6"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              <Button 
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Account Settings
+              </Button>
+            </div>
           </div>
         </div>
       </div>
