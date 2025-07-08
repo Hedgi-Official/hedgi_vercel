@@ -87,6 +87,27 @@ export function useUser() {
     },
   });
 
+  const updateUserMutation = useMutation<RequestResult, Error, { paymentIdentifier: string }>({
+    mutationFn: async (updateData) => {
+      const response = await fetch('/api/user/update-pix', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pixKey: updateData.paymentIdentifier }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message);
+      }
+
+      return { ok: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+    },
+  });
+
   return {
     user,
     isLoading,
@@ -94,5 +115,6 @@ export function useUser() {
     login: loginMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     register: registerMutation.mutateAsync,
+    updateUser: updateUserMutation.mutateAsync,
   };
 }
