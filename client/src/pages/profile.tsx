@@ -203,152 +203,153 @@ export default function Profile() {
 
             <div className="text-center">
               <div className="relative inline-block mb-4">
-                <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                  {user.fullName 
-                    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                    : user.username.slice(0, 2).toUpperCase()
-                  }
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-background border-2 border-background rounded-full flex items-center justify-center">
-                  <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                  <div 
+                    className="w-24 h-24 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg cursor-pointer hover:from-primary/90 hover:to-primary/80 transition-all duration-200"
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    {user.fullName 
+                      ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                      : user.username.slice(0, 2).toUpperCase()
+                    }
+                  </div>
                     <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Account Settings</DialogTitle>
-                      </DialogHeader>
-                      
-                      {!updateType ? (
-                        <div className="space-y-4">
-                          <p className="text-sm text-muted-foreground">
-                            Select what you'd like to update:
-                          </p>
-                          
-                          <div className="grid gap-2">
-                            <Button
-                              variant="outline"
-                              className="justify-start"
-                              onClick={() => setUpdateType('email')}
-                            >
-                              <Mail className="h-4 w-4 mr-2" />
-                              Update Email
-                              <span className="ml-auto text-xs text-muted-foreground">
-                                {user.email}
-                              </span>
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              className="justify-start"
-                              onClick={() => setUpdateType('phone')}
-                            >
-                              <Phone className="h-4 w-4 mr-2" />
-                              Update Phone Number
-                              <span className="ml-auto text-xs text-muted-foreground">
-                                {user.phoneNumber || "Not set"}
-                              </span>
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              className="justify-start"
-                              onClick={() => setUpdateType('pix')}
-                            >
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              Update {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
-                              <span className="ml-auto text-xs text-muted-foreground">
-                                {user.paymentIdentifier || "Not set"}
-                              </span>
-                            </Button>
-                          </div>
-                          
-                          <div className="flex justify-end">
-                            <Button variant="outline" onClick={handleCloseSettings}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
+                    <DialogHeader>
+                      <DialogTitle>Account Settings</DialogTitle>
+                    </DialogHeader>
+                    
+                    {!updateType ? (
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Select what you'd like to update:
+                        </p>
+                        
+                        <div className="grid gap-2">
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUpdateType(null)}
-                            className="w-fit"
+                            variant="outline"
+                            className="justify-start"
+                            onClick={() => setUpdateType('email')}
                           >
-                            ← Back to options
+                            <Mail className="h-4 w-4 mr-2" />
+                            Update Email
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {user.email}
+                            </span>
                           </Button>
                           
-                          {updateType === 'email' && (
-                            <div>
-                              <Label htmlFor="email">New Email Address</Label>
-                              <Input
-                                id="email"
-                                type="email"
-                                value={newEmail}
-                                onChange={(e) => setNewEmail(e.target.value)}
-                                placeholder="Enter new email address"
-                              />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Current: {user.email}
-                              </p>
-                            </div>
-                          )}
+                          <Button
+                            variant="outline"
+                            className="justify-start"
+                            onClick={() => setUpdateType('phone')}
+                          >
+                            <Phone className="h-4 w-4 mr-2" />
+                            Update Phone Number
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {user.phoneNumber || "Not set"}
+                            </span>
+                          </Button>
                           
-                          {updateType === 'phone' && (
-                            <div>
-                              <Label htmlFor="phoneNumber">New Phone Number</Label>
-                              <Input
-                                id="phoneNumber"
-                                value={newPhoneNumber}
-                                onChange={(e) => setNewPhoneNumber(e.target.value)}
-                                placeholder="Enter new phone number"
-                              />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Current: {user.phoneNumber || "Not set"}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {updateType === 'pix' && (
-                            <div>
-                              <Label htmlFor="pixKey">
-                                New {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
-                              </Label>
-                              <Input
-                                id="pixKey"
-                                placeholder={
-                                  user.nation === "BR"
-                                    ? "Enter your PIX key (email, phone, or CPF)"
-                                    : "Enter your payment identifier"
-                                }
-                                value={newPixKey}
-                                onChange={(e) => setNewPixKey(e.target.value)}
-                              />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Current: {user.paymentIdentifier || "Not set"}
-                              </p>
-                            </div>
-                          )}
-                          
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={handleCloseSettings} disabled={isUpdating}>
-                              Cancel
-                            </Button>
-                            <Button onClick={handleUpdateField} disabled={isUpdating || isLoading}>
-                              {isUpdating ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  Processing...
-                                </div>
-                              ) : (
-                                `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`
-                              )}
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            className="justify-start"
+                            onClick={() => setUpdateType('pix')}
+                          >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Update {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {user.paymentIdentifier || "Not set"}
+                            </span>
+                          </Button>
                         </div>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                        
+                        <div className="flex justify-end">
+                          <Button variant="outline" onClick={handleCloseSettings}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setUpdateType(null)}
+                          className="w-fit"
+                        >
+                          ← Back to options
+                        </Button>
+                        
+                        {updateType === 'email' && (
+                          <div>
+                            <Label htmlFor="email">New Email Address</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={newEmail}
+                              onChange={(e) => setNewEmail(e.target.value)}
+                              placeholder="Enter new email address"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Current: {user.email}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {updateType === 'phone' && (
+                          <div>
+                            <Label htmlFor="phoneNumber">New Phone Number</Label>
+                            <Input
+                              id="phoneNumber"
+                              value={newPhoneNumber}
+                              onChange={(e) => setNewPhoneNumber(e.target.value)}
+                              placeholder="Enter new phone number"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Current: {user.phoneNumber || "Not set"}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {updateType === 'pix' && (
+                          <div>
+                            <Label htmlFor="pixKey">
+                              New {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                            </Label>
+                            <Input
+                              id="pixKey"
+                              placeholder={
+                                user.nation === "BR"
+                                  ? "Enter your PIX key (email, phone, or CPF)"
+                                  : "Enter your payment identifier"
+                              }
+                              value={newPixKey}
+                              onChange={(e) => setNewPixKey(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Current: {user.paymentIdentifier || "Not set"}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={handleCloseSettings} disabled={isUpdating}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleUpdateField} disabled={isUpdating || isLoading}>
+                            {isUpdating ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                Processing...
+                              </div>
+                            ) : (
+                              `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
