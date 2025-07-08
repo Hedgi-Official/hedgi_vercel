@@ -17,11 +17,12 @@ export default function Profile() {
   const { t } = useTranslation();
   const [showFullCPF, setShowFullCPF] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [updateType, setUpdateType] = useState<'pix' | 'email' | 'phone' | null>(null);
   const [newPixKey, setNewPixKey] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
-  const { toast } = useToast();
   const [newEmail, setNewEmail] = useState("");
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     await logout();
@@ -87,62 +88,87 @@ export default function Profile() {
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateField = async () => {
+    if (!updateType) return;
+
     setIsUpdating(true);
     try {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (newEmail && !emailRegex.test(newEmail)) {
-        toast({
-          title: "Error",
-          description: "Invalid email format.",
-          variant: "destructive",
-        });
-        return;
-      }
+      let updateData: { paymentIdentifier?: string; email?: string; phoneNumber?: string } = {};
+      let successMessage = "";
 
-      // Check if email is already taken (This is a placeholder, implement your actual email validation logic here)
-      // const isEmailTaken = await checkEmailAvailability(newEmail);
-      // if (isEmailTaken) {
-      //   toast({
-      //     title: "Error",
-      //     description: "This email is already taken.",
-      //     variant: "destructive",
-      //   });
-      //   return;
-      // }
-
-      const updateData: { paymentIdentifier?: string; email?: string; phoneNumber?: string } = {};
-
-      if (newPixKey) {
-        updateData.paymentIdentifier = newPixKey;
-      }
-      if (newEmail) {
-        updateData.email = newEmail;
-      }
-      if (newPhoneNumber) {
-        updateData.phoneNumber = newPhoneNumber;
+      switch (updateType) {
+        case 'pix':
+          if (!newPixKey.trim()) {
+            toast({
+              title: "Error",
+              description: "PIX key cannot be empty.",
+              variant: "destructive",
+            });
+            return;
+          }
+          updateData.paymentIdentifier = newPixKey.trim();
+          successMessage = "PIX key updated successfully.";
+          break;
+        
+        case 'email':
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!newEmail.trim() || !emailRegex.test(newEmail)) {
+            toast({
+              title: "Error",
+              description: "Please enter a valid email address.",
+              variant: "destructive",
+            });
+            return;
+          }
+          updateData.email = newEmail.trim();
+          successMessage = "Email updated successfully.";
+          break;
+        
+        case 'phone':
+          if (!newPhoneNumber.trim()) {
+            toast({
+              title: "Error",
+              description: "Phone number cannot be empty.",
+              variant: "destructive",
+            });
+            return;
+          }
+          updateData.phoneNumber = newPhoneNumber.trim();
+          successMessage = "Phone number updated successfully.";
+          break;
       }
 
       await updateUser(updateData);
 
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
+        title: "Success",
+        description: successMessage,
       });
+      
+      // Reset form
       setSettingsOpen(false);
+      setUpdateType(null);
       setNewPixKey("");
       setNewEmail("");
       setNewPhoneNumber("");
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile.";
       toast({
         title: "Error",
-        description: "Failed to update profile.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsOpen(false);
+    setUpdateType(null);
+    setNewPixKey("");
+    setNewEmail("");
+    setNewPhoneNumber("");
   };
 
   return (
@@ -179,61 +205,130 @@ export default function Profile() {
                       <DialogHeader>
                         <DialogTitle>Account Settings</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={newEmail}
-                            onChange={(e) => setNewEmail(e.target.value)}
-                            placeholder={user.email}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="phoneNumber">Phone Number</Label>
-                          <Input
-                            id="phoneNumber"
-                            value={newPhoneNumber}
-                            onChange={(e) => setNewPhoneNumber(e.target.value)}
-                            placeholder={user.phoneNumber || "Enter phone number"}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="pixKey">
-                            {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
-                          </Label>
-                          <Input
-                            id="pixKey"
-                            placeholder={
-                              user.nation === "BR"
-                                ? "Enter your PIX key (email, phone, or CPF)"
-                                : "Enter your payment identifier"
-                            }
-                            value={newPixKey}
-                            onChange={(e) => setNewPixKey(e.target.value)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Current: {user.paymentIdentifier || "Not set"}
+                      
+                      {!updateType ? (
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Select what you'd like to update:
                           </p>
+                          
+                          <div className="grid gap-2">
+                            <Button
+                              variant="outline"
+                              className="justify-start"
+                              onClick={() => setUpdateType('email')}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Update Email
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {user.email}
+                              </span>
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              className="justify-start"
+                              onClick={() => setUpdateType('phone')}
+                            >
+                              <Phone className="h-4 w-4 mr-2" />
+                              Update Phone Number
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {user.phoneNumber || "Not set"}
+                              </span>
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              className="justify-start"
+                              onClick={() => setUpdateType('pix')}
+                            >
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Update {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {user.paymentIdentifier || "Not set"}
+                              </span>
+                            </Button>
+                          </div>
+                          
+                          <div className="flex justify-end">
+                            <Button variant="outline" onClick={handleCloseSettings}>
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex justify-end gap-2">
+                      ) : (
+                        <div className="space-y-4">
                           <Button
-                            variant="outline"
-                            onClick={() => {
-                              setSettingsOpen(false);
-                              setNewPixKey("");
-                              setNewEmail("");
-                              setNewPhoneNumber("");
-                            }}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setUpdateType(null)}
+                            className="w-fit"
                           >
-                            Cancel
+                            ← Back to options
                           </Button>
-                          <Button onClick={handleUpdateProfile} disabled={isUpdating}>
-                            {isUpdating ? "Updating..." : "Update Profile"}
-                          </Button>
+                          
+                          {updateType === 'email' && (
+                            <div>
+                              <Label htmlFor="email">New Email Address</Label>
+                              <Input
+                                id="email"
+                                type="email"
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                                placeholder="Enter new email address"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Current: {user.email}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {updateType === 'phone' && (
+                            <div>
+                              <Label htmlFor="phoneNumber">New Phone Number</Label>
+                              <Input
+                                id="phoneNumber"
+                                value={newPhoneNumber}
+                                onChange={(e) => setNewPhoneNumber(e.target.value)}
+                                placeholder="Enter new phone number"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Current: {user.phoneNumber || "Not set"}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {updateType === 'pix' && (
+                            <div>
+                              <Label htmlFor="pixKey">
+                                New {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                              </Label>
+                              <Input
+                                id="pixKey"
+                                placeholder={
+                                  user.nation === "BR"
+                                    ? "Enter your PIX key (email, phone, or CPF)"
+                                    : "Enter your payment identifier"
+                                }
+                                value={newPixKey}
+                                onChange={(e) => setNewPixKey(e.target.value)}
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Current: {user.paymentIdentifier || "Not set"}
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={handleCloseSettings}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleUpdateField} disabled={isUpdating}>
+                              {isUpdating ? "Updating..." : `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </DialogContent>
                   </Dialog>
                 </div>
