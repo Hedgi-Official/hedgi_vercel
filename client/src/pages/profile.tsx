@@ -1,18 +1,25 @@
-
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag, Eye, EyeOff, ArrowLeft, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
   const [showFullCPF, setShowFullCPF] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [newPixKey, setNewPixKey] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     await logout();
@@ -40,27 +47,40 @@ export default function Profile() {
 
   const formatCPF = (cpf: string, showFull: boolean) => {
     if (!cpf) return "Not provided";
-    
+
     if (showFull) {
       return cpf;
     }
-    
+
     // Remove any existing formatting
     const cleanCPF = cpf.replace(/\D/g, '');
-    
+
     if (cleanCPF.length === 11) {
       // Format as XXX.XXX.XXX-89 (mask first 9 digits, show last 2)
       const lastTwo = cleanCPF.slice(-2);
       return `XXX.XXX.XXX-${lastTwo}`;
     }
-    
+
     return cpf; // Return as-is if not 11 digits
+  };
+
+  const handleUpdatePixKey = async () => {
+    setIsUpdating(true);
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    toast({
+      title: "PIX Key Updated",
+      description: "Your PIX key has been successfully updated.",
+    });
+    setSettingsOpen(false);
+    setNewPixKey("");
+    setIsUpdating(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <Header showAuthButton={false} username={user?.username} onLogout={handleLogout} />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
@@ -76,7 +96,7 @@ export default function Profile() {
                 Back to Dashboard
               </Button>
             </div>
-            
+
             <div className="text-center">
               <div className="relative inline-block mb-4">
                 <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
@@ -86,10 +106,56 @@ export default function Profile() {
                   }
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-background border-2 border-background rounded-full flex items-center justify-center">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                    <DialogTrigger asChild>
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>User Settings</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="pix-key">
+                            {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                          </Label>
+                          <Input
+                            id="pix-key"
+                            placeholder={
+                              user.nation === "BR" 
+                                ? "Enter your PIX key (email, phone, or CPF)"
+                                : "Enter your payment identifier"
+                            }
+                            value={newPixKey}
+                            onChange={(e) => setNewPixKey(e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Current: {user.paymentIdentifier || "Not set"}
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setSettingsOpen(false);
+                              setNewPixKey("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleUpdatePixKey}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? "Updating..." : "Update"}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
-              
+
               <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent mb-2">
                 {user.fullName || user.username}
               </h1>
@@ -101,7 +167,7 @@ export default function Profile() {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Personal Information Card */}
             <div className="lg:col-span-2">
               <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
@@ -114,7 +180,7 @@ export default function Profile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  
+
                   {/* Full Name */}
                   <div className="flex items-center justify-between py-4 px-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-3">
@@ -176,7 +242,7 @@ export default function Profile() {
 
             {/* Location & Financial Info Card */}
             <div className="space-y-6">
-              
+
               {/* Location Card */}
               <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
                 <CardHeader className="pb-4">
@@ -210,7 +276,7 @@ export default function Profile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  
+
                   {/* PIX Key / Payment Identifier */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">

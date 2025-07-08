@@ -463,6 +463,43 @@ export function registerRoutes(app: Express): Server {
   // app.use(paymentRouter); // Removed - using payment routes from server/index.ts instead
   app.use(simulateRouter);
 
+  // User settings endpoints
+  app.post("/api/user/update-pix", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated() || !req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    try {
+      const { pixKey } = req.body;
+      
+      if (!pixKey || typeof pixKey !== 'string') {
+        return res.status(400).json({ error: 'PIX key is required' });
+      }
+
+      const userId = req.user.id;
+      console.log(`[User Settings] Updating PIX key for user ${userId}`);
+
+      // Update the user's PIX key in the database
+      await db.update(users)
+        .set({ 
+          paymentIdentifier: pixKey.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      console.log(`[User Settings] Successfully updated PIX key for user ${userId}`);
+      
+      res.json({ 
+        success: true, 
+        message: 'PIX key updated successfully',
+        pixKey: pixKey.trim()
+      });
+    } catch (error) {
+      console.error('[User Settings] Error updating PIX key:', error);
+      res.status(500).json({ error: 'Failed to update PIX key' });
+    }
+  });
+
   // **SIMPLE FLASK PROXY ENDPOINTS**
 
   // 1. Create a new trade → POST /api/trades (proxy to Flask with PIX key)
