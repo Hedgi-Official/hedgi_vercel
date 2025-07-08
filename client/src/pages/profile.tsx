@@ -22,6 +22,7 @@ export default function Profile() {
   const [newEmail, setNewEmail] = useState("");
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -92,6 +93,14 @@ export default function Profile() {
     if (!updateType) return;
 
     setIsUpdating(true);
+    setIsLoading(true);
+    
+    // Show immediate feedback
+    toast({
+      title: "Processing...",
+      description: `Updating your ${updateType === 'pix' ? (user.nation === "BR" ? "PIX key" : "payment identifier") : updateType}...`,
+    });
+
     try {
       let updateData: { paymentIdentifier?: string; email?: string; phoneNumber?: string } = {};
       let successMessage = "";
@@ -141,7 +150,7 @@ export default function Profile() {
       await updateUser(updateData);
 
       toast({
-        title: "Success",
+        title: "✅ Success",
         description: successMessage,
       });
       
@@ -154,12 +163,13 @@ export default function Profile() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to update profile.";
       toast({
-        title: "Error",
+        title: "❌ Error",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsUpdating(false);
+      setIsLoading(false);
     }
   };
 
@@ -320,11 +330,18 @@ export default function Profile() {
                           )}
                           
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={handleCloseSettings}>
+                            <Button variant="outline" onClick={handleCloseSettings} disabled={isUpdating}>
                               Cancel
                             </Button>
-                            <Button onClick={handleUpdateField} disabled={isUpdating}>
-                              {isUpdating ? "Updating..." : `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`}
+                            <Button onClick={handleUpdateField} disabled={isUpdating || isLoading}>
+                              {isUpdating ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  Processing...
+                                </div>
+                              ) : (
+                                `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`
+                              )}
                             </Button>
                           </div>
                         </div>

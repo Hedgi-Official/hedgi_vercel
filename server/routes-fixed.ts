@@ -552,25 +552,27 @@ export function registerRoutes(app: Express): Server {
       const { users } = await import('../db/schema.js');
       const { eq } = await import('drizzle-orm');
 
-      // Check if email is already taken by another user
+      // Only check email if it's being updated and is different
       if (email && email !== req.user.email) {
+        // Optimized query - only select id field
         const existingUser = await db
-          .select()
+          .select({ id: users.id })
           .from(users)
           .where(eq(users.email, email))
           .limit(1);
 
-        if (existingUser.length > 0 && existingUser[0].id !== req.user.id) {
+        if (existingUser.length > 0) {
           return res.status(400).json({ error: "Email is already taken by another user" });
         }
       }
 
       // Build update object with only provided fields
-      const updateData: any = {};
+      const updateData: any = { updatedAt: new Date() };
       if (paymentIdentifier !== undefined) updateData.paymentIdentifier = paymentIdentifier;
       if (email !== undefined) updateData.email = email;
       if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
 
+      // Single database update operation
       await db
         .update(users)
         .set(updateData)
@@ -578,6 +580,7 @@ export function registerRoutes(app: Express): Server {
 
       console.log(`[User Settings] Successfully updated profile for user ${req.user.id}`);
 
+      // Send response immediately
       res.json({ success: true, message: "Profile updated successfully" });
     } catch (error) {
       console.error('[User Settings] Error updating profile:', error);
