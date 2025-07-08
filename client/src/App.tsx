@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
 import UsingHedgi from "@/pages/using-hedgi";
@@ -41,7 +42,7 @@ function Router() {
         {user ? <Dashboard /> : <AuthPage />}
       </Route>
       <Route path="/profile">
-        {user ? <UnderConstruction title="Profile" /> : <AuthPage />}
+        {user ? <Profile /> : <AuthPage />}
       </Route>
       <Route path="/what-is-hedge">
         {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
