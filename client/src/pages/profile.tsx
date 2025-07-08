@@ -4,13 +4,15 @@ import { useLocation } from "wouter";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag } from "lucide-react";
+import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 
 export default function Profile() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
+  const [showFullCPF, setShowFullCPF] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -34,6 +36,25 @@ export default function Profile() {
       'US': 'United States 🇺🇸'
     };
     return countries[countryCode] || countryCode;
+  };
+
+  const formatCPF = (cpf: string, showFull: boolean) => {
+    if (!cpf) return "Not provided";
+    
+    if (showFull) {
+      return cpf;
+    }
+    
+    // Remove any existing formatting
+    const cleanCPF = cpf.replace(/\D/g, '');
+    
+    if (cleanCPF.length === 11) {
+      // Format as XXX.XXX.XXX-89 (mask first 9 digits, show last 2)
+      const lastTwo = cleanCPF.slice(-2);
+      return `XXX.XXX.XXX-${lastTwo}`;
+    }
+    
+    return cpf; // Return as-is if not 11 digits
   };
 
   return (
@@ -118,7 +139,23 @@ export default function Profile() {
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">CPF</span>
                   </div>
-                  <span className="text-muted-foreground">{user.cpf || "Not provided"}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{formatCPF(user.cpf || "", showFullCPF)}</span>
+                    {user.cpf && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFullCPF(!showFullCPF)}
+                        className="h-6 w-6 p-0"
+                      >
+                        {showFullCPF ? (
+                          <EyeOff className="h-3 w-3" />
+                        ) : (
+                          <Eye className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
 
