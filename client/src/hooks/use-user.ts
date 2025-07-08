@@ -87,12 +87,12 @@ export function useUser() {
     },
   });
 
-  const updateUserMutation = useMutation<RequestResult, Error, { paymentIdentifier: string }>({
+  const updateUserMutation = useMutation<RequestResult, Error, { paymentIdentifier?: string, email?: string, phoneNumber?: string }>({
     mutationFn: async (updateData) => {
-      const response = await fetch('/api/user/update-pix', {
+      const response = await fetch('/api/user/update-profile', {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pixKey: updateData.paymentIdentifier }),
+        body: JSON.stringify(updateData),
         credentials: "include",
       });
 

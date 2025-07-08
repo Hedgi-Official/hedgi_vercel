@@ -100,7 +100,7 @@ export function registerRoutes(app: Express): Server {
       const html = await response.text();
       const htmlTime = Date.now() - htmlStart;
       console.log(`[Local Brick] Generated brick HTML (${html.length} chars) in ${htmlTime}ms`);
-      
+
       // Debug: Show the actual onSubmit signature from Flask
       const onSubmitMatch = html.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
       if (onSubmitMatch) {
@@ -111,7 +111,7 @@ export function registerRoutes(app: Express): Server {
       const originalFetch = 'fetch("/process_payment", {';
       const protocol = req.get('x-forwarded-proto') === 'https' ? 'https' : req.protocol;
       const newFetch = `fetch("${protocol}://${req.get('host')}/api/proxy/process_payment", {`;
-      
+
       let updatedHtml = html.replace(originalFetch, newFetch);
       console.log(`[Brick Proxy] Fetch URL replacement: ${originalFetch} -> ${newFetch}`);
 
@@ -187,7 +187,7 @@ export function registerRoutes(app: Express): Server {
 
       const totalTime = Date.now() - startTime;
       console.log(`[Local Brick] Complete proxy response in ${totalTime}ms for session ${sessionInfo.sessionId}, user ${sessionInfo.userId}`);
-      
+
       // 3) Return it as HTML so the iframe can render it
       res.setHeader("Content-Type", "text/html");
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -236,13 +236,13 @@ export function registerRoutes(app: Express): Server {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type");
-    
+
     try {
       console.log("[Proxy] /api/proxy/process_payment endpoint called!");
       console.log("[Proxy] Request headers:", req.headers);
       console.log("[Proxy] Request method:", req.method);
       console.log("[Proxy] Request URL:", req.url);
-      
+
       // 1) The request body is a JSON object containing:
       //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
       const originalPayload = req.body;
@@ -253,12 +253,12 @@ export function registerRoutes(app: Express): Server {
                            originalPayload.paymentMethodId ||
                            originalPayload.paymentMethod?.id ||
                            originalPayload.payment_method?.id;
-      
+
       console.log("[Proxy] Raw payload keys:", Object.keys(originalPayload));
       console.log("[Proxy] Looking for payment_method_id:", originalPayload.payment_method_id);
       console.log("[Proxy] Looking for paymentMethodId:", originalPayload.paymentMethodId);
       console.log("[Proxy] Extracted payment_method_id:", paymentMethodId);
-      
+
       // Log full payload only if payment method ID is missing for debugging
       if (!paymentMethodId) {
         console.log("[Proxy] MISSING payment_method_id - Full payload:", JSON.stringify(originalPayload, null, 2));
@@ -331,7 +331,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const { txId } = req.params;
       console.log(`[Payment Status] Checking status for txId: ${txId}`);
-      
+
       const cachedResult = paymentResultsCache.get(txId);
       if (cachedResult) {
         console.log(`[Payment Status] Found cached result for ${txId}:`, cachedResult);
@@ -370,7 +370,7 @@ export function registerRoutes(app: Express): Server {
       const monthDiff = today.getMonth() - birthDate.getMonth();
       const dayDiff = today.getDate() - birthDate.getDate();
       const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
-      
+
       if (actualAge < 18) {
         return res.status(400).json({ message: "You must be at least 18 years old to use this service" });
       }
@@ -433,7 +433,7 @@ export function registerRoutes(app: Express): Server {
           console.error("Login after registration failed:", err);
           return res.status(500).json({ message: "Registration successful but login failed" });
         }
-        
+
         return res.json({
           message: "Registration successful",
           user: {
@@ -471,7 +471,7 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const { pixKey } = req.body;
-      
+
       if (!pixKey || typeof pixKey !== 'string') {
         return res.status(400).json({ error: 'PIX key is required' });
       }
@@ -488,7 +488,7 @@ export function registerRoutes(app: Express): Server {
         .where(eq(users.id, userId));
 
       console.log(`[User Settings] Successfully updated PIX key for user ${userId}`);
-      
+
       res.json({ 
         success: true, 
         message: 'PIX key updated successfully',
@@ -500,6 +500,91 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update PIX key endpoint (legacy support)
+  app.post("/api/user/update-pix", async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    try {
+      const { pixKey } = req.body;
+
+      if (!pixKey) {
+        return res.status(400).json({ error: "PIX key is required" });
+      }
+
+      console.log(`[User Settings] Updating PIX key for user ${req.user.id}`);
+
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      await db
+        .update(users)
+        .set({ paymentIdentifier: pixKey })
+        .where(eq(users.id, req.user.id));
+
+      console.log(`[User Settings] Successfully updated PIX key for user ${req.user.id}`);
+
+      res.json({ success: true, message: "PIX key updated successfully" });
+    } catch (error) {
+      console.error('[User Settings] Error updating PIX key:', error);
+      res.status(500).json({ error: "Failed to update PIX key" });
+    }
+  });
+
+  // Update user profile endpoint
+  app.post("/api/user/update-profile", async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    try {
+      const { paymentIdentifier, email, phoneNumber } = req.body;
+
+      if (!paymentIdentifier && !email && !phoneNumber) {
+        return res.status(400).json({ error: "At least one field must be provided" });
+      }
+
+      console.log(`[User Settings] Updating profile for user ${req.user.id}`);
+
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      // Check if email is already taken by another user
+      if (email && email !== req.user.email) {
+        const existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        if (existingUser.length > 0 && existingUser[0].id !== req.user.id) {
+          return res.status(400).json({ error: "Email is already taken by another user" });
+        }
+      }
+
+      // Build update object with only provided fields
+      const updateData: any = {};
+      if (paymentIdentifier !== undefined) updateData.paymentIdentifier = paymentIdentifier;
+      if (email !== undefined) updateData.email = email;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+
+      await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, req.user.id));
+
+      console.log(`[User Settings] Successfully updated profile for user ${req.user.id}`);
+
+      res.json({ success: true, message: "Profile updated successfully" });
+    } catch (error) {
+      console.error('[User Settings] Error updating profile:', error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // **SIMPLE FLASK PROXY ENDPOINTS**
 
   // 1. Create a new trade → POST /api/trades (proxy to Flask with PIX key)
@@ -507,7 +592,7 @@ export function registerRoutes(app: Express): Server {
     try {
       // Get user ID from session or default (for authenticated requests)
       const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 21; // Default user for testing (has PIX key)
-      
+
       // Fetch user's PIX key and email from database with graceful fallback
       let pixKey = null;
       let mail = null;
@@ -573,7 +658,7 @@ export function registerRoutes(app: Express): Server {
           created_at: result.created_at,
           metadata: result.metadata
         });
-        
+
         // Don't use Flask ID as primary key, let database auto-generate
         const insertResult = await db.insert(trades).values({
           userId: dbUserId,
@@ -590,7 +675,7 @@ export function registerRoutes(app: Express): Server {
             mail: mail
           }
         }).returning();
-        
+
         console.log('[Express Proxy] Successfully saved trade to local database:', insertResult);
       } catch (dbError) {
         console.error('[Express Proxy] Failed to save to local database (continuing without local storage):', dbError.message);
@@ -691,7 +776,7 @@ export function registerRoutes(app: Express): Server {
 
       const result = await response.json();
       console.log('[Express Proxy] Flask close response:', result);
-      res.json(result);
+      res.json(result);      
     } catch (error) {
       console.error('[Express Proxy] Close error:', error);
       res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
@@ -703,17 +788,17 @@ export function registerRoutes(app: Express): Server {
     console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
     console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
     console.log('[SPREAD ENDPOINT] FLASK URL:', FLASK);
-    
+
     if (!req.isAuthenticated()) {
       console.log('[SPREAD ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     try {
       const flaskTradeId = req.params.tradeId;
       const flaskUrl = `${FLASK}/trades/${flaskTradeId}/spread`;
       console.log(`[SPREAD] Fetching from URL: ${flaskUrl}`);
-      
+
       // Direct call to Flask spread endpoint
       const flaskRes = await fetch(flaskUrl, {
         method: 'GET',
@@ -757,7 +842,7 @@ export function registerRoutes(app: Express): Server {
   app.get('/api/trades', async (req: Request, res: Response) => {
     // Use authenticated user ID or fallback to user 7 for testing
     const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
-    
+
     try {
       console.log(`[Express Proxy] Getting active trades for user ${userId}`);
 
@@ -822,13 +907,13 @@ export function registerRoutes(app: Express): Server {
   });
 
 
-  
+
 
   // 5. Get trade history → GET /api/trades/history (proxy to Flask)
   app.get('/api/trades/history', async (req: Request, res: Response) => {
     // Use authenticated user ID or fallback to user 7 for testing
     const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
-    
+
     try {
       console.log('[Express Proxy] Getting trade history from database');
 

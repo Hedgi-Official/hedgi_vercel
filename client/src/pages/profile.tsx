@@ -20,6 +20,8 @@ export default function Profile() {
   const [newPixKey, setNewPixKey] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhoneNumber, setNewPhoneNumber] = useState("");
 
   const handleLogout = async () => {
     await logout();
@@ -85,6 +87,64 @@ export default function Profile() {
     }
   };
 
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true);
+    try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (newEmail && !emailRegex.test(newEmail)) {
+        toast({
+          title: "Error",
+          description: "Invalid email format.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if email is already taken (This is a placeholder, implement your actual email validation logic here)
+      // const isEmailTaken = await checkEmailAvailability(newEmail);
+      // if (isEmailTaken) {
+      //   toast({
+      //     title: "Error",
+      //     description: "This email is already taken.",
+      //     variant: "destructive",
+      //   });
+      //   return;
+      // }
+
+      const updateData: { paymentIdentifier?: string; email?: string; phoneNumber?: string } = {};
+
+      if (newPixKey) {
+        updateData.paymentIdentifier = newPixKey;
+      }
+      if (newEmail) {
+        updateData.email = newEmail;
+      }
+      if (newPhoneNumber) {
+        updateData.phoneNumber = newPhoneNumber;
+      }
+
+      await updateUser(updateData);
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+      setSettingsOpen(false);
+      setNewPixKey("");
+      setNewEmail("");
+      setNewPhoneNumber("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       <Header showAuthButton={false} username={user?.username} onLogout={handleLogout} />
@@ -115,22 +175,38 @@ export default function Profile() {
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-background border-2 border-background rounded-full flex items-center justify-center">
                   <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                    <DialogTrigger asChild>
-                      <Settings className="h-4 w-4 text-muted-foreground" />
-                    </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>User Settings</DialogTitle>
+                        <DialogTitle>Account Settings</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="pix-key">
+                        <div>
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            placeholder={user.email}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phoneNumber">Phone Number</Label>
+                          <Input
+                            id="phoneNumber"
+                            value={newPhoneNumber}
+                            onChange={(e) => setNewPhoneNumber(e.target.value)}
+                            placeholder={user.phoneNumber || "Enter phone number"}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="pixKey">
                             {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
                           </Label>
                           <Input
-                            id="pix-key"
+                            id="pixKey"
                             placeholder={
-                              user.nation === "BR" 
+                              user.nation === "BR"
                                 ? "Enter your PIX key (email, phone, or CPF)"
                                 : "Enter your payment identifier"
                             }
@@ -147,15 +223,14 @@ export default function Profile() {
                             onClick={() => {
                               setSettingsOpen(false);
                               setNewPixKey("");
+                              setNewEmail("");
+                              setNewPhoneNumber("");
                             }}
                           >
                             Cancel
                           </Button>
-                          <Button
-                            onClick={handleUpdatePixKey}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? "Updating..." : "Update"}
+                          <Button onClick={handleUpdateProfile} disabled={isUpdating}>
+                            {isUpdating ? "Updating..." : "Update Profile"}
                           </Button>
                         </div>
                       </div>
