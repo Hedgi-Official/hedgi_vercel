@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const [, navigate] = useLocation();
-  const { user, logout } = useUser();
+  const { user, logout, updateUser } = useUser();
   const { t } = useTranslation();
   const [showFullCPF, setShowFullCPF] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -66,15 +66,23 @@ export default function Profile() {
 
   const handleUpdatePixKey = async () => {
     setIsUpdating(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast({
-      title: "PIX Key Updated",
-      description: "Your PIX key has been successfully updated.",
-    });
-    setSettingsOpen(false);
-    setNewPixKey("");
-    setIsUpdating(false);
+    try {
+      await updateUser({ paymentIdentifier: newPixKey });
+      toast({
+        title: "PIX Key Updated",
+        description: "Your PIX key has been successfully updated.",
+      });
+      setSettingsOpen(false);
+      setNewPixKey("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update PIX key.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -336,6 +344,7 @@ export default function Profile() {
               <Button 
                 variant="ghost"
                 className="text-muted-foreground hover:text-foreground"
+                onClick={() => setSettingsOpen(true)}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Account Settings
