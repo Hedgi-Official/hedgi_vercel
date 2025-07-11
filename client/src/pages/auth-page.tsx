@@ -15,7 +15,7 @@ import { Flag } from "lucide-react";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
-const registerSchema = z.object({
+const createRegisterSchema = (t: any) => z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().optional(),
@@ -37,7 +37,7 @@ const registerSchema = z.object({
 
     const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
     return actualAge >= 18;
-  }, "You must be at least 18 years old to use this service")
+  }, t('auth.You must be at least 18 years old to use this service'))
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -75,7 +75,7 @@ export default function AuthPage() {
   const handleSubmit = async (action: "login" | "register") => {
     try {
       if (action === "register") {
-        const validationResult = registerSchema.safeParse(registerData);
+        const validationResult = createRegisterSchema(t).safeParse(registerData);
         if (!validationResult.success) {
           toast({
             variant: "destructive",
@@ -300,7 +300,7 @@ export default function AuthPage() {
 
                 {/* CPF Field */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">CPF (Brazilian Tax ID)</label>
+                  <label className="text-sm font-medium">{t('auth.CPF')}</label>
                   <Input
                     placeholder="000.000.000-00"
                     value={registerData.cpf}
@@ -314,7 +314,7 @@ export default function AuthPage() {
 
                 {/* Birthdate Field */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Date of Birth</label>
+                  <label className="text-sm font-medium">{t('auth.Date of Birth')}</label>
                   <Input
                     type="date"
                     value={registerData.birthdate}
@@ -322,7 +322,7 @@ export default function AuthPage() {
                     max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                   />
                   <p className="text-xs text-muted-foreground">
-                    You must be at least 18 years old to use this service
+                    {t('auth.You must be at least 18 years old to use this service')}
                   </p>
                 </div>
 

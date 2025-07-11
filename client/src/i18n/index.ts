@@ -54,7 +54,9 @@ const enUS = {
       'Enter username': 'Enter username',
       'Select your birth date': 'Select your birth date',
       'Select your country': 'Select your country',
-      'Choose your country': 'Choose your country'
+      'Choose your country': 'Choose your country',
+      'CPF': 'CPF (Brazilian Tax ID)',
+      'You must be at least 18 years old to use this service': 'You must be at least 18 years old to use this service'
     },
     simulator: {
       title: 'Currency Hedge Placement',
@@ -222,6 +224,8 @@ const ptBR = {
       'Select your birth date': 'Selecione sua data de nascimento',
       'Select your country': 'Selecione seu país',
       'Choose your country': 'Escolha seu país',
+      'CPF': 'CPF',
+      'You must be at least 18 years old to use this service': 'Você precisa ter pelo menos 18 anos para usar esse serviço',
     },
     currencyPairs: {
       'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
