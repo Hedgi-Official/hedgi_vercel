@@ -1,0 +1,109 @@
+Here’s a drop-in TSX component that “builds your own form” against Feedback Fish’s public API. It mirrors the fetch(…api.feedback.fish/feedback…) snippet you showed, but wrapped in a React form with zero “HTML files” to edit:
+
+tsx
+Copy
+Edit
+// src/components/CustomFeedbackForm.tsx
+import React, { useState } from 'react';
+
+const PROJECT_ID = '407c4b1d302218';  // ← your Feedback Fish projectId
+
+type Status = 'idle' | 'sending' | 'success' | 'error';
+
+export default function CustomFeedbackForm() {
+  const [text, setText] = useState('');
+  const [category, setCategory] = useState<'issue'|'idea'|'other'>('other');
+  const [status, setStatus] = useState<Status>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setStatus('sending');
+
+    try {
+      const res = await fetch('https://api.feedback.fish/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: PROJECT_ID,
+          text,
+          category,
+          // omit userId for full anonymity
+          metadata: {},
+        }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus('success');
+      setText('');
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+    }
+  };
+
+  if (status === 'success') {
+    return <p>🎉 Thanks for your feedback!</p>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '1em 0' }}>
+      <label>
+        Feedback
+        <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          required
+          rows={4}
+          style={{ width: '100%', marginTop: 4 }}
+        />
+      </label>
+
+      <label style={{ display: 'block', marginTop: 8 }}>
+        Category
+        <select
+          value={category}
+          onChange={e => setCategory(e.target.value as any)}
+          style={{ marginLeft: 8 }}
+        >
+          <option value="idea">Idea</option>
+          <option value="issue">Issue</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+
+      <button
+        type="submit"
+        disabled={status === 'sending'}
+        style={{ marginTop: 12 }}
+      >
+        {status === 'sending' ? 'Sending…' : 'Submit Feedback'}
+      </button>
+
+      {status === 'error' && (
+        <p role="alert" style={{ color: 'red', marginTop: 8 }}>
+          Oops–couldn’t send. Please try again.
+        </p>
+      )}
+    </form>
+  );
+}
+Usage: just import and drop <CustomFeedbackForm /> wherever you want in your page (e.g. in your TSX).
+
+Notes
+Anonymity: by omitting userId, every submission is fully anonymous.
+
+Env vars: in a real app you’d probably stash that PROJECT_ID in an env var (e.g. NEXT_PUBLIC_FEEDBACK_FISH_ID).
+
+No HTML file edits: everything lives in TSX/JSX—no separate HTML needed.
+
+That’s it—your own feedback form, backed by Feedback Fish’s API, in pure TypeScript/React.
+
+
+
+
+
+
+
+
+You said:
