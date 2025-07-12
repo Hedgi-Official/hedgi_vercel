@@ -214,22 +214,6 @@ const enUS = {
       '✅ Success': '✅ Success',
       '❌ Error': '❌ Error'
     },
-    feedback: {
-      'Anonymous Feedback': 'Anonymous Feedback',
-      'Help us improve Hedgi. Your feedback is completely anonymous.': 'Help us improve Hedgi. Your feedback is completely anonymous.',
-      'Your Feedback': 'Your Feedback',
-      'Share your thoughts, suggestions, or report issues...': 'Share your thoughts, suggestions, or report issues...',
-      'Category': 'Category',
-      'General Feedback': 'General Feedback',
-      'Submit Feedback': 'Submit Feedback',
-      '🎉 Thanks for your feedback!': '🎉 Thanks for your feedback!',
-      'Feedback': 'Feedback',
-      'Idea': 'Idea',
-      'Issue': 'Issue',
-      'Other': 'Other',
-      'Sending…': 'Sending…',
-      'Oops–couldn't send. Please try again.': 'Oops–couldn't send. Please try again.'
-    },
     payment: {
       title: 'Payment',
       mercadoPagoUnavailable: 'Mercado Pago is temporarily unavailable. Please try again in a few hours.'
@@ -446,6 +430,7 @@ const ptBR = {
       'Your PIX key has been successfully updated.': 'Sua chave PIX foi atualizada com sucesso.',
       'Error': 'Erro',
       'Failed to update PIX key.': 'Falha ao atualizar a chave PIX.',
+      'Processing...': 'Processando...',
       'Updating your': 'Atualizando seu',
       'PIX key updated successfully.': 'Chave PIX atualizada com sucesso.',
       'Email updated successfully.': 'E-mail atualizado com sucesso.',
@@ -453,22 +438,6 @@ const ptBR = {
       'Failed to update profile.': 'Falha ao atualizar o perfil.',
       '✅ Success': '✅ Sucesso',
       '❌ Error': '❌ Erro'
-    },
-    feedback: {
-      'Anonymous Feedback': 'Feedback Anônimo',
-      'Help us improve Hedgi. Your feedback is completely anonymous.': 'Ajude-nos a melhorar a Hedgi. Seu feedback é completamente anônimo.',
-      'Your Feedback': 'Seu Feedback',
-      'Share your thoughts, suggestions, or report issues...': 'Compartilhe seus pensamentos, sugestões ou reporte problemas...',
-      'Category': 'Categoria',
-      'General Feedback': 'Feedback Geral',
-      'Submit Feedback': 'Enviar Feedback',
-      '🎉 Thanks for your feedback!': '🎉 Obrigado pelo seu feedback!',
-      'Feedback': 'Feedback',
-      'Idea': 'Ideia',
-      'Issue': 'Problema',
-      'Other': 'Outro',
-      'Sending…': 'Enviando…',
-      'Oops–couldn't send. Please try again.': 'Ops - não foi possível enviar. Tente novamente.'
     },
     payment: {
       title: 'Pagamento',
