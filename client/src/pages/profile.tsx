@@ -10,6 +10,7 @@ import { User, Mail, Phone, MapPin, CreditCard, Calendar, Flag, Eye, EyeOff, Arr
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { FeedbackForm } from "@/components/feedback-form";
 
 export default function Profile() {
   const [, navigate] = useLocation();
@@ -515,6 +516,11 @@ export default function Profile() {
 
                 </CardContent>
               </Card>
+
+              {/* Feedback Form */}
+              <div className="mt-6">
+                <FeedbackForm />
+              </div>
             </div>
           </div>
 
