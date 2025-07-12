@@ -74,15 +74,15 @@ export default function Profile() {
     try {
       await updateUser({ paymentIdentifier: newPixKey });
       toast({
-        title: "PIX Key Updated",
-        description: "Your PIX key has been successfully updated.",
+        title: t('profile.PIX Key Updated'),
+        description: t('profile.Your PIX key has been successfully updated.'),
       });
       setSettingsOpen(false);
       setNewPixKey("");
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update PIX key.",
+        title: t('profile.Error'),
+        description: t('profile.Failed to update PIX key.'),
         variant: "destructive",
       });
     } finally {
@@ -98,8 +98,8 @@ export default function Profile() {
     
     // Show immediate feedback
     toast({
-      title: "Processing...",
-      description: `Updating your ${updateType === 'pix' ? (user.nation === "BR" ? "PIX key" : "payment identifier") : updateType}...`,
+      title: t('profile.Processing...'),
+      description: `${t('profile.Updating your')} ${updateType === 'pix' ? (user.nation === "BR" ? t('profile.PIX key') : t('profile.payment identifier')) : updateType}...`,
     });
 
     try {
@@ -110,48 +110,48 @@ export default function Profile() {
         case 'pix':
           if (!newPixKey.trim()) {
             toast({
-              title: "Error",
-              description: "PIX key cannot be empty.",
+              title: t('profile.Error'),
+              description: t('profile.PIX key cannot be empty.'),
               variant: "destructive",
             });
             return;
           }
           updateData.paymentIdentifier = newPixKey.trim();
-          successMessage = "PIX key updated successfully.";
+          successMessage = t('profile.PIX key updated successfully.');
           break;
         
         case 'email':
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!newEmail.trim() || !emailRegex.test(newEmail)) {
             toast({
-              title: "Error",
-              description: "Please enter a valid email address.",
+              title: t('profile.Error'),
+              description: t('profile.Please enter a valid email address.'),
               variant: "destructive",
             });
             return;
           }
           updateData.email = newEmail.trim();
-          successMessage = "Email updated successfully.";
+          successMessage = t('profile.Email updated successfully.');
           break;
         
         case 'phone':
           if (!newPhoneNumber.trim()) {
             toast({
-              title: "Error",
-              description: "Phone number cannot be empty.",
+              title: t('profile.Error'),
+              description: t('profile.Phone number cannot be empty.'),
               variant: "destructive",
             });
             return;
           }
           updateData.phoneNumber = newPhoneNumber.trim();
-          successMessage = "Phone number updated successfully.";
+          successMessage = t('profile.Phone number updated successfully.');
           break;
       }
 
       await updateUser(updateData);
 
       toast({
-        title: "✅ Success",
+        title: t('profile.✅ Success'),
         description: successMessage,
       });
       
@@ -162,9 +162,9 @@ export default function Profile() {
       setNewEmail("");
       setNewPhoneNumber("");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update profile.";
+      const errorMessage = error instanceof Error ? error.message : t('profile.Failed to update profile.');
       toast({
-        title: "❌ Error",
+        title: t('profile.❌ Error'),
         description: errorMessage,
         variant: "destructive",
       });
@@ -198,7 +198,7 @@ export default function Profile() {
                 className="hover:bg-muted/50"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                {t('profile.Back to Dashboard')}
               </Button>
             </div>
 
@@ -216,13 +216,13 @@ export default function Profile() {
                   </div>
                     <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Account Settings</DialogTitle>
+                      <DialogTitle>{t('profile.Account Settings')}</DialogTitle>
                     </DialogHeader>
                     
                     {!updateType ? (
                       <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
-                          Select what you'd like to update:
+                          {t('profile.Select what you\'d like to update:')}
                         </p>
                         
                         <div className="grid gap-2">
@@ -232,7 +232,7 @@ export default function Profile() {
                             onClick={() => setUpdateType('email')}
                           >
                             <Mail className="h-4 w-4 mr-2" />
-                            Update Email
+                            {t('profile.Update Email')}
                             <span className="ml-auto text-xs text-muted-foreground">
                               {user.email}
                             </span>
@@ -244,9 +244,9 @@ export default function Profile() {
                             onClick={() => setUpdateType('phone')}
                           >
                             <Phone className="h-4 w-4 mr-2" />
-                            Update Phone Number
+                            {t('profile.Update Phone Number')}
                             <span className="ml-auto text-xs text-muted-foreground">
-                              {user.phoneNumber || "Not set"}
+                              {user.phoneNumber || t('profile.Not set')}
                             </span>
                           </Button>
                           
@@ -256,16 +256,16 @@ export default function Profile() {
                             onClick={() => setUpdateType('pix')}
                           >
                             <CreditCard className="h-4 w-4 mr-2" />
-                            Update {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                            {t(`profile.Update ${user.nation === "BR" ? "PIX Key" : "Payment Identifier"}`)}
                             <span className="ml-auto text-xs text-muted-foreground">
-                              {user.paymentIdentifier || "Not set"}
+                              {user.paymentIdentifier || t('profile.Not set')}
                             </span>
                           </Button>
                         </div>
                         
                         <div className="flex justify-end">
                           <Button variant="outline" onClick={handleCloseSettings}>
-                            Cancel
+                            {t('profile.Cancel')}
                           </Button>
                         </div>
                       </div>
@@ -277,36 +277,36 @@ export default function Profile() {
                           onClick={() => setUpdateType(null)}
                           className="w-fit"
                         >
-                          ← Back to options
+                          {t('profile.Back to options')}
                         </Button>
                         
                         {updateType === 'email' && (
                           <div>
-                            <Label htmlFor="email">New Email Address</Label>
+                            <Label htmlFor="email">{t('profile.New Email Address')}</Label>
                             <Input
                               id="email"
                               type="email"
                               value={newEmail}
                               onChange={(e) => setNewEmail(e.target.value)}
-                              placeholder="Enter new email address"
+                              placeholder={t('profile.Enter new email address')}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Current: {user.email}
+                              {t('profile.Current')}: {user.email}
                             </p>
                           </div>
                         )}
                         
                         {updateType === 'phone' && (
                           <div>
-                            <Label htmlFor="phoneNumber">New Phone Number</Label>
+                            <Label htmlFor="phoneNumber">{t('profile.New Phone Number')}</Label>
                             <Input
                               id="phoneNumber"
                               value={newPhoneNumber}
                               onChange={(e) => setNewPhoneNumber(e.target.value)}
-                              placeholder="Enter new phone number"
+                              placeholder={t('profile.Enter new phone number')}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Current: {user.phoneNumber || "Not set"}
+                              {t('profile.Current')}: {user.phoneNumber || t('profile.Not set')}
                             </p>
                           </div>
                         )}
@@ -314,36 +314,36 @@ export default function Profile() {
                         {updateType === 'pix' && (
                           <div>
                             <Label htmlFor="pixKey">
-                              New {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                              {t(`profile.New ${user.nation === "BR" ? "PIX Key" : "Payment Identifier"}`)}
                             </Label>
                             <Input
                               id="pixKey"
                               placeholder={
                                 user.nation === "BR"
-                                  ? "Enter your PIX key (email, phone, or CPF)"
-                                  : "Enter your payment identifier"
+                                  ? t('profile.Enter your PIX key (email, phone, or CPF)')
+                                  : t('profile.Enter your payment identifier')
                               }
                               value={newPixKey}
                               onChange={(e) => setNewPixKey(e.target.value)}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Current: {user.paymentIdentifier || "Not set"}
+                              {t('profile.Current')}: {user.paymentIdentifier || t('profile.Not set')}
                             </p>
                           </div>
                         )}
                         
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" onClick={handleCloseSettings} disabled={isUpdating}>
-                            Cancel
+                            {t('profile.Cancel')}
                           </Button>
                           <Button onClick={handleUpdateField} disabled={isUpdating || isLoading}>
                             {isUpdating ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                Processing...
+                                {t('profile.Processing...')}
                               </div>
                             ) : (
-                              `Update ${updateType === 'pix' ? (user.nation === "BR" ? "PIX Key" : "Payment ID") : updateType === 'email' ? "Email" : "Phone"}`
+                              `${t('profile.Update')} ${updateType === 'pix' ? t(`profile.${user.nation === "BR" ? "PIX Key" : "Payment ID"}`) : updateType === 'email' ? t('profile.Email') : t('profile.Phone')}`
                             )}
                           </Button>
                         </div>
@@ -357,7 +357,7 @@ export default function Profile() {
                 {user.fullName || user.username}
               </h1>
               <p className="text-muted-foreground">
-                Member since {formatDate(user.createdAt || new Date())}
+                {t('profile.Member since')} {formatDate(user.createdAt || new Date())}
               </p>
             </div>
           </div>
@@ -373,7 +373,7 @@ export default function Profile() {
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <User className="h-5 w-5 text-primary" />
                     </div>
-                    Personal Information
+                    {t('profile.Personal Information')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -384,9 +384,9 @@ export default function Profile() {
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                         <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <span className="font-medium">Full Name</span>
+                      <span className="font-medium">{t('profile.Full Name')}</span>
                     </div>
-                    <span className="text-muted-foreground font-medium">{user.fullName || "Not provided"}</span>
+                    <span className="text-muted-foreground font-medium">{user.fullName || t('profile.Not provided')}</span>
                   </div>
 
                   {/* Username */}
@@ -395,7 +395,7 @@ export default function Profile() {
                       <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                         <User className="h-4 w-4 text-green-600 dark:text-green-400" />
                       </div>
-                      <span className="font-medium">Username</span>
+                      <span className="font-medium">{t('profile.Username')}</span>
                     </div>
                     <span className="text-muted-foreground font-medium">@{user.username}</span>
                   </div>
@@ -406,7 +406,7 @@ export default function Profile() {
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                         <Mail className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <span className="font-medium">Email</span>
+                      <span className="font-medium">{t('profile.Email')}</span>
                     </div>
                     <span className="text-muted-foreground font-medium">{user.email}</span>
                   </div>
@@ -417,9 +417,9 @@ export default function Profile() {
                       <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
                         <Phone className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                       </div>
-                      <span className="font-medium">Phone Number</span>
+                      <span className="font-medium">{t('profile.Phone Number')}</span>
                     </div>
-                    <span className="text-muted-foreground font-medium">{user.phoneNumber || "Not provided"}</span>
+                    <span className="text-muted-foreground font-medium">{user.phoneNumber || t('profile.Not provided')}</span>
                   </div>
 
                   {/* Birth Date */}
@@ -428,7 +428,7 @@ export default function Profile() {
                       <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
                         <Calendar className="h-4 w-4 text-pink-600 dark:text-pink-400" />
                       </div>
-                      <span className="font-medium">Birth Date</span>
+                      <span className="font-medium">{t('profile.Birth Date')}</span>
                     </div>
                     <span className="text-muted-foreground font-medium">{formatDate(user.birthdate)}</span>
                   </div>
@@ -447,7 +447,7 @@ export default function Profile() {
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <MapPin className="h-5 w-5 text-primary" />
                     </div>
-                    Location
+                    {t('profile.Location')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -456,7 +456,7 @@ export default function Profile() {
                       {user.nation === 'BR' ? '🇧🇷' : user.nation === 'US' ? '🇺🇸' : '🌍'}
                     </div>
                     <p className="font-medium text-lg">
-                      {user.nation ? getCountryName(user.nation) : "Not provided"}
+                      {user.nation ? getCountryName(user.nation) : t('profile.Not provided')}
                     </p>
                   </div>
                 </CardContent>
@@ -469,7 +469,7 @@ export default function Profile() {
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <CreditCard className="h-5 w-5 text-primary" />
                     </div>
-                    Financial Info
+                    {t('profile.Financial Info')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -478,10 +478,10 @@ export default function Profile() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                       <CreditCard className="h-3 w-3" />
-                      {user.nation === "BR" ? "PIX Key" : "Payment Identifier"}
+                      {user.nation === "BR" ? t('profile.PIX Key') : t('profile.Payment Identifier')}
                     </div>
                     <div className="p-3 bg-muted/50 rounded-lg border text-sm font-mono break-all">
-                      {user.paymentIdentifier || "Not provided"}
+                      {user.paymentIdentifier || t('profile.Not provided')}
                     </div>
                   </div>
 
@@ -490,7 +490,7 @@ export default function Profile() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                         <CreditCard className="h-3 w-3" />
-                        CPF
+                        {t('profile.CPF')}
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 p-3 bg-muted/50 rounded-lg border text-sm font-mono">
@@ -533,7 +533,7 @@ export default function Profile() {
                 className="px-6"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                {t('profile.Back to Dashboard')}
               </Button>
               <Button 
                 variant="ghost"
@@ -541,7 +541,7 @@ export default function Profile() {
                 onClick={() => setSettingsOpen(true)}
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Account Settings
+                {t('profile.Account Settings')}
               </Button>
             </div>
           </div>
