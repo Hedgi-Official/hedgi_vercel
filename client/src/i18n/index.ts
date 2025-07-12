@@ -446,7 +446,6 @@ const ptBR = {
       'Your PIX key has been successfully updated.': 'Sua chave PIX foi atualizada com sucesso.',
       'Error': 'Erro',
       'Failed to update PIX key.': 'Falha ao atualizar a chave PIX.',
-      'Processing...': 'Processando...',
       'Updating your': 'Atualizando seu',
       'PIX key updated successfully.': 'Chave PIX atualizada com sucesso.',
       'Email updated successfully.': 'E-mail atualizado com sucesso.',
