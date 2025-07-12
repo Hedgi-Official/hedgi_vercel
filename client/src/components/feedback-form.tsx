@@ -24,13 +24,23 @@ export function FeedbackForm() {
     
     setStatus('sending');
 
+    // Format the category label
+    const categoryLabels = {
+      'idea': 'Idea / Suggestion',
+      'issue': 'Bug / Issue',
+      'other': 'General Feedback'
+    };
+
+    const categoryLabel = categoryLabels[category];
+    const formattedText = `[${categoryLabel}] ${text}`;
+
     try {
       const res = await fetch('https://api.feedback.fish/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: PROJECT_ID,
-          text,
+          text: formattedText,
           category,
           metadata: {},
         }),
