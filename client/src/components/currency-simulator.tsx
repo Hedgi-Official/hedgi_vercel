@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
-import { calculateBusinessDays, countWednesdaysInNextDays } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
@@ -56,7 +56,13 @@ export function CurrencySimulator({
 }: Props) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
-  const [duration, setDuration] = useState(7);
+  const [expirationDate, setExpirationDate] = useState<Date | undefined>(
+    () => {
+      const date = new Date();
+      date.setDate(date.getDate() + 7); // Default to 7 days from now
+      return date;
+    }
+  );
   // Alpha launch: simplified to BRL->USD only
   const [targetCurrency] = useState<SupportedCurrency>('USD');
   const [baseCurrency] = useState<SupportedCurrency>('BRL');
@@ -76,11 +82,20 @@ export function CurrencySimulator({
   const { data: activTradesRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
+    if (!expirationDate) {
+      console.error('No expiration date selected');
+      return;
+    }
+
     let currentRate, swapValues;
     if (activTradesRate) {
       currentRate = { bid: activTradesRate.bid, ask: activTradesRate.ask };
       swapValues = { swapLong: activTradesRate.swap_long, swapShort: activTradesRate.swap_short };
     }
+
+    // Calculate duration in days from today to expiration date
+    const today = new Date();
+    const duration = getDaysBetweenDates(today, expirationDate);
 
     // run your existing simulateHedge (fallback if no live rates)
     const result = await simulateHedge(
@@ -91,8 +106,8 @@ export function CurrencySimulator({
       tradeDirection
     );
 
-    const wednesdays = countWednesdaysInNextDays(duration)
-    const businessDays = calculateBusinessDays(new Date(), duration);
+    const wednesdays = countWednesdaysBetweenDates(today, expirationDate);
+    const businessDays = calculateBusinessDaysBetweenDates(today, expirationDate);
 
     // compute hedge cost
     let hedgeCost = 0;
@@ -139,6 +154,9 @@ export function CurrencySimulator({
     setIsPlacingHedge(true);
 
     try {
+      const today = new Date();
+      const duration = expirationDate ? getDaysBetweenDates(today, expirationDate) : 7;
+      
       const hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & { cost: string } = {
         baseCurrency,
         targetCurrency,
@@ -316,18 +334,32 @@ export function CurrencySimulator({
             />
           </div>
 
-          {/* Duration */}
+          {/* Expiration Date */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <Clock className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.durationLabel').replace('{days}', duration.toString())}
+              {t('simulator.expirationDate')}
             </label>
-            <Slider
-              value={[duration]}
-              onValueChange={([v]) => setDuration(v)}
-              max={30}
-              step={1}
+            <DatePicker
+              value={expirationDate}
+              onValueChange={setExpirationDate}
+              minDate={(() => {
+                const minDate = new Date();
+                minDate.setDate(minDate.getDate() + 3); // Minimum 3 days from now
+                return minDate;
+              })()}
+              maxDate={(() => {
+                const maxDate = new Date();
+                maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
+                return maxDate;
+              })()}
+              placeholder={t('simulator.selectExpirationDate')}
             />
+            {expirationDate && (
+              <p className="text-sm text-muted-foreground">
+                {t('simulator.hedgeDuration').replace('{days}', getDaysBetweenDates(new Date(), expirationDate).toString())}
+              </p>
+            )}
           </div>
 
           {/* Simulate */}

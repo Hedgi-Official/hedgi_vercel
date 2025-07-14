@@ -26,6 +26,26 @@ export function calculateBusinessDays(startDate: Date, durationInDays: number): 
   return businessDays;
 }
 
+export function calculateBusinessDaysBetweenDates(startDate: Date, endDate: Date): number {
+  let businessDays = 0;
+  const currentDate = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Set times to start of day to avoid time zone issues
+  currentDate.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  while (currentDate <= end) {
+    const dayOfWeek = currentDate.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 is Sunday, 6 is Saturday
+      businessDays++;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return businessDays;
+}
+
 export function countWednesdaysInNextDays(days: number): number {
   let wednesdayCount = 0;
   const today = new Date();
@@ -42,4 +62,38 @@ export function countWednesdaysInNextDays(days: number): number {
   }
   
   return wednesdayCount;
+}
+
+export function countWednesdaysBetweenDates(startDate: Date, endDate: Date): number {
+  let wednesdayCount = 0;
+  const currentDate = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Set times to start of day to avoid time zone issues
+  currentDate.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  while (currentDate <= end) {
+    // Wednesday is day 3 (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.)
+    if (currentDate.getDay() === 3) {
+      wednesdayCount++;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return wednesdayCount;
+}
+
+export function getDaysBetweenDates(startDate: Date, endDate: Date): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Set times to start of day to avoid time zone issues
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
 }

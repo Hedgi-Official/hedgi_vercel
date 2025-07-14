@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
-import { calculateBusinessDays, countWednesdaysInNextDays } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
@@ -44,7 +44,13 @@ export interface SimulationResult {
 export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOrdersUpdated }: Props) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(10000);
-  const [duration, setDuration] = useState(7);
+  const [expirationDate, setExpirationDate] = useState<Date | undefined>(
+    () => {
+      const date = new Date();
+      date.setDate(date.getDate() + 7); // Default to 7 days from now
+      return date;
+    }
+  );
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
@@ -62,6 +68,11 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
+    if (!expirationDate) {
+      console.error('No expiration date selected');
+      return;
+    }
+
     const currencyPair = `${targetCurrency}${baseCurrency}`;
 
     let currentRate;
@@ -81,6 +92,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       console.log('[EnhancedCurrencySimulator] Using ActivTrades swap values:', swapValues);
     }
 
+    // Calculate duration in days from today to expiration date
+    const today = new Date();
+    const duration = getDaysBetweenDates(today, expirationDate);
+
     const result = await simulateHedge(
       baseCurrency,
       targetCurrency,
@@ -89,8 +104,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
       tradeDirection
     );
 
-    const wednesdays = countWednesdaysInNextDays(duration);
-    const businessDays = calculateBusinessDays(new Date(), duration);
+    const wednesdays = countWednesdaysBetweenDates(today, expirationDate);
+    const businessDays = calculateBusinessDaysBetweenDates(today, expirationDate);
 
     let hedgeCost = 0;
     if (currentRate && swapValues) {
@@ -149,6 +164,10 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
 
     setHedgeError(null);
 
+    // Calculate duration in days from today to expiration date
+    const today = new Date();
+    const duration = expirationDate ? getDaysBetweenDates(today, expirationDate) : 7;
+    
     // Prepare the hedge data
     const hedgeData = {
       baseCurrency,
@@ -409,27 +428,38 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                 <div className="space-y-2 py-2">
                   <label className="text-sm font-medium flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-primary" />
-                    {t('simulator.durationLabel').replace('{days}', duration.toString())}
+                    {t('simulator.expirationDate')}
                   </label>
-                  <div className="pt-2 pb-6">
-                    <Slider
-                      value={[duration]}
-                      onValueChange={([value]) => setDuration(value)}
-                      max={30}
-                      step={1}
-                    />
-                  </div>
+                  <DatePicker
+                    value={expirationDate}
+                    onValueChange={setExpirationDate}
+                    minDate={(() => {
+                      const minDate = new Date();
+                      minDate.setDate(minDate.getDate() + 3); // Minimum 3 days from now
+                      return minDate;
+                    })()}
+                    maxDate={(() => {
+                      const maxDate = new Date();
+                      maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
+                      return maxDate;
+                    })()}
+                    placeholder={t('simulator.selectExpirationDate')}
+                  />
+                  {expirationDate && (
+                    <p className="text-sm text-muted-foreground">
+                      {t('simulator.hedgeDuration').replace('{days}', getDaysBetweenDates(new Date(), expirationDate).toString())}
+                    </p>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="p-0 max-w-xs">
                 <div className="bg-card rounded-lg shadow-md p-4">
                   <div className="flex flex-col items-center mb-3">
                     <Clock className="h-7 w-7 text-primary mb-2" />
-                    <h4 className="font-bold text-foreground">{t('simulator.duration')}</h4>
+                    <h4 className="font-bold text-foreground">{t('simulator.expirationDate')}</h4>
                   </div>
                   <div className="text-sm text-foreground space-y-2">
-                    <p>{t('simulator.durationHelp').split('\n\n')[0]}</p>
-                    <p>{t('simulator.durationHelp').split('\n\n')[1]}</p>
+                    <p>{t('simulator.expirationDateHelp')}</p>
                   </div>
                 </div>
               </TooltipContent>
