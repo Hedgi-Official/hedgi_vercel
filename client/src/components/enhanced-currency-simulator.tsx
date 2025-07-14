@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { CurrencyChart } from './currency-chart';
-import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates, getMinimumHedgeDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
@@ -48,7 +48,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     () => {
       const date = new Date();
       date.setDate(date.getDate() + 7); // Default to 7 days from now
-      return date;
+      // If default date is a weekend, use next business day
+      return getMinimumHedgeDate().getTime() > date.getTime() ? getMinimumHedgeDate() : date;
     }
   );
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
@@ -433,11 +434,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                   <DatePicker
                     value={expirationDate}
                     onValueChange={setExpirationDate}
-                    minDate={(() => {
-                      const minDate = new Date();
-                      minDate.setDate(minDate.getDate() + 3); // Minimum 3 days from now
-                      return minDate;
-                    })()}
+                    minDate={getMinimumHedgeDate()}
                     maxDate={(() => {
                       const maxDate = new Date();
                       maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
-import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates } from '@/lib/utils';
+import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates, getMinimumHedgeDate } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
@@ -343,11 +343,7 @@ export function CurrencySimulator({
             <DatePicker
               value={expirationDate}
               onValueChange={setExpirationDate}
-              minDate={(() => {
-                const minDate = new Date();
-                minDate.setDate(minDate.getDate() + 3); // Minimum 3 days from now
-                return minDate;
-              })()}
+              minDate={getMinimumHedgeDate()}
               maxDate={(() => {
                 const maxDate = new Date();
                 maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now

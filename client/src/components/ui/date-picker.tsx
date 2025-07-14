@@ -4,7 +4,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, isWeekend } from '@/lib/utils';
 
 interface DatePickerProps {
   value?: Date;
@@ -51,7 +51,9 @@ export function DatePicker({
           selected={value}
           onSelect={handleSelect}
           disabled={(date) =>
-            (minDate && date < minDate) || (maxDate && date > maxDate)
+            (minDate && date < minDate) || 
+            (maxDate && date > maxDate) ||
+            isWeekend(date)
           }
           initialFocus
         />

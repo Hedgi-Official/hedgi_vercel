@@ -97,3 +97,36 @@ export function getDaysBetweenDates(startDate: Date, endDate: Date): number {
   
   return diffDays;
 }
+
+export function isWeekend(date: Date): boolean {
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+}
+
+export function isBusinessDay(date: Date): boolean {
+  return !isWeekend(date);
+}
+
+export function getNextBusinessDay(date: Date): Date {
+  const nextDay = new Date(date);
+  nextDay.setDate(nextDay.getDate() + 1);
+  
+  while (isWeekend(nextDay)) {
+    nextDay.setDate(nextDay.getDate() + 1);
+  }
+  
+  return nextDay;
+}
+
+export function getMinimumHedgeDate(): Date {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // If tomorrow is a weekend, find the next business day
+  if (isWeekend(tomorrow)) {
+    return getNextBusinessDay(tomorrow);
+  }
+  
+  return tomorrow;
+}
