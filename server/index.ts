@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   // Simple authentication is now handled in the main routes file
 
   // Initialize routes first to ensure API endpoints are ready
-  registerRoutes(app);
+  await registerRoutes(app);
   log("Routes registered successfully");
 
   // Setup Vite or static serving based on environment
