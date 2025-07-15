@@ -191,25 +191,16 @@ export default function AuthPage() {
                 >
                   {t('auth.Sign In')}
                 </Button>
-                <div className="text-center space-y-2">
+                <p className="text-sm text-center text-muted-foreground">
+                  {t('auth.Don\'t have an account?')} {' '}
                   <Button
                     variant="link"
-                    className="text-sm h-auto p-0 font-normal"
-                    onClick={() => navigate("/forgot-password")}
+                    className="p-0 h-auto font-normal"
+                    onClick={() => setActiveTab("register")}
                   >
-                    Forgot your password?
+                    {t('auth.Sign Up')}
                   </Button>
-                  <p className="text-sm text-muted-foreground">
-                    {t('auth.Don\'t have an account?')} {' '}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-normal"
-                      onClick={() => setActiveTab("register")}
-                    >
-                      {t('auth.Sign Up')}
-                    </Button>
-                  </p>
-                </div>
+                </p>
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4">

@@ -18,7 +18,6 @@ import { PAYMENT_CONFIG } from "./config";
 import { paymentService } from "./services/paymentService";
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { passwordResetService } from './services/passwordResetService';
 
 const FLASK = process.env.FLASK_URL;
 interface BrokerRate {
@@ -759,98 +758,6 @@ export function registerRoutes(app: Express): Server {
           </body>
         </html>
       `);
-    }
-  });
-
-  // Password Reset API Routes
-  app.post('/api/forgot-password', async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email is required' 
-        });
-      }
-
-      console.log('[Forgot Password] Request for email:', email);
-      const result = await passwordResetService.requestPasswordReset(email);
-      
-      if (result.success) {
-        console.log('[Forgot Password] Email sent successfully to:', email);
-        return res.json(result);
-      } else {
-        console.log('[Forgot Password] Failed to send email to:', email);
-        return res.status(500).json(result);
-      }
-    } catch (error) {
-      console.error('[Forgot Password] Error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An error occurred while processing your request' 
-      });
-    }
-  });
-
-  app.get('/api/validate-reset-token', async (req: Request, res: Response) => {
-    try {
-      const { token } = req.query;
-      
-      if (!token || typeof token !== 'string') {
-        return res.status(400).json({ 
-          valid: false, 
-          message: 'Token is required' 
-        });
-      }
-
-      console.log('[Validate Reset Token] Validating token');
-      const result = await passwordResetService.validateResetToken(token);
-      
-      return res.json(result);
-    } catch (error) {
-      console.error('[Validate Reset Token] Error:', error);
-      return res.status(500).json({ 
-        valid: false, 
-        message: 'An error occurred while validating the token' 
-      });
-    }
-  });
-
-  app.post('/api/reset-password', async (req: Request, res: Response) => {
-    try {
-      const { token, newPassword } = req.body;
-      
-      if (!token || !newPassword) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Token and new password are required' 
-        });
-      }
-
-      if (newPassword.length < 6) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Password must be at least 6 characters long' 
-        });
-      }
-
-      console.log('[Reset Password] Attempting to reset password');
-      const result = await passwordResetService.resetPassword(token, newPassword);
-      
-      if (result.success) {
-        console.log('[Reset Password] Password reset successful');
-        return res.json(result);
-      } else {
-        console.log('[Reset Password] Password reset failed:', result.message);
-        return res.status(400).json(result);
-      }
-    } catch (error) {
-      console.error('[Reset Password] Error:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'An error occurred while resetting the password' 
-      });
     }
   });
 
