@@ -20,7 +20,6 @@ import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 import { UnderConstruction } from "@/components/under-construction";
 import { Header } from "@/components/header";
 import { CacheManager } from "@/components/cache-manager";
-import ResetPassword from "@/components/reset-password";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -39,14 +38,6 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
-      <Route path="/reset-password" component={() => (
-        <div className="min-h-screen bg-background">
-          <Header showAuthButton={false} />
-          <div className="container mx-auto px-4 py-8 flex items-center justify-center">
-            <ResetPassword />
-          </div>
-        </div>
-      )} />
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
       </Route>

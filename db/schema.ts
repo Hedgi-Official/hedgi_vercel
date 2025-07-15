@@ -76,18 +76,9 @@ export const trades = pgTable('trades', {
   enableRLS:     boolean('enable_rls').notNull().default(false),
 });
 
-export const passwordResetTokens = pgTable('password_reset_tokens', {
-  id:         serial('id').primaryKey(),
-  userId:     integer('user_id').notNull().references(() => users.id),
-  tokenHash:  text('token_hash').notNull().unique(),
-  expiresAt:  timestamp('expires_at').notNull(),
-  createdAt:  timestamp('created_at').notNull().defaultNow(),
-});
-
 export const userRelations = relations(users, ({ many }) => ({
   hedges: many(hedges),
   trades: many(trades),
-  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const hedgeRelations = relations(hedges, ({ one }) => ({
@@ -104,13 +95,6 @@ export const tradeRelations = relations(trades, ({ one }) => ({
   }),
 }));
 
-export const passwordResetTokenRelations = relations(passwordResetTokens, ({ one }) => ({
-  user: one(users, {
-    fields:    [passwordResetTokens.userId],
-    references:[users.id],
-  }),
-}));
-
 import { z } from 'zod';
 
 export const insertUserSchema = createInsertSchema(users).extend({
@@ -123,5 +107,3 @@ export type Hedge    = typeof hedges.$inferSelect;
 export type NewHedge = typeof hedges.$inferInsert;
 export type Trade    = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;

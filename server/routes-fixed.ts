@@ -37,7 +37,7 @@ const crypto = {
 const FLASK = process.env.FLASK_URL;
 
 console.log("[BOOT] Using FLASK_URL =", FLASK);
-export async function registerRoutes(app: Express): Promise<Server> {
+export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
   // Local Mercado Pago brick endpoint to avoid CORS issues
@@ -979,98 +979,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Express Proxy] History error:', error);
       res.status(500).json({ error: 'Failed to fetch trade history' });
-    }
-  });
-
-  // Import password reset utilities
-  const { genAndStoreToken, validateAndConsumeToken } = await import('./utils/token-utils.js');
-  const { sendEmail, generatePasswordResetEmailHTML } = await import('./utils/email-service.js');
-
-  // Forgot password endpoint
-  app.post('/api/forgot-password', async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      console.log(`[Forgot Password] Request for email: ${email}`);
-
-      // Generate and store token
-      const token = await genAndStoreToken(email);
-      
-      if (!token) {
-        // Return success even if user doesn't exist for security
-        return res.json({ message: 'If that email exists, you\'ll receive a password reset link shortly.' });
-      }
-
-      // Generate reset link
-      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
-      
-      // Get user's language preference (default to English)
-      const language = req.headers['accept-language']?.includes('pt') ? 'pt-BR' : 'en';
-      
-      // Generate email HTML
-      const emailHTML = generatePasswordResetEmailHTML(resetLink, language);
-      
-      // Send email
-      const emailSent = await sendEmail({
-        to: email,
-        subject: language === 'pt-BR' ? 'Redefinir sua senha - Hedgi' : 'Reset your password - Hedgi',
-        html: emailHTML
-      });
-
-      if (emailSent) {
-        console.log(`[Forgot Password] Email sent successfully to ${email}`);
-      } else {
-        console.error(`[Forgot Password] Failed to send email to ${email}`);
-      }
-
-      // Always return success message for security
-      res.json({ message: 'If that email exists, you\'ll receive a password reset link shortly.' });
-    } catch (error) {
-      console.error('[Forgot Password] Error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Reset password endpoint
-  app.post('/api/reset-password', async (req: Request, res: Response) => {
-    try {
-      const { token, password } = req.body;
-      
-      if (!token || !password) {
-        return res.status(400).json({ error: 'Token and password are required' });
-      }
-
-      if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-      }
-
-      console.log(`[Reset Password] Attempting to reset password with token`);
-
-      // Validate token and get user ID
-      const userId = await validateAndConsumeToken(token);
-      
-      if (!userId) {
-        return res.status(400).json({ error: 'Invalid or expired token' });
-      }
-
-      // Hash the new password
-      const hashedPassword = await crypto.hash(password);
-      
-      // Update user's password in database
-      await db.update(users)
-        .set({ password: hashedPassword })
-        .where(eq(users.id, userId));
-
-      console.log(`[Reset Password] Password updated successfully for user ${userId}`);
-      
-      res.json({ message: 'Password has been reset successfully' });
-    } catch (error) {
-      console.error('[Reset Password] Error:', error);
-      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

@@ -12,7 +12,6 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
 import { Flag } from "lucide-react";
-import ForgotPassword from "@/components/forgot-password";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
@@ -51,7 +50,6 @@ export default function AuthPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("login");
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -155,18 +153,6 @@ export default function AuthPage() {
       .slice(0, 14);
   };
 
-  // Show forgot password form if requested
-  if (showForgotPassword) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header showAuthButton={false} />
-        <div className="container mx-auto px-4 py-8 flex items-center justify-center">
-          <ForgotPassword onBack={() => setShowForgotPassword(false)} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header showAuthButton={false} />
@@ -205,27 +191,16 @@ export default function AuthPage() {
                 >
                   {t('auth.Sign In')}
                 </Button>
-                
-                <div className="text-center space-y-2">
+                <p className="text-sm text-center text-muted-foreground">
+                  {t('auth.Don\'t have an account?')} {' '}
                   <Button
                     variant="link"
-                    className="p-0 h-auto font-normal text-sm"
-                    onClick={() => setShowForgotPassword(true)}
+                    className="p-0 h-auto font-normal"
+                    onClick={() => setActiveTab("register")}
                   >
-                    Forgot Password?
+                    {t('auth.Sign Up')}
                   </Button>
-                  
-                  <p className="text-sm text-muted-foreground">
-                    {t('auth.Don\'t have an account?')} {' '}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-normal"
-                      onClick={() => setActiveTab("register")}
-                    >
-                      {t('auth.Sign Up')}
-                    </Button>
-                  </p>
-                </div>
+                </p>
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4">
