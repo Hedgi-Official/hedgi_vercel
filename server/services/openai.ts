@@ -5,15 +5,8 @@ class OpenAIService {
   private openai: OpenAI;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.warn("OpenAI API key not found. Chat functionality will be disabled.");
-      this.openai = null as any;
-      return;
-    }
-    
     this.openai = new OpenAI({
-      apiKey,
+      apiKey: process.env.OPENAI_API_KEY,
     });
   }
 
@@ -27,10 +20,6 @@ class OpenAIService {
     userMessage: string,
     messageHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
   ): Promise<string> {
-    if (!this.openai) {
-      return "I'm sorry, but the AI chat service is currently unavailable. Please try again later.";
-    }
-    
     try {
       const messages = [
         {
