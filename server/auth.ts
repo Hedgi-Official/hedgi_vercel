@@ -127,13 +127,25 @@ export function setupAuth(app: Express) {
     }
     
     try {
-      // Generate and store token - returns null if user doesn't exist
+      // First check if user exists without generating token
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${email})`)
+        .limit(1);
+      
+      if (!user) {
+        // User doesn't exist - return success message immediately without any processing
+        console.log('[forgot-password] User not found for email, skipping all processing');
+        return res.json({ message: "If that email exists, you'll get a link shortly." });
+      }
+      
+      // User exists, proceed with token generation and email sending
       const token = await genAndStoreToken(email);
       
       if (!token) {
-        // User doesn't exist, but return success message to avoid email enumeration
-        console.log('[forgot-password] No user found for email, not sending email');
-        return res.json({ message: "If that email exists, you'll get a link shortly." });
+        // This shouldn't happen since we verified user exists, but safety check
+        return res.status(500).json({ error: "Unable to process request" });
       }
       
       const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
