@@ -65,6 +65,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log('[passport] Login attempt for username:', username);
         const [user] = await db
           .select()
           .from(users)
@@ -72,14 +73,20 @@ export function setupAuth(app: Express) {
           .limit(1);
 
         if (!user) {
+          console.log('[passport] User not found for username:', username);
           return done(null, false, { message: "Incorrect username." });
         }
+        
+        console.log('[passport] User found, verifying password...');
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
+          console.log('[passport] Password verification failed');
           return done(null, false, { message: "Incorrect password." });
         }
+        console.log('[passport] Login successful');
         return done(null, user);
       } catch (err) {
+        console.error('[passport] Login error:', err);
         return done(err);
       }
     })
