@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- July 17, 2025. **Complete forgot password system implemented** - Added secure password reset flow with email verification, token-based authentication, and comprehensive frontend pages
 - July 7, 2025. **Implemented comprehensive cache management solution** - Added service worker, cache-busting utilities, and user-friendly cache refresh component to resolve browser caching issues with Vite-generated assets
 - July 7, 2025. **Fixed critical application startup issues** - Resolved duplicate key error in i18n translations and React Query context initialization problem
 - June 20, 2025. **PIX key integration completed** - All trades automatically include user's PIX key in metadata section

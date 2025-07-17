@@ -3,11 +3,11 @@ import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
+import { users, insertUserSchema, type User as SelectUser, passwordResetTokens } from "@db/schema";
 import { db } from "@db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, lt } from "drizzle-orm";
 import fs from 'node:fs';
 import nodemailer from "nodemailer";
 import cryptoLib from "crypto";
@@ -130,9 +130,31 @@ export function setupAuth(app: Express) {
 
   app.get("/api/confirm-reset", async (req, res) => {
     const { token } = req.query as { token: string };
-    const valid = await validateAndConsumeToken(token);
-    if (!valid) return res.status(400).send("Invalid or expired link.");
-    // Redirect to your React reset-page, e.g.:
+    
+    if (!token) {
+      return res.status(400).send("No token provided");
+    }
+    
+    // Don't consume the token here, just validate it exists and isn't expired
+    // We'll consume it when the user actually resets their password
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    
+    const [tokenRecord] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.tokenHash, tokenHash),
+          lt(new Date(), passwordResetTokens.expiresAt)
+        )
+      )
+      .limit(1);
+    
+    if (!tokenRecord) {
+      return res.status(400).send("Invalid or expired reset link");
+    }
+    
+    // Redirect to your React reset-page with the token
     return res.redirect(`/reset-password?token=${token}`);
   });
   app.post("/api/reset-password", async (req, res) => {
