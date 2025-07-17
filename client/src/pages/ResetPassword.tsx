@@ -55,14 +55,19 @@ export default function ResetPassword() {
 
   const validateToken = async (tokenToValidate: string) => {
     try {
+      console.log('[validateToken] Validating token:', tokenToValidate.substring(0, 10) + '...');
       const response = await fetch(`/api/validate-reset-token?token=${encodeURIComponent(tokenToValidate)}`);
       
       if (response.ok) {
+        console.log('[validateToken] Token validation successful');
         setIsValidToken(true);
       } else {
+        const errorData = await response.json();
+        console.log('[validateToken] Token validation failed:', errorData);
         setIsValidToken(false);
       }
     } catch (error) {
+      console.error('[validateToken] Error during validation:', error);
       setIsValidToken(false);
     } finally {
       setIsValidating(false);

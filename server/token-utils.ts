@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 import { db } from "@db";
 import { passwordResetTokens, users } from "@db/schema";
-import { eq, and, lt, gt } from "drizzle-orm";
+import { eq, and, lt, gt, sql } from "drizzle-orm";
 
 export async function genAndStoreToken(email: string): Promise<string> {
   // Generate a cryptographically secure random token (64 bytes = 128 hex chars)
@@ -9,18 +9,23 @@ export async function genAndStoreToken(email: string): Promise<string> {
   
   // Hash the token using SHA-256
   const tokenHash = createHash('sha256').update(plainToken).digest('hex');
+  console.log('[genAndStoreToken] Generated token for:', email);
+  console.log('[genAndStoreToken] Token hash:', tokenHash.substring(0, 10) + '...');
   
-  // Find user by email
+  // Find user by email (case-insensitive)
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sql`LOWER(${users.email}) = LOWER(${email})`)
     .limit(1);
   
   if (!user) {
     // Still return a token to avoid timing attacks, but don't store it
+    console.log('[genAndStoreToken] User not found for email:', email);
     return plainToken;
   }
+  
+  console.log('[genAndStoreToken] Found user with ID:', user.id);
   
   // Delete any existing password reset tokens for this user (security best practice)
   await db
@@ -29,6 +34,7 @@ export async function genAndStoreToken(email: string): Promise<string> {
   
   // Set expiry to 1 hour from now
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  console.log('[genAndStoreToken] Token expires at:', expiresAt);
   
   // Insert the token hash into the database
   await db.insert(passwordResetTokens).values({
@@ -37,6 +43,7 @@ export async function genAndStoreToken(email: string): Promise<string> {
     expiresAt
   });
   
+  console.log('[genAndStoreToken] Token stored successfully');
   return plainToken;
 }
 

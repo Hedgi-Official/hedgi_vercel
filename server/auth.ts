@@ -167,6 +167,10 @@ export function setupAuth(app: Express) {
       const tokenHash = createHash('sha256').update(token).digest('hex');
       console.log('[validate-reset-token] Token hash:', tokenHash.substring(0, 10) + '...');
       
+      // First, let's check if there are any tokens in the database at all
+      const allTokens = await db.select().from(passwordResetTokens);
+      console.log('[validate-reset-token] Total tokens in DB:', allTokens.length);
+      
       const [tokenRecord] = await db
         .select()
         .from(passwordResetTokens)
@@ -180,6 +184,19 @@ export function setupAuth(app: Express) {
       
       if (!tokenRecord) {
         console.log('[validate-reset-token] Token not found or expired');
+        // Let's check if the token exists without expiry check
+        const [tokenWithoutExpiry] = await db
+          .select()
+          .from(passwordResetTokens)
+          .where(eq(passwordResetTokens.tokenHash, tokenHash))
+          .limit(1);
+        
+        if (tokenWithoutExpiry) {
+          console.log('[validate-reset-token] Token exists but expired. Expiry:', tokenWithoutExpiry.expiresAt);
+        } else {
+          console.log('[validate-reset-token] Token hash not found in database');
+        }
+        
         return res.status(400).json({ error: "Invalid or expired reset link" });
       }
       
