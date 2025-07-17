@@ -42,17 +42,26 @@ export default function ResetPassword() {
 
   useEffect(() => {
     // Extract token from URL parameters and validate it
-    const params = new URLSearchParams(location.split('?')[1]);
+    const searchParams = location.split('?')[1];
+    console.log('[useEffect] Current location:', location);
+    console.log('[useEffect] Search params:', searchParams);
+    
+    if (!searchParams) {
+      console.log('[useEffect] No query parameters found in URL');
+      setIsValidating(false);
+      return;
+    }
+    
+    const params = new URLSearchParams(searchParams);
     const urlToken = params.get('token');
     
-    console.log('[useEffect] Current location:', location);
     console.log('[useEffect] URL token:', urlToken ? urlToken.substring(0, 10) + '...' : 'null');
     
     if (urlToken) {
       setToken(urlToken);
       validateToken(urlToken);
     } else {
-      console.log('[useEffect] No token found in URL');
+      console.log('[useEffect] No token found in URL parameters');
       setIsValidating(false);
     }
   }, [location]);

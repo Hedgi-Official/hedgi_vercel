@@ -125,8 +125,12 @@ export function setupAuth(app: Express) {
       const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
       const link = `${baseUrl}/reset-password?token=${token}`;
       
+      console.log('[forgot-password] Generated link:', link);
+      console.log('[forgot-password] Base URL:', baseUrl);
+      console.log('[forgot-password] Token length:', token.length);
+      
       // Send email from hjalmar@hedgi.ai with enhanced security message
-      await transporter.sendMail({
+      const emailResult = await transporter.sendMail({
         to: email,
         from: "hjalmar@hedgi.ai",
         subject: "Reset your Hedgi password",
@@ -146,6 +150,8 @@ export function setupAuth(app: Express) {
           </div>
         `
       });
+      
+      console.log('[forgot-password] Email sent successfully:', emailResult.messageId);
     } catch (error) {
       console.error('Password reset error:', error);
       return res.status(500).json({ error: "Unable to process request" });
