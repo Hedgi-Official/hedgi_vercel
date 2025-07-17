@@ -45,10 +45,14 @@ export default function ResetPassword() {
     const params = new URLSearchParams(location.split('?')[1]);
     const urlToken = params.get('token');
     
+    console.log('[useEffect] Current location:', location);
+    console.log('[useEffect] URL token:', urlToken ? urlToken.substring(0, 10) + '...' : 'null');
+    
     if (urlToken) {
       setToken(urlToken);
       validateToken(urlToken);
     } else {
+      console.log('[useEffect] No token found in URL');
       setIsValidating(false);
     }
   }, [location]);
