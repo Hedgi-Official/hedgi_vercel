@@ -81,7 +81,9 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
-- July 17, 2025. **Password reset system debugging** - Fixed case-sensitive email lookup and identified email link generation issue where tokens aren't being included in URLs properly
+- July 17, 2025. **Secure password reset system fully operational** - Complete enterprise-grade password reset system with cryptographically secure tokens, email verification, and one-time use validation working end-to-end
+- July 17, 2025. **Fixed URL parameter extraction issue** - Resolved Wouter router stripping query parameters by using window.location.search directly
+- July 17, 2025. **Fixed case-sensitive email lookup** - Implemented case-insensitive email matching for token generation
 - July 17, 2025. **Complete forgot password system implemented** - Added secure password reset flow with email verification, token-based authentication, and comprehensive frontend pages
 - July 7, 2025. **Implemented comprehensive cache management solution** - Added service worker, cache-busting utilities, and user-friendly cache refresh component to resolve browser caching issues with Vite-generated assets
 - July 7, 2025. **Fixed critical application startup issues** - Resolved duplicate key error in i18n translations and React Query context initialization problem
