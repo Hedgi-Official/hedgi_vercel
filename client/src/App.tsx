@@ -19,7 +19,7 @@ import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
-import ConfirmReset from "@/pages/ConfirmReset";
+
 import { UnderConstruction } from "@/components/under-construction";
 import { Header } from "@/components/header";
 import { CacheManager } from "@/components/cache-manager";
@@ -43,7 +43,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
-      <Route path="/confirm-reset" component={ConfirmReset} />
+
       <Route path="/dashboard">
         {user ? <Dashboard /> : <AuthPage />}
       </Route>

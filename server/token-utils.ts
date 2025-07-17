@@ -4,8 +4,8 @@ import { passwordResetTokens, users } from "@db/schema";
 import { eq, and, lt } from "drizzle-orm";
 
 export async function genAndStoreToken(email: string): Promise<string> {
-  // Generate a cryptographically secure random token
-  const plainToken = randomBytes(32).toString('hex');
+  // Generate a cryptographically secure random token (64 bytes = 128 hex chars)
+  const plainToken = randomBytes(64).toString('hex');
   
   // Hash the token using SHA-256
   const tokenHash = createHash('sha256').update(plainToken).digest('hex');
@@ -21,6 +21,11 @@ export async function genAndStoreToken(email: string): Promise<string> {
     // Still return a token to avoid timing attacks, but don't store it
     return plainToken;
   }
+  
+  // Delete any existing password reset tokens for this user (security best practice)
+  await db
+    .delete(passwordResetTokens)
+    .where(eq(passwordResetTokens.userId, user.id));
   
   // Set expiry to 1 hour from now
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);

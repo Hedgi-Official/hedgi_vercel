@@ -114,29 +114,54 @@ export function setupAuth(app: Express) {
 
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
-    // 1. generate & store token
-    const token = await genAndStoreToken(email);
-    const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
-    const link  = `${baseUrl}/confirm-reset?token=${token}`;
-    // 2. send email from hjalmar@hedgi.ai
-    await transporter.sendMail({
-      to:      email,
-      from:    "hjalmar@hedgi.ai",
-      subject: "Reset your password",
-      html:    `<p>Click <a href="${link}">here</a> to reset your password.</p>`
-    });
+    // Basic validation
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: "Valid email required" });
+    }
+    
+    try {
+      // Generate and store token
+      const token = await genAndStoreToken(email);
+      const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
+      const link = `${baseUrl}/reset-password?token=${token}`;
+      
+      // Send email from hjalmar@hedgi.ai with enhanced security message
+      await transporter.sendMail({
+        to: email,
+        from: "hjalmar@hedgi.ai",
+        subject: "Reset your Hedgi password",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1f2937;">Reset Your Hedgi Password</h2>
+            <p>You requested to reset your password. Click the secure link below to create a new password:</p>
+            <div style="margin: 20px 0;">
+              <a href="${link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">
+              <strong>Security notice:</strong> This link expires in 1 hour and can only be used once. If you didn't request this, please ignore this email.
+            </p>
+            <p style="color: #6b7280; font-size: 14px;">
+              Link: <a href="${link}">${link}</a>
+            </p>
+          </div>
+        `
+      });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return res.status(500).json({ error: "Unable to process request" });
+    }
     res.json({ message: "If that email exists, you’ll get a link shortly." });
   });
 
-  app.get("/api/confirm-reset", async (req, res) => {
+  // API endpoint to validate token without consuming it
+  app.get("/api/validate-reset-token", async (req, res) => {
     const { token } = req.query as { token: string };
     
     if (!token) {
-      return res.status(400).send("No token provided");
+      return res.status(400).json({ error: "No token provided" });
     }
     
-    // Don't consume the token here, just validate it exists and isn't expired
-    // We'll consume it when the user actually resets their password
+    // Validate token exists and isn't expired (don't consume it yet)
     const tokenHash = createHash('sha256').update(token).digest('hex');
     
     const [tokenRecord] = await db
@@ -151,11 +176,10 @@ export function setupAuth(app: Express) {
       .limit(1);
     
     if (!tokenRecord) {
-      return res.status(400).send("Invalid or expired reset link");
+      return res.status(400).json({ error: "Invalid or expired reset link" });
     }
     
-    // Redirect to your React reset-page with the token
-    return res.redirect(`/reset-password?token=${token}`);
+    return res.json({ valid: true });
   });
   app.post("/api/reset-password", async (req, res) => {
     const { token, newPassword } = req.body;
