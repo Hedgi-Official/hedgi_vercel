@@ -42,9 +42,10 @@ export default function ResetPassword() {
 
   useEffect(() => {
     // Extract token from URL parameters and validate it
-    const searchParams = location.split('?')[1];
+    // Use window.location.search directly since Wouter strips query params
+    const searchParams = window.location.search;
     console.log('[useEffect] Current location:', location);
-    console.log('[useEffect] Search params:', searchParams);
+    console.log('[useEffect] Window search:', searchParams);
     
     if (!searchParams) {
       console.log('[useEffect] No query parameters found in URL');
