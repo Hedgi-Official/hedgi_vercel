@@ -127,8 +127,15 @@ export function setupAuth(app: Express) {
     }
     
     try {
-      // Generate and store token
+      // Generate and store token - returns null if user doesn't exist
       const token = await genAndStoreToken(email);
+      
+      if (!token) {
+        // User doesn't exist, but return success message to avoid email enumeration
+        console.log('[forgot-password] No user found for email, not sending email');
+        return res.json({ message: "If that email exists, you'll get a link shortly." });
+      }
+      
       const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
       const link = `${baseUrl}/reset-password?token=${token}`;
       
@@ -136,7 +143,7 @@ export function setupAuth(app: Express) {
       console.log('[forgot-password] Base URL:', baseUrl);
       console.log('[forgot-password] Token length:', token.length);
       
-      // Send email from hjalmar@hedgi.ai with enhanced security message
+      // Send email from hjalmar@hedgi.ai with enhanced security message and Hedgi green button
       const emailResult = await transporter.sendMail({
         to: email,
         from: "hjalmar@hedgi.ai",
@@ -146,7 +153,7 @@ export function setupAuth(app: Express) {
             <h2 style="color: #1f2937;">Reset Your Hedgi Password</h2>
             <p>You requested to reset your password. Click the secure link below to create a new password:</p>
             <div style="margin: 20px 0;">
-              <a href="${link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
+              <a href="${link}" style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
             </div>
             <p style="color: #6b7280; font-size: 14px;">
               <strong>Security notice:</strong> This link expires in 1 hour and can only be used once. If you didn't request this, please ignore this email.

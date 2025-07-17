@@ -3,16 +3,8 @@ import { db } from "@db";
 import { passwordResetTokens, users } from "@db/schema";
 import { eq, and, lt, gt, sql } from "drizzle-orm";
 
-export async function genAndStoreToken(email: string): Promise<string> {
-  // Generate a cryptographically secure random token (64 bytes = 128 hex chars)
-  const plainToken = randomBytes(64).toString('hex');
-  
-  // Hash the token using SHA-256
-  const tokenHash = createHash('sha256').update(plainToken).digest('hex');
-  console.log('[genAndStoreToken] Generated token for:', email);
-  console.log('[genAndStoreToken] Token hash:', tokenHash.substring(0, 10) + '...');
-  
-  // Find user by email (case-insensitive)
+export async function genAndStoreToken(email: string): Promise<string | null> {
+  // Find user by email (case-insensitive) first
   const [user] = await db
     .select({ id: users.id })
     .from(users)
@@ -20,10 +12,17 @@ export async function genAndStoreToken(email: string): Promise<string> {
     .limit(1);
   
   if (!user) {
-    // Still return a token to avoid timing attacks, but don't store it
     console.log('[genAndStoreToken] User not found for email:', email);
-    return plainToken;
+    return null;
   }
+  
+  // Generate a cryptographically secure random token (64 bytes = 128 hex chars)
+  const plainToken = randomBytes(64).toString('hex');
+  
+  // Hash the token using SHA-256
+  const tokenHash = createHash('sha256').update(plainToken).digest('hex');
+  console.log('[genAndStoreToken] Generated token for:', email);
+  console.log('[genAndStoreToken] Token hash:', tokenHash.substring(0, 10) + '...');
   
   console.log('[genAndStoreToken] Found user with ID:', user.id);
   
