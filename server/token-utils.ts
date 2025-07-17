@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 import { db } from "@db";
 import { passwordResetTokens, users } from "@db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, gt } from "drizzle-orm";
 
 export async function genAndStoreToken(email: string): Promise<string> {
   // Generate a cryptographically secure random token (64 bytes = 128 hex chars)
@@ -51,7 +51,7 @@ export async function validateAndConsumeToken(token: string): Promise<number | n
     .where(
       and(
         eq(passwordResetTokens.tokenHash, tokenHash),
-        lt(new Date(), passwordResetTokens.expiresAt)
+        gt(passwordResetTokens.expiresAt, new Date())
       )
     )
     .limit(1);

@@ -7,7 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
 import { users, insertUserSchema, type User as SelectUser, passwordResetTokens } from "@db/schema";
 import { db } from "@db";
-import { eq, sql, and, lt } from "drizzle-orm";
+import { eq, sql, and, lt, gt } from "drizzle-orm";
 import fs from 'node:fs';
 import nodemailer from "nodemailer";
 import cryptoLib from "crypto";
@@ -158,28 +158,37 @@ export function setupAuth(app: Express) {
     const { token } = req.query as { token: string };
     
     if (!token) {
+      console.log('[validate-reset-token] No token provided');
       return res.status(400).json({ error: "No token provided" });
     }
     
-    // Validate token exists and isn't expired (don't consume it yet)
-    const tokenHash = createHash('sha256').update(token).digest('hex');
-    
-    const [tokenRecord] = await db
-      .select()
-      .from(passwordResetTokens)
-      .where(
-        and(
-          eq(passwordResetTokens.tokenHash, tokenHash),
-          lt(new Date(), passwordResetTokens.expiresAt)
+    try {
+      // Validate token exists and isn't expired (don't consume it yet)
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      console.log('[validate-reset-token] Token hash:', tokenHash.substring(0, 10) + '...');
+      
+      const [tokenRecord] = await db
+        .select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.tokenHash, tokenHash),
+            gt(passwordResetTokens.expiresAt, new Date())
+          )
         )
-      )
-      .limit(1);
-    
-    if (!tokenRecord) {
-      return res.status(400).json({ error: "Invalid or expired reset link" });
+        .limit(1);
+      
+      if (!tokenRecord) {
+        console.log('[validate-reset-token] Token not found or expired');
+        return res.status(400).json({ error: "Invalid or expired reset link" });
+      }
+      
+      console.log('[validate-reset-token] Token validated successfully');
+      return res.json({ valid: true });
+    } catch (error) {
+      console.error('[validate-reset-token] Error:', error);
+      return res.status(500).json({ error: "Token validation failed" });
     }
-    
-    return res.json({ valid: true });
   });
   app.post("/api/reset-password", async (req, res) => {
     const { token, newPassword } = req.body;
