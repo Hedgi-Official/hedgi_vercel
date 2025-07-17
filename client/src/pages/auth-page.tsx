@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useUser } from "@/hooks/use-user";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -191,6 +191,13 @@ export default function AuthPage() {
                 >
                   {t('auth.Sign In')}
                 </Button>
+                <div className="text-center">
+                  <Link href="/forgot-password">
+                    <Button variant="link" className="text-sm text-muted-foreground">
+                      Forgot your password?
+                    </Button>
+                  </Link>
+                </div>
                 <p className="text-sm text-center text-muted-foreground">
                   {t('auth.Don\'t have an account?')} {' '}
                   <Button

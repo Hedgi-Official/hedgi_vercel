@@ -76,6 +76,13 @@ export const trades = pgTable('trades', {
   enableRLS:     boolean('enable_rls').notNull().default(false),
 });
 
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id:        serial('id').primaryKey(),
+  userId:    integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
 export const userRelations = relations(users, ({ many }) => ({
   hedges: many(hedges),
   trades: many(trades),

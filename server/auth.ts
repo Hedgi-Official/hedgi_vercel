@@ -9,6 +9,9 @@ import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq, sql } from "drizzle-orm";
 import fs from 'node:fs';
+import nodemailer from "nodemailer";
+import cryptoLib from "crypto";
+import { genAndStoreToken, validateAndConsumeToken } from "./token-utils"; 
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -98,6 +101,57 @@ export function setupAuth(app: Express) {
       done(err);
     }
   });
+
+  // Reset Password Endpoint
+  const transporter = nodemailer.createTransport({
+    host:   process.env.SMTP_HOST,
+    port:   Number(process.env.SMTP_PORT),
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.HEDGI_APP_SECRET 
+    }
+  })
+
+  app.post("/api/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    // 1. generate & store token
+    const token = await genAndStoreToken(email);
+    const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
+    const link  = `${baseUrl}/confirm-reset?token=${token}`;
+    // 2. send email from hjalmar@hedgi.ai
+    await transporter.sendMail({
+      to:      email,
+      from:    "hjalmar@hedgi.ai",
+      subject: "Reset your password",
+      html:    `<p>Click <a href="${link}">here</a> to reset your password.</p>`
+    });
+    res.json({ message: "If that email exists, you’ll get a link shortly." });
+  });
+
+  app.get("/api/confirm-reset", async (req, res) => {
+    const { token } = req.query as { token: string };
+    const valid = await validateAndConsumeToken(token);
+    if (!valid) return res.status(400).send("Invalid or expired link.");
+    // Redirect to your React reset-page, e.g.:
+    return res.redirect(`/reset-password?token=${token}`);
+  });
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, newPassword } = req.body;
+    const userId = await validateAndConsumeToken(token);
+    if (!userId) return res.status(400).json({ error: "Invalid or expired token." });
+    
+    // Hash the new password
+    const hashedPassword = await crypto.hash(newPassword);
+    
+    // Update the user's password in the database
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+    
+    res.json({ message: "Password has been reset." });
+  })
+  // Helper function to send verification email
 
   // Helper functions for reading and writing to .env file
   const readEnvFile = () => {
