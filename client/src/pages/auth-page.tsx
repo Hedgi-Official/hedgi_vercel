@@ -20,7 +20,10 @@ const createRegisterSchema = (t: any) => z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").regex(
+      /(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
+      "Password must include an uppercase letter, a number, and a special character"
+    ),
   confirmPassword: z.string(),
   nation: z.string().min(1, "Please select your country"),
   paymentIdentifier: z.string().min(1, "Payment identifier is required"),
