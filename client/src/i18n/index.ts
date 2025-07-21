@@ -231,7 +231,10 @@ const enUS = {
       'Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.': 'Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.',
       'Couldn\'t send feedback. Please try again.': 'Couldn\'t send feedback. Please try again.',
       '🎉 Feedback Sent!': '🎉 Feedback Sent!',
-      'Thank you for helping us improve Hedgi.': 'Thank you for helping us improve Hedgi.'
+      'Thank you for helping us improve Hedgi.': 'Thank you for helping us improve Hedgi.',
+      'Idea / Suggestion': 'Idea / Suggestion',
+      'Bug / Issue': 'Bug / Issue',
+      'General Feedback': 'General Feedback'
     },
     payment: {
       title: 'Payment',
@@ -478,7 +481,16 @@ const ptBR = {
       'Thank you for helping us improve Hedgi.': 'Obrigado por nos ajudar a melhorar o Hedgi.',
       'Idea / Suggestion': 'Ideia / Sugestão',
       'Bug / Issue': 'Bug / Problema',
-      'General Feedback': 'Feedback Geral'
+      'General Feedback': 'Feedback Geral',
+      'Anonymous Feedback': 'Feedback Anônimo',
+      'Help us improve Hedgi. Your feedback is completely anonymous.': 'Ajude-nos a melhorar o Hedgi. Seu feedback é completamente anônimo.',
+      'Your Feedback': 'Seu Feedback',
+      'Share your thoughts, suggestions, or report issues...': 'Compartilhe seus pensamentos, sugestões ou reporte problemas...',
+      'Category': 'Categoria',
+      'Submit Feedback': 'Enviar Feedback',
+      'Sending...': 'Enviando...',
+      'Feedback Sent!': 'Feedback Enviado!',
+      'Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.': 'Obrigado por nos ajudar a melhorar o Hedgi. Seu feedback é anônimo e valioso para nós.'
     },
     payment: {
       title: 'Pagamento',
