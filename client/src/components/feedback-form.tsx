@@ -53,8 +53,8 @@ export function FeedbackForm() {
       setText('');
 
       toast({
-        title: "🎉 Feedback Sent!",
-        description: "Thank you for helping us improve Hedgi.",
+        title: t('🎉 Feedback Sent!'),
+        description: t('Thank you for helping us improve Hedgi.'),
       });
 
       // Reset form after success
@@ -67,8 +67,8 @@ export function FeedbackForm() {
       setStatus('error');
 
       toast({
-        title: "Error",
-        description: "Couldn't send feedback. Please try again.",
+        title: t('profile.Error'),
+        description: t('profile.Couldn\'t send feedback. Please try again.'),
         variant: "destructive",
       });
     }
