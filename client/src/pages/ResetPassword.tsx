@@ -208,7 +208,7 @@ export default function ResetPassword() {
               </AlertDescription>
             </Alert>
             <div className="mt-4">
-              <Link href="/login">
+              <Link href="/auth">
                 <Button className="w-full">
                   Go to Login
                 </Button>
@@ -282,7 +282,7 @@ export default function ResetPassword() {
           </form>
           
           <div className="mt-4 text-center">
-            <Link href="/login">
+            <Link href="/auth">
               <Button variant="link" className="text-sm">
                 Back to Login
               </Button>

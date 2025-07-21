@@ -73,7 +73,7 @@ export default function ForgotPassword() {
               </AlertDescription>
             </Alert>
             <div className="mt-4">
-              <Link href="/login">
+              <Link href="/auth">
                 <Button variant="outline" className="w-full">
                   Back to Login
                 </Button>
@@ -117,7 +117,7 @@ export default function ForgotPassword() {
           </form>
           
           <div className="mt-4 text-center">
-            <Link href="/login">
+            <Link href="/auth">
               <Button variant="link" className="text-sm">
                 Back to Login
               </Button>
