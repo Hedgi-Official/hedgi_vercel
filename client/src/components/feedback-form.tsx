@@ -27,9 +27,9 @@ export function FeedbackForm() {
 
     // Format the category label
     const categoryLabels = {
-      'idea': t('Idea / Suggestion'),
-      'issue': t('Bug / Issue'),
-      'other': t('General Feedback')
+      'idea': t('profile.Idea / Suggestion'),
+      'issue': t('profile.Bug / Issue'),
+      'other': t('profile.General Feedback')
     };
 
     const categoryLabel = categoryLabels[category];
@@ -53,8 +53,8 @@ export function FeedbackForm() {
       setText('');
 
       toast({
-        title: t('🎉 Feedback Sent!'),
-        description: t('Thank you for helping us improve Hedgi.'),
+        title: t('profile.🎉 Feedback Sent!'),
+        description: t('profile.Thank you for helping us improve Hedgi.'),
       });
 
       // Reset form after success
@@ -80,9 +80,9 @@ export function FeedbackForm() {
         <CardContent className="pt-6">
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t('Feedback Sent!')}</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('profile.Feedback Sent!')}</h3>
             <p className="text-muted-foreground">
-              {t('Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.')}
+              {t('profile.Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.')}
             </p>
           </div>
         </CardContent>
@@ -97,21 +97,21 @@ export function FeedbackForm() {
           <div className="p-2 bg-primary/10 rounded-lg">
             <MessageSquare className="h-5 w-5 text-primary" />
           </div>
-          {t('Anonymous Feedback')}
+          {t('profile.Anonymous Feedback')}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {t('Help us improve Hedgi. Your feedback is completely anonymous.')}
+          {t('profile.Help us improve Hedgi. Your feedback is completely anonymous.')}
         </p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="feedback-text">{t('Your Feedback')}</Label>
+            <Label htmlFor="feedback-text">{t('profile.Your Feedback')}</Label>
             <Textarea
               id="feedback-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={t('Share your thoughts, suggestions, or report issues...')}
+              placeholder={t('profile.Share your thoughts, suggestions, or report issues...')}
               required
               rows={4}
               className="resize-none"
@@ -119,15 +119,15 @@ export function FeedbackForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="feedback-category">{t('Category')}</Label>
+            <Label htmlFor="feedback-category">{t('profile.Category')}</Label>
             <Select value={category} onValueChange={(value: 'issue' | 'idea' | 'other') => setCategory(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="idea">💡 {t('Idea / Suggestion')}</SelectItem>
-                <SelectItem value="issue">🐛 {t('Bug / Issue')}</SelectItem>
-                <SelectItem value="other">💬 {t('General Feedback')}</SelectItem>
+                <SelectItem value="idea">💡 {t('profile.Idea / Suggestion')}</SelectItem>
+                <SelectItem value="issue">🐛 {t('profile.Bug / Issue')}</SelectItem>
+                <SelectItem value="other">💬 {t('profile.General Feedback')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -140,12 +140,12 @@ export function FeedbackForm() {
             {status === 'sending' ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                {t('Sending...')}
+                {t('profile.Sending...')}
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Send className="h-4 w-4" />
-                {t('Submit Feedback')}
+                {t('profile.Submit Feedback')}
               </div>
             )}
           </Button>
@@ -153,7 +153,7 @@ export function FeedbackForm() {
           {status === 'error' && (
             <div className="flex items-center gap-2 text-destructive text-sm">
               <AlertCircle className="h-4 w-4" />
-              {t('Couldn\'t send feedback. Please try again.')}
+              {t('profile.Couldn\'t send feedback. Please try again.')}
             </div>
           )}
         </form>
