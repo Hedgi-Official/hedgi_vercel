@@ -475,7 +475,10 @@ const ptBR = {
       'Thank you for helping us improve Hedgi. Your feedback is anonymous and valuable to us.': 'Obrigado por nos ajudar a melhorar o Hedgi. Seu feedback é anônimo e valioso para nós.',
       'Couldn\'t send feedback. Please try again.': 'Não foi possível enviar feedback. Tente novamente.',
       '🎉 Feedback Sent!': '🎉 Feedback Enviado!',
-      'Thank you for helping us improve Hedgi.': 'Obrigado por nos ajudar a melhorar o Hedgi.'
+      'Thank you for helping us improve Hedgi.': 'Obrigado por nos ajudar a melhorar o Hedgi.',
+      'Idea / Suggestion': 'Ideia / Sugestão',
+      'Bug / Issue': 'Bug / Problema',
+      'General Feedback': 'Feedback Geral'
     },
     payment: {
       title: 'Pagamento',
