@@ -947,14 +947,21 @@ export function registerRoutes(app: Express): Server {
             .then(response => response.ok ? response.json() : null)
             .then(flaskData => {
               console.log(`[Express Proxy] Flask status for trade ${trade.id} (Flask ${trade.flaskTradeId}):`, flaskData);
-              if (flaskData && ['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status)) {
+              if (flaskData && ['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status?.trim())) {
+                // Fix Flask's microsecond precision dates for JavaScript compatibility
+                let closedAtISO = flaskData.closedAt;
+                if (closedAtISO && closedAtISO.includes('.')) {
+                  // Truncate microseconds to milliseconds (6 digits -> 3 digits)
+                  closedAtISO = closedAtISO.replace(/\.(\d{6})$/, '.$1'.substring(0, 4));
+                }
+                
                 const completedTrade = {
                   ...trade,
                   status: flaskData.status,
-                  closedAt: flaskData.closedAt || new Date().toISOString(),
+                  closedAt: closedAtISO || new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 };
-                console.log(`[Express Proxy] Added completed trade ${trade.id} with status ${flaskData.status}`);
+                console.log(`[Express Proxy] Added completed trade ${trade.id} with status ${flaskData.status}, closedAt: ${closedAtISO}`);
                 return completedTrade;
               }
               console.log(`[Express Proxy] Trade ${trade.id} status ${flaskData?.status || 'unknown'} - not completed`);
