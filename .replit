@@ -74,12 +74,3 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
-
-[[workflows.workflow]]
-name = "Safe Migration"
-author = 22615688
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run backup && npm run pre-migration-check && npx drizzle-kit migrate"
