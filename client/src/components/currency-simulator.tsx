@@ -100,71 +100,43 @@ export function CurrencySimulator({
     const wednesdays = countWednesdaysBetweenDates(today, expirationDate);
     const businessDays = calculateBusinessDaysBetweenDates(today, expirationDate);
 
-    // Ensure we have live broker data before calculating
-    if (!currentRate || !swapValues) {
-      console.error('[CurrencySimulator] CRITICAL: Missing live broker data!', {
-        hasCurrentRate: !!currentRate,
-        hasSwapValues: !!swapValues,
-        activTradesRate: activTradesRate
-      });
-      // Do not proceed with fallback - show error to user
-      setSimulation(null);
-      return;
-    }
+    let hedgeCost = 0;
+    let rate = 0;
 
-    // USE ONLY LIVE FLASK SERVER DATA - NO FALLBACKS
-    console.log('[CurrencySimulator] Using LIVE Flask server data:', {
-      symbol: `${targetCurrency}${baseCurrency}`,
-      liveData: {
-        ask: currentRate.ask,
-        bid: currentRate.bid,
-        swapLong: swapValues.swapLong,
-        swapShort: swapValues.swapShort
-      },
-      inputParams: {
-        amount,
-        tradeDirection,
+    if (currentRate && swapValues) {
+      // Use ActivTrades data for accurate calculation
+      const spreadCost = (currentRate.ask - currentRate.bid) * amount;
+      const volumeInLots = amount / 100000;
+      hedgeCost =
+        Math.abs(
+          volumeInLots *
+            (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
+            (businessDays + wednesdays*2) * 1.1
+        ) + spreadCost;
+
+      rate = tradeDirection === 'buy' ? currentRate.ask : currentRate.bid;
+
+      console.log('[CurrencySimulator] Using ActivTrades calculation:', {
+        volumeInLots,
         businessDays,
-        wednesdays
-      }
-    });
-
-    // FIXED: Calculate spread cost in USD first (not BRL)
-    // For USDBRL: spread cost = (ask - bid) * amount / ask
-    // This gives us the spread cost in USD, avoiding double exchange rate application
-    const spreadCostUSD = (currentRate.ask - currentRate.bid) * amount / currentRate.ask;
-    
-    // Calculate volume in lots (standard forex calculation)
-    const volumeInLots = amount / 100000;
-    
-    // Get the appropriate swap rate based on trade direction
-    const swapRate = tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort;
-    
-    // Calculate swap cost with Wednesday triple charges and safety margin
-    const swapCostUSD = Math.abs(volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1);
-    
-    // Total cost in USD (both components now in USD)
-    const hedgeCostUSD = swapCostUSD + spreadCostUSD;
-
-    // Get the execution rate (ask for buy, bid for sell)
-    const rate = tradeDirection === 'buy' ? currentRate.ask : currentRate.bid;
-
-    // Convert hedge cost to target currency using live exchange rate (only once!)
-    const hedgeCost = hedgeCostUSD * currentRate.ask;
-
-    console.log('[CurrencySimulator] FIXED CALCULATION BREAKDOWN:', {
-      step1_spreadCostUSD: `(${currentRate.ask} - ${currentRate.bid}) × ${amount} ÷ ${currentRate.ask} = ${spreadCostUSD.toFixed(2)} USD`,
-      step2_volumeInLots: `${amount} ÷ 100,000 = ${volumeInLots} lots`,
-      step3_swapCostUSD: `${volumeInLots} × ${Math.abs(swapRate)} × (${businessDays} + ${wednesdays}×2) × 1.1 = ${swapCostUSD.toFixed(2)} USD`,
-      step4_totalUSD: `${swapCostUSD.toFixed(2)} + ${spreadCostUSD.toFixed(2)} = ${hedgeCostUSD.toFixed(2)} USD`,
-      step5_convertToBRL: `${hedgeCostUSD.toFixed(2)} × ${currentRate.ask} = ${hedgeCost.toFixed(2)} BRL`,
-      note: 'FIXED: No longer applying exchange rate twice to spread cost',
-      finalResult: {
-        hedgeCost: hedgeCost.toFixed(2) + ' BRL',
-        rate: rate,
+        wednesdays,
+        swapRate: tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort,
+        spreadCost,
+        totalCost: hedgeCost
+      });
+    } else {
+      // Fallback to simulation only if ActivTrades data is unavailable
+      console.log('[CurrencySimulator] ActivTrades data unavailable, using fallback simulation');
+      const result = await simulateHedge(
+        baseCurrency,
+        targetCurrency,
+        amount,
+        duration,
         tradeDirection
-      }
-    });
+      );
+      hedgeCost = result.costDetails.hedgeCost || result.totalCost;
+      rate = result.rate;
+    }
 
     // break-even calculation
     const costPct = rate > 0 ? (hedgeCost / amount / rate) * 100 : 0;
