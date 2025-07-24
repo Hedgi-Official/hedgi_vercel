@@ -4,17 +4,11 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "tsc",
-    "build:client": "cd client && npm run build",
     "dev": "tsx server/index.ts",
-    "start": "node dist/server/index.js",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "backup": "tsx scripts/backup-before-migration.ts",
-    "pre-migration-check": "tsx scripts/pre-migration-check.ts",
-    "safe-migrate": "npm run backup && npm run pre-migration-check && npx drizzle-kit migrate"
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "start": "NODE_ENV=production node dist/index.js",
+    "check": "tsc",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
