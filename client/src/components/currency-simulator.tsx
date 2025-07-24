@@ -97,14 +97,21 @@ export function CurrencySimulator({
     const today = new Date();
     const duration = getDaysBetweenDates(today, expirationDate);
 
+    // run your existing simulateHedge (fallback if no live rates)
+    const result = await simulateHedge(
+      baseCurrency,
+      targetCurrency,
+      amount,
+      duration,
+      tradeDirection
+    );
+
     const wednesdays = countWednesdaysBetweenDates(today, expirationDate);
     const businessDays = calculateBusinessDaysBetweenDates(today, expirationDate);
 
+    // compute hedge cost
     let hedgeCost = 0;
-    let rate = 0;
-
     if (currentRate && swapValues) {
-      // Use ActivTrades data for accurate calculation
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
       hedgeCost =
@@ -113,58 +120,30 @@ export function CurrencySimulator({
             (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
             (businessDays + wednesdays*2) * 1.1
         ) + spreadCost;
-
-      rate = tradeDirection === 'buy' ? currentRate.ask : currentRate.bid;
-
-      console.log('[CurrencySimulator] Using ActivTrades calculation:', {
-        volumeInLots,
-        businessDays,
-        wednesdays,
-        swapRate: tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort,
-        spreadCost,
-        totalCost: hedgeCost
-      });
-    } else {
-      // Fallback to simulation only if ActivTrades data is unavailable
-      console.log('[CurrencySimulator] ActivTrades data unavailable, using fallback simulation');
-      const result = await simulateHedge(
-        baseCurrency,
-        targetCurrency,
-        amount,
-        duration,
-        tradeDirection
-      );
-      hedgeCost = result.costDetails.hedgeCost || result.totalCost;
-      rate = result.rate;
     }
 
-    // break-even calculation
-    const costPct = rate > 0 ? (hedgeCost / amount / rate) * 100 : 0;
-    const breakEvenRate = tradeDirection === 'buy'
-      ? rate * (1 + costPct / 100)
-      : rate * (1 - costPct / 100);
+    // break-even
+    const costPct = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
+    const breakEvenRate =
+      tradeDirection === 'buy'
+        ? (currentRate ? currentRate.ask : result.rate) * (1 + costPct / 100)
+        : (currentRate ? currentRate.bid : result.rate) * (1 - costPct / 100);
 
     // Reset margin to default 2x hedgeCost and clear input field
     const defaultMargin = Math.round(hedgeCost * 2 * 100) / 100; // Round to nearest cent
     setMargin(defaultMargin);
     setMarginInput(''); // Clear input to show calculated default
 
-    // Get historical rates for fallback only when needed
-    const historicalRates = currentRate ? 
-      [] : // Skip historical rates when using live data
-      (await simulateHedge(baseCurrency, targetCurrency, amount, duration, tradeDirection)).historicalRates;
-
     setSimulation({
-      rate,
-      hedgedAmount: amount,
-      totalCost: hedgeCost,
-      breakEvenRate,
+      ...result,
       businessDays,
-      costDetails: {
-        costPercentage: costPct,
-        hedgeCost
-      },
-      historicalRates: historicalRates || []
+      costDetails: { ...result.costDetails, hedgeCost },
+      rate: currentRate
+        ? tradeDirection === 'buy'
+          ? currentRate.ask
+          : currentRate.bid
+        : result.rate,
+      breakEvenRate
     });
   };
 
