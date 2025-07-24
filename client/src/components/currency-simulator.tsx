@@ -141,7 +141,7 @@ export function CurrencySimulator({
     const swapRate = tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort;
     
     // Calculate swap cost with Wednesday triple charges and safety margin
-    const swapCostUSD = Math.abs(10*volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1 / currentRate.ask);
+    const swapCostUSD = Math.abs(volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1);
     
     // Total cost in USD (both components now in USD)
     const hedgeCostUSD = swapCostUSD + spreadCostUSD;
@@ -444,14 +444,23 @@ export function CurrencySimulator({
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Stop Loss Rate</p>
                   <p className="text-xl md:text-2xl font-bold">
-                    {simulation.stopLossRate ? simulation.stopLossRate.toFixed(4) : '0.0000'} {`${targetCurrency}/${baseCurrency}`}
+                    {(() => {
+                      const entryPrice = simulation.rate;
+                      const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
+                      const volume = amount;
+                      // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
+                      const stopLossRate = tradeDirection === 'sell' ? 
+                        Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                        Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                      return stopLossRate.toFixed(4);
+                    })()} {`${targetCurrency}/${baseCurrency}`}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
                       const entryPrice = simulation.rate;
                       const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
-                      const volume = simulation.amount; // Use simulation amount, not current input
-                      const stopLossRate = simulation.tradeDirection === 'sell' ? 
+                      const volume = amount;
+                      const stopLossRate = tradeDirection === 'sell' ? 
                         Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
                         Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                       const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;

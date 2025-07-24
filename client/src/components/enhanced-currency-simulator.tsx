@@ -141,7 +141,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     const swapRate = tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort;
     
     // Calculate swap cost with Wednesday triple charges and safety margin
-    const swapCostUSD = Math.abs(10*volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1 / currentRate.ask);
+    const swapCostUSD = Math.abs(volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1);
     
     // Total cost in USD (both components now in USD)
     const hedgeCostUSD = swapCostUSD + spreadCostUSD;
