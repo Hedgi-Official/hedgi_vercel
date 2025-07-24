@@ -134,7 +134,7 @@ export function CurrencySimulator({
         duration,
         tradeDirection
       );
-      hedgeCost = result.costDetails.hedgeCost || result.totalCost;
+      hedgeCost = result.totalCost;
       rate = result.rate;
     }
 

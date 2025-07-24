@@ -135,7 +135,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
         duration,
         tradeDirection
       );
-      hedgeCost = result.costDetails.hedgeCost || result.totalCost;
+      hedgeCost = result.totalCost;
       rate = result.rate;
     }
 
