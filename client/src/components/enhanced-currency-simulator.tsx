@@ -473,17 +473,29 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
                     <Clock className="mr-2 h-4 w-4 text-primary" />
                     {t('simulator.expirationDate')}
                   </label>
-                  <DatePicker
-                    value={expirationDate}
-                    onValueChange={setExpirationDate}
-                    minDate={getMinimumHedgeDate()}
-                    maxDate={(() => {
-                      const maxDate = new Date();
-                      maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
-                      return maxDate;
-                    })()}
-                    placeholder={t('simulator.selectExpirationDate')}
-                  />
+                  <div className="flex gap-2">
+                    <DatePicker
+                      value={expirationDate}
+                      onValueChange={setExpirationDate}
+                      minDate={getMinimumHedgeDate()}
+                      maxDate={(() => {
+                        const maxDate = new Date();
+                        maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
+                        return maxDate;
+                      })()}
+                      placeholder={t('simulator.selectExpirationDate')}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpirationDate(getMinimumHedgeDate())}
+                      className="shrink-0"
+                      title="Select next business day"
+                    >
+                      Next
+                    </Button>
+                  </div>
                   {expirationDate && (
                     <p className="text-sm text-muted-foreground">
                       {t('simulator.hedgeDuration').replace('{days}', getDaysBetweenDates(new Date(), expirationDate).toString())}
