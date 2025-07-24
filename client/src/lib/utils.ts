@@ -35,7 +35,8 @@ export function calculateBusinessDaysBetweenDates(startDate: Date, endDate: Date
   currentDate.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
 
-  while (currentDate <= end) {
+  // FIXED: Exclude expiration date - hedge expires at start of end date
+  while (currentDate < end) {
     const dayOfWeek = currentDate.getDay();
     if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 is Sunday, 6 is Saturday
       businessDays++;
@@ -73,7 +74,8 @@ export function countWednesdaysBetweenDates(startDate: Date, endDate: Date): num
   currentDate.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
 
-  while (currentDate <= end) {
+  // FIXED: Exclude expiration date - hedge expires at start of end date
+  while (currentDate < end) {
     // Wednesday is day 3 (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.)
     if (currentDate.getDay() === 3) {
       wednesdayCount++;

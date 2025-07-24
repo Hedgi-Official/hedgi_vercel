@@ -132,7 +132,7 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     // FIXED: Calculate spread cost in USD first (not BRL)
     // For USDBRL: spread cost = (ask - bid) * amount / ask
     // This gives us the spread cost in USD, avoiding double exchange rate application
-    const spreadCostUSD = (currentRate.ask - currentRate.bid) * amount / currentRate.ask;
+    const spreadCostUSD = (1.1*(currentRate.ask - currentRate.bid) * amount / currentRate.ask);
     
     // Calculate volume in lots (standard forex calculation)
     const volumeInLots = amount / 100000;
