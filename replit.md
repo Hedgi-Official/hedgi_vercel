@@ -81,6 +81,9 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- July 24, 2025. **ENHANCEMENT: Enabled same-day and next-day hedge expiration** - Modified `getMinimumHedgeDate()` to allow same-day hedge expiration, enabling Thursday→Friday hedges and ultra-short duration positions. Minimum hedge duration now 0-1 days instead of 1+ days
+- July 24, 2025. **CRITICAL: Fixed hedge expiration date inclusion bug** - Corrected date calculation logic to exclude expiration date from swap cost calculation. Hedge expires at start of expiration date, not end. Changed `<=` to `<` in date loops, reducing costs by ~12.5% (2.75 USD on 7-day $10K hedge)
+- July 24, 2025. **MAJOR: Fixed double exchange rate application in spread calculation** - Corrected critical bug where spread cost was calculated in BRL then converted to BRL again, causing ~83% overcharge. Now calculates spread cost in USD first: `(ask-bid) × amount ÷ ask`, then converts to BRL once
 - July 24, 2025. **Fixed hedge cost calculation system** - Eliminated fallback simulation priority issue and corrected currency conversion to display costs in target currency (BRL) instead of base currency (USD)
 - July 17, 2025. **Secure password reset system fully operational** - Complete enterprise-grade password reset system with cryptographically secure tokens, email verification, and one-time use validation working end-to-end
 - July 17, 2025. **Fixed URL parameter extraction issue** - Resolved Wouter router stripping query parameters by using window.location.search directly

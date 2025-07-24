@@ -122,13 +122,13 @@ export function getNextBusinessDay(date: Date): Date {
 
 export function getMinimumHedgeDate(): Date {
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   
-  // If tomorrow is a weekend, find the next business day
-  if (isWeekend(tomorrow)) {
-    return getNextBusinessDay(tomorrow);
+  // FIXED: Allow same-day hedge expiration (today)
+  // This enables Thursday->Friday hedges and even intraday hedges
+  // If today is a weekend, find the next business day
+  if (isWeekend(today)) {
+    return getNextBusinessDay(today);
   }
   
-  return tomorrow;
+  return today;
 }
