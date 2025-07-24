@@ -447,9 +447,9 @@ export function CurrencySimulator({
                     {(() => {
                       const entryPrice = simulation.rate;
                       const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
-                      const volume = amount;
+                      const volume = simulation.amount; // Use simulation amount, not current input
                       // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
-                      const stopLossRate = tradeDirection === 'sell' ? 
+                      const stopLossRate = simulation.tradeDirection === 'sell' ? 
                         Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
                         Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                       return stopLossRate.toFixed(4);
@@ -459,8 +459,8 @@ export function CurrencySimulator({
                     {(() => {
                       const entryPrice = simulation.rate;
                       const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
-                      const volume = amount;
-                      const stopLossRate = tradeDirection === 'sell' ? 
+                      const volume = simulation.amount; // Use simulation amount, not current input
+                      const stopLossRate = simulation.tradeDirection === 'sell' ? 
                         Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
                         Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                       const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;
