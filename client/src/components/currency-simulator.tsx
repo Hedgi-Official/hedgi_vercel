@@ -107,7 +107,7 @@ export function CurrencySimulator({
       // Use ActivTrades data for accurate calculation
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
-      hedgeCost =
+      const hedgeCostUSD =
         Math.abs(
           volumeInLots *
             (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
@@ -116,13 +116,18 @@ export function CurrencySimulator({
 
       rate = tradeDirection === 'buy' ? currentRate.ask : currentRate.bid;
 
+      // Convert hedge cost to target currency (BRL)
+      hedgeCost = hedgeCostUSD * currentRate.ask;
+
       console.log('[CurrencySimulator] Using ActivTrades calculation:', {
         volumeInLots,
         businessDays,
         wednesdays,
         swapRate: tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort,
         spreadCost,
-        totalCost: hedgeCost
+        hedgeCostUSD,
+        hedgeCostBRL: hedgeCost,
+        exchangeRate: currentRate.ask
       });
     } else {
       // Fallback to simulation only if ActivTrades data is unavailable

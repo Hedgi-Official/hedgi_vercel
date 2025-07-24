@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- July 24, 2025. **Fixed hedge cost calculation system** - Eliminated fallback simulation priority issue and corrected currency conversion to display costs in target currency (BRL) instead of base currency (USD)
 - July 17, 2025. **Secure password reset system fully operational** - Complete enterprise-grade password reset system with cryptographically secure tokens, email verification, and one-time use validation working end-to-end
 - July 17, 2025. **Fixed URL parameter extraction issue** - Resolved Wouter router stripping query parameters by using window.location.search directly
 - July 17, 2025. **Fixed case-sensitive email lookup** - Implemented case-insensitive email matching for token generation
