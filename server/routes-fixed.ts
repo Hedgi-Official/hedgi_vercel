@@ -12,7 +12,7 @@ import activtradesRouter from "./routes/activtrades-rate";
 import tickmillRouter from "./routes/tickmill-rate";
 import fbsRouter from "./routes/fbs-rate";
 import paymentRouter from "./routes/payment";
-// simulate router removed - all pricing comes from Flask servers
+import simulateRouter from "./routes/simulate";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
