@@ -1,10 +1,11 @@
+
 import { z } from "zod";
 
 export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 export type CurrencyPair = `${SupportedCurrency}${SupportedCurrency}`;
 
-// Sample rates for development/testing
+// Sample rates for development/testing - these should only be used as absolute fallback
 const SAMPLE_RATES: Record<CurrencyPair, number> = {
   'USDBRL': 4.95,
   'USDEUR': 0.93,
@@ -62,7 +63,7 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
     if (base !== 'USD' && target !== 'USD') {
       const baseUSD = `${base}USD` in SAMPLE_RATES ? 
         SAMPLE_RATES[`${base}USD` as CurrencyPair] : 
-        1 / SAMPLE_RATES[`USD${base}` as CurrencyPair];
+        1 / SAMPLE_RATES[`USD${base}` as CurrKeyPair];
       const targetUSD = `${target}USD` in SAMPLE_RATES ? 
         SAMPLE_RATES[`${target}USD` as CurrencyPair] : 
         1 / SAMPLE_RATES[`USD${target}` as CurrencyPair];
@@ -94,51 +95,36 @@ export async function simulateHedge(
   tradeDirection: 'buy' | 'sell' = 'buy'
 ) {
   try {
-    console.log(`[Currency API] Simulating hedge for ${amount} ${target}`);
+    console.log(`[Currency API] Simulating hedge for ${amount} ${target} - NOTE: This should use Flask server rates`);
 
-    // Get current rate
+    // WARNING: This function should not be used in production
+    // All pricing should come from Flask servers via ActivTrades/FBS/Tickmill APIs
+    console.warn('[Currency API] simulateHedge is deprecated - use broker APIs directly');
+
+    // Get fallback rate only for historical data generation
     const rate = await fetchExchangeRate(base, target);
-    console.log(`[Currency API] Current rate: ${rate}`);
+    console.log(`[Currency API] Fallback rate: ${rate}`);
 
-    // Calculate hedge costs using more realistic market conditions
-    // Base spread cost (difference between buy and sell rates)
-    const spreadCost = 0.15; // 0.15% typical FX spread
-
-    // Forward points cost (increases with duration)
-    const forwardPointsCost = 0.02 * (duration / 30); // 0.02% per month equivalent
-
-    // Transaction fee
-    const transactionFee = 0.1; // 0.1% fixed transaction fee
-
-    // Total cost percentage
-    const costPercentage = spreadCost + forwardPointsCost + transactionFee;
-
-    // Calculate total cost in target currency
-    const totalCost = (amount * costPercentage) / 100;
-
-    // Calculate break-even rate
-    const breakEvenRate = tradeDirection === 'sell' ?
-      rate * (1 + costPercentage / 100) :
-      rate * (1 - costPercentage / 100);
-
-    // Get historical rates
+    // Get historical rates for chart display
     const historicalRates = await fetchHistoricalRates(base, target, duration);
 
+    // Return minimal data - real hedge calculations should be done in components
+    // using actual broker rates from Flask servers
     const result = {
       rate,
       hedgedAmount: amount,
-      totalCost,
-      breakEvenRate,
+      totalCost: 0, // Should be calculated using real broker rates
+      breakEvenRate: rate, // Should be calculated using real broker rates
       costDetails: {
-        costPercentage,
-        spreadCost,
-        forwardPointsCost,
-        transactionFee
+        costPercentage: 0,
+        spreadCost: 0,
+        forwardPointsCost: 0,
+        transactionFee: 0
       },
       historicalRates
     };
 
-    console.log('[Currency API] Simulation result:', result);
+    console.log('[Currency API] Simulation result (DEPRECATED):', result);
     return result;
   } catch (error) {
     console.error('[Currency API] Simulation error:', error);
