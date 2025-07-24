@@ -14,6 +14,21 @@ import simulateRouter from "./routes/simulate";
 
 const FLASK = process.env.FLASK_URL;
 
+// Status mapping for trade statuses
+const statusMap: Record<string, string> = {
+  'EXECUTED': 'Executed',
+  'NEW': 'New', 
+  'PENDING': 'Pending',
+  'OPEN': 'Open',
+  'CLOSED': 'Closed',
+  'CANCELLED': 'Cancelled',
+  'FAILED': 'Failed',
+  'COMPLETED': 'Completed',
+  'ACTIVE': 'Active',
+  'CLOSE_REQUESTED': 'Close Requested',
+  'PENDING (WAITING FOR MARKET TO OPEN BEFORE CLOSING)': 'Pending (Waiting for market to open before closing)'
+};
+
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 

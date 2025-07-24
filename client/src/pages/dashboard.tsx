@@ -846,9 +846,9 @@ export default function Dashboard() {
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
 
-                  // Calculate payment amount using actual hedge costs and margin
+                  // Calculate payment amount using actual hedge costs and margin  
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
+                  const hedgeCost = (hedgePayload as any).cost ? Number((hedgePayload as any).cost) : 0;
                   const paymentAmount = Number((margin + hedgeCost).toFixed(2));
 
                   console.log("💰 [Dashboard] Payment calculation:");

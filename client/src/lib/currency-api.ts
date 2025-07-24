@@ -6,18 +6,22 @@ export type CurrencyPair = `${SupportedCurrency}${SupportedCurrency}`;
 
 // Sample rates for development/testing
 const SAMPLE_RATES: Record<CurrencyPair, number> = {
+  'USDUSD': 1.00,
   'USDBRL': 4.95,
   'USDEUR': 0.93,
   'USDMXN': 17.05,
   'EURUSD': 1.08,
+  'EUREUR': 1.00,
   'EURBRL': 5.35,
   'EURMXN': 18.45,
   'BRLUSD': 0.20,
   'BRLEUR': 0.19,
+  'BRLBRL': 1.00,
   'BRLMXN': 3.45,
   'MXNUSD': 0.059,
   'MXNEUR': 0.054,
   'MXNBRL': 0.29,
+  'MXNMXN': 1.00,
 } as const;
 
 function generateHistoricalRates(baseRate: number, days: number) {
