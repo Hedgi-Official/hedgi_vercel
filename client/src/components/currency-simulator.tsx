@@ -129,8 +129,10 @@ export function CurrencySimulator({
       }
     });
 
-    // Calculate spread cost using live ask/bid rates
-    const spreadCost = (currentRate.ask - currentRate.bid) * amount;
+    // FIXED: Calculate spread cost in USD first (not BRL)
+    // For USDBRL: spread cost = (ask - bid) * amount / ask
+    // This gives us the spread cost in USD, avoiding double exchange rate application
+    const spreadCostUSD = (currentRate.ask - currentRate.bid) * amount / currentRate.ask;
     
     // Calculate volume in lots (standard forex calculation)
     const volumeInLots = amount / 100000;
@@ -139,23 +141,24 @@ export function CurrencySimulator({
     const swapRate = tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort;
     
     // Calculate swap cost with Wednesday triple charges and safety margin
-    const swapCost = Math.abs(volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1);
+    const swapCostUSD = Math.abs(volumeInLots * swapRate * (businessDays + wednesdays * 2) * 1.1);
     
-    // Total cost in USD
-    const hedgeCostUSD = swapCost + spreadCost;
+    // Total cost in USD (both components now in USD)
+    const hedgeCostUSD = swapCostUSD + spreadCostUSD;
 
     // Get the execution rate (ask for buy, bid for sell)
     const rate = tradeDirection === 'buy' ? currentRate.ask : currentRate.bid;
 
-    // Convert hedge cost to target currency using live exchange rate
+    // Convert hedge cost to target currency using live exchange rate (only once!)
     const hedgeCost = hedgeCostUSD * currentRate.ask;
 
-    console.log('[CurrencySimulator] LIVE CALCULATION BREAKDOWN:', {
-      step1_spreadCost: `(${currentRate.ask} - ${currentRate.bid}) × ${amount} = ${spreadCost.toFixed(2)} USD`,
+    console.log('[CurrencySimulator] FIXED CALCULATION BREAKDOWN:', {
+      step1_spreadCostUSD: `(${currentRate.ask} - ${currentRate.bid}) × ${amount} ÷ ${currentRate.ask} = ${spreadCostUSD.toFixed(2)} USD`,
       step2_volumeInLots: `${amount} ÷ 100,000 = ${volumeInLots} lots`,
-      step3_swapCost: `${volumeInLots} × ${swapRate} × (${businessDays} + ${wednesdays}×2) × 1.1 = ${swapCost.toFixed(2)} USD`,
-      step4_totalUSD: `${swapCost.toFixed(2)} + ${spreadCost.toFixed(2)} = ${hedgeCostUSD.toFixed(2)} USD`,
+      step3_swapCostUSD: `${volumeInLots} × ${Math.abs(swapRate)} × (${businessDays} + ${wednesdays}×2) × 1.1 = ${swapCostUSD.toFixed(2)} USD`,
+      step4_totalUSD: `${swapCostUSD.toFixed(2)} + ${spreadCostUSD.toFixed(2)} = ${hedgeCostUSD.toFixed(2)} USD`,
       step5_convertToBRL: `${hedgeCostUSD.toFixed(2)} × ${currentRate.ask} = ${hedgeCost.toFixed(2)} BRL`,
+      note: 'FIXED: No longer applying exchange rate twice to spread cost',
       finalResult: {
         hedgeCost: hedgeCost.toFixed(2) + ' BRL',
         rate: rate,
