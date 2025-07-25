@@ -35,7 +35,8 @@ export function calculateBusinessDaysBetweenDates(startDate: Date, endDate: Date
   currentDate.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
 
-  while (currentDate <= end) {
+  // Exclude the end date from calculation (expiration date should not count)
+  while (currentDate < end) {
     const dayOfWeek = currentDate.getDay();
     if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 is Sunday, 6 is Saturday
       businessDays++;
@@ -73,7 +74,8 @@ export function countWednesdaysBetweenDates(startDate: Date, endDate: Date): num
   currentDate.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
 
-  while (currentDate <= end) {
+  // Exclude the end date from calculation (expiration date should not count)
+  while (currentDate < end) {
     // Wednesday is day 3 (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.)
     if (currentDate.getDay() === 3) {
       wednesdayCount++;
@@ -120,13 +122,12 @@ export function getNextBusinessDay(date: Date): Date {
 
 export function getMinimumHedgeDate(): Date {
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
   
-  // If tomorrow is a weekend, find the next business day
-  if (isWeekend(tomorrow)) {
-    return getNextBusinessDay(tomorrow);
+  // Allow same-day hedge if today is a business day
+  if (isBusinessDay(today)) {
+    return today;
   }
   
-  return tomorrow;
+  // If today is weekend, find the next business day
+  return getNextBusinessDay(today);
 }
