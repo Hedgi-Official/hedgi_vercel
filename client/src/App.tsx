@@ -57,12 +57,6 @@ function Router() {
         {currentLanguage === "pt-BR" ? <UsingHedgiPTBR /> : <UsingHedgi />}
       </Route>
       <Route path="/about-us" component={AboutUs} />
-      <Route path="/under-construction" component={() => (
-        <>
-          <Header showAuthButton />
-          <UnderConstruction title="Coming Soon" />
-        </>
-      )} />
       <Route component={NotFound} />
     </Switch>
   );
