@@ -62,7 +62,7 @@ export default function LandingPage() {
         <section className="mt-32 mb-16">
           <div className="relative w-full min-h-[600px] rounded-2xl overflow-hidden shadow-2xl">
             {/* Image Collage Grid */}
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
               {/* Couple picnic - relaxed happiness */}
               <div className="relative overflow-hidden">
                 <img 
@@ -71,7 +71,7 @@ export default function LandingPage() {
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="eager"
                   decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -84,20 +84,7 @@ export default function LandingPage() {
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="lazy"
                   decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
-              </div>
-              
-              {/* Woman reading with dog - peaceful lifestyle */}
-              <div className="relative overflow-hidden md:col-span-2 lg:col-span-1">
-                <img 
-                  src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg" 
-                  alt="Woman reading peacefully with her dog" 
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  loading="lazy"
-                  decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 33vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -111,20 +98,45 @@ export default function LandingPage() {
                   style={{ objectPosition: 'center 25%' }}
                   loading="lazy"
                   decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 66vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
               
               {/* Golfer - pursuing passions */}
-              <div className="relative overflow-hidden">
+              <div className="relative overflow-hidden md:col-span-2 lg:col-span-2">
                 <img 
                   src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg" 
                   alt="Person playing golf, pursuing hobbies" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="lazy"
                   decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              {/* Additional images to fill the 4-column grid */}
+              <div className="relative overflow-hidden">
+                <img 
+                  src="/images/gautham-krishna-fy466BrLmgg-unsplash_1750022560441-min.jpg" 
+                  alt="Peaceful outdoor scene" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="lazy"
+                  decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
+              </div>
+              
+              <div className="relative overflow-hidden">
+                <img 
+                  src="/images/vicky-hladynets-Bb7c5J3sHD0-unsplash_1750022645648.jpg" 
+                  alt="Lifestyle moment" 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="lazy"
+                  decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
