@@ -6,12 +6,29 @@ import { Header } from "@/components/header";
 import { Skyline } from "@/components/skyline";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 /*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
+
+  // Preload critical images
+  useEffect(() => {
+    const imageUrls = [
+      "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440.jpg",
+      "/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg",
+      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647.jpg",
+      "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441.jpg",
+      "/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441.jpg"
+    ];
+
+    imageUrls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -61,6 +78,8 @@ export default function LandingPage() {
                   src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440.jpg" 
                   alt="Happy couple enjoying a picnic" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="eager"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -71,6 +90,8 @@ export default function LandingPage() {
                   src="/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg" 
                   alt="Confident man laughing outdoors" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="eager"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -81,6 +102,8 @@ export default function LandingPage() {
                   src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647.jpg" 
                   alt="Woman reading peacefully with her dog" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="eager"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -92,6 +115,8 @@ export default function LandingPage() {
                   alt="Family walking together in nature" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   style={{ objectPosition: 'center 25%' }}
+                  loading="eager"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -102,6 +127,8 @@ export default function LandingPage() {
                   src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441.jpg" 
                   alt="Person playing golf, pursuing hobbies" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  loading="eager"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
