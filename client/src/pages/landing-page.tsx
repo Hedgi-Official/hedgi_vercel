@@ -21,7 +21,7 @@ export default function LandingPage() {
       "/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg",
       "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg",
       "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg",
-      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg"
+      "/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg"
     ];
 
     imageUrls.forEach(url => {
@@ -75,7 +75,7 @@ export default function LandingPage() {
               {/* Couple picnic - relaxed happiness */}
               <div className="relative overflow-hidden">
                 <img 
-                  src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440.jpg" 
+                  src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg" 
                   alt="Happy couple enjoying a picnic" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="eager"
@@ -99,7 +99,7 @@ export default function LandingPage() {
               {/* Woman reading with dog - peaceful lifestyle */}
               <div className="relative overflow-hidden md:col-span-2 lg:col-span-1">
                 <img 
-                  src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647.jpg" 
+                  src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg" 
                   alt="Woman reading peacefully with her dog" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="eager"
@@ -111,7 +111,7 @@ export default function LandingPage() {
               {/* Family walking - security and future */}
               <div className="relative overflow-hidden md:col-span-2 lg:col-span-2">
                 <img 
-                  src="/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441.jpg" 
+                  src="/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg" 
                   alt="Family walking together in nature" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   style={{ objectPosition: 'center 25%' }}
@@ -124,7 +124,7 @@ export default function LandingPage() {
               {/* Golfer - pursuing passions */}
               <div className="relative overflow-hidden">
                 <img 
-                  src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441.jpg" 
+                  src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg" 
                   alt="Person playing golf, pursuing hobbies" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="eager"
