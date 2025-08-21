@@ -58,10 +58,10 @@ export default function AboutUs() {
                 Hedgi
               </h1>
               <p className="text-2xl md:text-3xl font-semibold mb-4 text-foreground">
-                Currency Insurance for Your Business.
+                Currency Insurance for Everyone.
               </p>
               <p className="text-lg md:text-xl mb-12 text-muted-foreground max-w-2xl mx-auto">
-                Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection.
+                Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection for businesses and individuals.
               </p>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function AboutUs() {
                   </div>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                     75% of companies not using currency protection lose money due to fluctuations. Currency moves erased $9.83 billion from corporate earnings in just one quarter.
-                    At <span className="font-semibold text-primary">Hedgi</span>, we provide simple currency insurance so your business never loses money when buying from other countries.
+                    At <span className="font-semibold text-primary">Hedgi</span>, we provide simple currency insurance so you never lose money when buying from other countries - whether you're a business or an individual.
                   </p>
                   <div className="flex items-center text-primary font-medium">
                     <TrendingUp className="w-5 h-5 mr-2" />
@@ -120,7 +120,7 @@ export default function AboutUs() {
               <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Why Choose Hedgi</h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Simple currency insurance designed for businesses that buy from other countries
+                  Simple currency insurance for anyone who buys from other countries
                 </p>
               </div>
               
@@ -149,9 +149,9 @@ export default function AboutUs() {
                   <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
                     <Globe className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">For Any Business</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">For Everyone</h3>
                   <p className="text-muted-foreground">
-                    Whether you import goods, pay suppliers abroad, or have international customers - we protect your money.
+                    Whether you're buying products online, paying suppliers abroad, or making international purchases - we protect your money.
                   </p>
                 </div>
               </div>
@@ -177,16 +177,16 @@ export default function AboutUs() {
               <div className="grid md:grid-cols-2 gap-8 mt-12">
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Building className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Importers</h3>
+                  <h3 className="text-xl font-semibold mb-3">For Businesses</h3>
                   <p className="text-muted-foreground">
-                    Buying products from overseas? Lock in your costs and protect your margins from currency swings.
+                    Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.
                   </p>
                 </div>
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Users className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Any SME</h3>
+                  <h3 className="text-xl font-semibold mb-3">For Individuals</h3>
                   <p className="text-muted-foreground">
-                    No treasury expertise needed. Simple currency insurance that works for businesses of any size.
+                    Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.
                   </p>
                 </div>
               </div>
