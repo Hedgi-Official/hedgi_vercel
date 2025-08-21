@@ -33,7 +33,7 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
   };
 
   return (
-    <nav className="bg-background border-b">
+    <nav className="bg-background border-b relative z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

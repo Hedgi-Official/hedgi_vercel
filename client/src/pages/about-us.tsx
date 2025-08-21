@@ -19,7 +19,7 @@ export default function AboutUs() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Abstract Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -54,8 +54,8 @@ export default function AboutUs() {
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary/20 rounded-full animate-ping"></div>
                 </div>
               </div>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 bg-gradient-to-r from-primary via-green-600 to-blue-600 bg-clip-text text-transparent">
-                Hedgi
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 bg-gradient-to-r from-primary via-green-600 to-blue-600 bg-clip-text text-transparent">
+                What is Hedgi?
               </h1>
               <p className="text-2xl md:text-3xl font-semibold mb-4 text-foreground">
                 Currency Insurance for Everyone.
