@@ -163,6 +163,18 @@ const enUS = {
     'About Us': 'About Us',
     'Page Under Construction': 'Page Under Construction',
     'Coming Soon': 'This page is under construction. Please check back later.',
+    // About Us page translations
+    'What is Hedgi?': 'What is Hedgi?',
+    'Currency Insurance for Everyone.': 'Currency Insurance for Everyone.',
+    'Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection for businesses and individuals.': 'Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection for businesses and individuals.',
+    'Our Mission': 'Our Mission',
+    'Companies Lose Money': 'Companies Lose Money',
+    'Lost to Currency Moves': 'Lost to Currency Moves',
+    'Why Choose Hedgi': 'Why Choose Hedgi',
+    'For Businesses': 'For Businesses',
+    'Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.': 'Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.',
+    'For Individuals': 'For Individuals',
+    'Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.': 'Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.',
     profile: {
       'Personal Information': 'Personal Information',
       'Full Name': 'Full Name',
