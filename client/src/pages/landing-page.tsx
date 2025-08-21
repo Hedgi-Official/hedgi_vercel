@@ -14,11 +14,27 @@ export default function LandingPage() {
   const { user, logout } = useUser();
   const { t } = useTranslation();
 
-  // Preload only the first visible image
+  // Preload only critical images and optimize loading
   useEffect(() => {
-    // Only preload the hero image that's immediately visible
+    // Preload the hero image that's immediately visible
     const heroImage = new Image();
     heroImage.src = "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg";
+    
+    // Prefetch other images after a short delay to prevent blocking
+    const timer = setTimeout(() => {
+      const imagesToPrefetch = [
+        "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg",
+        "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg",
+        "/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg"
+      ];
+      
+      imagesToPrefetch.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const handleLogout = async () => {
@@ -72,6 +88,10 @@ export default function LandingPage() {
                   loading="eager"
                   decoding="async"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  style={{ 
+                    contentVisibility: 'auto',
+                    containIntrinsicSize: '400px 300px'
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
