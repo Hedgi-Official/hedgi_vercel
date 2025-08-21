@@ -14,20 +14,11 @@ export default function LandingPage() {
   const { user, logout } = useUser();
   const { t } = useTranslation();
 
-  // Preload critical images
+  // Preload only the first visible image
   useEffect(() => {
-    const imageUrls = [
-      "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg",
-      "/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg",
-      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg",
-      "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg",
-      "/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg"
-    ];
-
-    imageUrls.forEach(url => {
-      const img = new Image();
-      img.src = url;
-    });
+    // Only preload the hero image that's immediately visible
+    const heroImage = new Image();
+    heroImage.src = "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg";
   }, []);
 
   const handleLogout = async () => {
@@ -80,6 +71,7 @@ export default function LandingPage() {
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="eager"
                   decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -90,8 +82,9 @@ export default function LandingPage() {
                   src="/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg" 
                   alt="Confident man laughing outdoors" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -102,8 +95,9 @@ export default function LandingPage() {
                   src="/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg" 
                   alt="Woman reading peacefully with her dog" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -115,8 +109,9 @@ export default function LandingPage() {
                   alt="Family walking together in nature" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   style={{ objectPosition: 'center 25%' }}
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 66vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
@@ -127,8 +122,9 @@ export default function LandingPage() {
                   src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg" 
                   alt="Person playing golf, pursuing hobbies" 
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
