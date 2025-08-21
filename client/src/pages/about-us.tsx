@@ -54,14 +54,15 @@ export default function AboutUs() {
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary/20 rounded-full animate-ping"></div>
                 </div>
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 bg-gradient-to-r from-primary via-green-600 to-blue-600 bg-clip-text text-transparent">
-                What is Hedgi?
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 pb-1 
+                bg-gradient-to-r from-primary via-green-600 to-blue-600 bg-clip-text text-transparent">
+                {t('aboutUs.What is Hedgi?')}
               </h1>
               <p className="text-2xl md:text-3xl font-semibold mb-4 text-foreground">
-                Currency Insurance for Everyone.
+                {t('aboutUs.Currency Insurance for Everyone.')}
               </p>
               <p className="text-lg md:text-xl mb-12 text-muted-foreground max-w-2xl mx-auto">
-                Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection for businesses and individuals.
+                {t('aboutUs.Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection for businesses and individuals.')}
               </p>
             </div>
           </div>
@@ -75,7 +76,7 @@ export default function AboutUs() {
                 <div>
                   <div className="flex items-center mb-6">
                     <Shield className="w-8 h-8 text-primary mr-3" />
-                    <h2 className="text-3xl md:text-4xl font-bold text-foreground">Our Mission</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold text-foreground">{t('aboutUs.Our Mission')}</h2>
                   </div>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                     75% of companies not using currency protection lose money due to fluctuations. Currency moves erased $9.83 billion from corporate earnings in just one quarter.
@@ -83,7 +84,7 @@ export default function AboutUs() {
                   </p>
                   <div className="flex items-center text-primary font-medium">
                     <TrendingUp className="w-5 h-5 mr-2" />
-                    <span>Protecting businesses since 2024</span>
+                    <span>Secure your cash in just a few clicks</span>
                   </div>
                 </div>
                 <div className="relative">
@@ -91,11 +92,11 @@ export default function AboutUs() {
                     <div className="grid grid-cols-2 gap-6 text-center">
                       <div>
                         <div className="text-3xl font-bold text-primary mb-2">75%</div>
-                        <div className="text-sm text-muted-foreground">Companies Lose Money</div>
+                        <div className="text-sm text-muted-foreground">{t('aboutUs.Companies Lose Money')}</div>
                       </div>
                       <div>
-                        <div className="text-3xl font-bold text-primary mb-2">$9.8B</div>
-                        <div className="text-sm text-muted-foreground">Lost to FX Moves</div>
+                        <div className="text-3xl font-bold text-primary mb-2">{t('aboutUs.$9.8B')}</div>
+                        <div className="text-sm text-muted-foreground">{t('aboutUs.Lost to Currency Moves')}</div>
                       </div>
                       <div>
                         <div className="text-3xl font-bold text-primary mb-2">81%</div>
@@ -118,7 +119,7 @@ export default function AboutUs() {
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Why Choose Hedgi</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">{t('aboutUs.Why Choose Hedgi')}</h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                   Simple currency insurance for anyone who buys from other countries
                 </p>
@@ -131,7 +132,7 @@ export default function AboutUs() {
                   </div>
                   <h3 className="text-xl font-semibold mb-3 text-foreground">Radically Simple</h3>
                   <p className="text-muted-foreground">
-                    Just enter the amount and time period. No jargon, no complex terms. We handle everything automatically.
+                    Just enter the amount and time period. No jargon, no complex terms. We handle everything else.
                   </p>
                 </div>
 
@@ -177,16 +178,16 @@ export default function AboutUs() {
               <div className="grid md:grid-cols-2 gap-8 mt-12">
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Building className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Businesses</h3>
+                  <h3 className="text-xl font-semibold mb-3">{t('aboutUs.For Businesses')}</h3>
                   <p className="text-muted-foreground">
-                    Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.
+                    {t('aboutUs.Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.')}
                   </p>
                 </div>
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Users className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Individuals</h3>
+                  <h3 className="text-xl font-semibold mb-3">{t('aboutUs.For Individuals')}</h3>
                   <p className="text-muted-foreground">
-                    Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.
+                    {t('aboutUs.Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.')}
                   </p>
                 </div>
               </div>
