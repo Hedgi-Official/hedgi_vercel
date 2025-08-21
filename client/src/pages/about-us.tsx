@@ -58,10 +58,10 @@ export default function AboutUs() {
                 Hedgi
               </h1>
               <p className="text-2xl md:text-3xl font-semibold mb-4 text-foreground">
-                Protect What's Yours.
+                Currency Insurance for Your Business.
               </p>
               <p className="text-lg md:text-xl mb-12 text-muted-foreground max-w-2xl mx-auto">
-                Sleep easy. Hedge smarter. The future of currency protection is here.
+                Protect your money against currency fluctuations when buying from other countries. Simple, automatic protection.
               </p>
             </div>
           </div>
@@ -78,9 +78,8 @@ export default function AboutUs() {
                     <h2 className="text-3xl md:text-4xl font-bold text-foreground">Our Mission</h2>
                   </div>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                    We don't believe anyone should lose sleep over currency fluctuations.
-                    At <span className="font-semibold text-primary">Hedgi</span>, our mission is to give businesses peace of
-                    mind by making foreign exchange protection simple, transparent, and affordable.
+                    75% of companies not using currency protection lose money due to fluctuations. Currency moves erased $9.83 billion from corporate earnings in just one quarter.
+                    At <span className="font-semibold text-primary">Hedgi</span>, we provide simple currency insurance so your business never loses money when buying from other countries.
                   </p>
                   <div className="flex items-center text-primary font-medium">
                     <TrendingUp className="w-5 h-5 mr-2" />
@@ -91,20 +90,20 @@ export default function AboutUs() {
                   <div className="bg-gradient-to-br from-primary/10 to-blue-500/10 rounded-2xl p-8 backdrop-blur-sm border border-primary/20">
                     <div className="grid grid-cols-2 gap-6 text-center">
                       <div>
-                        <div className="text-3xl font-bold text-primary mb-2">24/7</div>
-                        <div className="text-sm text-muted-foreground">Market Protection</div>
+                        <div className="text-3xl font-bold text-primary mb-2">75%</div>
+                        <div className="text-sm text-muted-foreground">Companies Lose Money</div>
                       </div>
                       <div>
-                        <div className="text-3xl font-bold text-primary mb-2">50+</div>
-                        <div className="text-sm text-muted-foreground">Currency Pairs</div>
+                        <div className="text-3xl font-bold text-primary mb-2">$9.8B</div>
+                        <div className="text-sm text-muted-foreground">Lost to FX Moves</div>
                       </div>
                       <div>
-                        <div className="text-3xl font-bold text-primary mb-2">99.9%</div>
-                        <div className="text-sm text-muted-foreground">Uptime</div>
+                        <div className="text-3xl font-bold text-primary mb-2">81%</div>
+                        <div className="text-sm text-muted-foreground">Companies Use Protection</div>
                       </div>
                       <div>
-                        <div className="text-3xl font-bold text-primary mb-2">Global</div>
-                        <div className="text-sm text-muted-foreground">Coverage</div>
+                        <div className="text-3xl font-bold text-primary mb-2">52%</div>
+                        <div className="text-sm text-muted-foreground">Now Considering It</div>
                       </div>
                     </div>
                   </div>
@@ -121,7 +120,7 @@ export default function AboutUs() {
               <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Why Choose Hedgi</h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Experience the next generation of currency hedging with our advanced platform
+                  Simple currency insurance designed for businesses that buy from other countries
                 </p>
               </div>
               
@@ -130,9 +129,9 @@ export default function AboutUs() {
                   <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
                     <Zap className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Lightning Fast</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">Radically Simple</h3>
                   <p className="text-muted-foreground">
-                    Execute hedges in seconds with our proprietary trading algorithm. No delays, no complications.
+                    Just enter the amount and time period. No jargon, no complex terms. We handle everything automatically.
                   </p>
                 </div>
 
@@ -140,9 +139,9 @@ export default function AboutUs() {
                   <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
                     <Shield className="w-6 h-6 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Bank-Grade Security</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">Always Protected</h3>
                   <p className="text-muted-foreground">
-                    Your funds are protected by enterprise-level security and trusted payment infrastructure.
+                    Your currency insurance is backed by trusted financial infrastructure. Secure automatic protection.
                   </p>
                 </div>
 
@@ -150,9 +149,9 @@ export default function AboutUs() {
                   <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
                     <Globe className="w-6 h-6 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Global Reach</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">For Any Business</h3>
                   <p className="text-muted-foreground">
-                    Access major currency pairs worldwide with competitive rates and instant execution.
+                    Whether you import goods, pay suppliers abroad, or have international customers - we protect your money.
                   </p>
                 </div>
               </div>
@@ -166,28 +165,28 @@ export default function AboutUs() {
             <div className="max-w-4xl mx-auto text-center">
               <div className="mb-8">
                 <TrendingUp className="w-16 h-16 text-primary mx-auto mb-4" />
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">Advanced Technology</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">How It Works</h2>
               </div>
               <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-                Hedgi provides businesses with a smarter way to hedge. Our proprietary
-                trading algorithm reduces fees and ensures optimal execution,
-                delivering the <span className="font-semibold text-primary">most cost-effective hedges possible</span>.
-                Focus on growth while we handle the volatility.
+                Hedgi provides businesses with "currency insurance" - a simple way to protect against FX swings. 
+                You only input the amount and time period, and Hedgi automatically executes the protection.
+                No jargon, no barriers. <span className="font-semibold text-primary">Never see complex terms like swap rates or margin requirements</span>.
+                Focus on your business while we handle the currency risk.
               </p>
               
               <div className="grid md:grid-cols-2 gap-8 mt-12">
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Building className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Businesses</h3>
+                  <h3 className="text-xl font-semibold mb-3">For Importers</h3>
                   <p className="text-muted-foreground">
-                    Protect your international transactions and cash flows with institutional-grade hedging tools.
+                    Buying products from overseas? Lock in your costs and protect your margins from currency swings.
                   </p>
                 </div>
                 <div className="text-left p-6 bg-background rounded-xl border border-border">
                   <Users className="w-8 h-8 text-primary mb-4" />
-                  <h3 className="text-xl font-semibold mb-3">For Professionals</h3>
+                  <h3 className="text-xl font-semibold mb-3">For Any SME</h3>
                   <p className="text-muted-foreground">
-                    Access sophisticated hedging strategies previously available only to large corporations.
+                    No treasury expertise needed. Simple currency insurance that works for businesses of any size.
                   </p>
                 </div>
               </div>
@@ -201,9 +200,9 @@ export default function AboutUs() {
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">Ready to Get Started?</h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Currency risk is unavoidable, but losing money to it is not.
-                With <span className="font-semibold text-primary">Hedgi</span>, hedging becomes as natural as paying
-                an invoice — seamless, fair, and stress-free.
+                Stop losing money to currency fluctuations when buying from other countries.
+                With <span className="font-semibold text-primary">Hedgi</span>, currency protection becomes as simple as
+                getting insurance — automatic, affordable, and stress-free.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -212,7 +211,7 @@ export default function AboutUs() {
                   onClick={() => navigate("/auth")}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Start Hedging Now
+                  Get Currency Insurance
                 </Button>
                 
                 <div className="flex items-center gap-2 text-muted-foreground">
