@@ -17,11 +17,11 @@ export default function LandingPage() {
   // Preload critical images
   useEffect(() => {
     const imageUrls = [
-      "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440.jpg",
+      "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg",
       "/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg",
-      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647.jpg",
-      "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441.jpg",
-      "/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441.jpg"
+      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg",
+      "/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg",
+      "/images/vitaly-gariev-z2GQyICOn1g-unsplash_1750022645647 (2)-min.jpg"
     ];
 
     imageUrls.forEach(url => {
