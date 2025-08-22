@@ -28,41 +28,33 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Abstract Background Pattern */}
-      <div className="absolute inset-0 opacity-5 -z-10">
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 opacity-3 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style={{stopColor: "hsl(var(--primary))", stopOpacity: 0.3}} />
-              <stop offset="50%" style={{stopColor: "hsl(120, 60%, 50%)", stopOpacity: 0.2}} />
-              <stop offset="100%" style={{stopColor: "hsl(200, 60%, 50%)", stopOpacity: 0.1}} />
+              <stop offset="0%" style={{stopColor: "hsl(var(--primary))", stopOpacity: 0.1}} />
+              <stop offset="100%" style={{stopColor: "hsl(var(--primary))", stopOpacity: 0.05}} />
             </linearGradient>
           </defs>
-          {/* Abstract flowing lines representing financial data */}
-          <path d="M0,200 Q250,100 500,180 T1000,150" stroke="url(#gradient1)" strokeWidth="2" fill="none" opacity="0.6"/>
-          <path d="M0,400 Q300,300 600,380 T1000,350" stroke="url(#gradient1)" strokeWidth="2" fill="none" opacity="0.4"/>
-          <path d="M0,600 Q200,500 400,580 T1000,550" stroke="url(#gradient1)" strokeWidth="2" fill="none" opacity="0.3"/>
-          {/* Currency symbols scattered */}
-          <text x="100" y="300" fontSize="24" fill="url(#gradient1)" opacity="0.3">$</text>
-          <text x="800" y="200" fontSize="24" fill="url(#gradient1)" opacity="0.3">€</text>
-          <text x="600" y="700" fontSize="24" fill="url(#gradient1)" opacity="0.3">R$</text>
-          <text x="300" y="800" fontSize="24" fill="url(#gradient1)" opacity="0.3">¥</text>
+          {/* Subtle flowing lines */}
+          <path d="M0,200 Q250,100 500,180 T1000,150" stroke="url(#gradient1)" strokeWidth="1" fill="none" opacity="0.3"/>
+          <path d="M0,600 Q200,500 400,580 T1000,550" stroke="url(#gradient1)" strokeWidth="1" fill="none" opacity="0.2"/>
         </svg>
       </div>
 
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
       <main className="relative z-10">
-        {/* Hero Section with Gradient Background */}
+        {/* Hero Section */}
         <section className="relative py-16 md:py-24 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-green-500/5 to-blue-500/5"></div>
           <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
                   <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-                    <span className="bg-gradient-to-r from-primary via-green-600 to-blue-600 bg-clip-text text-transparent">
+                    <span className="text-primary">
                       {t('Protect the value')}
                     </span>
                     <br />
@@ -70,7 +62,7 @@ export default function LandingPage() {
                   </h1>
                   <Skyline />
                 </div>
-                <p className="text-2xl md:text-3xl font-semibold mb-4 text-primary">
+                <p className="text-xl md:text-2xl font-medium mb-4 text-foreground">
                   The Simplest Way to Insure Your Money Against Unpredictable Markets.
                 </p>
                 <p className="text-lg md:text-xl mb-8 text-muted-foreground max-w-xl mx-auto lg:mx-0">
@@ -79,7 +71,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   onClick={() => navigate('/auth')}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg w-full sm:w-auto"
                 >
                   {t('Start Hedging Now')}
                 </Button>
@@ -87,7 +79,7 @@ export default function LandingPage() {
 
               {/* Right side - Currency Simulator */}
               <div className="lg:mt-0 mt-8">
-                <div className="bg-gradient-to-br from-background/50 to-muted/30 rounded-2xl p-6 backdrop-blur-sm border border-primary/10">
+                <div className="bg-background rounded-2xl p-6 border border-border shadow-sm">
                   <CurrencySimulator showGraph={false} />
                 </div>
               </div>
@@ -95,8 +87,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Trust & Value Proposition Section */}
-        <section className="py-16 bg-gradient-to-r from-background to-muted/20">
+        {/* Trust & People Section */}
+        <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-16">
@@ -108,40 +100,81 @@ export default function LandingPage() {
                 </p>
               </div>
               
+              {/* People Images for Trust */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <img
+                    src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
+                    alt="Happy customers using Hedgi"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+                <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <img
+                    src="/images/woman-9193216_640.jpg"
+                    alt="Professional using currency protection"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+                <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <img
+                    src="/images/family-1542595_640.jpg"
+                    alt="Family securing their financial future"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+                <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <img
+                    src="/images/gautham-krishna-fy466BrLmgg-unsplash_1750022560441-min.jpg"
+                    alt="Experienced investor with peace of mind"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
+              </div>
+
+              {/* Clean Feature Grid */}
               <div className="grid md:grid-cols-3 gap-8">
-                <div className="group p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent border border-primary/10 hover:border-primary/30 transition-all duration-300">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                     <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Instant Protection</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">{t('features.Instant Protection')}</h3>
                   <p className="text-muted-foreground">
-                    Lock in today's exchange rates and protect your budget from unpredictable currency swings.
+                    {t('features.instantProtectionDesc')}
                   </p>
                 </div>
 
-                <div className="group p-6 rounded-2xl bg-gradient-to-br from-green-500/5 to-transparent border border-green-500/10 hover:border-green-500/30 transition-all duration-300">
-                  <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Real-Time Monitoring</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">{t('features.Real-Time Monitoring')}</h3>
                   <p className="text-muted-foreground">
-                    24/7 tracking of global markets ensures you can hedge when the window is best, any time of day.
+                    {t('features.realTimeMonitoringDesc')}
                   </p>
                 </div>
 
-                <div className="group p-6 rounded-2xl bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/10 hover:border-blue-500/30 transition-all duration-300">
-                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-3 text-foreground">Best Rates Guaranteed</h3>
+                  <h3 className="text-xl font-semibold mb-3 text-foreground">{t('features.Best Rates Guaranteed')}</h3>
                   <p className="text-muted-foreground">
-                    Compare prices across brokers automatically to ensure you pay the lowest fees possible.
+                    {t('features.bestRatesGuaranteedDesc')}
                   </p>
                 </div>
               </div>
@@ -149,24 +182,22 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Professional CTA Section */}
-        <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-blue-500/5">
+        {/* Clean CTA Section */}
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">Ready to Protect Your Money?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">{t('cta.Ready to Protect Your Money?')}</h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Stop losing money to currency fluctuations when buying from other countries.
-                With <span className="font-semibold text-primary">Hedgi</span>, currency protection becomes as simple as
-                getting insurance — automatic, affordable, and stress-free.
+                {t('cta.ctaDescription')}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
                 <Button
                   size="lg"
                   onClick={() => navigate("/auth")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
                 >
-                  Get Currency Insurance
+                  {t('cta.Get Currency Insurance')}
                 </Button>
                 
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -177,7 +208,7 @@ export default function LandingPage() {
                   variant="outline"
                   size="lg"
                   onClick={() => navigate("/using-hedgi")}
-                  className="px-8 py-4 text-lg border-primary/20 hover:border-primary hover:bg-primary/5 transition-all duration-300"
+                  className="px-8 py-4 text-lg"
                 >
                   {t("How To Use Hedgi")}
                 </Button>

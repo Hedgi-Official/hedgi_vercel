@@ -205,11 +205,8 @@ const enUS = {
       'Not provided': 'Not provided',
       'Cancel': 'Cancel',
       'Update': 'Update',
-      'Update PIX Key': 'Update PIX Key',
       'Update Payment ID': 'Update Payment ID',
-      'Update Email': 'Update Email',
       'Update Phone': 'Update Phone',
-      'Processing...': 'Processing...',
       'Member since': 'Member since',
       'Back to Dashboard': 'Back to Dashboard',
       'Select what you\'d like to update:': 'Select what you\'d like to update:',
@@ -221,7 +218,6 @@ const enUS = {
       'Your PIX key has been successfully updated.': 'Your PIX key has been successfully updated.',
       'Error': 'Error',
       'Failed to update PIX key.': 'Failed to update PIX key.',
-      'Processing...': 'Processing...',
       'Updating your': 'Updating your',
       'PIX key updated successfully.': 'PIX key updated successfully.',
       'Email updated successfully.': 'Email updated successfully.',
@@ -255,6 +251,19 @@ const enUS = {
     lifestyle: {
       tagline: 'Protect your money.\nLive your life.',
       description: 'Invest, travel and spend stress-free, knowing your currency is shielded from market volatility.'
+    },
+    features: {
+      'Instant Protection': 'Instant Protection',
+      'Real-Time Monitoring': 'Real-Time Monitoring',
+      'Best Rates Guaranteed': 'Best Rates Guaranteed',
+      'instantProtectionDesc': 'Lock in today\'s exchange rates and protect your budget from unpredictable currency swings.',
+      'realTimeMonitoringDesc': '24/7 tracking of global markets ensures you can hedge when the window is best, any time of day.',
+      'bestRatesGuaranteedDesc': 'Compare prices across brokers automatically to ensure you pay the lowest fees possible.'
+    },
+    cta: {
+      'Ready to Protect Your Money?': 'Ready to Protect Your Money?',
+      'ctaDescription': 'Stop losing money to currency fluctuations when buying from other countries. With Hedgi, currency protection becomes as simple as getting insurance — automatic, affordable, and stress-free.',
+      'Get Currency Insurance': 'Get Currency Insurance'
     }
   }
 };
@@ -452,11 +461,8 @@ const ptBR = {
       'Not provided': 'Não fornecido',
       'Cancel': 'Cancelar',
       'Update': 'Atualizar',
-      'Update PIX Key': 'Atualizar Chave PIX',
       'Update Payment ID': 'Atualizar ID de Pagamento',
-      'Update Email': 'Atualizar E-mail',
       'Update Phone': 'Atualizar Telefone',
-      'Processing...': 'Processando...',
       'Member since': 'Membro desde',
       'Back to Dashboard': 'Voltar ao Painel',
       'Select what you\'d like to update:': 'Selecione o que você gostaria de atualizar:',
@@ -468,7 +474,6 @@ const ptBR = {
       'Your PIX key has been successfully updated.': 'Sua chave PIX foi atualizada com sucesso.',
       'Error': 'Erro',
       'Failed to update PIX key.': 'Falha ao atualizar a chave PIX.',
-      'Processing...': 'Processando...',
       'Updating your': 'Atualizando seu',
       'PIX key updated successfully.': 'Chave PIX atualizada com sucesso.',
       'Email updated successfully.': 'E-mail atualizado com sucesso.',
@@ -514,6 +519,19 @@ const ptBR = {
     lifestyle: {
       tagline: 'Proteja seu dinheiro.\nViva sua vida.',
       description: 'Invista, viaje e gaste sem estresse, sabendo que sua moeda está protegida contra a volatilidade do mercado.'
+    },
+    features: {
+      'Instant Protection': 'Proteção Instantânea',
+      'Real-Time Monitoring': 'Monitoramento em Tempo Real',
+      'Best Rates Guaranteed': 'Melhores Taxas Garantidas',
+      'instantProtectionDesc': 'Fixe as taxas de câmbio de hoje e proteja seu orçamento de oscilações cambiais imprevisíveis.',
+      'realTimeMonitoringDesc': 'Acompanhamento 24/7 dos mercados globais garante que você possa se proteger quando a janela for melhor, a qualquer hora do dia.',
+      'bestRatesGuaranteedDesc': 'Compare preços entre corretoras automaticamente para garantir que você pague as menores taxas possíveis.'
+    },
+    cta: {
+      'Ready to Protect Your Money?': 'Pronto para Proteger seu Dinheiro?',
+      'ctaDescription': 'Pare de perder dinheiro com flutuações cambiais ao comprar de outros países. Com a Hedgi, a proteção cambial se torna tão simples quanto contratar um seguro — automática, acessível e sem estresse.',
+      'Get Currency Insurance': 'Obter Seguro Cambial'
     }
   }
 };
