@@ -79,8 +79,8 @@ export default function LandingPage() {
               {/* Laughing man in nature - confidence */}
               <div className="relative overflow-hidden">
                 <img
-                  src="/images/kenzie-kraft-9RZ7s4kEv54-unsplash_1750022560441.jpg"
-                  alt="Confident man laughing outdoors"
+                  src="/images/woman-9193216_640.jpg"
+                  alt="Woman under lights"
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   loading="lazy"
                   decoding="async"
@@ -92,8 +92,8 @@ export default function LandingPage() {
               {/* Family walking - security and future */}
               <div className="relative overflow-hidden">
                 <img
-                  src="/images/jessica-rockowitz-5NLCaz2wJXE-unsplash_1750022560441-min.jpg"
-                  alt="Family walking together in nature"
+                  src="/images/family-1542595_640.jpg"
+                  alt="Family in Black and White"
                   className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   style={{ objectPosition: 'center 25%' }}
                   loading="lazy"
@@ -108,11 +108,7 @@ export default function LandingPage() {
                 <img
                   src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg"
                   alt="Person playing golf, pursuing hobbies"
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  style={{ objectPosition: 'center 65%' }}
-                  loading="lazy"
-                  decoding="async"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 66vw"
+                  className="w-full h-full object-cover object-[center_30%] transition-transform duration-700 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
               </div>
