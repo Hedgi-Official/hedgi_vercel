@@ -108,7 +108,7 @@ export default function LandingPage() {
                 <img 
                   src="/images/courtney-cook-SsIIw_MET0E-unsplash_1750022560441-min.jpg" 
                   alt="Person playing golf, pursuing hobbies" 
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  className="w-full h-full object-top transition-transform duration-700 hover:scale-105"
                   loading="lazy"
                   decoding="async"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 100vw, 100vw"
