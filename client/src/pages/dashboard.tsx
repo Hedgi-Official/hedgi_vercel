@@ -838,81 +838,74 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <main className="container mx-auto px-6 py-8 space-y-8">
-        {/* Key Metrics & Exchange Rates */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Portfolio Overview */}
-          <div className="xl:col-span-1">
-            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-gray-900">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Portfolio Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-lg p-4 border border-gray-100">
-                    <div className="text-2xl font-bold text-gray-900">{activeTrades.length}</div>
-                    <div className="text-sm text-gray-500">Active Hedges</div>
+      <main className="container mx-auto px-6 py-6 space-y-6">
+        {/* Integrated Trading Dashboard */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
+          {/* Top Section: Portfolio Overview & Exchange Rates */}
+          <div className="grid grid-cols-1 xl:grid-cols-4 divide-y xl:divide-y-0 xl:divide-x divide-gray-200/50">
+            {/* Portfolio Overview */}
+            <div className="xl:col-span-1 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-gray-900">Portfolio Overview</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-xl font-bold text-gray-900">{activeTrades.length}</div>
+                    <div className="text-xs text-gray-500">Active Hedges</div>
                   </div>
-                  <div className="bg-white rounded-lg p-4 border border-gray-100">
-                    <div className="text-2xl font-bold text-gray-900">{trades.length}</div>
-                    <div className="text-sm text-gray-500">Total Trades</div>
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <div className="text-xl font-bold text-gray-900">{trades.length}</div>
+                    <div className="text-xs text-gray-500">Total Trades</div>
                   </div>
                 </div>
-                <div className="bg-gradient-to-r from-primary/5 to-green-50 rounded-lg p-4 border border-primary/10">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="bg-gradient-to-r from-primary/10 to-green-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-gray-700">Protection Status</span>
                   </div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-base font-semibold text-gray-900">
                     {activeTrades.length > 0 ? 'Protected' : 'Unprotected'}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     {activeTrades.length > 0 
-                      ? 'Your positions are hedged against currency fluctuations' 
-                      : 'Consider hedging your currency exposure'}
+                      ? 'Your positions are hedged' 
+                      : 'Consider hedging exposure'}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </div>
 
-          {/* Exchange Rates */}
-          <div className="xl:col-span-2">
-            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-xl shadow-xl border-0 ring-1 ring-gray-200/50">
+            {/* Exchange Rates */}
+            <div className="xl:col-span-3">
               <ExchangeRatesWidget />
             </div>
           </div>
-        </div>
 
-        {/* Main Trading Interface */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+          {/* Bottom Section: Trading Interface */}
+          <div className="border-t border-gray-200/50">
+            <div className="grid grid-cols-1 xl:grid-cols-5 divide-y xl:divide-y-0 xl:divide-x divide-gray-200/50">
 
-          {/* Active Trades */}
-          <div className="xl:col-span-2">
-            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50 h-fit">
-              <CardHeader className="border-b border-gray-100/50">
-                <CardTitle className="flex items-center gap-2 text-gray-900">
+              {/* Active Trades */}
+              <div className="xl:col-span-2 p-6">
+                <div className="flex items-center gap-2 mb-4">
                   <Activity className="h-5 w-5 text-primary" />
-                  {t('Active Trades')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
+                  <h3 className="font-semibold text-gray-900">{t('Active Trades')}</h3>
+                </div>
                 {(() => {
                   if (activeTrades.length === 0) {
                     return (
-                      <div className="text-center py-12">
-                        <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500 mb-2">{t('No active trades')}</p>
+                      <div className="text-center py-8">
+                        <Shield className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 mb-1">{t('No active trades')}</p>
                         <p className="text-sm text-gray-400">Your hedged positions will appear here</p>
                       </div>
                     );
                   }
 
                   return (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {activeTrades.map((trade) => {
                         return (
                           <TradeItem 
@@ -927,21 +920,15 @@ export default function Dashboard() {
                     </div>
                   );
                 })()}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
 
-          {/* New Hedge Creation */}
-          <div className="xl:col-span-3">
-            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50">
-              <CardHeader className="border-b border-gray-100/50">
-                <CardTitle className="flex items-center gap-2 text-gray-900">
+              {/* New Hedge Creation */}
+              <div className="xl:col-span-3 p-6">
+                <div className="flex items-center gap-2 mb-4">
                   <Shield className="h-5 w-5 text-primary" />
-                  {t('New Hedge')}
-                </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">Protect your currency exposure with professional hedging tools</p>
-              </CardHeader>
-              <CardContent className="p-6">
+                  <h3 className="font-semibold text-gray-900">{t('New Hedge')}</h3>
+                  <span className="text-sm text-gray-500">• Protect your currency exposure</span>
+                </div>
                 <CurrencySimulator
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
@@ -985,14 +972,23 @@ export default function Dashboard() {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
                 }}
               />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Trade History */}
-        <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-xl shadow-xl border-0 ring-1 ring-gray-200/50">
-          <TradeHistory />
+        {/* Trade History - Integrated Section */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
+          <div className="border-b border-gray-200/50 p-6 pb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-gray-900">Trade History</h3>
+              <span className="text-sm text-gray-500">• View your past transactions</span>
+            </div>
+          </div>
+          <div className="px-6 pb-6">
+            <TradeHistory />
+          </div>
         </div>
       </main>
 
