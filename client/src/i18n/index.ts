@@ -30,6 +30,7 @@ const enUS = {
     'Welcome': 'Welcome',
     'Logout': 'Logout',
     'Home': 'Home',
+    'How To Use Hedgi': 'How To Use Hedgi',
     auth: {
       'Sign In': 'Sign In',
       'Sign Up': 'Sign Up',
@@ -297,6 +298,7 @@ const ptBR = {
     'Welcome': 'Bem-vindo',
     'Logout': 'Sair',
     'Home': 'Início',
+    'How To Use Hedgi': 'Como Usar o Hedgi',
     auth: {
       'Sign In': 'Entrar',
       'Sign Up': 'Cadastrar',
