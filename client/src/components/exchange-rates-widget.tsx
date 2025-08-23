@@ -34,74 +34,72 @@ export function ExchangeRatesWidget() {
     // Check if we have a rate with an error message (from server-side error handling)
     if (rate && rate.error) {
       return (
-        <div className="p-2 md:p-4 rounded-lg border flex flex-col h-full">
-          <div className="text-xs md:text-sm text-muted-foreground h-8 md:h-10 flex items-center justify-center text-center leading-tight">{title}</div>
-          <div className="text-destructive text-xs md:text-sm flex-1 flex items-center justify-center text-center">{rate.error}</div>
+        <div className="bg-gray-50 rounded-xl p-6 flex flex-col h-full border border-gray-100">
+          <div className="text-sm text-gray-600 mb-3 font-medium text-center">{title}</div>
+          <div className="text-destructive text-sm flex-1 flex items-center justify-center text-center">{rate.error}</div>
         </div>
       );
     }
 
     return (
-      <div className="p-2 md:p-4 rounded-lg border flex flex-col h-full">
-        <div className="text-xs md:text-sm text-muted-foreground h-8 md:h-10 flex items-center justify-center text-center leading-tight">{title}</div>
-        <div className="space-y-1 md:space-y-2 flex-1">
-          <div className="text-lg md:text-2xl font-bold">
+      <div className="bg-gray-50 rounded-xl p-6 flex flex-col h-full border border-gray-100">
+        <div className="text-sm text-gray-600 mb-3 font-medium text-center">{title}</div>
+        <div className="space-y-3 flex-1">
+          <div className="text-2xl font-bold text-gray-900">
             {rate ? rate.bid.toFixed(4) : 'Loading...'}
           </div>
-          <div className="text-xs md:text-sm text-muted-foreground">{t('Bid Price')}</div>
+          <div className="text-sm text-gray-500">{t('Bid Price')}</div>
         </div>
-        <div className="space-y-1 md:space-y-2">
-          <div className="text-lg md:text-2xl font-bold">
+        <div className="space-y-3 pt-4 border-t border-gray-200">
+          <div className="text-2xl font-bold text-gray-900">
             {rate ? rate.ask.toFixed(4) : 'Loading...'}
           </div>
-          <div className="text-xs md:text-sm text-muted-foreground">{t('Ask Price')}</div>
+          <div className="text-sm text-gray-500">{t('Ask Price')}</div>
         </div>
       </div>
     );
   };
 
   return (
-    <Card className="bg-background shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {t('Live Exchange Rates')}
-            {(isLoadingActivTrades || isLoadingTickmill || isLoadingFBS) && 
-              <Loader2 className="h-4 w-4 animate-spin" />
-            }
+    <div className="p-8">
+      {/* Currency Pair Selector */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          {(isLoadingActivTrades || isLoadingTickmill || isLoadingFBS) && 
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          }
+        </div>
+        <Select value={selectedPair} onValueChange={setSelectedPair}>
+          <SelectTrigger className="w-[280px] border-gray-200 bg-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CURRENCY_PAIRS.map(pair => (
+              <SelectItem key={pair.value} value={pair.value}>
+                {t(`currencyPairs.${pair.value}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Rate Cards */}
+      {(isLoadingActivTrades && isLoadingTickmill && isLoadingFBS) ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
+            {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
+            {renderRateCard("FBS Rate", fbsRate, fbsError)}
           </div>
-          <Select value={selectedPair} onValueChange={setSelectedPair}>
-            <SelectTrigger className="w-[280px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCY_PAIRS.map(pair => (
-                <SelectItem key={pair.value} value={pair.value}>
-                  {t(`currencyPairs.${pair.value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {(isLoadingActivTrades && isLoadingTickmill && isLoadingFBS) ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="text-sm text-gray-700 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            {t('Market Hours Notice')}
           </div>
-        ) : (
-          <div className="grid gap-4">
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
-              {renderRateCard("ActivTrades Rate", activtradesRate, activtradesError)}
-              {renderRateCard("Tickmill Rate", tickmillRate, tickmillError)}
-              {renderRateCard("FBS Rate", fbsRate, fbsError)}
-            </div>
-            <div className="text-sm text-black mt-4 p-3 bg-muted/50 rounded-lg">
-              {t('Market Hours Notice')}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }

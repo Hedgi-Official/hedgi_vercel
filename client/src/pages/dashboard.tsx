@@ -838,74 +838,102 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <main className="container mx-auto px-6 py-6 space-y-6">
-        {/* Integrated Trading Dashboard */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-          {/* Top Section: Portfolio Overview & Exchange Rates */}
-          <div className="grid grid-cols-1 xl:grid-cols-4 divide-y xl:divide-y-0 xl:divide-x divide-gray-200/50">
-            {/* Portfolio Overview */}
-            <div className="xl:col-span-1 p-6">
-              <div className="flex items-center gap-2 mb-4">
+      <main className="container mx-auto px-8 py-8 max-w-7xl">
+        {/* Professional Header Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
                 <BarChart3 className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-gray-900">Portfolio Overview</h3>
               </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-gray-900">{activeTrades.length}</div>
-                    <div className="text-xs text-gray-500">Active Hedges</div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-gray-900">{trades.length}</div>
-                    <div className="text-xs text-gray-500">Total Trades</div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-primary/10 to-green-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-gray-700">Protection Status</span>
-                  </div>
-                  <div className="text-base font-semibold text-gray-900">
-                    {activeTrades.length > 0 ? 'Protected' : 'Unprotected'}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {activeTrades.length > 0 
-                      ? 'Your positions are hedged' 
-                      : 'Consider hedging exposure'}
-                  </div>
-                </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{activeTrades.length}</div>
+                <div className="text-sm text-gray-500">Active Hedges</div>
               </div>
-            </div>
-
-            {/* Exchange Rates */}
-            <div className="xl:col-span-3">
-              <ExchangeRatesWidget />
             </div>
           </div>
-
-          {/* Bottom Section: Trading Interface */}
-          <div className="border-t border-gray-200/50">
-            <div className="grid grid-cols-1 xl:grid-cols-5 divide-y xl:divide-y-0 xl:divide-x divide-gray-200/50">
-
-              {/* Active Trades */}
-              <div className="xl:col-span-2 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-gray-900">{t('Active Trades')}</h3>
+          
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                <Activity className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{trades.length}</div>
+                <div className="text-sm text-gray-500">Total Trades</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                activeTrades.length > 0 ? 'bg-primary/10' : 'bg-amber-50'
+              }`}>
+                <Shield className={`h-5 w-5 ${
+                  activeTrades.length > 0 ? 'text-primary' : 'text-amber-600'
+                }`} />
+              </div>
+              <div>
+                <div className={`text-lg font-semibold ${
+                  activeTrades.length > 0 ? 'text-primary' : 'text-amber-600'
+                }`}>
+                  {activeTrades.length > 0 ? 'Protected' : 'Unprotected'}
                 </div>
+                <div className="text-sm text-gray-500">Currency Status</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Exchange Rates Section */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8 overflow-hidden">
+          <div className="px-8 py-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">Live Exchange Rates</h2>
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-gray-500">Live</span>
+              </div>
+            </div>
+          </div>
+          <div className="p-0">
+            <ExchangeRatesWidget />
+          </div>
+        </div>
+
+        {/* Trading Interface Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+          {/* Active Trades */}
+          <div className="xl:col-span-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-fit">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <Activity className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('Active Trades')}</h3>
+                </div>
+              </div>
+              <div className="p-6">
                 {(() => {
                   if (activeTrades.length === 0) {
                     return (
-                      <div className="text-center py-8">
-                        <Shield className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-1">{t('No active trades')}</p>
-                        <p className="text-sm text-gray-400">Your hedged positions will appear here</p>
+                      <div className="text-center py-12">
+                        <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Shield className="h-8 w-8 text-gray-300" />
+                        </div>
+                        <p className="text-gray-900 font-medium mb-2">{t('No active trades')}</p>
+                        <p className="text-sm text-gray-500">Your hedged positions will appear here</p>
                       </div>
                     );
                   }
 
                   return (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {activeTrades.map((trade) => {
                         return (
                           <TradeItem 
@@ -921,14 +949,22 @@ export default function Dashboard() {
                   );
                 })()}
               </div>
+            </div>
+          </div>
 
-              {/* New Hedge Creation */}
-              <div className="xl:col-span-3 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-gray-900">{t('New Hedge')}</h3>
-                  <span className="text-sm text-gray-500">• Protect your currency exposure</span>
+          {/* New Hedge Creation */}
+          <div className="xl:col-span-3">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('New Hedge')}</h3>
+                  <span className="text-sm text-gray-500 ml-2">• Create currency protection</span>
                 </div>
+              </div>
+              <div className="p-6">
                 <CurrencySimulator
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
@@ -977,16 +1013,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Trade History - Integrated Section */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-          <div className="border-b border-gray-200/50 p-6 pb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-gray-900">Trade History</h3>
-              <span className="text-sm text-gray-500">• View your past transactions</span>
+        {/* Trade History Section */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mt-8 overflow-hidden">
+          <div className="px-8 py-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-purple-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">Trade History</h2>
+              <span className="text-sm text-gray-500 ml-2">• View past transactions</span>
             </div>
           </div>
-          <div className="px-6 pb-6">
+          <div className="p-8">
             <TradeHistory />
           </div>
         </div>
