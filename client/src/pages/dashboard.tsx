@@ -12,7 +12,7 @@ import { TradeHistory } from "@/components/trade-history";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Hedge } from "@db/schema";
 import { useToast } from "@/hooks/use-toast";
-import { X, AlertCircle } from "lucide-react";
+import { X, AlertCircle, TrendingUp, Shield, BarChart3, Calendar, Clock, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   AlertDialog,
@@ -39,6 +39,11 @@ type Trade = {
     magic: number;
     comment: string;
   };
+};
+
+// Extended hedge type that includes cost for payment calculations
+type HedgeWithCost = Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> & {
+  cost?: string;
 };
 
 export default function Dashboard() {
@@ -803,52 +808,148 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
       <Header username={user?.username} onLogout={handleLogout} />
+      
+      {/* Dashboard Header */}
+      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {t('Welcome back')}, {user?.fullName}
+              </h1>
+              <p className="text-gray-600 flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                {t('Manage your currency hedges and view market rates')}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex items-center gap-2 text-sm text-gray-500">
+                <Clock className="h-4 w-4" />
+                <span>{new Date().toLocaleDateString()} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                <Activity className="h-3 w-3" />
+                Live
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <main className="container mx-auto px-4 py-8 relative z-10">
-        <div className="grid gap-6 md:gap-8">
-          {/* Live Exchange Rates Widget */}
-          <ExchangeRatesWidget />
+      <main className="container mx-auto px-6 py-8 space-y-8">
+        {/* Key Metrics & Exchange Rates */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Portfolio Overview */}
+          <div className="xl:col-span-1">
+            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Portfolio Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-gray-100">
+                    <div className="text-2xl font-bold text-gray-900">{activeTrades.length}</div>
+                    <div className="text-sm text-gray-500">Active Hedges</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-100">
+                    <div className="text-2xl font-bold text-gray-900">{trades.length}</div>
+                    <div className="text-sm text-gray-500">Total Trades</div>
+                  </div>
+                </div>
+                <div className="bg-gradient-to-r from-primary/5 to-green-50 rounded-lg p-4 border border-primary/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-gray-700">Protection Status</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {activeTrades.length > 0 ? 'Protected' : 'Unprotected'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {activeTrades.length > 0 
+                      ? 'Your positions are hedged against currency fluctuations' 
+                      : 'Consider hedging your currency exposure'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="bg-white shadow-lg">
-            <CardHeader>
-              <CardTitle>{t('Active Trades')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                if (activeTrades.length === 0) {
-                  return <p>{t('No active trades')}</p>;
-                }
+          {/* Exchange Rates */}
+          <div className="xl:col-span-2">
+            <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-xl shadow-xl border-0 ring-1 ring-gray-200/50">
+              <ExchangeRatesWidget />
+            </div>
+          </div>
+        </div>
 
-                return activeTrades.map((trade) => {
+        {/* Main Trading Interface */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+
+          {/* Active Trades */}
+          <div className="xl:col-span-2">
+            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50 h-fit">
+              <CardHeader className="border-b border-gray-100/50">
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <Activity className="h-5 w-5 text-primary" />
+                  {t('Active Trades')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {(() => {
+                  if (activeTrades.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-2">{t('No active trades')}</p>
+                        <p className="text-sm text-gray-400">Your hedged positions will appear here</p>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <TradeItem 
-                      key={trade.id} 
-                      trade={trade} 
-                      onClose={(flaskTradeId, dbTradeId) => {
-                        showCloseConfirmation(flaskTradeId, dbTradeId, trade);
-                      }}
-                    />
+                    <div className="space-y-4">
+                      {activeTrades.map((trade) => {
+                        return (
+                          <TradeItem 
+                            key={trade.id} 
+                            trade={trade} 
+                            onClose={(flaskTradeId, dbTradeId) => {
+                              showCloseConfirmation(flaskTradeId, dbTradeId, trade);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   );
-                });
-              })()}
-            </CardContent>
-          </Card>
+                })()}
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="bg-white shadow-lg">
-            <CardHeader>
-              <CardTitle>{t('New Hedge')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CurrencySimulator
+          {/* New Hedge Creation */}
+          <div className="xl:col-span-3">
+            <Card className="bg-gradient-to-br from-white to-gray-50/50 shadow-xl border-0 ring-1 ring-gray-200/50">
+              <CardHeader className="border-b border-gray-100/50">
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <Shield className="h-5 w-5 text-primary" />
+                  {t('New Hedge')}
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">Protect your currency exposure with professional hedging tools</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <CurrencySimulator
                 showGraph={false}
                 onPlaceHedge={(hedgePayload) => { 
                   console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
 
                   // Calculate payment amount using actual hedge costs and margin
                   const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  const hedgeCost = hedgePayload.cost ? Number(hedgePayload.cost) : 0;
+                  const hedgeCost = (hedgePayload as HedgeWithCost).cost ? Number((hedgePayload as HedgeWithCost).cost) : 0;
                   const paymentAmount = Number((margin + hedgeCost).toFixed(2));
 
                   console.log("💰 [Dashboard] Payment calculation:");
@@ -884,26 +985,34 @@ export default function Dashboard() {
                   queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
                 }}
               />
-              {/* Trade History Component */}
-              <TradeHistory />
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Trade History */}
+        <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-xl shadow-xl border-0 ring-1 ring-gray-200/50">
+          <TradeHistory />
         </div>
       </main>
 
       {/* Confirmation Dialog for Position Not Found */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-0 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Position Not Found
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
               The trade position couldn't be found at the broker.
               This could be because it was closed elsewhere or never existed.
               Would you like to remove it from your dashboard?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelHedgeDeletion}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmHedgeDeletion}>
+            <AlertDialogCancel onClick={cancelHedgeDeletion} className="bg-gray-100 hover:bg-gray-200 border-0">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmHedgeDeletion} className="bg-red-600 hover:bg-red-700 border-0">
               Yes, remove it
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -912,67 +1021,67 @@ export default function Dashboard() {
 
       {/* Enhanced Confirmation Dialog for Trade Close with Spread Information */}
       <AlertDialog open={closeConfirmDialogOpen} onOpenChange={setCloseConfirmDialogOpen}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="border-0 shadow-2xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t('simulator.confirmCloseTitle', 'Are you sure you want to close this trade?')}
+            <AlertDialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-amber-500" />
+              {t('simulator.confirmCloseTitle', 'Confirm Trade Closure')}
             </AlertDialogTitle>
             {loadingSpread && (
-              <AlertDialogDescription>
+              <AlertDialogDescription className="text-gray-600">
                 {t('Loading trade details...', 'Loading trade details...')}
               </AlertDialogDescription>
             )}
             {!loadingSpread && spreadData && (
               <div className="space-y-3 mt-4">
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {t('Entry Rate', 'Entry Rate')}:
-                    </span>
-                    <span className="font-medium">{spreadData.entry_price.toFixed(4)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {t('Current Rate', 'Current Rate')}:
-                    </span>
-                    <span className="font-medium">{spreadData.current_price.toFixed(4)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {t('Margin paid at open', 'Margin paid at open')}:
-                    </span>
-                    <span className="font-medium">{getCurrencySymbol(tradeToClose?.trade)}{spreadData.margin.toFixed(2)}</span>
-                  </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between items-center font-bold">
-                      <span className="text-sm">
-                        {t('You will receive')}:
-                      </span>
-                      <span className={`text-lg ${spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3 border border-gray-100">
+                  <div className="text-sm font-semibold text-gray-900">Trade Performance</div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Entry:</span>
+                      <div className="font-medium text-gray-900">{spreadData.entry_price.toFixed(4)}</div>
+                    </div>
+                    
+                    <div>
+                      <span className="text-gray-600">Current:</span>
+                      <div className="font-medium text-gray-900">{spreadData.current_price.toFixed(4)}</div>
+                    </div>
+                    
+                    <div>
+                      <span className="text-gray-600">Margin Paid:</span>
+                      <div className="font-medium text-gray-900">{getCurrencySymbol(tradeToClose?.trade)}{spreadData.margin.toFixed(2)}</div>
+                    </div>
+                    
+                    <div>
+                      <span className="text-gray-600">You'll Receive:</span>
+                      <div className={`font-bold ${
+                        spreadData.return >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
                         {getCurrencySymbol(tradeToClose?.trade)}{spreadData.return.toFixed(2)}
-                      </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
             {!loadingSpread && !spreadData && tradeToClose?.flaskTradeId && (
-              <AlertDialogDescription>
+              <AlertDialogDescription className="text-gray-600">
                 {t('Unable to load trade details. Do you still want to close this trade?', 'Unable to load trade details. Do you still want to close this trade?')}
               </AlertDialogDescription>
             )}
             {!loadingSpread && !tradeToClose?.flaskTradeId && (
-              <AlertDialogDescription>
+              <AlertDialogDescription className="text-gray-600">
                 {t('simulator.confirmCloseMessage', 'This action cannot be undone.')}
               </AlertDialogDescription>
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelTradeClose}>
-              {t('Dont close', "Don't close")}
+            <AlertDialogCancel onClick={cancelTradeClose} className="bg-gray-100 hover:bg-gray-200 border-0">
+              {t('Dont close', "Cancel")}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmTradeClose} disabled={loadingSpread}>
-              {t('Close trade', 'Close trade')}
+            <AlertDialogAction onClick={confirmTradeClose} disabled={loadingSpread} className="bg-red-600 hover:bg-red-700 border-0">
+              {t('Close trade', 'Close Trade')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
