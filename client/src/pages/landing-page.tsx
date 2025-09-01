@@ -53,14 +53,16 @@ export default function LandingPage() {
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
-                  <h1 className="text-5xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+                  <h1 className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
                     <span className="text-foreground">
                       {t('Protect the value')}
                     </span>
                     <br />
                     <span className="text-foreground">{t('of your')} <TypingEffect /></span>
                   </h1>
-                  <Skyline />
+                  <div className="flex justify-center lg:justify-start">
+                    <Skyline />
+                  </div>
                 </div>
                 <p className="text-xl md:text-2xl font-medium mb-4 text-foreground">
                   The Simplest Way to Insure Your Money Against Unpredictable Markets.
