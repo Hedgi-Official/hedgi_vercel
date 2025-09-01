@@ -96,11 +96,11 @@ export default function LandingPage() {
                     <span className="text-foreground block">
                       {t('Protect the value')}
                     </span>
-                    <span className="text-foreground block sm:block lg:block">
-                      <span className="sm:inline lg:inline">{t('of your')}</span>{' '}<TypingEffect />
+                    <span className="text-foreground block">
+                      <span className="inline-block" style={{ display: 'inline' }}>{t('of your')}</span>{' '}<span className="inline-block" style={{ display: 'inline' }}><TypingEffect /></span>
                     </span>
                   </h1>
-                  <div className="w-full -mt-3 sm:-mt-1 max-w-full sm:max-w-none">
+                  <div className="w-full -mt-3 sm:-mt-1">
                     <Skyline />
                   </div>
                 </div>

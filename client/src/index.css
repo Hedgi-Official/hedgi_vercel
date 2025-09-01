@@ -39,14 +39,3 @@
   list-style-type: decimal;
 }
 
-/* Mobile-specific Skyline styling */
-@media (max-width: 639px) {
-  /* Remove the negative margins to keep skyline same width as button */
-  .skyline-wrapper {
-    width: 100%;
-  }
-  
-  .skyline-container {
-    width: 100%;
-  }
-}
