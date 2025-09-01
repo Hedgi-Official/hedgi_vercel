@@ -49,7 +49,7 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative py-16 md:py-24 overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
