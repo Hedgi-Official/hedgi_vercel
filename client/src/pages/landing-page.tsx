@@ -87,18 +87,20 @@ export default function LandingPage() {
                 <div className="mb-6">
                   <h1 
                     ref={titleRef}
-                    className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold mb-0 sm:mb-1"
+                    className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold mb-0 sm:mb-1 leading-tight sm:leading-tight"
                     style={{
                       fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? mobileFontSize : undefined,
-                      lineHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '1.1' : '1.25'
+                      lineHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '1.1' : undefined
                     }}
                   >
                     <span className="text-foreground block">
                       {t('Protect the value')}
                     </span>
-                    <span className="text-foreground block">{t('of your')} <TypingEffect /></span>
+                    <span className="text-foreground block sm:block lg:block">
+                      <span className="sm:inline lg:inline">{t('of your')}</span>{' '}<TypingEffect />
+                    </span>
                   </h1>
-                  <div className="w-full -mt-3 sm:-mt-1">
+                  <div className="w-full -mt-3 sm:-mt-1 max-w-full sm:max-w-none">
                     <Skyline />
                   </div>
                 </div>

@@ -41,10 +41,12 @@
 
 /* Mobile-specific Skyline styling */
 @media (max-width: 639px) {
+  /* Remove the negative margins to keep skyline same width as button */
+  .skyline-wrapper {
+    width: 100%;
+  }
+  
   .skyline-container {
-    margin-left: calc(-1rem);
-    margin-right: calc(-1rem);
-    padding-left: 0;
-    padding-right: 0;
+    width: 100%;
   }
 }
