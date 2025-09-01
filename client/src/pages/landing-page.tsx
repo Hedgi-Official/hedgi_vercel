@@ -6,19 +6,51 @@ import { Header } from "@/components/header";
 import { Skyline } from "@/components/skyline";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 /*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
+  const [mobileFontSize, setMobileFontSize] = useState('3rem');
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   // Preload only the first visible image
   useEffect(() => {
     // Only preload the hero image that's immediately visible
     const heroImage = new Image();
     heroImage.src = "/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg";
+  }, []);
+
+  // Dynamic font sizing for mobile to ensure 2-line layout
+  useEffect(() => {
+    const calculateFontSize = () => {
+      if (typeof window !== 'undefined' && window.innerWidth < 640) { // Only on mobile
+        const containerWidth = window.innerWidth - 32; // Account for padding
+        // Calculate optimal font size to fit "Protect the value" on one line
+        // The text "Protect the value" has approximately 17 characters
+        // We need to ensure it fits within the container width
+        const textLength = 17; // Approximate character count for "Protect the value"
+        const charWidthRatio = 0.55; // Approximate width ratio for bold font
+        const optimalFontSize = containerWidth / (textLength * charWidthRatio);
+        // Cap the size between reasonable limits
+        const finalSize = Math.max(28, Math.min(optimalFontSize, 52));
+        setMobileFontSize(`${finalSize}px`);
+      } else {
+        setMobileFontSize('3rem'); // Default for larger screens
+      }
+    };
+
+    calculateFontSize();
+    window.addEventListener('resize', calculateFontSize);
+    // Also recalculate when orientation changes
+    window.addEventListener('orientationchange', calculateFontSize);
+    
+    return () => {
+      window.removeEventListener('resize', calculateFontSize);
+      window.removeEventListener('orientationchange', calculateFontSize);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -53,14 +85,22 @@ export default function LandingPage() {
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
-                  <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold leading-tight mb-1">
-                    <span className="text-foreground">
+                  <h1 
+                    ref={titleRef}
+                    className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold mb-0 sm:mb-1"
+                    style={{
+                      fontSize: typeof window !== 'undefined' && window.innerWidth < 640 ? mobileFontSize : undefined,
+                      lineHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '1.1' : '1.25'
+                    }}
+                  >
+                    <span className="text-foreground block">
                       {t('Protect the value')}
                     </span>
-                    <br />
-                    <span className="text-foreground">{t('of your')} <TypingEffect /></span>
+                    <span className="text-foreground block">{t('of your')} <TypingEffect /></span>
                   </h1>
-                  <Skyline />
+                  <div className="w-full -mt-3 sm:-mt-1">
+                    <Skyline />
+                  </div>
                 </div>
                 <p className="text-xl md:text-2xl font-medium mb-4 text-foreground">
                   The Simplest Way to Insure Your Money Against Unpredictable Markets.
