@@ -1,10 +1,10 @@
 export function Skyline() {
   return (
-    <div className="w-full h-24 mt-1 mb-4">
+    <div className="w-full h-24 mb-4" style={{marginTop: '4px'}}>
       <svg
         viewBox="0 0 800 100"
         className="w-full h-full text-foreground/10"
-        preserveAspectRatio="xMidYMax meet"
+        preserveAspectRatio="none"
       >
         <path
           fill="currentColor"

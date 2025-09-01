@@ -53,7 +53,7 @@ export default function LandingPage() {
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
-                  <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold leading-tight mb-1">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight" style={{marginBottom: '8px'}}>
                     <span className="text-foreground">
                       {t('Protect the value')}
                     </span>
