@@ -49,20 +49,18 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative py-16 md:py-24 overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-start">
               {/* Left side - Hero content */}
               <div className="text-center lg:text-left">
                 <div className="mb-6">
-                  <h1 className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
+                  <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl font-bold leading-tight mb-1">
                     <span className="text-foreground">
                       {t('Protect the value')}
                     </span>
                     <br />
                     <span className="text-foreground">{t('of your')} <TypingEffect /></span>
                   </h1>
-                  <div className="flex justify-center lg:justify-start">
-                    <Skyline />
-                  </div>
+                  <Skyline />
                 </div>
                 <p className="text-xl md:text-2xl font-medium mb-4 text-foreground">
                   The Simplest Way to Insure Your Money Against Unpredictable Markets.
