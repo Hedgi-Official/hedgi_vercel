@@ -165,6 +165,10 @@ const enUS = {
     'For Companies': 'For Companies',
     'Page Under Construction': 'Page Under Construction',
     'Coming Soon': 'This page is under construction. Please check back later.',
+    'Developer Access': 'Developer Access',
+    'Enter developer password': 'Enter developer password',
+    'Access': 'Access',
+    'Incorrect password': 'Incorrect password',
     // About Us page translations
     'What is Hedgi?': 'What is Hedgi?',
     'Currency Insurance for Everyone.': 'Currency Insurance for Everyone.',
@@ -435,6 +439,10 @@ const ptBR = {
     'For Companies': 'Para Empresas',
     'Page Under Construction': 'Página Em Construção',
     'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.',
+    'Developer Access': 'Acesso de Desenvolvedor',
+    'Enter developer password': 'Digite a senha de desenvolvedor',
+    'Access': 'Acessar',
+    'Incorrect password': 'Senha incorreta',
     profile: {
       'Personal Information': 'Informações Pessoais',
       'Full Name': 'Nome Completo',
