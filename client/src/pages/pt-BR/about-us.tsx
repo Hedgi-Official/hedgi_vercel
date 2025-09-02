@@ -40,47 +40,48 @@ export default function AboutUs() {
         </section>
 
         {/* Mission Section */}
-        <section className="py-16 bg-gradient-to-r from-background to-muted/20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto">
-              <div className="grid md:grid-cols-2 gap-12 items-center">
-                <div>
-                  <div className="flex items-center mb-6">
-                    <Shield className="w-8 h-8 text-primary mr-3" />
-                    <h2 className="text-3xl md:text-4xl font-bold text-foreground">Nossa Missão</h2>
-                  </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-                    75% das empresas que não usam proteção cambial perdem dinheiro devido às flutuações. Movimentos cambiais apagaram US$ 9,83 bilhões dos lucros corporativos em apenas um trimestre.
-                    Na <span className="font-semibold text-primary">Hedgi</span>, oferecemos seguro cambial simples para que você nunca perca dinheiro ao comprar de outros países - seja você uma empresa ou um indivíduo.
-                  </p>
-                  <div className="flex items-center text-primary font-medium">
-                    <TrendingUp className="w-5 h-5 mr-2" />
-                    <span>Protegendo empresas desde 2024</span>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="bg-gradient-to-br from-primary/10 to-blue-500/10 rounded-2xl p-8 backdrop-blur-sm border border-primary/20">
-                    <div className="grid grid-cols-2 gap-6 text-center">
-                      <div>
-                        <div className="text-3xl font-bold text-primary mb-2">75%</div>
-                        <div className="text-sm text-muted-foreground">Empresas Perdem Dinheiro</div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-primary mb-2">US$ 9,8 bi</div>
-                        <div className="text-sm text-muted-foreground">Perdidos em Movimentos Cambiais</div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-primary mb-2">81%</div>
-                        <div className="text-sm text-muted-foreground">Empresas Usam Proteção</div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-primary mb-2">52%</div>
-                        <div className="text-sm text-muted-foreground">Agora Considerando</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <section className="py-16 px-4 bg-background">
+          <div className="container mx-auto max-w-4xl">
+            <div className="text-center mb-12">
+              <div className="flex items-center justify-center mb-6">
+                <Shield className="w-8 h-8 text-primary mr-3" />
+                <h2 className="text-3xl font-bold text-foreground">Nossa Missão</h2>
               </div>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+                75% das empresas que não usam proteção cambial perdem dinheiro devido às flutuações. Movimentos cambiais apagaram US$ 9,83 bilhões dos lucros corporativos em apenas um trimestre.
+                Na <span className="font-semibold text-primary">Hedgi</span>, oferecemos seguro cambial simples para que você nunca perca dinheiro ao comprar de outros países - seja você uma empresa ou um indivíduo.
+              </p>
+              <div className="flex items-center justify-center text-primary font-medium">
+                <TrendingUp className="w-5 h-5 mr-2" />
+                <span>Protegendo empresas desde 2024</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="text-center p-6">
+                  <div className="text-3xl font-bold text-primary mb-2">75%</div>
+                  <div className="text-sm text-muted-foreground">Empresas Perdem Dinheiro</div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="text-center p-6">
+                  <div className="text-3xl font-bold text-primary mb-2">US$ 9,8 bi</div>
+                  <div className="text-sm text-muted-foreground">Perdidos em Movimentos Cambiais</div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="text-center p-6">
+                  <div className="text-3xl font-bold text-primary mb-2">81%</div>
+                  <div className="text-sm text-muted-foreground">Empresas Usam Proteção</div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="text-center p-6">
+                  <div className="text-3xl font-bold text-primary mb-2">52%</div>
+                  <div className="text-sm text-muted-foreground">Agora Considerando</div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
