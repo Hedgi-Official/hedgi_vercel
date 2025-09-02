@@ -15,9 +15,11 @@ import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
 import UsingHedgi from "@/pages/using-hedgi";
 import AboutUs from "@/pages/about-us";
+import ForCompanies from "@/pages/for-companies";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
 import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
 import AboutUsPTBR from "@/pages/pt-BR/about-us";
+import ForCompaniesPTBR from "@/pages/pt-BR/for-companies";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 
@@ -59,6 +61,9 @@ function Router() {
       </Route>
       <Route path="/about-us">
         {currentLanguage === "pt-BR" ? <AboutUsPTBR /> : <AboutUs />}
+      </Route>
+      <Route path="/for-companies">
+        {currentLanguage === "pt-BR" ? <ForCompaniesPTBR /> : <ForCompanies />}
       </Route>
       <Route component={NotFound} />
     </Switch>

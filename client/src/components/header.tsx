@@ -57,6 +57,9 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
             <Link href="/about-us">
               <Button variant="ghost">{t('About Us')}</Button>
             </Link>
+            <Link href="/for-companies">
+              <Button variant="ghost">{t('For Companies')}</Button>
+            </Link>
           </div>
 
           {/* Desktop Right Section */}
@@ -127,6 +130,11 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
               <Link href="/about-us">
                 <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
                   {t('About Us')}
+                </Button>
+              </Link>
+              <Link href="/for-companies">
+                <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
+                  {t('For Companies')}
                 </Button>
               </Link>
               

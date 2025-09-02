@@ -162,6 +162,7 @@ const enUS = {
     'What is Hedging?': 'What is Hedging?',
     'Using Hedgi': 'Using Hedgi',
     'About Us': 'About Us',
+    'For Companies': 'For Companies',
     'Page Under Construction': 'Page Under Construction',
     'Coming Soon': 'This page is under construction. Please check back later.',
     // About Us page translations
@@ -431,6 +432,7 @@ const ptBR = {
     'What is Hedging?': 'O que é Hedging?',
     'Using Hedgi': 'Usando a Hedgi',
     'About Us': 'Sobre Nós',
+    'For Companies': 'Para Empresas',
     'Page Under Construction': 'Página Em Construção',
     'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.',
     profile: {
