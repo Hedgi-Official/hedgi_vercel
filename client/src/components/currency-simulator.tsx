@@ -10,6 +10,7 @@ import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDays
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
+import { isSyntheticPair, getSyntheticConfig, formatPairForBackend, formatPairDisplay } from '@/lib/synthetic-pairs';
 
 
 export interface TradeResponse {
@@ -73,8 +74,19 @@ export function CurrencySimulator({
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
   
+  const pairDisplay = formatPairDisplay(baseCurrency, targetCurrency);
+  const isSynthetic = isSyntheticPair(pairDisplay);
+  const syntheticConfig = isSynthetic ? getSyntheticConfig(pairDisplay) : null;
 
-  const { data: activTradesRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
+  // For synthetic pairs, fetch rates for both legs
+  const leg1Symbol = syntheticConfig ? formatPairForBackend(syntheticConfig.legs[0]) : `${targetCurrency}${baseCurrency}`;
+  const leg2Symbol = syntheticConfig ? formatPairForBackend(syntheticConfig.legs[1]) : null;
+  
+  const { data: leg1Rate } = useActivTradesRate(leg1Symbol);
+  const { data: leg2Rate } = useActivTradesRate(leg2Symbol || 'USDBRL');
+  
+  // For regular pairs, use leg1Rate as activTradesRate. For synthetic, we'll compute combined rate
+  const activTradesRate = isSynthetic ? null : leg1Rate;
 
   const handleSimulate = async () => {
     if (!expirationDate) {
@@ -82,31 +94,57 @@ export function CurrencySimulator({
       return;
     }
 
-    let currentRate, swapValues;
-    if (activTradesRate) {
-      currentRate = { bid: activTradesRate.bid, ask: activTradesRate.ask };
-      swapValues = { swapLong: activTradesRate.swap_long, swapShort: activTradesRate.swap_short };
-    }
-
-    // Calculate duration in days from today to expiration date
     const today = new Date();
     const duration = getDaysBetweenDates(today, expirationDate);
-
-    // run your existing simulateHedge (fallback if no live rates)
-    const result = await simulateHedge(
-      baseCurrency,
-      targetCurrency,
-      amount,
-      duration,
-      tradeDirection
-    );
-
     const wednesdays = countWednesdaysBetweenDates(today, expirationDate);
     const businessDays = calculateBusinessDaysBetweenDates(today, expirationDate);
 
-    // compute hedge cost
-    let hedgeCost = 0;
-    if (currentRate && swapValues) {
+    let currentRate, swapValues, hedgeCost = 0;
+
+    if (isSynthetic && leg1Rate && leg2Rate) {
+      // For synthetic pairs, calculate combined rate and cost from both legs
+      // BRL/CNY = BRL/USD * USD/CNY
+      // For BRL/USD: ask=5.7, bid=5.6 means 1 USD = 5.7 BRL (ask) or 5.6 BRL (bid)
+      // For USD/CNY: ask=7.3, bid=7.2 means 1 CNY = 7.3 USD (ask) or 7.2 USD (bid)
+      // To get BRL/CNY: we need to divide BRL/USD by USD/CNY
+      // 1 CNY = (BRL/USD) / (USD/CNY) = 5.7 / 7.3 = 0.78 BRL (approximately)
+      
+      const syntheticBid = leg1Rate.bid / leg2Rate.ask; // Use bid of leg1, ask of leg2 for worst case
+      const syntheticAsk = leg1Rate.ask / leg2Rate.bid; // Use ask of leg1, bid of leg2 for worst case
+      
+      currentRate = { bid: syntheticBid, ask: syntheticAsk };
+      
+      // Calculate cost for each leg and sum them
+      const volumeInLots = amount / 100000;
+      
+      // Leg 1 cost
+      const leg1SpreadCost = (leg1Rate.ask - leg1Rate.bid) * amount;
+      const leg1SwapCost = Math.abs(
+        volumeInLots *
+          (tradeDirection === 'buy' ? leg1Rate.swap_long : leg1Rate.swap_short) *
+          (businessDays + wednesdays*2) * 1.1
+      );
+      
+      // Leg 2 cost
+      const leg2SpreadCost = (leg2Rate.ask - leg2Rate.bid) * amount;
+      const leg2SwapCost = Math.abs(
+        volumeInLots *
+          (tradeDirection === 'buy' ? leg2Rate.swap_long : leg2Rate.swap_short) *
+          (businessDays + wednesdays*2) * 1.1
+      );
+      
+      // Total hedge cost is the sum of both legs
+      hedgeCost = leg1SpreadCost + leg1SwapCost + leg2SpreadCost + leg2SwapCost;
+      
+      swapValues = { 
+        swapLong: leg1Rate.swap_long + leg2Rate.swap_long, 
+        swapShort: leg1Rate.swap_short + leg2Rate.swap_short 
+      };
+    } else if (activTradesRate) {
+      // Regular pair
+      currentRate = { bid: activTradesRate.bid, ask: activTradesRate.ask };
+      swapValues = { swapLong: activTradesRate.swap_long, swapShort: activTradesRate.swap_short };
+      
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
       hedgeCost =
@@ -116,6 +154,15 @@ export function CurrencySimulator({
             (businessDays + wednesdays*2) * 1.1
         ) + spreadCost;
     }
+
+    // run your existing simulateHedge (fallback if no live rates)
+    const result = await simulateHedge(
+      baseCurrency,
+      targetCurrency,
+      amount,
+      duration,
+      tradeDirection
+    );
 
     // break-even
     const costPct = currentRate ? (hedgeCost / amount / currentRate.bid) * 100 : 0;
