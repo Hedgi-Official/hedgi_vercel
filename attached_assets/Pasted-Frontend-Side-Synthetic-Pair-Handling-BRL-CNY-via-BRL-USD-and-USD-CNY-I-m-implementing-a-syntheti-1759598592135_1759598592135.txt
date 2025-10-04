@@ -1,0 +1,147 @@
+Frontend-Side Synthetic Pair Handling (BRL/CNY via BRL/USD and USD/CNY)
+
+I’m implementing a synthetic currency pair system on the frontend only.
+
+The backend (Flask) must remain unaware of any synthetic mappings — it only executes trades it’s directly instructed to (e.g., BRL/USD, USD/CNY).
+
+The frontend (Replit app), however, should recognize when a user trades a synthetic pair (like BRL/CNY) and automatically create and track the necessary underlying real trades through the backend API.
+
+System Behavior
+
+Frontend responsibilities:
+
+Recognize synthetic pairs such as BRL/CNY.
+
+When a user places a trade in BRL/CNY, automatically:
+
+Send one trade request to backend for BRL/USD.
+
+Send another trade request to backend for USD/CNY.
+
+Maintain a synthetic trade object in local/frontend state:
+
+{
+  "synthetic_pair": "BRL/CNY",
+  "synthetic_trade_id": "SYN001",
+  "legs": [
+    { "pair": "BRL/USD", "trade_id": "LEG001", "direction": "buy" },
+    { "pair": "USD/CNY", "trade_id": "LEG002", "direction": "buy" }
+  ],
+  "synthetic_price": "computed",
+  "synthetic_pnl": "aggregated"
+}
+
+
+Handle all UI logic for combined positions, including:
+
+Showing a single row for BRL/CNY in the positions table.
+
+Computing combined PnL as
+
+PnL
+synthetic
+=
+PnL
+BRL/USD
++
+PnL
+USD/CNY
+PnL
+synthetic
+	​
+
+=PnL
+BRL/USD
+	​
+
++PnL
+USD/CNY
+	​
+
+
+Computing live synthetic price as
+
+𝑃
+BRL/CNY
+=
+𝑃
+BRL/USD
+×
+𝑃
+USD/CNY
+P
+BRL/CNY
+	​
+
+=P
+BRL/USD
+	​
+
+×P
+USD/CNY
+	​
+
+
+Handling lot sizing correctly: the USD exposure of the BRL/USD leg must match the USD notional of the USD/CNY leg so the USD cancels out.
+
+When the user closes the BRL/CNY trade:
+
+Send two separate close requests to the backend for each leg.
+
+If either leg fails to open or close, retry independently and show status.
+
+Backend responsibilities:
+
+Receive independent requests such as:
+
+{ "pair": "BRL/USD", "direction": "buy", "volume": 10000 }
+{ "pair": "USD/CNY", "direction": "buy", "volume": 17500 }
+
+
+Execute them normally (no knowledge of synthetic linkage).
+
+Example Workflow
+
+User clicks “Buy BRL/CNY” for 10,000 units.
+
+Frontend calculates:
+
+Open BRL/USD buy (10,000 BRL worth).
+
+Open USD/CNY buy for equivalent USD notional.
+
+Sends two independent trade requests to Flask.
+
+Tracks their returned trade IDs and bundles them under one synthetic trade entry in the UI.
+
+For live pricing or charting, the frontend recomputes BRL/CNY = BRL/USD × USD/CNY.
+
+When closing, frontend issues close requests for both legs.
+
+Implementation Tips
+
+Maintain a synthetic_pairs mapping:
+
+const SYNTHETIC_PAIRS = {
+  "BRL/CNY": ["BRL/USD", "USD/CNY"],
+  "INR/CHF": ["INR/USD", "USD/CHF"]
+};
+
+
+Store linkage in frontend state (React, Redux, or local DB).
+
+Never rely on backend for relationship logic — backend just executes pair trades independently.
+
+Optionally, create helper functions:
+
+openSyntheticTrade("BRL/CNY", "buy", 10000)
+closeSyntheticTrade("SYN001")
+computeSyntheticPrice("BRL/CNY", rates)
+
+Goals
+
+Keep backend stateless and pair-agnostic.
+
+Frontend fully manages synthetic exposure, PnL, and display.
+
+Allow easy extension to other synthetic pairs in the future.
