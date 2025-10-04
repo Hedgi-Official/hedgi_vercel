@@ -1,14 +1,15 @@
 import { z } from "zod";
 
-export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN'] as const;
+export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'EUR', 'MXN', 'CNY'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 export type CurrencyPair = `${SupportedCurrency}${SupportedCurrency}`;
 
 // Sample rates for development/testing
-const SAMPLE_RATES: Record<CurrencyPair, number> = {
+const SAMPLE_RATES: Partial<Record<CurrencyPair, number>> = {
   'USDBRL': 4.95,
   'USDEUR': 0.93,
   'USDMXN': 17.05,
+  'USDCNY': 7.25,
   'EURUSD': 1.08,
   'EURBRL': 5.35,
   'EURMXN': 18.45,
@@ -18,7 +19,7 @@ const SAMPLE_RATES: Record<CurrencyPair, number> = {
   'MXNUSD': 0.059,
   'MXNEUR': 0.054,
   'MXNBRL': 0.29,
-} as const;
+};
 
 function generateHistoricalRates(baseRate: number, days: number) {
   const volatility = 0.02; // 2% daily volatility
@@ -49,24 +50,39 @@ export async function fetchExchangeRate(base: SupportedCurrency, target: Support
 
     // If direct rate exists
     if (key in SAMPLE_RATES) {
-      return SAMPLE_RATES[key];
+      const rate = SAMPLE_RATES[key];
+      if (rate !== undefined) return rate;
     }
 
     // If inverse rate exists
     const inverseKey = `${target}${base}` as CurrencyPair;
     if (inverseKey in SAMPLE_RATES) {
-      return 1 / SAMPLE_RATES[inverseKey];
+      const inverseRate = SAMPLE_RATES[inverseKey];
+      if (inverseRate !== undefined) return 1 / inverseRate;
     }
 
     // Calculate cross rate via USD
     if (base !== 'USD' && target !== 'USD') {
-      const baseUSD = `${base}USD` in SAMPLE_RATES ? 
-        SAMPLE_RATES[`${base}USD` as CurrencyPair] : 
-        1 / SAMPLE_RATES[`USD${base}` as CurrencyPair];
-      const targetUSD = `${target}USD` in SAMPLE_RATES ? 
-        SAMPLE_RATES[`${target}USD` as CurrencyPair] : 
-        1 / SAMPLE_RATES[`USD${target}` as CurrencyPair];
-      return baseUSD / targetUSD;
+      const baseUSDKey = `${base}USD` as CurrencyPair;
+      const usdBaseKey = `USD${base}` as CurrencyPair;
+      const targetUSDKey = `${target}USD` as CurrencyPair;
+      const usdTargetKey = `USD${target}` as CurrencyPair;
+      
+      const baseUSD = baseUSDKey in SAMPLE_RATES && SAMPLE_RATES[baseUSDKey] !== undefined
+        ? SAMPLE_RATES[baseUSDKey]
+        : usdBaseKey in SAMPLE_RATES && SAMPLE_RATES[usdBaseKey] !== undefined
+        ? 1 / SAMPLE_RATES[usdBaseKey]
+        : undefined;
+        
+      const targetUSD = targetUSDKey in SAMPLE_RATES && SAMPLE_RATES[targetUSDKey] !== undefined
+        ? SAMPLE_RATES[targetUSDKey]
+        : usdTargetKey in SAMPLE_RATES && SAMPLE_RATES[usdTargetKey] !== undefined
+        ? 1 / SAMPLE_RATES[usdTargetKey]
+        : undefined;
+        
+      if (baseUSD !== undefined && targetUSD !== undefined) {
+        return baseUSD / targetUSD;
+      }
     }
 
     throw new Error(`Rate not available for ${base}/${target}`);
@@ -147,11 +163,12 @@ export async function simulateHedge(
 }
 
 function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {
-  const CURRENCY_VALUES = {
+  const CURRENCY_VALUES: Record<SupportedCurrency, number> = {
     USD: 1,
     EUR: 1.08,
     BRL: 0.20,
-    MXN: 0.058
+    MXN: 0.058,
+    CNY: 0.138
   };
   return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
