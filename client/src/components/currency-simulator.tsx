@@ -83,7 +83,17 @@ export function CurrencySimulator({
   const leg2Symbol = syntheticConfig ? formatPairForBackend(syntheticConfig.legs[1]) : null;
   
   const { data: leg1Rate } = useActivTradesRate(leg1Symbol);
-  const { data: leg2Rate } = useActivTradesRate(leg2Symbol || 'USDBRL');
+  const { data: leg2RateRaw } = useActivTradesRate(leg2Symbol || 'USDBRL');
+  
+  // Fallback rates for pairs not supported by broker API
+  const FALLBACK_RATES: Record<string, { bid: number; ask: number; swap_long: number; swap_short: number }> = {
+    'USDCNY': { bid: 7.24, ask: 7.26, swap_long: -5, swap_short: 2 },
+  };
+  
+  // Use fallback if leg2Rate has invalid data (bid/ask are 0 or missing)
+  const leg2Rate = (leg2Symbol && leg2RateRaw && (leg2RateRaw.bid === 0 || leg2RateRaw.ask === 0))
+    ? { ...FALLBACK_RATES[leg2Symbol] || leg2RateRaw, symbol: leg2Symbol, broker: 'fallback' }
+    : leg2RateRaw;
   
   // For regular pairs, use leg1Rate as activTradesRate. For synthetic, we'll compute combined rate
   const activTradesRate = isSynthetic ? null : leg1Rate;
