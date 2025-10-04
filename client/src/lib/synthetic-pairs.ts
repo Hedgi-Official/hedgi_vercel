@@ -5,11 +5,6 @@ export interface SyntheticPairConfig {
 
 export const SYNTHETIC_PAIRS: Record<string, SyntheticPairConfig> = {
   "BRL/CNY": { legs: ["BRL/USD", "USD/CNY"], bridgeCurrency: "USD" },
-  "BRL/CHF": { legs: ["BRL/USD", "USD/CHF"], bridgeCurrency: "USD" },
-  "MXN/CNY": { legs: ["MXN/USD", "USD/CNY"], bridgeCurrency: "USD" },
-  "MXN/CHF": { legs: ["MXN/USD", "USD/CHF"], bridgeCurrency: "USD" },
-  "INR/CHF": { legs: ["INR/USD", "USD/CHF"], bridgeCurrency: "USD" },
-  "INR/CNY": { legs: ["INR/USD", "USD/CNY"], bridgeCurrency: "USD" },
 };
 
 export interface SyntheticTradeLeg {
