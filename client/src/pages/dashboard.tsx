@@ -24,6 +24,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { useSyntheticTrades } from "@/hooks/use-synthetic-trades";
+import {
+  isSyntheticPair,
+  getSyntheticConfig,
+  formatPairForBackend,
+  formatPairDisplay,
+  calculateLegVolumes,
+} from "@/lib/synthetic-pairs";
 
 
 // Define the shape your Flask /trades endpoint returns:
@@ -52,6 +60,15 @@ export default function Dashboard() {
   const { user, logout } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const {
+    syntheticTrades,
+    createSyntheticTrade,
+    addLegToSyntheticTrade,
+    removeSyntheticTrade,
+    updateSyntheticTradeStatus,
+    getSyntheticTradeByLegId,
+  } = useSyntheticTrades();
 
   // State for confirmation dialog
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
@@ -205,56 +222,171 @@ export default function Dashboard() {
     { hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">, paymentToken?: string }
   >({
     mutationFn: async ({ hedgeData: h, paymentToken }) => {
-      // h is now the exact object your simulator gives you
-
-      // parse numeric amount & use actual selected direction
       const amountNum = parseFloat(h.amount);
-      const volume    = Math.abs(amountNum) / 100000;
-      const direction = h.tradeDirection; // Use the actual direction selected by user
-      const symbol    = `${h.targetCurrency}${h.baseCurrency}`;
+      const volume = Math.abs(amountNum) / 100000;
+      const direction = h.tradeDirection as "buy" | "sell";
+      const pairDisplay = formatPairDisplay(h.targetCurrency, h.baseCurrency);
+      const symbol = `${h.targetCurrency}${h.baseCurrency}`;
 
-      // Flask expects this exact structure based on working curl example
-      const payload = { 
-        symbol, 
-        direction, 
-        volume,
-        metadata: {
-          days: h.duration,
-          margin: h.margin || 500,
-          paymentToken: paymentToken || 'DEV_MODE',
-          deviation: 5,
-          comment: 'Hedgi test trade'
-        }
-      };
-
-      console.log('[Dashboard] sending payload:', payload);
-      console.log('[Dashboard] payment token received:', paymentToken);
-      console.log('[Dashboard] payment token in metadata:', payload.metadata.paymentToken);
-
-      // Use direct server URL in development to bypass Vite routing issues
       const serverUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000'
         : '';
       const fullUrl = `${serverUrl}/api/trades`;
 
-      console.log('[Dashboard] sending to URL:', fullUrl);
-      console.log('[Dashboard] payload JSON:', JSON.stringify(payload));
-      const res = await fetch(fullUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      if (isSyntheticPair(pairDisplay)) {
+        console.log(`[Dashboard] Detected synthetic pair: ${pairDisplay}`);
+        const config = getSyntheticConfig(pairDisplay);
+        if (!config) {
+          throw new Error(`Failed to get config for synthetic pair: ${pairDisplay}`);
+        }
 
-      console.log('[Dashboard] Response status:', res.status);
-      console.log('[Dashboard] Response headers:', Object.fromEntries(res.headers.entries()));
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Failed to create trade');
+        const [leg1Pair, leg2Pair] = config.legs;
+        const legVolumes = calculateLegVolumes(pairDisplay, volume, direction);
+
+        const leg1Symbol = formatPairForBackend(leg1Pair);
+        const leg2Symbol = formatPairForBackend(leg2Pair);
+
+        const leg1Payload = {
+          symbol: leg1Symbol,
+          direction,
+          volume: legVolumes.leg1Volume,
+          metadata: {
+            days: h.duration,
+            margin: (parseFloat(h.margin?.toString() || '500') / 2),
+            paymentToken: paymentToken || 'DEV_MODE',
+            deviation: 5,
+            comment: `Hedgi synthetic ${pairDisplay} - leg 1`
+          }
+        };
+
+        const leg2Payload = {
+          symbol: leg2Symbol,
+          direction,
+          volume: legVolumes.leg2Volume,
+          metadata: {
+            days: h.duration,
+            margin: (parseFloat(h.margin?.toString() || '500') / 2),
+            paymentToken: paymentToken || 'DEV_MODE',
+            deviation: 5,
+            comment: `Hedgi synthetic ${pairDisplay} - leg 2`
+          }
+        };
+
+        console.log('[Dashboard] Creating leg 1 trade:', leg1Payload);
+        const leg1Res = await fetch(fullUrl, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(leg1Payload)
+        });
+
+        if (!leg1Res.ok) {
+          const txt = await leg1Res.text();
+          throw new Error(`Failed to create leg 1: ${txt}`);
+        }
+        const leg1Data = await leg1Res.json();
+        console.log('[Dashboard] Leg 1 trade created:', leg1Data);
+
+        console.log('[Dashboard] Creating leg 2 trade:', leg2Payload);
+        let leg2Data;
+        try {
+          const leg2Res = await fetch(fullUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(leg2Payload)
+          });
+
+          if (!leg2Res.ok) {
+            const txt = await leg2Res.text();
+            throw new Error(`Failed to create leg 2: ${txt}`);
+          }
+          leg2Data = await leg2Res.json();
+          console.log('[Dashboard] Leg 2 trade created:', leg2Data);
+        } catch (leg2Error) {
+          console.error('[Dashboard] Leg 2 failed. Attempting to close leg 1 to rollback...');
+          
+          try {
+            const rollbackResponse = await fetch(`${serverUrl}/api/trades/${leg1Data.id}/close`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include'
+            });
+            
+            if (!rollbackResponse.ok) {
+              const rollbackError = await rollbackResponse.text();
+              console.error('[Dashboard] Rollback HTTP error:', rollbackResponse.status, rollbackError);
+              throw new Error(`Rollback failed with status ${rollbackResponse.status}: ${rollbackError}`);
+            }
+            
+            console.log('[Dashboard] Leg 1 rolled back successfully');
+          } catch (rollbackError) {
+            console.error('[Dashboard] Rollback failed. Leg 1 may be orphaned:', rollbackError);
+            throw new Error(
+              `Synthetic trade creation failed: Leg 2 could not be created and leg 1 rollback failed. ` +
+              `Please manually close trade #${leg1Data.id} (${leg1Symbol}). ` +
+              `Original error: ${leg2Error instanceof Error ? leg2Error.message : 'Unknown error'}. ` +
+              `Rollback error: ${rollbackError instanceof Error ? rollbackError.message : 'Unknown error'}`
+            );
+          }
+          
+          throw new Error(
+            `Failed to create synthetic trade: ${leg2Error instanceof Error ? leg2Error.message : 'Unknown error'}`
+          );
+        }
+
+        console.log('[Dashboard] Both legs created successfully. Persisting synthetic trade...');
+        const syntheticTradeId = createSyntheticTrade(pairDisplay, direction, volume);
+        console.log(`[Dashboard] Created synthetic trade: ${syntheticTradeId}`);
+
+        addLegToSyntheticTrade(
+          syntheticTradeId,
+          leg1Pair,
+          leg1Data.id,
+          legVolumes.leg1Direction,
+          legVolumes.leg1Volume,
+          leg1Symbol
+        );
+
+        addLegToSyntheticTrade(
+          syntheticTradeId,
+          leg2Pair,
+          leg2Data.id,
+          legVolumes.leg2Direction,
+          legVolumes.leg2Volume,
+          leg2Symbol
+        );
+
+        return leg1Data;
+      } else {
+        console.log(`[Dashboard] Regular trade pair: ${symbol}`);
+        const payload = { 
+          symbol, 
+          direction, 
+          volume,
+          metadata: {
+            days: h.duration,
+            margin: h.margin || 500,
+            paymentToken: paymentToken || 'DEV_MODE',
+            deviation: 5,
+            comment: 'Hedgi test trade'
+          }
+        };
+
+        console.log('[Dashboard] sending payload:', payload);
+        const res = await fetch(fullUrl, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Failed to create trade');
+        }
+        return res.json() as Promise<Trade>;
       }
-      return res.json() as Promise<Trade>;
     },
     onSuccess(data) {
       queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
@@ -807,6 +939,142 @@ export default function Dashboard() {
     }
   };
 
+  const closeSyntheticTrade = async (syntheticTradeId: string) => {
+    const syntheticTrade = syntheticTrades.find(t => t.syntheticTradeId === syntheticTradeId);
+    if (!syntheticTrade) return;
+
+    console.log('[Dashboard] Closing synthetic trade:', syntheticTradeId);
+
+    const closeResults: Array<{ legId: number; symbol: string; success: boolean; error?: string }> = [];
+
+    for (const leg of syntheticTrade.legs) {
+      try {
+        await closeFlaskTrade(leg.tradeId, leg.tradeId);
+        closeResults.push({ legId: leg.tradeId, symbol: leg.symbol, success: true });
+      } catch (error) {
+        console.error(`[Dashboard] Failed to close leg ${leg.tradeId}:`, error);
+        closeResults.push({
+          legId: leg.tradeId,
+          symbol: leg.symbol,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    const allSuccess = closeResults.every(r => r.success);
+    const partialSuccess = closeResults.some(r => r.success) && !allSuccess;
+    const allFailed = closeResults.every(r => !r.success);
+
+    if (allSuccess) {
+      removeSyntheticTrade(syntheticTradeId);
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+      
+      toast({
+        title: "Synthetic Trade Closed",
+        description: `Synthetic trade ${syntheticTrade.syntheticPair} closed successfully.`,
+      });
+    } else if (partialSuccess) {
+      updateSyntheticTradeStatus(syntheticTradeId, 'partial');
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+      
+      const failedLegs = closeResults.filter(r => !r.success);
+      const successLegs = closeResults.filter(r => r.success);
+      
+      toast({
+        variant: "destructive",
+        title: "Partial Close",
+        description: `Closed ${successLegs.length} of ${closeResults.length} legs. Failed to close: ${failedLegs.map(l => l.symbol).join(', ')}. Please close manually.`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Close Failed",
+        description: `Failed to close any legs of synthetic trade ${syntheticTrade.syntheticPair}. Please try again or close manually.`,
+      });
+    }
+  };
+
+  const SyntheticTradeItem = ({ syntheticTrade }: { syntheticTrade: any }) => {
+    const leg1Trade = activeTrades.find(t => t.id === syntheticTrade.legs[0]?.tradeId);
+    const leg2Trade = activeTrades.find(t => t.id === syntheticTrade.legs[1]?.tradeId);
+
+    const isPartial = syntheticTrade.status === 'partial';
+    const hasLeg1 = !!leg1Trade;
+    const hasLeg2 = !!leg2Trade;
+
+    if (!hasLeg1 && !hasLeg2) {
+      return null;
+    }
+
+    const volume = syntheticTrade.volume * 100000;
+    const baseCurrency = syntheticTrade.syntheticPair.split('/')[1];
+    
+    return (
+      <div className={`p-4 border rounded flex justify-between items-center ${
+        isPartial ? 'bg-amber-50/50 border-amber-300' : 'bg-purple-50/50 border-purple-200'
+      }`}>
+        <div className="flex-1">
+          <p className="font-medium mb-2 flex items-center gap-2">
+            <Badge variant="outline" className={
+              isPartial 
+                ? 'bg-amber-100 text-amber-700 border-amber-300' 
+                : 'bg-purple-100 text-purple-700 border-purple-300'
+            }>
+              {isPartial ? 'PARTIAL' : 'SYNTHETIC'}
+            </Badge>
+            {t('Hedging')} {volume.toLocaleString('en-US')} ({syntheticTrade.syntheticPair})
+          </p>
+          
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Pair')}:</span>
+              <span className="font-medium">{syntheticTrade.syntheticPair}</span>
+            </div>
+            
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Legs')}:</span>
+              <span className="font-medium text-xs">
+                {hasLeg1 && syntheticTrade.legs[0]?.symbol}
+                {hasLeg1 && hasLeg2 && ' + '}
+                {hasLeg2 && syntheticTrade.legs[1]?.symbol}
+                {!hasLeg1 && <span className="text-red-600"> (Leg 1 closed)</span>}
+                {!hasLeg2 && <span className="text-red-600"> (Leg 2 closed)</span>}
+              </span>
+            </div>
+            
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Direction')}:</span>
+              <span className="font-medium">
+                {syntheticTrade.direction === 'buy' ? t('Buy') : t('Sell')}
+              </span>
+            </div>
+            
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t('Status')}:</span>
+              <span className={`font-medium ${isPartial ? 'text-amber-700' : ''}`}>
+                {syntheticTrade.status.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive/90"
+            onClick={() => closeSyntheticTrade(syntheticTrade.syntheticTradeId)}
+            title={isPartial ? 'Close remaining legs' : 'Close both legs'}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
       <Header username={user?.username} onLogout={handleLogout} />
@@ -920,7 +1188,17 @@ export default function Dashboard() {
               </div>
               <div className="p-6">
                 {(() => {
-                  if (activeTrades.length === 0) {
+                  const legTradeIds = new Set(
+                    syntheticTrades.flatMap(st => st.legs.map(leg => leg.tradeId))
+                  );
+
+                  const filteredActiveTrades = activeTrades.filter(
+                    trade => !legTradeIds.has(trade.id)
+                  );
+
+                  const openSyntheticTrades = syntheticTrades.filter(st => st.status === 'open');
+
+                  if (filteredActiveTrades.length === 0 && openSyntheticTrades.length === 0) {
                     return (
                       <div className="text-center py-12">
                         <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -934,7 +1212,14 @@ export default function Dashboard() {
 
                   return (
                     <div className="space-y-4">
-                      {activeTrades.map((trade) => {
+                      {openSyntheticTrades.map((syntheticTrade) => (
+                        <SyntheticTradeItem 
+                          key={syntheticTrade.syntheticTradeId}
+                          syntheticTrade={syntheticTrade}
+                        />
+                      ))}
+                      
+                      {filteredActiveTrades.map((trade) => {
                         return (
                           <TradeItem 
                             key={trade.id} 

@@ -63,14 +63,9 @@ export function CurrencySimulator({
       return date;
     }
   );
-  // Alpha launch: simplified to BRL->USD only
-  const [targetCurrency] = useState<SupportedCurrency>('USD');
-  const [baseCurrency] = useState<SupportedCurrency>('BRL');
+  const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
+  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
-
-  // Original multi-currency code (commented for alpha launch):
-  // const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
-  // const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [margin, setMargin] = useState<number | null>(null);
   const [marginInput, setMarginInput] = useState<string>('');
@@ -200,46 +195,7 @@ export function CurrencySimulator({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Alpha launch: BRL/USD currency selectors only */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Globe className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.targetCurrency')}
-              </label>
-              <Select
-                value={targetCurrency}
-                onValueChange={() => {}} // Disabled for alpha launch
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.baseCurrency')}
-              </label>
-              <Select
-                value={baseCurrency}
-                onValueChange={() => {}} // Disabled for alpha launch
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">BRL</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Original multi-currency selectors (commented for future expansion):
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Globe className="mr-2 h-4 w-4 text-primary" />
@@ -279,7 +235,6 @@ export function CurrencySimulator({
               </Select>
             </div>
           </div>
-          */}
 
           {/* Direction */}
           <div className="space-y-2">
