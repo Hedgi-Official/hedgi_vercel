@@ -113,11 +113,14 @@ export function CurrencySimulator({
 
     if (isSynthetic && leg1Rate && leg2Rate) {
       // For synthetic pairs, calculate combined rate and cost from both legs
-      // BRL/CNY = BRL/USD * USD/CNY
-      // For BRL/USD: ask=5.7, bid=5.6 means 1 USD = 5.7 BRL (ask) or 5.6 BRL (bid)
-      // For USD/CNY: ask=7.3, bid=7.2 means 1 CNY = 7.3 USD (ask) or 7.2 USD (bid)
-      // To get BRL/CNY: we need to divide BRL/USD by USD/CNY
-      // 1 CNY = (BRL/USD) / (USD/CNY) = 5.7 / 7.3 = 0.78 BRL (approximately)
+      // We're trading USDBRL and USDCNY to create synthetic BRL/CNY
+      // USDBRL: 1 USD = 5.3 BRL (bid=5.33, ask=5.34)
+      // USDCNY: 1 USD = 7.25 CNY (bid=7.24, ask=7.26)
+      // To get BRL/CNY (how many BRL per 1 CNY):
+      // If 1 USD = 5.3 BRL and 1 USD = 7.25 CNY
+      // Then 7.25 CNY = 5.3 BRL
+      // So 1 CNY = 5.3 / 7.25 = 0.73 BRL
+      // BRL/CNY = USDBRL / USDCNY
       
       const syntheticBid = leg1Rate.bid / leg2Rate.ask; // Use bid of leg1, ask of leg2 for worst case
       const syntheticAsk = leg1Rate.ask / leg2Rate.bid; // Use ask of leg1, bid of leg2 for worst case
