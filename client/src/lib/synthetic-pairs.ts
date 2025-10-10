@@ -48,7 +48,9 @@ export function formatPairForBackend(pair: string): string {
 }
 
 export function computeSyntheticPrice(leg1Price: number, leg2Price: number): number {
-  return leg1Price * leg2Price;
+  // For BRL/CNY: USDBRL / USDCNY gives BRL per CNY
+  // Example: 5.34 / 7.26 = 0.736 BRL per CNY
+  return leg1Price / leg2Price;
 }
 
 export function computeSyntheticPnL(leg1PnL: number, leg2PnL: number): number {
