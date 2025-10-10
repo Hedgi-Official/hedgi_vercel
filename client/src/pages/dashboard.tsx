@@ -1014,17 +1014,15 @@ export default function Dashboard() {
     
     return (
       <div className={`p-4 border rounded flex justify-between items-center ${
-        isPartial ? 'bg-amber-50/50 border-amber-300' : 'bg-purple-50/50 border-purple-200'
+        isPartial ? 'bg-amber-50/50 border-amber-300' : ''
       }`}>
         <div className="flex-1">
           <p className="font-medium mb-2 flex items-center gap-2">
-            <Badge variant="outline" className={
-              isPartial 
-                ? 'bg-amber-100 text-amber-700 border-amber-300' 
-                : 'bg-purple-100 text-purple-700 border-purple-300'
-            }>
-              {isPartial ? 'PARTIAL' : 'SYNTHETIC'}
-            </Badge>
+            {isPartial && (
+              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                PARTIAL
+              </Badge>
+            )}
             {t('Hedging')} {volume.toLocaleString('en-US')} ({syntheticTrade.syntheticPair})
           </p>
           
