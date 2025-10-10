@@ -1,10 +1,18 @@
 export interface SyntheticPairConfig {
   legs: [string, string];
   bridgeCurrency: string;
+  leg1Direction: 'buy' | 'sell'; // Direction for leg 1
+  leg2Direction: 'buy' | 'sell'; // Direction for leg 2
 }
 
 export const SYNTHETIC_PAIRS: Record<string, SyntheticPairConfig> = {
-  "BRL/CNY": { legs: ["USDBRL", "USDCNY"], bridgeCurrency: "USD" },
+  // BRL/CNY: Sell USDBRL (buy USD with BRL) + Buy USDCNY (buy CNY with USD) = Net long CNY vs BRL
+  "BRL/CNY": { 
+    legs: ["USDBRL", "USDCNY"], 
+    bridgeCurrency: "USD",
+    leg1Direction: 'sell', // Sell USDBRL to get USD
+    leg2Direction: 'buy'   // Buy USDCNY to get CNY
+  },
 };
 
 export interface SyntheticTradeLeg {
@@ -57,11 +65,13 @@ export function calculateLegVolumes(
     throw new Error(`Unknown synthetic pair: ${syntheticPair}`);
   }
 
+  // Use the predefined directions from config for synthetic pairs
+  // The 'direction' parameter is ignored for synthetic pairs as each leg has its own direction
   return {
     leg1Volume: totalVolume,
     leg2Volume: totalVolume,
-    leg1Direction: direction,
-    leg2Direction: direction,
+    leg1Direction: config.leg1Direction,
+    leg2Direction: config.leg2Direction,
   };
 }
 

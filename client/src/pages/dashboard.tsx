@@ -248,7 +248,7 @@ export default function Dashboard() {
 
         const leg1Payload = {
           symbol: leg1Symbol,
-          direction,
+          direction: legVolumes.leg1Direction, // Use direction from leg volumes
           volume: legVolumes.leg1Volume,
           metadata: {
             days: h.duration,
@@ -261,7 +261,7 @@ export default function Dashboard() {
 
         const leg2Payload = {
           symbol: leg2Symbol,
-          direction,
+          direction: legVolumes.leg2Direction, // Use direction from leg volumes
           volume: legVolumes.leg2Volume,
           metadata: {
             days: h.duration,
