@@ -64,8 +64,9 @@ export function CurrencySimulator({
       return date;
     }
   );
+  // Lock base currency to BRL, only allow USD or CNY as target
+  const baseCurrency = 'BRL' as const;
   const [targetCurrency, setTargetCurrency] = useState<SupportedCurrency>('USD');
-  const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('BRL');
   const [tradeDirection, setTradeDirection] = useState<'buy' | 'sell'>('buy');
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [margin, setMargin] = useState<number | null>(null);
@@ -255,45 +256,21 @@ export function CurrencySimulator({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Globe className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.targetCurrency')}
-              </label>
-              <Select
-                value={targetCurrency}
-                onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
-              >
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_CURRENCIES.map(c => (
-                    <SelectItem key={c} value={c} disabled={c === baseCurrency}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                {t('simulator.baseCurrency')}
-              </label>
-              <Select
-                value={baseCurrency}
-                onValueChange={v => setBaseCurrency(v as SupportedCurrency)}
-              >
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_CURRENCIES.map(c => (
-                    <SelectItem key={c} value={c} disabled={c === targetCurrency}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Globe className="mr-2 h-4 w-4 text-primary" />
+              {t('simulator.tradePair')}
+            </label>
+            <Select
+              value={targetCurrency}
+              onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
+            >
+              <SelectTrigger><SelectValue placeholder="Select pair" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">BRL/USD (Direct)</SelectItem>
+                <SelectItem value="CNY">BRL/CNY (Synthetic)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Direction */}
