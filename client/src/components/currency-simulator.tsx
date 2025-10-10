@@ -259,7 +259,7 @@ export function CurrencySimulator({
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <Globe className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.tradePair')}
+              Trade Pair
             </label>
             <Select
               value={targetCurrency}
