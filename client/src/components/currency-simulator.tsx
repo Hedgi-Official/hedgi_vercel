@@ -267,8 +267,8 @@ export function CurrencySimulator({
             >
               <SelectTrigger><SelectValue placeholder="Select pair" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="USD">BRL/USD (Direct)</SelectItem>
-                <SelectItem value="CNY">BRL/CNY (Synthetic)</SelectItem>
+                <SelectItem value="USD">BRL/USD</SelectItem>
+                <SelectItem value="CNY">BRL/CNY</SelectItem>
               </SelectContent>
             </Select>
           </div>
