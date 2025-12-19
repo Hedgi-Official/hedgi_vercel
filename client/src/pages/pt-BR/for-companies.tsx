@@ -466,7 +466,7 @@ export default function ForCompanies() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
-                  Toda transação cross-border é um potencial risco cambial.
+                  Toda transação cross-border apresenta um potencial risco cambial.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
                   Hedgi é a API de Hedge Cambial que se integra ao seu fluxo de pagamentos existente. Criada para equipes que querem incorporar proteção cambial aos seus produtos ou fazer hedge de sua exposição interna.
