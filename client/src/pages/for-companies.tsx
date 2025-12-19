@@ -38,165 +38,132 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  Marker,
+  Line
+} from "react-simple-maps";
 
-const WorldMapVisualization = () => (
-  <div className="relative w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden">
-    <svg viewBox="0 0 1000 500" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="mapBg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: "#0a1628", stopOpacity: 1 }} />
-          <stop offset="50%" style={{ stopColor: "#1a2744", stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: "#0a1628", stopOpacity: 1 }} />
-        </linearGradient>
-        <linearGradient id="landGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: "#2d4a3e", stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: "#3d5a4e", stopOpacity: 1 }} />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      
-      <rect width="100%" height="100%" fill="url(#mapBg)" />
-      
-      <g stroke="#1e3a5f" strokeWidth="0.3" opacity="0.4">
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-          <line key={`h${i}`} x1="0" y1={i * 50} x2="1000" y2={i * 50} />
+const WorldMapVisualization = () => {
+  const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+  
+  const currencyMarkers = [
+    { coordinates: [-74.006, 40.7128], currency: "$", color: "#22c55e", name: "USD" },
+    { coordinates: [8.6821, 50.1109], currency: "€", color: "#3b82f6", name: "EUR" },
+    { coordinates: [-0.1276, 51.5074], currency: "£", color: "#8b5cf6", name: "GBP" },
+    { coordinates: [139.6917, 35.6895], currency: "¥", color: "#ef4444", name: "JPY" },
+    { coordinates: [121.4737, 31.2304], currency: "¥", color: "#f97316", name: "CNY" },
+    { coordinates: [-46.6333, -23.5505], currency: "R$", color: "#f59e0b", name: "BRL" },
+    { coordinates: [3.3792, 6.5244], currency: "₦", color: "#06b6d4", name: "NGN" },
+    { coordinates: [72.8777, 19.076], currency: "₹", color: "#ec4899", name: "INR" },
+  ];
+
+  return (
+    <div className="relative w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2744 50%, #0a1628 100%)" }}>
+      <ComposableMap
+        projection="geoMercator"
+        projectionConfig={{
+          scale: 120,
+          center: [20, 20]
+        }}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <Geographies geography={geoUrl}>
+          {({ geographies }) =>
+            geographies.map((geo) => (
+              <Geography
+                key={geo.rsmKey}
+                geography={geo}
+                fill="#2d4a3e"
+                stroke="#4a7c59"
+                strokeWidth={0.5}
+                style={{
+                  default: { outline: "none" },
+                  hover: { fill: "#3d5a4e", outline: "none" },
+                  pressed: { outline: "none" }
+                }}
+              />
+            ))
+          }
+        </Geographies>
+        
+        {currencyMarkers.map((marker, idx) => (
+          <Marker key={marker.name} coordinates={marker.coordinates as [number, number]}>
+            <circle r={6} fill={marker.color} opacity={0.9}>
+              <animate attributeName="r" values="6;9;6" dur="2s" repeatCount="indefinite" begin={`${idx * 0.25}s`} />
+            </circle>
+            <text
+              textAnchor="middle"
+              y={-10}
+              style={{ fontFamily: "system-ui", fill: marker.color, fontSize: "11px", fontWeight: "bold" }}
+            >
+              {marker.currency}
+            </text>
+          </Marker>
         ))}
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((i) => (
-          <line key={`v${i}`} x1={i * 50} y1="0" x2={i * 50} y2="500" />
-        ))}
-      </g>
-      
-      <g fill="url(#landGradient)" stroke="#4a7c59" strokeWidth="0.5" opacity="0.9">
-        {/* North America */}
-        <path d="M50,45 L80,35 L120,30 L150,35 L180,25 L210,30 L240,35 L260,50 L250,65 L270,80 L280,100 L270,115 L285,130 L275,145 L260,155 L245,150 L230,160 L215,155 L195,165 L175,160 L155,170 L140,165 L125,175 L110,170 L95,180 L80,175 L70,160 L55,155 L45,140 L50,120 L40,100 L45,80 L55,65 Z" />
-        {/* Greenland */}
-        <path d="M290,25 L320,20 L350,25 L370,40 L365,60 L350,75 L325,80 L300,70 L285,50 L290,35 Z" />
-        {/* Central America & Caribbean */}
-        <path d="M140,190 L160,185 L175,195 L185,210 L180,225 L165,235 L150,230 L140,215 L145,200 Z" />
-        {/* South America */}
-        <path d="M170,250 L195,240 L220,245 L240,255 L255,275 L260,300 L255,330 L245,360 L225,390 L200,410 L175,415 L155,400 L145,370 L150,340 L145,310 L155,280 L165,260 Z" />
         
-        {/* Europe */}
-        <path d="M420,60 L450,50 L480,55 L510,50 L540,60 L560,75 L550,95 L570,110 L555,125 L535,130 L515,125 L495,135 L475,130 L455,140 L435,135 L420,125 L410,105 L420,85 Z" />
-        {/* UK & Ireland */}
-        <path d="M395,75 L410,70 L420,80 L415,95 L400,100 L390,90 Z" />
-        {/* Scandinavia */}
-        <path d="M470,30 L490,20 L510,25 L525,40 L520,60 L505,70 L485,65 L470,50 Z" />
-        
-        {/* Africa */}
-        <path d="M445,155 L480,150 L515,155 L545,170 L565,195 L575,230 L570,270 L555,310 L530,345 L495,370 L455,375 L420,360 L400,330 L395,290 L405,250 L420,210 L435,180 Z" />
-        
-        {/* Middle East */}
-        <path d="M560,135 L590,130 L620,140 L640,160 L635,185 L615,200 L585,195 L565,175 L555,155 Z" />
-        
-        {/* Russia/Northern Asia */}
-        <path d="M550,45 L600,35 L660,30 L720,35 L780,40 L840,35 L890,45 L920,60 L915,85 L895,100 L860,105 L820,100 L780,110 L740,105 L700,115 L660,110 L620,100 L580,95 L555,80 L545,60 Z" />
-        
-        {/* China/East Asia */}
-        <path d="M720,120 L770,115 L820,125 L860,140 L885,165 L880,195 L855,220 L815,235 L770,230 L730,215 L705,190 L700,160 L710,135 Z" />
-        {/* Japan */}
-        <path d="M895,140 L915,135 L930,150 L925,175 L905,190 L885,185 L880,165 L890,150 Z" />
-        {/* Korean Peninsula */}
-        <path d="M860,145 L875,140 L885,155 L880,175 L865,180 L855,165 Z" />
-        
-        {/* India */}
-        <path d="M660,175 L700,170 L730,190 L740,225 L725,265 L695,290 L660,285 L640,255 L645,220 L655,195 Z" />
-        {/* Southeast Asia */}
-        <path d="M755,245 L790,240 L820,255 L835,285 L825,315 L795,330 L760,320 L745,290 L750,265 Z" />
-        
-        {/* Indonesia */}
-        <path d="M780,340 L820,335 L860,345 L890,360 L880,380 L845,385 L805,375 L775,360 Z" />
-        
-        {/* Australia */}
-        <path d="M820,400 L870,390 L920,400 L960,420 L970,455 L950,485 L900,495 L850,485 L815,460 L810,430 Z" />
-        {/* New Zealand */}
-        <path d="M975,475 L990,470 L1000,485 L995,500 L980,500 L970,490 Z" />
-      </g>
-      
-      {/* Currency markers with glow */}
-      <g filter="url(#glow)">
-        {/* USD - New York */}
-        <circle cx="195" cy="130" r="8" fill="#22c55e" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" />
-        </circle>
-        <text x="195" y="118" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#22c55e">$</text>
-        
-        {/* EUR - Frankfurt */}
-        <circle cx="475" cy="95" r="8" fill="#3b82f6" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="0.5s" />
-        </circle>
-        <text x="475" y="83" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#3b82f6">€</text>
-        
-        {/* GBP - London */}
-        <circle cx="410" cy="85" r="8" fill="#8b5cf6" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="0.75s" />
-        </circle>
-        <text x="410" y="73" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#8b5cf6">£</text>
-        
-        {/* JPY - Tokyo */}
-        <circle cx="905" cy="165" r="8" fill="#ef4444" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="1s" />
-        </circle>
-        <text x="905" y="153" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#ef4444">¥</text>
-        
-        {/* CNY - Shanghai */}
-        <circle cx="830" cy="185" r="8" fill="#f97316" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="1.25s" />
-        </circle>
-        <text x="830" y="173" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#f97316">¥</text>
-        
-        {/* BRL - Sao Paulo */}
-        <circle cx="220" cy="355" r="8" fill="#f59e0b" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="1.5s" />
-        </circle>
-        <text x="220" y="343" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#f59e0b">R$</text>
-        
-        {/* NGN - Lagos */}
-        <circle cx="455" cy="255" r="8" fill="#06b6d4" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="1.75s" />
-        </circle>
-        <text x="455" y="243" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#06b6d4">₦</text>
-        
-        {/* INR - Mumbai */}
-        <circle cx="680" cy="230" r="8" fill="#ec4899" opacity="0.9">
-          <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" begin="2s" />
-        </circle>
-        <text x="680" y="218" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#ec4899">₹</text>
-      </g>
-      
-      {/* Connection lines */}
-      <g strokeWidth="1.5" fill="none" opacity="0.5">
-        <path d="M200,130 Q340,80 465,95" stroke="#22c55e">
-          <animate attributeName="stroke-dasharray" values="0,400;250,400" dur="3s" repeatCount="indefinite" />
-        </path>
-        <path d="M485,95 Q650,100 820,185" stroke="#3b82f6">
-          <animate attributeName="stroke-dasharray" values="0,400;300,400" dur="3.5s" repeatCount="indefinite" begin="0.5s" />
-        </path>
-        <path d="M415,85 Q450,90 465,95" stroke="#8b5cf6">
-          <animate attributeName="stroke-dasharray" values="0,100;50,100" dur="1.5s" repeatCount="indefinite" begin="0.75s" />
-        </path>
-        <path d="M840,185 Q870,175 895,165" stroke="#f97316">
-          <animate attributeName="stroke-dasharray" values="0,100;60,100" dur="2s" repeatCount="indefinite" begin="1s" />
-        </path>
-        <path d="M225,350 Q320,280 445,255" stroke="#f59e0b">
-          <animate attributeName="stroke-dasharray" values="0,300;200,300" dur="3s" repeatCount="indefinite" begin="1.25s" />
-        </path>
-        <path d="M465,255 Q550,240 670,230" stroke="#06b6d4">
-          <animate attributeName="stroke-dasharray" values="0,250;180,250" dur="2.5s" repeatCount="indefinite" begin="1.5s" />
-        </path>
-        <path d="M690,230 Q760,200 820,185" stroke="#ec4899">
-          <animate attributeName="stroke-dasharray" values="0,200;150,200" dur="2s" repeatCount="indefinite" begin="1.75s" />
-        </path>
-      </g>
-    </svg>
-  </div>
-);
+        <Line
+          from={[-74.006, 40.7128]}
+          to={[8.6821, 50.1109]}
+          stroke="#22c55e"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[8.6821, 50.1109]}
+          to={[121.4737, 31.2304]}
+          stroke="#3b82f6"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[-0.1276, 51.5074]}
+          to={[8.6821, 50.1109]}
+          stroke="#8b5cf6"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[121.4737, 31.2304]}
+          to={[139.6917, 35.6895]}
+          stroke="#f97316"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[-46.6333, -23.5505]}
+          to={[3.3792, 6.5244]}
+          stroke="#f59e0b"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[3.3792, 6.5244]}
+          to={[72.8777, 19.076]}
+          stroke="#06b6d4"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+        <Line
+          from={[72.8777, 19.076]}
+          to={[121.4737, 31.2304]}
+          stroke="#ec4899"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeOpacity={0.5}
+        />
+      </ComposableMap>
+    </div>
+  );
+};
 
 const CodeSnippet = () => (
   <div className="bg-zinc-900 rounded-lg p-4 md:p-6 text-sm font-mono overflow-x-auto">
