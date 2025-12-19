@@ -427,9 +427,9 @@ export default function ForCompanies() {
                     <span>Exposição</span>
                   </div>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Cotação</span>
+                  <span>Simular</span>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Trava</span>
+                  <span>Cotação</span>
                   <ArrowRight className="w-4 h-4" />
                   <span>Hedge</span>
                 </div>

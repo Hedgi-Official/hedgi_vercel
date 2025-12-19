@@ -427,9 +427,9 @@ export default function ForCompanies() {
                     <span>Exposure</span>
                   </div>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Quote</span>
+                  <span>Simulate</span>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Lock</span>
+                  <span>Quote</span>
                   <ArrowRight className="w-4 h-4" />
                   <span>Hedge</span>
                 </div>
