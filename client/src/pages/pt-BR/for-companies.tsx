@@ -65,27 +65,29 @@ const WorldMapVisualization = () => {
       <ComposableMap
         projection="geoMercator"
         projectionConfig={{
-          scale: 120,
-          center: [20, 20]
+          scale: 140,
+          center: [15, 25]
         }}
         style={{ width: "100%", height: "100%" }}
       >
         <Geographies geography={geoUrl}>
           {({ geographies }) =>
-            geographies.map((geo) => (
-              <Geography
-                key={geo.rsmKey}
-                geography={geo}
-                fill="#2d4a3e"
-                stroke="#4a7c59"
-                strokeWidth={0.5}
-                style={{
-                  default: { outline: "none" },
-                  hover: { fill: "#3d5a4e", outline: "none" },
-                  pressed: { outline: "none" }
-                }}
-              />
-            ))
+            geographies
+              .filter((geo) => geo.properties.name !== "Antarctica")
+              .map((geo) => (
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  fill="#2d4a3e"
+                  stroke="#4a7c59"
+                  strokeWidth={0.5}
+                  style={{
+                    default: { outline: "none" },
+                    hover: { fill: "#3d5a4e", outline: "none" },
+                    pressed: { outline: "none" }
+                  }}
+                />
+              ))
           }
         </Geographies>
         
@@ -104,62 +106,21 @@ const WorldMapVisualization = () => {
           </Marker>
         ))}
         
-        <Line
-          from={[-74.006, 40.7128]}
-          to={[8.6821, 50.1109]}
-          stroke="#22c55e"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
-        <Line
-          from={[8.6821, 50.1109]}
-          to={[121.4737, 31.2304]}
-          stroke="#3b82f6"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
-        <Line
-          from={[-0.1276, 51.5074]}
-          to={[8.6821, 50.1109]}
-          stroke="#8b5cf6"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
-        <Line
-          from={[121.4737, 31.2304]}
-          to={[139.6917, 35.6895]}
-          stroke="#f97316"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
+        {/* Connection line: Brazil (R$) to USA ($) */}
         <Line
           from={[-46.6333, -23.5505]}
-          to={[3.3792, 6.5244]}
-          stroke="#f59e0b"
-          strokeWidth={1.5}
+          to={[-74.006, 40.7128]}
+          stroke="url(#brlUsdGradient)"
+          strokeWidth={2}
           strokeLinecap="round"
-          strokeOpacity={0.5}
+          strokeOpacity={0.7}
         />
-        <Line
-          from={[3.3792, 6.5244]}
-          to={[72.8777, 19.076]}
-          stroke="#06b6d4"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
-        <Line
-          from={[72.8777, 19.076]}
-          to={[121.4737, 31.2304]}
-          stroke="#ec4899"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeOpacity={0.5}
-        />
+        <defs>
+          <linearGradient id="brlUsdGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
       </ComposableMap>
     </div>
   );
