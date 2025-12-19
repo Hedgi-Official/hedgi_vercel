@@ -12,7 +12,8 @@ import {
   Zap, 
   Shield, 
   BarChart3, 
-  Webhook, 
+  TrendingDown,
+  Server,
   FileText,
   ArrowRight,
   Building2,
@@ -721,12 +722,12 @@ export default function ForCompanies() {
               <Card className="hover:border-primary/40 transition-colors">
                 <CardHeader className="pb-2">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                    <Webhook className="w-5 h-5 text-primary" />
+                    <TrendingDown className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Webhooks</CardTitle>
+                  <CardTitle className="text-base">Otimização de Custos</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Receba eventos de ciclo de vida e atualizações de status diretamente no seu sistema.</p>
+                  <p className="text-xs text-muted-foreground">Hedgi seleciona automaticamente os melhores provedores de liquidez com base nos parâmetros do seu hedge.</p>
                 </CardContent>
               </Card>
 
@@ -797,11 +798,11 @@ export default function ForCompanies() {
 
                 <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
                   <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Webhook className="w-4 h-4 text-primary" />
+                    <Server className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">Webhooks Assinados</h3>
-                    <p className="text-xs text-muted-foreground">Payloads de webhook assinados criptograficamente</p>
+                    <h3 className="font-semibold text-sm mb-0.5">Tráfego VPS Criptografado</h3>
+                    <p className="text-xs text-muted-foreground">Todos os dados criptografados via HTTPS com armazenamento seguro em banco de dados</p>
                   </div>
                 </div>
 

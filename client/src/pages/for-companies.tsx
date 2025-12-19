@@ -12,7 +12,8 @@ import {
   Zap, 
   Shield, 
   BarChart3, 
-  Webhook, 
+  TrendingDown,
+  Server,
   FileText,
   ArrowRight,
   Building2,
@@ -721,12 +722,12 @@ export default function ForCompanies() {
               <Card className="hover:border-primary/40 transition-colors">
                 <CardHeader className="pb-2">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                    <Webhook className="w-5 h-5 text-primary" />
+                    <TrendingDown className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Webhooks</CardTitle>
+                  <CardTitle className="text-base">Cost Optimization</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Receive lifecycle events and status updates directly into your system.</p>
+                  <p className="text-xs text-muted-foreground">Hedgi automatically selects the best liquidity providers based on your hedge parameters.</p>
                 </CardContent>
               </Card>
 
@@ -797,11 +798,11 @@ export default function ForCompanies() {
 
                 <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
                   <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Webhook className="w-4 h-4 text-primary" />
+                    <Server className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">Signed Webhooks</h3>
-                    <p className="text-xs text-muted-foreground">Cryptographically signed webhook payloads</p>
+                    <h3 className="font-semibold text-sm mb-0.5">VPS Encrypted Traffic</h3>
+                    <p className="text-xs text-muted-foreground">All data encrypted via HTTPS with secure database storage</p>
                   </div>
                 </div>
 
