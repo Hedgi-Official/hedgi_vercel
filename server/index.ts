@@ -82,35 +82,10 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Bind server to port with better error handling and logging
-  const PORT = parseInt(process.env.PORT || '5000', 10);
-  let serverStarted = false;
-
-  const startServer = (port: number) => {
-    if (serverStarted) return;
-    
-    log(`Attempting to start server on port ${port}...`);
-    const serverInstance = server.listen(port, "0.0.0.0", () => {
-      serverStarted = true;
-      log(`Server successfully bound and listening on port ${port}`);
-      log(`Test endpoint available at http://0.0.0.0:${port}/ping`);
-    });
-    
-    serverInstance.on('error', (e: any) => {
-      if (e.code === 'EADDRINUSE' && !serverStarted) {
-        log(`Port ${port} is busy, trying ${port + 1}...`);
-        startServer(port + 1);
-      } else if (!serverStarted) {
-        log(`Server error: ${e.message}`);
-        throw e;  // Rethrow non-port-related errors
-      }
-    });
-  };
-
-  try {
-    startServer(PORT);
-  } catch (error) {
-    log(`Failed to start server: ${error}`);
-    process.exit(1);
-  }
+  // Bind server to port 5000
+  const PORT = 5000;
+  
+  server.listen(PORT, "0.0.0.0", () => {
+    log(`Server successfully started on port ${PORT}`);
+  });
 })();
