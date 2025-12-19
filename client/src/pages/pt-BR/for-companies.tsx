@@ -58,6 +58,8 @@ const WorldMapVisualization = () => {
     { coordinates: [72.8777, 19.076], currency: "₹", color: "#ec4899", name: "INR" },
     { coordinates: [116.4074, 39.9042], currency: "¥", color: "#f97316", name: "CNY" },
     { coordinates: [151.2093, -33.8688], currency: "A$", color: "#06b6d4", name: "AUD" },
+    { coordinates: [139.6917, 35.6895], currency: "¥", color: "#a855f7", name: "JPY" },
+    { coordinates: [28.0473, -26.2041], currency: "R", color: "#14b8a6", name: "ZAR" },
   ];
 
   return (
@@ -70,6 +72,25 @@ const WorldMapVisualization = () => {
         }}
         style={{ width: "100%", height: "100%" }}
       >
+        <defs>
+          <linearGradient id="usdBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+          <linearGradient id="eurUsdGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+          <linearGradient id="cnyBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+          <linearGradient id="eurBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#f59e0b" />
+          </linearGradient>
+        </defs>
+        
         <Geographies geography={geoUrl}>
           {({ geographies }) =>
             geographies
@@ -91,6 +112,46 @@ const WorldMapVisualization = () => {
           }
         </Geographies>
         
+        {/* Connection line: USA ($) to Brazil (R$) - USDBRL */}
+        <Line
+          from={[-74.006, 40.7128]}
+          to={[-46.6333, -23.5505]}
+          stroke="url(#usdBrlGradient)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeOpacity={0.7}
+        />
+        
+        {/* Connection line: Europe (€) to USA ($) - EURUSD */}
+        <Line
+          from={[8.6821, 50.1109]}
+          to={[-74.006, 40.7128]}
+          stroke="url(#eurUsdGradient)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeOpacity={0.7}
+        />
+        
+        {/* Connection line: China (¥) to Brazil (R$) - CNYBRL */}
+        <Line
+          from={[116.4074, 39.9042]}
+          to={[-46.6333, -23.5505]}
+          stroke="url(#cnyBrlGradient)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeOpacity={0.7}
+        />
+        
+        {/* Connection line: Europe (€) to Brazil (R$) - EURBRL */}
+        <Line
+          from={[8.6821, 50.1109]}
+          to={[-46.6333, -23.5505]}
+          stroke="url(#eurBrlGradient)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeOpacity={0.7}
+        />
+        
         {currencyMarkers.map((marker, idx) => (
           <Marker key={marker.name} coordinates={marker.coordinates as [number, number]}>
             <circle r={6} fill={marker.color} opacity={0.9}>
@@ -105,22 +166,6 @@ const WorldMapVisualization = () => {
             </text>
           </Marker>
         ))}
-        
-        {/* Connection line: USA ($) to Brazil (R$) */}
-        <Line
-          from={[-74.006, 40.7128]}
-          to={[-46.6333, -23.5505]}
-          stroke="url(#usdBrlGradient)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeOpacity={0.7}
-        />
-        <defs>
-          <linearGradient id="usdBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="100%" stopColor="#f59e0b" />
-          </linearGradient>
-        </defs>
       </ComposableMap>
     </div>
   );
@@ -484,11 +529,6 @@ export default function ForCompanies() {
 
         <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                Rede Global de Fluxo de Moedas
-              </h2>
-            </div>
             <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
               <WorldMapVisualization />
             </div>
