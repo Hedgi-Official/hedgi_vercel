@@ -132,22 +132,32 @@ const CodeSnippet = () => (
       <div className="w-3 h-3 rounded-full bg-red-500" />
       <div className="w-3 h-3 rounded-full bg-yellow-500" />
       <div className="w-3 h-3 rounded-full bg-green-500" />
-      <span className="text-zinc-500 ml-2 text-xs">hedge-request.ts</span>
+      <span className="text-zinc-500 ml-2 text-xs">hedge-order.ts</span>
     </div>
-    <pre className="text-zinc-300 whitespace-pre-wrap md:whitespace-pre">
-<span className="text-purple-400">const</span> <span className="text-blue-400">response</span> = <span className="text-purple-400">await</span> fetch(<span className="text-green-400">'/api/v1/quotes'</span>, {"{"}
-  method: <span className="text-green-400">'POST'</span>,
-  headers: {"{"} <span className="text-green-400">'Authorization'</span>: <span className="text-green-400">`Bearer ${"{"}apiKey{"}"}`</span> {"}"},
+    <pre className="text-zinc-300 whitespace-pre-wrap">
+<span className="text-purple-400">const</span> <span className="text-blue-400">apiKey</span> = process.env.<span className="text-yellow-400">HEDGI_API_KEY</span>;
+
+<span className="text-purple-400">const</span> <span className="text-blue-400">res</span> = <span className="text-purple-400">await</span> fetch(<span className="text-green-400">"https://api.hedgi.ai/api/orders"</span>, {"{"}
+  method: <span className="text-green-400">"POST"</span>,
+  headers: {"{"}
+    <span className="text-green-400">Authorization</span>: <span className="text-green-400">`Bearer ${"{"}apiKey{"}"}`</span>,
+    <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>
+  {"}"},
   body: JSON.stringify({"{"}
-    exposure_currency: <span className="text-green-400">'EUR'</span>,
-    settlement_currency: <span className="text-green-400">'USD'</span>,
-    amount: <span className="text-yellow-400">50000</span>,
-    maturity_date: <span className="text-green-400">'2025-03-15'</span>
+    symbol: <span className="text-green-400">"EURUSD"</span>,
+    direction: <span className="text-green-400">"buy"</span>,
+    volume: <span className="text-yellow-400">0.1</span>,
+    duration_days: <span className="text-yellow-400">7</span>
   {"}"})
 {"}"});
 
-<span className="text-purple-400">const</span> {"{"} quote_id, rate, expires_at {"}"} = <span className="text-purple-400">await</span> response.json();
-<span className="text-zinc-500">// Lock this rate by executing the hedge</span>
+<span className="text-purple-400">if</span> (!res.ok) {"{"}
+  <span className="text-purple-400">throw new</span> <span className="text-red-400">Error</span>(
+    <span className="text-green-400">`Hedgi order failed: ${"{"}res.status{"}"} ${"{"}<span className="text-purple-400">await</span> res.text(){"}"}`</span>
+  );
+{"}"}
+
+<span className="text-purple-400">const</span> {"{"} order_id, broker, entry_price, status {"}"} = <span className="text-purple-400">await</span> res.json();
     </pre>
   </div>
 );
