@@ -466,10 +466,10 @@ export default function ForCompanies() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
-                  Toda transação cross-border é um potencial passivo cambial.
+                  Toda transação cross-border é um potencial risco cambial.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                  Hedgi é a API de Hedge Cambial que funciona com seu fluxo de pagamento/liquidação existente. Criada para equipes que querem incorporar proteção cambial em seus produtos ou fazer hedge de exposição interna.
+                  Hedgi é a API de Hedge Cambial que se integra ao seu fluxo de pagamentos existente. Criada para equipes que querem incorporar proteção cambial aos seus produtos ou fazer hedge de sua exposição interna.
                 </p>
                 <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap mb-6">
                   <div className="flex items-center gap-2">
@@ -674,7 +674,7 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                Infraestrutura de hedge que você pode chamar.
+                Infraestrutura de hedge dinâmica.
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Tudo que você precisa para integrar hedge cambial ao seu produto, acessível via API REST.
@@ -823,7 +823,7 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                Torne-se um parceiro de design de lançamento
+                Torne-se nosso launch design partner
               </h2>
               <p className="text-muted-foreground mb-6">
                 Junte-se ao nosso programa de acesso antecipado e ajude a moldar o futuro do hedge FX programático.
