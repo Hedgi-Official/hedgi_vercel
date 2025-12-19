@@ -78,16 +78,16 @@ const WorldMapVisualization = () => {
             <stop offset="100%" stopColor="#f59e0b" />
           </linearGradient>
           <linearGradient id="eurUsdGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#22c55e" />
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#3b82f6" />
           </linearGradient>
           <linearGradient id="cnyBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#f59e0b" />
+            <stop offset="0%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#f97316" />
           </linearGradient>
           <linearGradient id="eurBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#f59e0b" />
+            <stop offset="0%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#3b82f6" />
           </linearGradient>
         </defs>
         
