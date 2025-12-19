@@ -469,98 +469,6 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-                Infraestrutura de hedge que você pode chamar.
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Tudo que você precisa para integrar hedge cambial ao seu produto, acessível via API REST.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Zap className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Obter Cotações de Hedge</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Precifique uma exposição programaticamente com taxas de mercado em tempo real.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Lock className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Travar Taxas e Executar</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Converta cotações em hedges e trave suas taxas instantaneamente.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <BarChart3 className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Rastrear Posições</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Monitore o que está aberto vs protegido com visibilidade completa da exposição.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Webhook className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Webhooks</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Receba eventos de ciclo de vida e atualizações de status diretamente no seu sistema.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Relatórios e Exportações</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Gere resumos prontos para finanças e relatórios compatíveis com auditoria.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
-                    <Code className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Documentação Interativa</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Teste endpoints ao vivo na nossa documentação estilo Swagger.</p>
-                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-primary hover:text-primary/80" asChild>
-                    <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                      Explorar docs <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
         <section className="py-16 md:py-24 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -667,7 +575,99 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-20 bg-muted/30">
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                Infraestrutura de hedge que você pode chamar.
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Tudo que você precisa para integrar hedge cambial ao seu produto, acessível via API REST.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Obter Cotações de Hedge</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Precifique uma exposição programaticamente com taxas de mercado em tempo real.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Lock className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Travar Taxas e Executar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Converta cotações em hedges e trave suas taxas instantaneamente.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <BarChart3 className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Rastrear Posições</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Monitore o que está aberto vs protegido com visibilidade completa da exposição.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Webhook className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Webhooks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Receba eventos de ciclo de vida e atualizações de status diretamente no seu sistema.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Relatórios e Exportações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Gere resumos prontos para finanças e relatórios compatíveis com auditoria.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                    <Code className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Documentação Interativa</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Teste endpoints ao vivo na nossa documentação estilo Swagger.</p>
+                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-primary hover:text-primary/80" asChild>
+                    <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                      Explorar docs <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">

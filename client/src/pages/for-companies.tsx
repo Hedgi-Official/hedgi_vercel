@@ -469,98 +469,6 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-                Hedging infrastructure you can call.
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Everything you need to integrate currency hedging into your product, accessible via REST API.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Zap className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Get Hedge Quotes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Price an exposure programmatically with real-time market rates.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Lock className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Lock Rates & Execute</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Convert quotes to hedges and lock in your rates instantly.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <BarChart3 className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Track Positions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Monitor what's open vs hedged with complete exposure visibility.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Webhook className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Webhooks</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Receive lifecycle events and status updates directly into your system.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Reporting & Exports</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Generate finance-ready summaries and audit-compliant reports.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
-                    <Code className="w-6 h-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-lg">Interactive Docs</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Try endpoints live in our Swagger-style documentation.</p>
-                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-primary hover:text-primary/80" asChild>
-                    <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                      Explore docs <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
         <section className="py-16 md:py-24 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -667,7 +575,99 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-20 bg-muted/30">
+        <section className="py-16 md:py-24 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                Hedging infrastructure you can call.
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Everything you need to integrate currency hedging into your product, accessible via REST API.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Get Hedge Quotes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Price an exposure programmatically with real-time market rates.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Lock className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Lock Rates & Execute</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Convert quotes to hedges and lock in your rates instantly.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <BarChart3 className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Track Positions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Monitor what's open vs hedged with complete exposure visibility.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Webhook className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Webhooks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Receive lifecycle events and status updates directly into your system.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Reporting & Exports</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Generate finance-ready summaries and audit-compliant reports.</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
+                    <Code className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Interactive Docs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Try endpoints live in our Swagger-style documentation.</p>
+                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-primary hover:text-primary/80" asChild>
+                    <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                      Explore docs <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
