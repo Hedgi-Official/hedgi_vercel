@@ -446,13 +446,10 @@ export default function ForCompanies() {
                     </a>
                   </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-6">
                   Funciona com seus fluxos de pagamento/liquidação existentes
                 </p>
-              </div>
-              <div className="space-y-6">
-                <CodeSnippet />
-                <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-primary" />
                     <span>Exposição</span>
@@ -464,6 +461,9 @@ export default function ForCompanies() {
                   <ArrowRight className="w-4 h-4" />
                   <span>Hedge</span>
                 </div>
+              </div>
+              <div>
+                <CodeSnippet />
               </div>
             </div>
           </div>
