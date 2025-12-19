@@ -870,7 +870,8 @@ export default function ForCompanies() {
   return (
     <>
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
-      {isAuthenticated ? renderMainPage() : renderUnderConstruction()}
+      {/* Password protection temporarily disabled - change to: isAuthenticated ? renderMainPage() : renderUnderConstruction() */}
+      {renderMainPage()}
     </>
   );
 }
