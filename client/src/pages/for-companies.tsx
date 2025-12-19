@@ -126,36 +126,112 @@ const WorldMapVisualization = () => {
   );
 };
 
-const CodeSnippet = () => (
-  <div className="bg-zinc-900 rounded-lg p-4 md:p-6 text-sm font-mono overflow-x-auto">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-3 h-3 rounded-full bg-red-500" />
-      <div className="w-3 h-3 rounded-full bg-yellow-500" />
-      <div className="w-3 h-3 rounded-full bg-green-500" />
-      <span className="text-zinc-500 ml-2 text-xs">hedge-order.ts</span>
+const CodeSnippet = () => {
+  const codeLines = [
+    { text: 'const ', type: 'keyword' },
+    { text: 'apiKey', type: 'variable' },
+    { text: ' = process.env.', type: 'plain' },
+    { text: 'HEDGI_API_KEY', type: 'constant' },
+    { text: ';', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: 'const ', type: 'keyword' },
+    { text: 'baseUrl', type: 'variable' },
+    { text: ' = ', type: 'plain' },
+    { text: '"https://api.hedgi.ai"', type: 'string' },
+    { text: ';', type: 'plain' },
+    { text: '\n\n', type: 'break' },
+    { text: 'const ', type: 'keyword' },
+    { text: 'res', type: 'variable' },
+    { text: ' = ', type: 'plain' },
+    { text: 'await ', type: 'keyword' },
+    { text: 'fetch(', type: 'plain' },
+    { text: '`${baseUrl}/api/orders`', type: 'string' },
+    { text: ', {', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '  method: ', type: 'plain' },
+    { text: '"POST"', type: 'string' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '  headers: {', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    ', type: 'plain' },
+    { text: 'Authorization', type: 'string' },
+    { text: ': ', type: 'plain' },
+    { text: '`Bearer ${apiKey}`', type: 'string' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    ', type: 'plain' },
+    { text: '"Content-Type"', type: 'string' },
+    { text: ': ', type: 'plain' },
+    { text: '"application/json"', type: 'string' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '  },', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '  body: JSON.stringify({', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    symbol: ', type: 'plain' },
+    { text: '"USDBRL"', type: 'string' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    direction: ', type: 'plain' },
+    { text: '"buy"', type: 'string' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    volume: ', type: 'plain' },
+    { text: '0.1', type: 'constant' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '    duration_days: ', type: 'plain' },
+    { text: '7', type: 'constant' },
+    { text: ',', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '  }),', type: 'plain' },
+    { text: '\n', type: 'break' },
+    { text: '});', type: 'plain' },
+    { text: '\n\n', type: 'break' },
+    { text: 'const ', type: 'keyword' },
+    { text: '{ ', type: 'plain' },
+    { text: 'order_id', type: 'variable' },
+    { text: ', ', type: 'plain' },
+    { text: 'broker', type: 'variable' },
+    { text: ', ', type: 'plain' },
+    { text: 'entry_price', type: 'variable' },
+    { text: ', ', type: 'plain' },
+    { text: 'status', type: 'variable' },
+    { text: ' } = ', type: 'plain' },
+    { text: 'await ', type: 'keyword' },
+    { text: 'res.json();', type: 'plain' },
+  ];
+
+  const getColor = (type: string) => {
+    switch (type) {
+      case 'keyword': return 'text-purple-400';
+      case 'variable': return 'text-blue-400';
+      case 'string': return 'text-green-400';
+      case 'constant': return 'text-yellow-400';
+      default: return 'text-zinc-300';
+    }
+  };
+
+  return (
+    <div className="bg-zinc-900 rounded-lg p-4 md:p-6 text-sm font-mono overflow-x-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-3 h-3 rounded-full bg-red-500" />
+        <div className="w-3 h-3 rounded-full bg-yellow-500" />
+        <div className="w-3 h-3 rounded-full bg-green-500" />
+        <span className="text-zinc-500 ml-2 text-xs">hedge-order.ts</span>
+      </div>
+      <pre className="text-zinc-300 whitespace-pre">
+        {codeLines.map((segment, i) => 
+          segment.type === 'break' ? segment.text : (
+            <span key={i} className={getColor(segment.type)}>{segment.text}</span>
+          )
+        )}
+      </pre>
     </div>
-    <pre className="text-zinc-300 whitespace-pre-wrap">
-<span className="text-purple-400">const</span> <span className="text-blue-400">apiKey</span> = process.env.<span className="text-yellow-400">HEDGI_API_KEY</span>;
-<span className="text-purple-400">const</span> <span className="text-blue-400">baseUrl</span> = <span className="text-green-400">"https://api.hedgi.ai"</span>;
-
-<span className="text-purple-400">const</span> <span className="text-blue-400">res</span> = <span className="text-purple-400">await</span> fetch(<span className="text-green-400">{"`${baseUrl}/api/orders`"}</span>, {"{"}
-  method: <span className="text-green-400">"POST"</span>,
-  headers: {"{"}
-    <span className="text-green-400">Authorization</span>: <span className="text-green-400">{"`Bearer ${apiKey}`"}</span>,
-    <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>,
-  {"}"},
-  body: JSON.stringify({"{"}
-    symbol: <span className="text-green-400">"USDBRL"</span>,
-    direction: <span className="text-green-400">"buy"</span>,
-    volume: <span className="text-yellow-400">0.1</span>,
-    duration_days: <span className="text-yellow-400">7</span>,
-  {"}"}),
-{"}"}); 
-
-<span className="text-purple-400">const</span> {"{"} <span className="text-blue-400">order_id</span>, <span className="text-blue-400">broker</span>, <span className="text-blue-400">entry_price</span>, <span className="text-blue-400">status</span> {"}"} = <span className="text-purple-400">await</span> res.json();
-    </pre>
-  </div>
-);
+  );
+};
 
 const SandboxRequestForm = () => {
   const [formData, setFormData] = useState({
