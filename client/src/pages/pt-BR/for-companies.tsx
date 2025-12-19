@@ -424,9 +424,21 @@ export default function ForCompanies() {
                   Toda transação cross-border é um potencial passivo cambial.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                  Hedgi é uma API de Hedge Cambial para equipes que querem incorporar proteção cambial em seus produtos ou fazer hedge de exposição interna — com endpoints REST focados em desenvolvedores e documentação interativa.
+                  Hedgi é a API de Hedge Cambial que funciona com seu fluxo de pagamento/liquidação existente. Criada para equipes que querem incorporar proteção cambial em seus produtos ou fazer hedge de exposição interna.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span>Exposição</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Simular</span>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Cotação</span>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Hedge</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
                     <DialogTrigger asChild>
                       <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -445,21 +457,6 @@ export default function ForCompanies() {
                       Ver Documentação <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Funciona com seus fluxos de pagamento/liquidação existentes
-                </p>
-                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span>Exposição</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Simular</span>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Cotação</span>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Hedge</span>
                 </div>
               </div>
               <div>

@@ -424,9 +424,21 @@ export default function ForCompanies() {
                   Every cross-border transaction is a potential FX liability.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                  Hedgi is a Currency Hedging API for teams that want to embed hedging in their product or hedge internal FX exposure — with developer-first REST endpoints and interactive docs.
+                  Hedgi is the Currency Hedging API that works with your existing payout/settlement flow. Built for teams that want to embed hedging in their product or hedge internal FX exposure.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <span>Exposure</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Simulate</span>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Quote</span>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Hedge</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
                     <DialogTrigger asChild>
                       <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -445,21 +457,6 @@ export default function ForCompanies() {
                       View Docs <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Works with your existing payout/settlement flows
-                </p>
-                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span>Exposure</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Simulate</span>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Quote</span>
-                  <ArrowRight className="w-4 h-4" />
-                  <span>Hedge</span>
                 </div>
               </div>
               <div>
