@@ -390,7 +390,7 @@ export default function ForCompanies() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground leading-tight">
-                  Every cross-border transaction is an FX position.
+                  Every international payment and cross-border transaction is a FX position.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
                   Hedgi is a Currency Hedging API for teams that want to embed hedging in their product or hedge internal FX exposure — with developer-first REST endpoints and interactive docs.

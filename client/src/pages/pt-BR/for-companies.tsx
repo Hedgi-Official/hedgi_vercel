@@ -390,7 +390,7 @@ export default function ForCompanies() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground leading-tight">
-                  Toda transação internacional é uma posição em FX.
+                  Todo pagamento internacional e transação cross-border é uma posição em FX.
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
                   Hedgi é uma API de Hedge Cambial para equipes que querem incorporar proteção cambial em seus produtos ou fazer hedge de exposição interna — com endpoints REST focados em desenvolvedores e documentação interativa.
