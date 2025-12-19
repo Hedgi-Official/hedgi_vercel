@@ -40,88 +40,121 @@ import {
 import { Label } from "@/components/ui/label";
 
 const WorldMapVisualization = () => (
-  <div className="relative w-full h-[300px] md:h-[400px]">
-    <svg viewBox="0 0 800 400" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+  <div className="relative w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden">
+    <svg viewBox="0 0 1000 500" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.1 }} />
-          <stop offset="100%" style={{ stopColor: "hsl(var(--primary))", stopOpacity: 0.05 }} />
+        <linearGradient id="mapBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style={{ stopColor: "#0f172a", stopOpacity: 1 }} />
+          <stop offset="50%" style={{ stopColor: "#1e293b", stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: "#0f172a", stopOpacity: 1 }} />
+        </linearGradient>
+        <linearGradient id="landGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style={{ stopColor: "#334155", stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: "#475569", stopOpacity: 1 }} />
         </linearGradient>
         <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
+        <filter id="landShadow">
+          <feDropShadow dx="2" dy="2" stdDeviation="3" floodOpacity="0.3"/>
+        </filter>
       </defs>
       
-      <ellipse cx="400" cy="200" rx="350" ry="150" fill="url(#mapGradient)" stroke="hsl(var(--primary))" strokeWidth="1" opacity="0.3" />
+      <rect width="100%" height="100%" fill="url(#mapBg)" />
       
-      <g stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" opacity="0.3">
-        <path d="M150,100 Q200,80 250,110 L280,130 Q300,150 280,180 L250,200 Q200,220 150,200 L120,170 Q100,140 120,110 Z" fill="hsl(var(--muted))" opacity="0.4" />
-        <path d="M300,80 Q380,60 450,90 L480,110 Q520,140 500,180 L450,210 Q380,230 320,200 L290,160 Q270,120 290,90 Z" fill="hsl(var(--muted))" opacity="0.4" />
-        <path d="M520,100 Q600,80 680,120 L700,160 Q710,200 680,240 L620,260 Q560,270 520,240 L500,200 Q490,150 510,110 Z" fill="hsl(var(--muted))" opacity="0.4" />
-        <path d="M200,220 Q280,210 350,240 L380,280 Q390,320 350,340 L280,350 Q220,350 180,320 L160,280 Q150,240 180,220 Z" fill="hsl(var(--muted))" opacity="0.4" />
-        <path d="M450,250 Q520,240 580,270 L600,300 Q610,330 580,350 L520,360 Q470,360 440,330 L420,290 Q420,260 440,250 Z" fill="hsl(var(--muted))" opacity="0.4" />
+      <g stroke="#475569" strokeWidth="0.5" opacity="0.3">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <line key={`h${i}`} x1="0" y1={i * 62.5} x2="1000" y2={i * 62.5} />
+        ))}
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+          <line key={`v${i}`} x1={i * 83.3} y1="0" x2={i * 83.3} y2="500" />
+        ))}
+      </g>
+      
+      <g fill="url(#landGradient)" stroke="#64748b" strokeWidth="1" filter="url(#landShadow)">
+        <path d="M120,80 L180,60 L220,70 L260,55 L300,65 L280,90 L300,110 L280,140 L240,160 L200,150 L160,170 L120,150 L100,120 L110,95 Z" />
+        <path d="M130,180 L150,175 L170,190 L180,220 L160,280 L130,320 L100,300 L90,250 L100,200 Z" />
+        
+        <path d="M380,50 L420,40 L480,45 L520,55 L560,50 L600,60 L580,90 L620,100 L640,80 L680,90 L660,120 L700,130 L680,160 L640,170 L600,160 L560,180 L520,170 L480,190 L440,180 L400,160 L360,140 L340,100 L360,70 Z" />
+        
+        <path d="M420,200 L460,190 L500,200 L540,195 L560,220 L540,260 L560,300 L540,340 L500,370 L460,380 L420,360 L400,320 L420,280 L400,240 L420,210 Z" />
+        
+        <path d="M720,100 L780,80 L840,90 L900,80 L940,100 L920,140 L950,180 L920,220 L880,200 L840,220 L800,200 L760,220 L720,200 L700,160 L720,120 Z" />
+        <path d="M760,240 L800,230 L840,250 L860,290 L840,330 L800,350 L760,330 L740,290 Z" />
+        
+        <path d="M820,380 L880,360 L940,380 L960,420 L940,460 L880,480 L820,460 L800,420 Z" />
       </g>
       
       <g filter="url(#glow)">
-        <circle cx="180" cy="140" r="8" fill="hsl(var(--primary))" opacity="0.9">
-          <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite" />
+        <circle cx="200" cy="120" r="10" fill="#22c55e" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" />
         </circle>
-        <text x="180" y="125" textAnchor="middle" className="text-xs font-bold" fill="hsl(var(--primary))">$</text>
+        <text x="200" y="100" textAnchor="middle" className="text-sm font-bold" fill="#22c55e">$</text>
         
-        <circle cx="420" cy="120" r="8" fill="hsl(var(--primary))" opacity="0.9">
-          <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite" begin="0.5s" />
+        <circle cx="480" cy="140" r="10" fill="#3b82f6" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" begin="0.5s" />
         </circle>
-        <text x="420" y="105" textAnchor="middle" className="text-xs font-bold" fill="hsl(var(--primary))">€</text>
+        <text x="480" y="120" textAnchor="middle" className="text-sm font-bold" fill="#3b82f6">€</text>
         
-        <circle cx="620" cy="160" r="8" fill="hsl(var(--primary))" opacity="0.9">
-          <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite" begin="1s" />
+        <circle cx="860" cy="150" r="10" fill="#ef4444" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" begin="1s" />
         </circle>
-        <text x="620" y="145" textAnchor="middle" className="text-xs font-bold" fill="hsl(var(--primary))">¥</text>
+        <text x="860" y="130" textAnchor="middle" className="text-sm font-bold" fill="#ef4444">¥</text>
         
-        <circle cx="280" cy="280" r="8" fill="hsl(var(--primary))" opacity="0.9">
-          <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite" begin="1.5s" />
+        <circle cx="140" cy="260" r="10" fill="#f59e0b" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" begin="1.5s" />
         </circle>
-        <text x="280" y="265" textAnchor="middle" className="text-xs font-bold" fill="hsl(var(--primary))">R$</text>
+        <text x="140" y="240" textAnchor="middle" className="text-sm font-bold" fill="#f59e0b">R$</text>
         
-        <circle cx="540" cy="300" r="8" fill="hsl(var(--primary))" opacity="0.9">
-          <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite" begin="0.75s" />
+        <circle cx="620" cy="130" r="10" fill="#8b5cf6" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" begin="0.75s" />
         </circle>
-        <text x="540" y="285" textAnchor="middle" className="text-xs font-bold" fill="hsl(var(--primary))">£</text>
+        <text x="620" y="110" textAnchor="middle" className="text-sm font-bold" fill="#8b5cf6">£</text>
+        
+        <circle cx="480" cy="300" r="10" fill="#06b6d4" opacity="0.9">
+          <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" begin="1.25s" />
+        </circle>
+        <text x="480" y="280" textAnchor="middle" className="text-sm font-bold" fill="#06b6d4">₦</text>
       </g>
       
-      <g stroke="hsl(var(--primary))" strokeWidth="2" fill="none" opacity="0.6">
-        <path d="M188,140 Q300,100 412,120">
-          <animate attributeName="stroke-dasharray" values="0,1000;200,1000" dur="2s" repeatCount="indefinite" />
+      <g strokeWidth="2" fill="none">
+        <path d="M210,120 Q350,80 470,140" stroke="#22c55e" opacity="0.6">
+          <animate attributeName="stroke-dasharray" values="0,500;300,500" dur="3s" repeatCount="indefinite" />
         </path>
-        <path d="M428,120 Q520,140 612,160">
-          <animate attributeName="stroke-dasharray" values="0,1000;200,1000" dur="2s" repeatCount="indefinite" begin="0.5s" />
+        <path d="M490,140 Q550,135 610,130" stroke="#3b82f6" opacity="0.6">
+          <animate attributeName="stroke-dasharray" values="0,500;150,500" dur="2s" repeatCount="indefinite" begin="0.5s" />
         </path>
-        <path d="M180,148 Q230,220 272,272">
-          <animate attributeName="stroke-dasharray" values="0,1000;150,1000" dur="2s" repeatCount="indefinite" begin="1s" />
+        <path d="M630,130 Q750,120 850,150" stroke="#8b5cf6" opacity="0.6">
+          <animate attributeName="stroke-dasharray" values="0,500;250,500" dur="2.5s" repeatCount="indefinite" begin="1s" />
         </path>
-        <path d="M620,168 Q580,240 548,292">
-          <animate attributeName="stroke-dasharray" values="0,1000;150,1000" dur="2s" repeatCount="indefinite" begin="0.75s" />
+        <path d="M150,260 Q280,200 460,140" stroke="#f59e0b" opacity="0.6">
+          <animate attributeName="stroke-dasharray" values="0,500;350,500" dur="3.5s" repeatCount="indefinite" begin="0.75s" />
         </path>
-        <path d="M288,280 Q400,260 532,300">
-          <animate attributeName="stroke-dasharray" values="0,1000;250,1000" dur="2s" repeatCount="indefinite" begin="1.25s" />
+        <path d="M490,290 Q520,220 490,150" stroke="#06b6d4" opacity="0.6">
+          <animate attributeName="stroke-dasharray" values="0,500;180,500" dur="2s" repeatCount="indefinite" begin="1.25s" />
+        </path>
+        <path d="M200,125 Q170,200 145,250" stroke="#22c55e" opacity="0.4">
+          <animate attributeName="stroke-dasharray" values="0,500;150,500" dur="2.5s" repeatCount="indefinite" begin="1.5s" />
         </path>
       </g>
       
-      <g fill="hsl(var(--primary))" opacity="0.8">
-        <polygon points="408,118 418,123 408,128" transform="rotate(-20, 412, 120)">
-          <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
+      <g opacity="0.9">
+        <polygon points="465,138 475,143 465,148" fill="#3b82f6">
+          <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" />
         </polygon>
-        <polygon points="608,158 618,163 608,168" transform="rotate(15, 612, 160)">
+        <polygon points="605,128 615,133 605,138" fill="#8b5cf6">
           <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.5s" />
         </polygon>
-        <polygon points="268,270 278,275 268,280" transform="rotate(60, 272, 272)">
-          <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="1s" />
+        <polygon points="845,148 855,153 845,158" fill="#ef4444">
+          <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite" begin="1s" />
         </polygon>
       </g>
+      
+      <text x="50" y="480" fill="#64748b" fontSize="12" opacity="0.5">Rede Global de Fluxo de Moedas</text>
     </svg>
   </div>
 );
@@ -454,9 +487,19 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-12 md:py-16">
+        <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
-            <WorldMapVisualization />
+            <div className="text-center mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2 text-foreground">
+                Rede Global de Fluxo de Moedas
+              </h2>
+              <p className="text-muted-foreground">
+                Hedge em tempo real nos principais corredores de moedas
+              </p>
+            </div>
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
+              <WorldMapVisualization />
+            </div>
           </div>
         </section>
 
