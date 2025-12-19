@@ -51,13 +51,12 @@ const WorldMapVisualization = () => {
   
   const currencyMarkers = [
     { coordinates: [-74.006, 40.7128], currency: "$", color: "#22c55e", name: "USD" },
+    { coordinates: [-46.6333, -23.5505], currency: "R$", color: "#f59e0b", name: "BRL" },
     { coordinates: [8.6821, 50.1109], currency: "€", color: "#3b82f6", name: "EUR" },
     { coordinates: [-0.1276, 51.5074], currency: "£", color: "#8b5cf6", name: "GBP" },
-    { coordinates: [139.6917, 35.6895], currency: "¥", color: "#ef4444", name: "JPY" },
-    { coordinates: [121.4737, 31.2304], currency: "¥", color: "#f97316", name: "CNY" },
-    { coordinates: [-46.6333, -23.5505], currency: "R$", color: "#f59e0b", name: "BRL" },
-    { coordinates: [3.3792, 6.5244], currency: "₦", color: "#06b6d4", name: "NGN" },
     { coordinates: [72.8777, 19.076], currency: "₹", color: "#ec4899", name: "INR" },
+    { coordinates: [116.4074, 39.9042], currency: "¥", color: "#f97316", name: "CNY" },
+    { coordinates: [151.2093, -33.8688], currency: "A$", color: "#06b6d4", name: "AUD" },
   ];
 
   return (
@@ -65,8 +64,8 @@ const WorldMapVisualization = () => {
       <ComposableMap
         projection="geoMercator"
         projectionConfig={{
-          scale: 140,
-          center: [15, 25]
+          scale: 145,
+          center: [15, 35]
         }}
         style={{ width: "100%", height: "100%" }}
       >
@@ -106,19 +105,19 @@ const WorldMapVisualization = () => {
           </Marker>
         ))}
         
-        {/* Connection line: Brazil (R$) to USA ($) */}
+        {/* Connection line: USA ($) to Brazil (R$) */}
         <Line
-          from={[-46.6333, -23.5505]}
-          to={[-74.006, 40.7128]}
-          stroke="url(#brlUsdGradient)"
+          from={[-74.006, 40.7128]}
+          to={[-46.6333, -23.5505]}
+          stroke="url(#usdBrlGradient)"
           strokeWidth={2}
           strokeLinecap="round"
           strokeOpacity={0.7}
         />
         <defs>
-          <linearGradient id="brlUsdGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#22c55e" />
+          <linearGradient id="usdBrlGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#f59e0b" />
           </linearGradient>
         </defs>
       </ComposableMap>
