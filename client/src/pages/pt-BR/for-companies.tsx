@@ -20,7 +20,8 @@ import {
   Ship,
   Target,
   Check,
-  ExternalLink
+  ExternalLink,
+  Globe
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -231,70 +232,24 @@ const SolutionCard = ({
   icon: Icon, 
   title, 
   pain, 
-  outcome, 
-  example 
+  outcome 
 }: { 
   icon: any; 
   title: string; 
   pain: string; 
   outcome: string; 
-  example: string;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <Card className="h-full hover:border-primary/40 transition-colors">
-      <CardHeader>
-        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-          <Icon className="w-6 h-6 text-primary" />
+      <CardHeader className="pb-2">
+        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+          <Icon className="w-5 h-5 text-primary" />
         </div>
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{pain}</p>
-        <p className="text-sm font-medium text-foreground">{outcome}</p>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="px-0 text-primary hover:text-primary/80">
-              Ver exemplo de fluxo <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{title} - Exemplo de Fluxo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">1</div>
-                <div>
-                  <p className="font-medium">Detectar Exposição</p>
-                  <p className="text-sm text-muted-foreground">{example.split('→')[0]}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">2</div>
-                <div>
-                  <p className="font-medium">Solicitar Cotação</p>
-                  <p className="text-sm text-muted-foreground">Chame a API da Hedgi para obter uma cotação em tempo real</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">3</div>
-                <div>
-                  <p className="font-medium">Travar Taxa</p>
-                  <p className="text-sm text-muted-foreground">Execute o hedge para travar sua taxa</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">4</div>
-                <div>
-                  <p className="font-medium">Rastrear e Reconciliar</p>
-                  <p className="text-sm text-muted-foreground">Receba webhooks e acesse relatórios para liquidação</p>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <CardContent className="space-y-2 pt-0">
+        <p className="text-xs text-muted-foreground">{pain}</p>
+        <p className="text-xs font-medium text-foreground">{outcome}</p>
       </CardContent>
     </Card>
   );
@@ -469,24 +424,23 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-24 bg-muted/30">
+        <section className="py-10 md:py-16 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                 Construído para seu caso de uso
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-muted-foreground max-w-2xl mx-auto">
                 Seja construindo um produto ou gerenciando tesouraria, Hedgi se adapta ao seu fluxo de trabalho.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
               <SolutionCard
                 icon={Building2}
                 title="Empresas de Remessas"
                 pain="A volatilidade cambial entre cotação e liquidação corrói margens em transferências internacionais."
                 outcome="Ofereça taxas FX travadas no checkout e proteja sua margem em cada transferência."
-                example="Cliente inicia transferência → Taxa cotada travada → Liquidação processada → Margem protegida"
               />
 
               <SolutionCard
@@ -494,7 +448,6 @@ export default function ForCompanies() {
                 title="Empresas de Crypto"
                 pain="Gaps de timing de liquidação e conversões de tesouraria criam exposição FX não protegida."
                 outcome="Faça hedge da exposição FX criada por operações on/off-ramp e gestão de tesouraria."
-                example="Usuário faz on-ramp de fiat → Exposição FX detectada → Hedge executado → Liquidação completa"
               />
 
               <SolutionCard
@@ -502,7 +455,6 @@ export default function ForCompanies() {
                 title="Empresas de Importação / Exportação"
                 pain="Ciclos longos de pagamento do PO ao embarque até o pagamento deixam margem vulnerável a movimentos FX."
                 outcome="Proteja a margem em contas a pagar e receber durante todo o ciclo comercial."
-                example="PO criado → Exposição identificada → Hedge travado → Fatura liquidada na taxa protegida"
               />
 
               <SolutionCard
@@ -510,155 +462,180 @@ export default function ForCompanies() {
                 title="Afiliados e Performance Marketing"
                 pain="Gastos com mídia internacional em múltiplas moedas tornam CAC/ROAS imprevisíveis."
                 outcome="Estabilize custos de aquisição de clientes fazendo hedge da moeda de gasto previsto."
-                example="Orçamento alocado → Exposição cambial prevista → Hedge travado → Gasto executado na taxa conhecida"
               />
+
+              <Card className="h-full hover:border-primary/40 transition-colors bg-primary/5 border-primary/20 sm:col-span-2 lg:col-span-2">
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <Globe className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base">Outras Empresas Globais</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  <p className="text-xs text-muted-foreground">Risco FX é uma realidade crescente para empresas globais operando além de fronteiras.</p>
+                  <p className="text-xs font-medium text-foreground">Acha que Hedgi pode ser um fit para seu modelo de negócio? Entre em contato.</p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="px-0 text-primary hover:text-primary/80">
+                        Solicitar acesso <ArrowRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Solicitar Acesso ao Sandbox</DialogTitle>
+                      </DialogHeader>
+                      <SandboxRequestForm />
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
 
-        <section className="py-16 md:py-24">
+        <section className="py-10 md:py-16">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                 Como funciona
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-muted-foreground max-w-2xl mx-auto">
                 Quatro passos simples para proteger sua exposição FX
               </p>
             </div>
 
             <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-2xl font-bold text-primary">1</span>
+                  <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                    <span className="text-xl font-bold text-primary">1</span>
                   </div>
-                  <h3 className="font-semibold mb-2">Detectar Exposição</h3>
-                  <p className="text-sm text-muted-foreground">Identifique exposição FX nas suas transações ou tesouraria</p>
+                  <h3 className="font-semibold text-sm mb-1">Detectar Exposição</h3>
+                  <p className="text-xs text-muted-foreground">Identifique exposição FX</p>
                 </div>
 
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-2xl font-bold text-primary">2</span>
+                  <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                    <span className="text-xl font-bold text-primary">2</span>
                   </div>
-                  <h3 className="font-semibold mb-2">Solicitar Cotação</h3>
-                  <p className="text-sm text-muted-foreground">Chame a API para obter uma cotação de hedge em tempo real</p>
+                  <h3 className="font-semibold text-sm mb-1">Solicitar Cotação</h3>
+                  <p className="text-xs text-muted-foreground">Obtenha cotação em tempo real</p>
                 </div>
 
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-2xl font-bold text-primary">3</span>
+                  <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                    <span className="text-xl font-bold text-primary">3</span>
                   </div>
-                  <h3 className="font-semibold mb-2">Travar e Executar</h3>
-                  <p className="text-sm text-muted-foreground">Converta a cotação em hedge e trave sua taxa</p>
+                  <h3 className="font-semibold text-sm mb-1">Travar e Executar</h3>
+                  <p className="text-xs text-muted-foreground">Trave sua taxa</p>
                 </div>
 
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-2xl font-bold text-primary">4</span>
+                  <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                    <span className="text-xl font-bold text-primary">4</span>
                   </div>
-                  <h3 className="font-semibold mb-2">Rastrear e Reconciliar</h3>
-                  <p className="text-sm text-muted-foreground">Receba webhooks e gere relatórios</p>
+                  <h3 className="font-semibold text-sm mb-1">Rastrear e Reconciliar</h3>
+                  <p className="text-xs text-muted-foreground">Webhooks e relatórios</p>
                 </div>
               </div>
 
-              <div className="hidden md:block mt-8">
-                <div className="relative h-2">
+              <div className="hidden md:block mt-6">
+                <div className="relative h-1.5">
                   <div className="absolute inset-0 bg-primary/20 rounded-full" />
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full" />
-                  <div className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full" />
-                  <div className="absolute left-2/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full" />
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-primary rounded-full" />
+                  <div className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-primary rounded-full" />
+                  <div className="absolute left-2/3 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-primary rounded-full" />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-primary rounded-full" />
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="py-16 md:py-24 bg-muted/30">
+        <section className="py-10 md:py-16 bg-muted/30">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                 Infraestrutura de hedge que você pode chamar.
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-muted-foreground max-w-2xl mx-auto">
                 Tudo que você precisa para integrar hedge cambial ao seu produto, acessível via API REST.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Zap className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <Zap className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Obter Cotações de Hedge</CardTitle>
+                  <CardTitle className="text-base">Obter Cotações de Hedge</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Precifique uma exposição programaticamente com taxas de mercado em tempo real.</p>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Precifique uma exposição programaticamente com taxas de mercado em tempo real.</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Lock className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <Lock className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Travar Taxas e Executar</CardTitle>
+                  <CardTitle className="text-base">Travar Taxas e Executar</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Converta cotações em hedges e trave suas taxas instantaneamente.</p>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Converta cotações em hedges e trave suas taxas instantaneamente.</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <BarChart3 className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Rastrear Posições</CardTitle>
+                  <CardTitle className="text-base">Rastrear Posições</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Monitore o que está aberto vs protegido com visibilidade completa da exposição.</p>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Monitore o que está aberto vs protegido com visibilidade completa da exposição.</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Webhook className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <Webhook className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Webhooks</CardTitle>
+                  <CardTitle className="text-base">Webhooks</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Receba eventos de ciclo de vida e atualizações de status diretamente no seu sistema.</p>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Receba eventos de ciclo de vida e atualizações de status diretamente no seu sistema.</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <FileText className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <FileText className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Relatórios e Exportações</CardTitle>
+                  <CardTitle className="text-base">Relatórios e Exportações</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Gere resumos prontos para finanças e relatórios compatíveis com auditoria.</p>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Gere resumos prontos para finanças e relatórios compatíveis com auditoria.</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center mb-4">
-                    <Code className="w-6 h-6 text-primary" />
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mb-2">
+                    <Code className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">Documentação Interativa</CardTitle>
+                  <CardTitle className="text-base">Documentação Interativa</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Teste endpoints ao vivo na nossa documentação estilo Swagger.</p>
-                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-primary hover:text-primary/80" asChild>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">Teste endpoints ao vivo na nossa documentação estilo Swagger.</p>
+                  <Button variant="ghost" size="sm" className="mt-2 px-0 text-xs text-primary hover:text-primary/80" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                      Explorar docs <ExternalLink className="w-4 h-4" />
+                      Explorar docs <ExternalLink className="w-3 h-3" />
                     </a>
                   </Button>
                 </CardContent>
@@ -667,56 +644,56 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-16 md:py-20">
+        <section className="py-10 md:py-14">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                   Construído para fluxos financeiros
                 </h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                <p className="text-muted-foreground max-w-2xl mx-auto">
                   Segurança e confiabilidade de nível empresarial para suas operações de hedge
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-start gap-4 p-4 bg-background rounded-lg border">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Shield className="w-5 h-5 text-primary" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <Shield className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Autenticação por API Key</h3>
-                    <p className="text-sm text-muted-foreground">Acesso seguro com chaves API de menor privilégio</p>
+                    <h3 className="font-semibold text-sm mb-0.5">Autenticação por API Key</h3>
+                    <p className="text-xs text-muted-foreground">Acesso seguro com chaves API de menor privilégio</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 bg-background rounded-lg border">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Check className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <Check className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Suporte a Idempotência</h3>
-                    <p className="text-sm text-muted-foreground">Retentativas seguras com chaves de idempotência e rate limits</p>
+                    <h3 className="font-semibold text-sm mb-0.5">Suporte a Idempotência</h3>
+                    <p className="text-xs text-muted-foreground">Retentativas seguras com chaves de idempotência e rate limits</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 bg-background rounded-lg border">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Webhook className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <Webhook className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Webhooks Assinados</h3>
-                    <p className="text-sm text-muted-foreground">Payloads de webhook assinados criptograficamente</p>
+                    <h3 className="font-semibold text-sm mb-0.5">Webhooks Assinados</h3>
+                    <p className="text-xs text-muted-foreground">Payloads de webhook assinados criptograficamente</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 bg-background rounded-lg border">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-primary" />
+                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">Logs de Auditoria</h3>
-                    <p className="text-sm text-muted-foreground">Trilha de auditoria completa para requisitos de compliance</p>
+                    <h3 className="font-semibold text-sm mb-0.5">Logs de Auditoria</h3>
+                    <p className="text-xs text-muted-foreground">Trilha de auditoria completa para requisitos de compliance</p>
                   </div>
                 </div>
               </div>
@@ -724,23 +701,23 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <section className="py-20 md:py-28">
+        <section className="py-12 md:py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                 Torne-se um parceiro de design de lançamento
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-muted-foreground mb-6">
                 Junte-se ao nosso programa de acesso antecipado e ajude a moldar o futuro do hedge FX programático.
               </p>
 
-              <Card className="p-6 md:p-8">
+              <Card className="p-5 md:p-6">
                 <SandboxRequestForm />
-                <div className="mt-6 pt-6 border-t">
-                  <p className="text-sm text-muted-foreground mb-4">Ou explore nossa documentação primeiro:</p>
-                  <Button variant="outline" size="lg" asChild>
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-xs text-muted-foreground mb-3">Ou explore nossa documentação primeiro:</p>
+                  <Button variant="outline" size="sm" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      Ver Documentação da API <ExternalLink className="w-4 h-4" />
+                      Ver Documentação da API <ExternalLink className="w-3 h-3" />
                     </a>
                   </Button>
                 </div>
