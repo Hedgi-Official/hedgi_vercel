@@ -136,22 +136,23 @@ const CodeSnippet = () => (
     </div>
     <pre className="text-zinc-300 whitespace-pre-wrap">
 <span className="text-purple-400">const</span> <span className="text-blue-400">apiKey</span> = process.env.<span className="text-yellow-400">HEDGI_API_KEY</span>;
+<span className="text-purple-400">const</span> <span className="text-blue-400">baseUrl</span> = <span className="text-green-400">"https://api.hedgi.ai"</span>;
 
-<span className="text-purple-400">const</span> {"{"} order_id, broker, entry_price, status {"}"} = <span className="text-purple-400">await</span> (
-  <span className="text-purple-400">await</span> fetch(<span className="text-green-400">"https://api.hedgi.ai/api/orders"</span>, {"{"}
-    method: <span className="text-green-400">"POST"</span>,
-    headers: {"{"}
-      <span className="text-green-400">Authorization</span>: <span className="text-green-400">`Bearer ${"{"}apiKey{"}"}`</span>,
-      <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>
-    {"}"},
-    body: JSON.stringify({"{"}
-      symbol: <span className="text-green-400">"EURUSD"</span>,
-      direction: <span className="text-green-400">"buy"</span>,
-      volume: <span className="text-yellow-400">0.1</span>,
-      duration_days: <span className="text-yellow-400">7</span>
-    {"}"})
-  {"}"})
-).json();
+<span className="text-purple-400">const</span> <span className="text-blue-400">res</span> = <span className="text-purple-400">await</span> fetch(<span className="text-green-400">{"`${baseUrl}/api/orders`"}</span>, {"{"}
+  method: <span className="text-green-400">"POST"</span>,
+  headers: {"{"}
+    <span className="text-green-400">Authorization</span>: <span className="text-green-400">{"`Bearer ${apiKey}`"}</span>,
+    <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>,
+  {"}"},
+  body: JSON.stringify({"{"}
+    symbol: <span className="text-green-400">"USDBRL"</span>,
+    direction: <span className="text-green-400">"buy"</span>,
+    volume: <span className="text-yellow-400">0.1</span>,
+    duration_days: <span className="text-yellow-400">7</span>,
+  {"}"}),
+{"}"}); 
+
+<span className="text-purple-400">const</span> {"{"} <span className="text-blue-400">order_id</span>, <span className="text-blue-400">broker</span>, <span className="text-blue-400">entry_price</span>, <span className="text-blue-400">status</span> {"}"} = <span className="text-purple-400">await</span> res.json();
     </pre>
   </div>
 );
@@ -411,12 +412,9 @@ export default function ForCompanies() {
         <section className="py-8 md:py-12">
           <div className="container mx-auto px-4">
             <div className="text-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold mb-2 text-foreground">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                 Global Currency Flow Network
               </h2>
-              <p className="text-muted-foreground">
-                Real-time hedging across major currency corridors
-              </p>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
               <WorldMapVisualization />
@@ -464,12 +462,19 @@ export default function ForCompanies() {
                 outcome="Stabilize customer acquisition costs by hedging forecasted spend currency."
               />
 
-              <Card className="h-full hover:border-primary/40 transition-colors bg-primary/5 border-primary/20 sm:col-span-2 lg:col-span-2">
+              <SolutionCard
+                icon={Globe}
+                title="Global Workforce Companies"
+                pain="Employees abroad face salary volatility when paid in foreign currencies."
+                outcome="Offer FX protection as an employee benefit for international team members."
+              />
+
+              <Card className="h-full hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
                 <CardHeader className="pb-2">
                   <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mb-2">
-                    <Globe className="w-5 h-5 text-primary" />
+                    <ArrowRight className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Other Global Companies</CardTitle>
+                  <CardTitle className="text-base">Other Use Cases</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
                   <p className="text-xs text-muted-foreground">FX risk is a growing reality for global companies operating across borders.</p>
