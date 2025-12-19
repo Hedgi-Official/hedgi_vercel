@@ -137,27 +137,21 @@ const CodeSnippet = () => (
     <pre className="text-zinc-300 whitespace-pre-wrap">
 <span className="text-purple-400">const</span> <span className="text-blue-400">apiKey</span> = process.env.<span className="text-yellow-400">HEDGI_API_KEY</span>;
 
-<span className="text-purple-400">const</span> <span className="text-blue-400">res</span> = <span className="text-purple-400">await</span> fetch(<span className="text-green-400">"https://api.hedgi.ai/api/orders"</span>, {"{"}
-  method: <span className="text-green-400">"POST"</span>,
-  headers: {"{"}
-    <span className="text-green-400">Authorization</span>: <span className="text-green-400">`Bearer ${"{"}apiKey{"}"}`</span>,
-    <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>
-  {"}"},
-  body: JSON.stringify({"{"}
-    symbol: <span className="text-green-400">"EURUSD"</span>,
-    direction: <span className="text-green-400">"buy"</span>,
-    volume: <span className="text-yellow-400">0.1</span>,
-    duration_days: <span className="text-yellow-400">7</span>
+<span className="text-purple-400">const</span> {"{"} order_id, broker, entry_price, status {"}"} = <span className="text-purple-400">await</span> (
+  <span className="text-purple-400">await</span> fetch(<span className="text-green-400">"https://api.hedgi.ai/api/orders"</span>, {"{"}
+    method: <span className="text-green-400">"POST"</span>,
+    headers: {"{"}
+      <span className="text-green-400">Authorization</span>: <span className="text-green-400">`Bearer ${"{"}apiKey{"}"}`</span>,
+      <span className="text-green-400">"Content-Type"</span>: <span className="text-green-400">"application/json"</span>
+    {"}"},
+    body: JSON.stringify({"{"}
+      symbol: <span className="text-green-400">"EURUSD"</span>,
+      direction: <span className="text-green-400">"buy"</span>,
+      volume: <span className="text-yellow-400">0.1</span>,
+      duration_days: <span className="text-yellow-400">7</span>
+    {"}"})
   {"}"})
-{"}"});
-
-<span className="text-purple-400">if</span> (!res.ok) {"{"}
-  <span className="text-purple-400">throw new</span> <span className="text-red-400">Error</span>(
-    <span className="text-green-400">`Hedgi order failed: ${"{"}res.status{"}"} ${"{"}<span className="text-purple-400">await</span> res.text(){"}"}`</span>
-  );
-{"}"}
-
-<span className="text-purple-400">const</span> {"{"} order_id, broker, entry_price, status {"}"} = <span className="text-purple-400">await</span> res.json();
+).json();
     </pre>
   </div>
 );
