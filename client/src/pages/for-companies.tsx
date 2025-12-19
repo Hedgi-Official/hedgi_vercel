@@ -442,13 +442,13 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
               <div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">$7.5T</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">$9 trillion</p>
                 <p className="text-sm text-muted-foreground">Daily FX market volume</p>
               </div>
               <div className="hidden md:block w-px h-12 bg-border" />
               <div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">~$1Q</p>
-                <p className="text-sm text-muted-foreground">Cross-border payments in 2024</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">~$1 quadrillion</p>
+                <p className="text-sm text-muted-foreground">Cross-border payments and crypto in 2024</p>
               </div>
             </div>
           </div>
