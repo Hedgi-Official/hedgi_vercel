@@ -130,40 +130,50 @@ export default function AboutUs() {
           </div>
         </section>
 
-        {/* Technology Section */}
+        {/* How It Works Section */}
         <section className="py-16 px-4 bg-background">
           <div className="container mx-auto max-w-4xl">
             <div className="text-center mb-8">
               <TrendingUp className="w-16 h-16 text-primary mx-auto mb-4" />
               <h2 className="text-3xl font-bold mb-4 text-foreground">Como Funciona</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                A Hedgi fornece "seguro cambial" para empresas - uma maneira simples de se proteger contra oscilações do câmbio. 
+                A Hedgi fornece "seguro cambial" - uma maneira simples de se proteger contra oscilações do câmbio. 
                 Você apenas insere o valor e período, e a Hedgi executa automaticamente a proteção.
                 Sem jargões, sem barreiras. <span className="font-semibold text-primary">Nunca veja termos complexos como taxas de swap ou requisitos de margem</span>.
-                Foque no seu negócio enquanto nós cuidamos do risco cambial.
+                Foque no que importa enquanto nós cuidamos do risco cambial.
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-col items-center">
-                  <Building className="h-12 w-12 text-primary mb-2" />
-                  <CardTitle className="text-center">Para Empresas</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p>Importa produtos, paga fornecedores ou gerencia transações internacionais? Fixe seus custos e proteja suas margens.</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-col items-center">
-                  <Users className="h-12 w-12 text-primary mb-2" />
-                  <CardTitle className="text-center">Para Indivíduos</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p>Fazendo compras online em lojas estrangeiras? Fazendo compras internacionais? Proteja-se das oscilações cambiais.</p>
-                </CardContent>
-              </Card>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  1
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Conte Sua Necessidade</h3>
+                <p className="text-sm text-muted-foreground">
+                  Digite o valor e o par de moedas que deseja proteger
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  2
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Escolha a Duração</h3>
+                <p className="text-sm text-muted-foreground">
+                  Selecione por quanto tempo precisa de proteção (dias, semanas ou meses)
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  3
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Fique Protegido</h3>
+                <p className="text-sm text-muted-foreground">
+                  A Hedgi trava sua taxa. Você está protegido das oscilações cambiais.
+                </p>
+              </div>
             </div>
           </div>
         </section>

@@ -132,40 +132,50 @@ export default function AboutUs() {
           </div>
         </section>
 
-        {/* Technology Section */}
+        {/* How It Works Section */}
         <section className="py-16 px-4 bg-background">
           <div className="container mx-auto max-w-4xl">
             <div className="text-center mb-8">
               <TrendingUp className="w-16 h-16 text-primary mx-auto mb-4" />
               <h2 className="text-3xl font-bold mb-4 text-foreground">How It Works</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Hedgi provides businesses with "currency insurance" - a simple way to protect against FX swings. 
+                Hedgi provides "currency insurance" - a simple way to protect against FX swings. 
                 You only input the amount and time period, and Hedgi automatically executes the protection.
                 No jargon, no barriers. <span className="font-semibold text-primary">Never see complex terms like swap rates or margin requirements</span>.
-                Focus on your business while we handle the currency risk.
+                Focus on what matters while we handle the currency risk.
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-col items-center">
-                  <Building className="h-12 w-12 text-primary mb-2" />
-                  <CardTitle className="text-center">For Businesses</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p>Import goods, pay suppliers, or manage international transactions? Lock in your costs and protect your margins.</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-col items-center">
-                  <Users className="h-12 w-12 text-primary mb-2" />
-                  <CardTitle className="text-center">For Individuals</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p>Shopping online from foreign stores? Making international purchases? Protect yourself from currency swings.</p>
-                </CardContent>
-              </Card>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  1
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Tell Us Your Need</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter the amount and currency pair you want to protect
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  2
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Choose Duration</h3>
+                <p className="text-sm text-muted-foreground">
+                  Select how long you need protection (days, weeks, or months)
+                </p>
+              </div>
+
+              <div className="text-center">
+                <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                  3
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Stay Protected</h3>
+                <p className="text-sm text-muted-foreground">
+                  Hedgi locks your rate. You're protected from currency swings.
+                </p>
+              </div>
             </div>
           </div>
         </section>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -11,48 +11,86 @@ import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
-import { Flag } from "lucide-react";
+import { Flag, User, Building2 } from "lucide-react";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 
-const createRegisterSchema = (t: any) => z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  email: z.string().email("Invalid email address"),
-  phoneNumber: z.string().optional(),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters").regex(
-      /(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
-      "Password must include an uppercase letter, a number, and a special character"
-    ),
-  confirmPassword: z.string(),
-  nation: z.string().min(1, "Please select your country"),
-  paymentIdentifier: z.string().min(1, "Payment identifier is required"),
-  cpf: z.string().min(1, "CPF is required").refine((val) => {
-    const cleanCPF = val.replace(/\D/g, '');
-    return cleanCPF.length === 11;
-  }, "CPF must have 11 digits"),
-  birthdate: z.string().min(1, "Birth date is required").refine((val) => {
-    const date = new Date(val);
-    const today = new Date();
-    const age = today.getFullYear() - date.getFullYear();
-    const monthDiff = today.getMonth() - date.getMonth();
-    const dayDiff = today.getDate() - date.getDate();
+const createRegisterSchema = (t: any, accountType: 'individual' | 'business') => {
+  const baseSchema = z.object({
+    fullName: z.string().min(2, "Full name is required"),
+    email: z.string().email("Invalid email address"),
+    phoneNumber: z.string().optional(),
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters").regex(
+        /(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/,
+        "Password must include an uppercase letter, a number, and a special character"
+      ),
+    confirmPassword: z.string(),
+    nation: z.string().min(1, "Please select your country"),
+    paymentIdentifier: z.string().min(1, "Payment identifier is required"),
+    cpf: z.string().min(1, "CPF is required").refine((val) => {
+      const cleanCPF = val.replace(/\D/g, '');
+      return cleanCPF.length === 11;
+    }, "CPF must have 11 digits"),
+    birthdate: z.string().min(1, "Birth date is required").refine((val) => {
+      const date = new Date(val);
+      const today = new Date();
+      const age = today.getFullYear() - date.getFullYear();
+      const monthDiff = today.getMonth() - date.getMonth();
+      const dayDiff = today.getDate() - date.getDate();
 
-    const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
-    return actualAge >= 18;
-  }, t('auth.You must be at least 18 years old to use this service'))
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+      const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
+      return actualAge >= 18;
+    }, t('auth.You must be at least 18 years old to use this service')),
+    userType: z.enum(['individual', 'business']),
+    companyName: accountType === 'business' 
+      ? z.string().min(2, "Company name is required for business accounts")
+      : z.string().optional(),
+    companyRole: accountType === 'business'
+      ? z.string().min(2, "Your role is required for business accounts")
+      : z.string().optional(),
+  });
+
+  return baseSchema.refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+};
 
 export default function AuthPage() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { login, register } = useUser();
   const { toast } = useToast();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("login");
+  
+  // Account type state - 'individual' or 'business'
+  const [accountType, setAccountType] = useState<'individual' | 'business'>('individual');
+
+  // Read type from URL query params on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const typeParam = urlParams.get('type');
+    if (typeParam === 'business') {
+      setAccountType('business');
+      setRegisterData(prev => ({ ...prev, userType: 'business' }));
+    } else {
+      setAccountType('individual');
+      setRegisterData(prev => ({ ...prev, userType: 'individual' }));
+    }
+  }, []);
+
+  // Sync registerData.userType when accountType toggle changes
+  const handleAccountTypeChange = (newType: 'individual' | 'business') => {
+    setAccountType(newType);
+    setRegisterData(prev => ({
+      ...prev,
+      userType: newType,
+      companyName: newType === 'individual' ? '' : prev.companyName,
+      companyRole: newType === 'individual' ? '' : prev.companyRole,
+    }));
+  };
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -72,13 +110,17 @@ export default function AuthPage() {
     paymentIdentifier: "",
     cpf: "",
     birthdate: "",
-    inviteCode: "", // Added inviteCode field
+    inviteCode: "",
+    userType: "individual",
+    companyName: "",
+    companyRole: "",
   });
 
   const handleSubmit = async (action: "login" | "register") => {
     try {
       if (action === "register") {
-        const validationResult = createRegisterSchema(t).safeParse(registerData);
+        const dataToValidate = { ...registerData, userType: accountType };
+        const validationResult = createRegisterSchema(t, accountType).safeParse(dataToValidate);
         if (!validationResult.success) {
           toast({
             variant: "destructive",
@@ -102,13 +144,19 @@ export default function AuthPage() {
         const responseData = await response.json();
         result = { ok: response.ok, message: responseData.message };
       } else {
+        // Include accountType in registration data
+        const registrationPayload = {
+          ...registerData,
+          userType: accountType,
+        };
+        
         // Use the proper authentication endpoint with session management
         const response = await fetch('/api/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(registerData),
+          body: JSON.stringify(registrationPayload),
         });
 
         if (response.ok) {
@@ -163,6 +211,41 @@ export default function AuthPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center">{t('auth.Welcome back')}</CardTitle>
+            
+            {/* Account Type Toggle */}
+            <div className="mt-4">
+              <div className="flex items-center justify-center gap-2 p-1 bg-muted rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => handleAccountTypeChange('individual')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                    accountType === 'individual'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  {t('Individual')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAccountTypeChange('business')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                    accountType === 'business'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Building2 className="h-4 w-4" />
+                  {t('Business')}
+                </button>
+              </div>
+              {accountType === 'business' && (
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  Business accounts include API access and team features
+                </p>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -296,6 +379,23 @@ export default function AuthPage() {
                     onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                   />
                 </>
+
+                {/* Business-specific fields */}
+                {accountType === 'business' && (
+                  <>
+                    <Input
+                      placeholder="Company Name"
+                      value={registerData.companyName}
+                      onChange={(e) => setRegisterData({ ...registerData, companyName: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Your Role (e.g., CEO, CFO, Treasury Manager)"
+                      value={registerData.companyRole}
+                      onChange={(e) => setRegisterData({ ...registerData, companyRole: e.target.value })}
+                    />
+                  </>
+                )}
+
                 <Input
                   placeholder={t('auth.Enter your username')}
                   value={registerData.username}
