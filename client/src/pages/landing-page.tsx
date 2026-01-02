@@ -375,10 +375,10 @@ export default function LandingPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={() => navigate("/using-hedgi")}
+                  onClick={() => navigate("/for-individuals")}
                   className="px-8 py-4 text-lg"
                 >
-                  {t("How To Use Hedgi")}
+                  {t("For Individuals")}
                 </Button>
               </div>
             </div>
