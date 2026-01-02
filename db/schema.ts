@@ -29,6 +29,9 @@ export const users = pgTable('users', {
   createdAt:    timestamp('created_at').defaultNow().notNull(),
   googleCalendarEnabled: boolean('google_calendar_enabled').default(false),
   googleRefreshToken: text('google_refresh_token'),
+  userType:     text('user_type').default('individual').notNull(), // 'individual' or 'business'
+  companyName:  text('company_name'), // For business accounts
+  companyRole:  text('company_role'), // For business accounts
 });
 
 export const hedges = pgTable('hedges', {

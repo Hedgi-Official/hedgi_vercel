@@ -13,11 +13,11 @@ import Dashboard from "@/pages/dashboard";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
-import UsingHedgi from "@/pages/using-hedgi";
+import ForIndividuals from "@/pages/for-individuals";
 import AboutUs from "@/pages/about-us";
 import ForCompanies from "@/pages/for-companies";
 import WhatIsHedgePTBR from "@/pages/pt-BR/what-is-hedge";
-import UsingHedgiPTBR from "@/pages/pt-BR/using-hedgi";
+import ForIndividualsPTBR from "@/pages/pt-BR/for-individuals";
 import AboutUsPTBR from "@/pages/pt-BR/about-us";
 import ForCompaniesPTBR from "@/pages/pt-BR/for-companies";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -56,14 +56,14 @@ function Router() {
       <Route path="/what-is-hedge">
         {currentLanguage === "pt-BR" ? <WhatIsHedgePTBR /> : <WhatIsHedge />}
       </Route>
-      <Route path="/using-hedgi">
-        {currentLanguage === "pt-BR" ? <UsingHedgiPTBR /> : <UsingHedgi />}
-      </Route>
-      <Route path="/about-us">
-        {currentLanguage === "pt-BR" ? <AboutUsPTBR /> : <AboutUs />}
+      <Route path="/for-individuals">
+        {currentLanguage === "pt-BR" ? <ForIndividualsPTBR /> : <ForIndividuals />}
       </Route>
       <Route path="/for-companies">
         {currentLanguage === "pt-BR" ? <ForCompaniesPTBR /> : <ForCompanies />}
+      </Route>
+      <Route path="/about-us">
+        {currentLanguage === "pt-BR" ? <AboutUsPTBR /> : <AboutUs />}
       </Route>
       <Route component={NotFound} />
     </Switch>
