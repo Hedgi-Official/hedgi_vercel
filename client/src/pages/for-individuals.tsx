@@ -259,8 +259,64 @@ export default function ForIndividuals() {
             </div>
           </section>
 
-          {/* Use Cases Section */}
+          {/* Lifestyle Section - Protect Your Money */}
           <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-16">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground whitespace-pre-line">
+                    {t("lifestyle.tagline")}
+                  </h2>
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    {t("lifestyle.description")}
+                  </p>
+                </div>
+
+                {/* People Images for Trust */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                    <img
+                      src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
+                      alt="Happy customers using Hedgi"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                    <img
+                      src="/images/woman-9193216_640.jpg"
+                      alt="Professional using currency protection"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                    <img
+                      src="/images/family-1542595_640.jpg"
+                      alt="Family securing their financial future"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                    <img
+                      src="/images/gautham-krishna-fy466BrLmgg-unsplash_1750022560441-min.jpg"
+                      alt="Experienced investor with peace of mind"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Use Cases Section */}
+          <section className="py-16 bg-muted/30">
             <div className="container mx-auto px-4">
               <div className="text-center mb-10">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
