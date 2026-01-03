@@ -201,26 +201,32 @@ export default function ForIndividuals() {
                   </p>
                   
                   {/* Benefit Chips */}
-                  <div className="flex flex-col gap-4 mb-8">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-primary flex-shrink-0" />
+                  <div className="flex flex-col gap-5 mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Shield className="w-6 h-6 text-primary" />
+                      </div>
                       <div>
-                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip1Title')}</span>
-                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip1Desc')}</span>
+                        <span className="font-semibold text-foreground text-base">{t('forIndividuals.chip1Title')}</span>
+                        <span className="text-muted-foreground text-base"> — {t('forIndividuals.chip1Desc')}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                      </div>
                       <div>
-                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip2Title')}</span>
-                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip2Desc')}</span>
+                        <span className="font-semibold text-foreground text-base">{t('forIndividuals.chip2Title')}</span>
+                        <span className="text-muted-foreground text-base"> — {t('forIndividuals.chip2Desc')}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-6 h-6 text-primary" />
+                      </div>
                       <div>
-                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip3Title')}</span>
-                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip3Desc')}</span>
+                        <span className="font-semibold text-foreground text-base">{t('forIndividuals.chip3Title')}</span>
+                        <span className="text-muted-foreground text-base"> — {t('forIndividuals.chip3Desc')}</span>
                       </div>
                     </div>
                   </div>
