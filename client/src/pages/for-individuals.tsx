@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
 import { EnhancedCurrencySimulator } from "@/components/enhanced-currency-simulator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { 
   ShoppingCart, 
   Plane, 
@@ -12,11 +12,10 @@ import {
   MessageCircle, 
   Loader2,
   Shield,
-  TrendingUp,
   Clock,
   ArrowRight,
   Users,
-  Check
+  Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,7 @@ const UseCaseCard = ({
       </CardHeader>
       <CardContent className="space-y-2 pt-0">
         <p className="text-sm text-muted-foreground">{description}</p>
-        <p className="text-xs font-medium text-primary">{example}</p>
+        <p className="text-xs text-primary/80">{example}</p>
       </CardContent>
     </Card>
   );
@@ -70,7 +69,7 @@ export default function ForIndividuals() {
   const chatCardRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState<number>(700);
   const [chatMessages, setChatMessages] = useState<Array<{type: 'user' | 'bot', content: string}>>([
-    {type: 'bot', content: 'Hello! I\'m HedgiBot. I can help you understand how to set up and manage currency hedges. For what event would you like to hedge?'}
+    {type: 'bot', content: t('forIndividuals.chatWelcome')}
   ]);
 
   const handleLogout = async () => {
@@ -126,8 +125,8 @@ export default function ForIndividuals() {
       console.error('Error calling chat API:', error);
 
       toast({
-        title: "Chat Error",
-        description: "Sorry, I couldn't connect to my knowledge base. Please try again.",
+        title: t('forIndividuals.chatErrorTitle'),
+        description: t('forIndividuals.chatErrorDesc'),
         variant: "destructive",
       });
 
@@ -135,22 +134,13 @@ export default function ForIndividuals() {
         ...prev, 
         {
           type: 'bot', 
-          content: "I'm having trouble connecting to my knowledge base right now. Please try again shortly."
+          content: t('forIndividuals.chatErrorFallback')
         }
       ]);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (chatMessages.length === 0) {
-      setChatMessages([{
-        type: 'bot',
-        content: "Hi there! I'm HedgiBot. How can I help you set up currency protection today?"
-      }]);
-    }
-  }, [chatMessages]);
   
   useEffect(() => {
     if (!simulatorRef.current || !chatCardRef.current) return;
@@ -204,76 +194,69 @@ export default function ForIndividuals() {
               <div className="max-w-4xl mx-auto text-center">
                 <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
                   <Users className="w-4 h-4" />
-                  {t('For Individuals')}
+                  {t('forIndividuals.pill')}
                 </div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
-                  Protect Your Money from Currency Swings
+                  {t('forIndividuals.heroTitle')}
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  Whether you're shopping online, planning a trip, or receiving money from abroad, 
-                  Hedgi helps you lock in exchange rates and avoid surprises.
+                  {t('forIndividuals.heroSubtitle')}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
                   <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
                     <Link href="/auth?type=individual">
-                      Get Started Free
+                      {t('cta.Get Currency Insurance')}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                   <Button size="lg" variant="outline" asChild>
-                    <a href="#try-it">Try the Simulator</a>
+                    <a href="#try-it">{t('forIndividuals.trySimulator')}</a>
                   </Button>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          {/* Benefits Section */}
-          <section className="py-12 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-8 h-8 text-primary" />
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground">Protected Rates</p>
-                    <p className="text-sm text-muted-foreground">Lock in today's rate</p>
+                {/* Benefit Chips */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-primary" />
+                    <div className="text-left">
+                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip1Title')}</p>
+                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip1Desc')}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="hidden md:block w-px h-12 bg-border" />
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-8 h-8 text-primary" />
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground">Simple Process</p>
-                    <p className="text-sm text-muted-foreground">No jargon required</p>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <div className="text-left">
+                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip2Title')}</p>
+                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip2Desc')}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="hidden md:block w-px h-12 bg-border" />
-                <div className="flex items-center gap-3">
-                  <Clock className="w-8 h-8 text-primary" />
-                  <div className="text-left">
-                    <p className="font-semibold text-foreground">Flexible Duration</p>
-                    <p className="text-sm text-muted-foreground">Days to months</p>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    <div className="text-left">
+                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip3Title')}</p>
+                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip3Desc')}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Lifestyle Section - Protect Your Money */}
+          {/* Lifestyle Section */}
           <section className="py-16">
             <div className="container mx-auto px-4">
               <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-16">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground whitespace-pre-line">
-                    {t("lifestyle.tagline")}
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                    {t('forIndividuals.lifestyleTitle')}
                   </h2>
                   <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    {t("lifestyle.description")}
+                    {t('forIndividuals.lifestyleSubtitle')}
                   </p>
                 </div>
 
-                {/* People Images for Trust */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Images */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
                   <div className="relative rounded-xl overflow-hidden aspect-square">
                     <img
                       src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
@@ -311,6 +294,15 @@ export default function ForIndividuals() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
                 </div>
+
+                <div className="text-center">
+                  <h3 className="text-xl md:text-2xl font-semibold mb-2 text-foreground">
+                    {t('forIndividuals.lifestyleSectionTitle')}
+                  </h3>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    {t('forIndividuals.lifestyleSectionSubtitle')}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -320,54 +312,51 @@ export default function ForIndividuals() {
             <div className="container mx-auto px-4">
               <div className="text-center mb-10">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  Perfect for Everyday Needs
+                  {t('forIndividuals.useCasesTitle')}
                 </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Currency protection isn't just for big companies. Here's how individuals like you use Hedgi.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
                 <UseCaseCard
                   icon={ShoppingCart}
-                  title="Online Shoppers"
-                  description="Buying from international stores? Protect your purchase from rate changes between checkout and delivery."
-                  example="E.g., Shopping on Amazon US, AliExpress"
+                  title={t('forIndividuals.card1Title')}
+                  description={t('forIndividuals.card1Desc')}
+                  example={t('forIndividuals.card1Example')}
                 />
 
                 <UseCaseCard
                   icon={Plane}
-                  title="Travelers"
-                  description="Planning a trip abroad? Lock in your exchange rate now and budget with confidence."
-                  example="E.g., Vacation to Europe, Disney trip"
+                  title={t('forIndividuals.card2Title')}
+                  description={t('forIndividuals.card2Desc')}
+                  example={t('forIndividuals.card2Example')}
                 />
 
                 <UseCaseCard
                   icon={GraduationCap}
-                  title="Students Abroad"
-                  description="Paying tuition or rent in foreign currency? Avoid semester-long rate uncertainty."
-                  example="E.g., University fees, housing costs"
+                  title={t('forIndividuals.card3Title')}
+                  description={t('forIndividuals.card3Desc')}
+                  example={t('forIndividuals.card3Example')}
                 />
 
                 <UseCaseCard
                   icon={Briefcase}
-                  title="Freelancers"
-                  description="Getting paid in USD or EUR? Protect your earnings from currency drops before you convert."
-                  example="E.g., Remote work, consulting"
+                  title={t('forIndividuals.card4Title')}
+                  description={t('forIndividuals.card4Desc')}
+                  example={t('forIndividuals.card4Example')}
                 />
               </div>
             </div>
           </section>
 
           {/* How It Works Section */}
-          <section className="py-16 bg-muted/30">
+          <section className="py-16">
             <div className="container mx-auto px-4">
               <div className="text-center mb-10">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  How It Works
+                  {t('forIndividuals.howItWorksTitle')}
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Currency protection in three simple steps. No financial experience needed.
+                  {t('forIndividuals.howItWorksSubtitle')}
                 </p>
               </div>
 
@@ -376,9 +365,9 @@ export default function ForIndividuals() {
                   <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                     1
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Tell Us Your Need</h3>
+                  <h3 className="font-semibold text-lg mb-2">{t('forIndividuals.step1Title')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Enter the amount and currency pair you want to protect
+                    {t('forIndividuals.step1Desc')}
                   </p>
                 </div>
 
@@ -386,9 +375,9 @@ export default function ForIndividuals() {
                   <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                     2
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Choose Duration</h3>
+                  <h3 className="font-semibold text-lg mb-2">{t('forIndividuals.step2Title')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Select how long you need protection (days, weeks, or months)
+                    {t('forIndividuals.step2Desc')}
                   </p>
                 </div>
 
@@ -396,9 +385,9 @@ export default function ForIndividuals() {
                   <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                     3
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Stay Protected</h3>
+                  <h3 className="font-semibold text-lg mb-2">{t('forIndividuals.step3Title')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Hedgi locks your rate. You're protected from currency swings.
+                    {t('forIndividuals.step3Desc')}
                   </p>
                 </div>
               </div>
@@ -406,7 +395,7 @@ export default function ForIndividuals() {
               <div className="text-center mt-10">
                 <Button size="lg" asChild>
                   <Link href="/auth?type=individual">
-                    Create Your Account
+                    {t('forIndividuals.createAccount')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -415,14 +404,14 @@ export default function ForIndividuals() {
           </section>
 
           {/* Interactive Tools Section */}
-          <section id="try-it" className="py-16">
+          <section id="try-it" className="py-16 bg-muted/30">
             <div className="container mx-auto px-4">
               <div className="text-center mb-10">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  Try It Yourself
+                  {t('forIndividuals.tryItTitle')}
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Use our simulator for direct interaction or chat with our AI assistant for guided help.
+                  {t('forIndividuals.tryItSubtitle')}
                 </p>
               </div>
 
@@ -437,8 +426,11 @@ export default function ForIndividuals() {
                     <CardHeader className="flex-shrink-0">
                       <CardTitle className="flex items-center">
                         <MessageCircle className="mr-2 h-5 w-5" />
-                        Hedgi AI Assistant
+                        {t('forIndividuals.chatTitle')}
                       </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t('forIndividuals.chatPrompt')}
+                      </p>
                     </CardHeader>
                     <CardContent className="flex flex-col flex-grow chat-content p-4 pb-6 overflow-hidden">
                       <div className="flex-1 overflow-hidden flex flex-col mb-4">
@@ -476,7 +468,7 @@ export default function ForIndividuals() {
                               <div className="flex justify-start">
                                 <div className="rounded-lg px-4 py-2 bg-muted flex items-center space-x-2">
                                   <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span>Thinking...</span>
+                                  <span>{t('forIndividuals.chatThinking')}</span>
                                 </div>
                               </div>
                             )}
@@ -486,7 +478,7 @@ export default function ForIndividuals() {
 
                       <div className="flex items-center mt-4 flex-shrink-0">
                         <Input
-                          placeholder="Ask about currency hedging..."
+                          placeholder={t('forIndividuals.chatPlaceholder')}
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -512,8 +504,18 @@ export default function ForIndividuals() {
 
                 {/* Enhanced Currency Simulator */}
                 <div className="order-1 lg:order-2">
-                  <div className="enhanced-tooltips" ref={simulatorRef}>
-                    <EnhancedCurrencySimulator showGraph={false} />
+                  <div ref={simulatorRef}>
+                    <Card className="shadow-lg">
+                      <CardHeader>
+                        <CardTitle>{t('forIndividuals.simulatorTitle')}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {t('forIndividuals.simulatorHelper')}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <EnhancedCurrencySimulator showGraph={false} />
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
               </div>
@@ -524,14 +526,14 @@ export default function ForIndividuals() {
           <section className="py-16 bg-primary/5">
             <div className="container mx-auto px-4 text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
-                Ready to Protect Your Money?
+                {t('forIndividuals.ctaTitle')}
               </h2>
               <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-                Join thousands of individuals who use Hedgi to protect their international transactions.
+                {t('forIndividuals.ctaBody')}
               </p>
               <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
                 <Link href="/auth?type=individual">
-                  Get Started Free
+                  {t('cta.Get Currency Insurance')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
