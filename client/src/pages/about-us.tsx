@@ -8,7 +8,6 @@ import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
 
 import { 
-  Globe, 
   Shield, 
   Zap, 
   Mail, 
@@ -39,10 +38,6 @@ export default function AboutUs() {
         <section className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-                <Globe className="w-4 h-4" />
-                {t('aboutUs.badge')}
-              </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
                 {t('aboutUs.headline')}
               </h1>
@@ -74,21 +69,14 @@ export default function AboutUs() {
                 </button>
               </div>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
+              {/* Dynamic CTA Button */}
+              <div className="flex justify-center">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg" asChild>
                   <Link href={selectedAudience === 'individuals' ? '/for-individuals' : '/for-companies'}>
                     {selectedAudience === 'individuals' 
                       ? t('aboutUs.getCurrencyInsurance') 
                       : t('aboutUs.viewApiQuickstart')}
                     <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href={selectedAudience === 'individuals' ? '/for-companies' : '/for-individuals'}>
-                    {selectedAudience === 'individuals' 
-                      ? t('aboutUs.forCompanies') 
-                      : t('aboutUs.forIndividuals')}
                   </Link>
                 </Button>
               </div>
@@ -296,28 +284,63 @@ export default function AboutUs() {
         </section>
 
         {/* Bottom CTA Section */}
-        <section className="py-16 bg-primary/5">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
                 {t('aboutUs.ctaHeadline')}
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
                 {t('aboutUs.ctaBody')}
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-                <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
-                  <Link href="/auth?type=individual">
-                    {t('aboutUs.getCurrencyInsurance')}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/for-companies">
-                    {t('aboutUs.forCompanies')}
-                  </Link>
-                </Button>
+              {/* Audience Toggle */}
+              <div className="inline-flex items-center rounded-xl border border-border p-1.5 bg-muted/30 mb-8">
+                <button
+                  onClick={() => setSelectedAudience('individuals')}
+                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
+                    selectedAudience === 'individuals'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground/70 hover:text-foreground'
+                  }`}
+                >
+                  {t('aboutUs.individuals')}
+                </button>
+                <button
+                  onClick={() => setSelectedAudience('companies')}
+                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
+                    selectedAudience === 'companies'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground/70 hover:text-foreground'
+                  }`}
+                >
+                  {t('aboutUs.companies')}
+                </button>
+              </div>
+
+              {/* Dynamic CTA Button */}
+              <div className="flex justify-center items-center mb-6">
+                {selectedAudience === 'individuals' ? (
+                  <Button
+                    size="lg"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                    asChild
+                  >
+                    <Link href="/auth?type=individual">
+                      {t('aboutUs.getCurrencyInsurance')}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                    asChild
+                  >
+                    <Link href="/for-companies">
+                      {t('aboutUs.viewApiQuickstart')}
+                    </Link>
+                  </Button>
+                )}
               </div>
 
               <p className="text-sm text-muted-foreground">
