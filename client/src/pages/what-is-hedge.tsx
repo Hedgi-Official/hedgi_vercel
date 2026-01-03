@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { useUser } from "@/hooks/use-user";
 export default function WhatIsHedge() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
+  const [audienceType, setAudienceType] = useState<'individuals' | 'companies'>('individuals');
 
   const handleLogout = async () => {
     await logout();
@@ -65,7 +67,7 @@ export default function WhatIsHedge() {
           <p className="text-lg md:text-xl text-justify mb-4">
             Hedging is a risk-management technique that reduces uncertainty by offsetting an exposure with another position. In currency hedging, the goal is simple: make a future exchange rate more predictable, so your costs or revenues do not swing with the market.
           </p>
-          <p className="text-sm text-muted-foreground text-center mb-8">
+          <p className="text-base md:text-lg text-foreground/80 text-center mb-8">
             Think of it like "locking" an exchange rate for a defined amount and time window.
           </p>
         </div>
@@ -254,34 +256,72 @@ export default function WhatIsHedge() {
           
           <CurrencySimulator showGraph={false} />
           
-          <p className="text-sm text-muted-foreground text-center mt-6">
+          <p className="text-base md:text-lg text-foreground/80 text-center mt-6">
             A hedge has a cost, just like insurance. The goal is predictability.
           </p>
         </div>
       </section>
       
-      {/* Ready to Use Hedgi CTA Section */}
-      <section className="py-16 px-4 bg-background">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl font-bold mb-6">
-            Ready to use Hedgi?
-          </h2>
-          
-          <p className="text-lg text-muted-foreground mb-8">
-            Choose your path to see the right workflow and setup.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/for-individuals">
-              <Button size="lg" className="text-lg px-8">
-                For Individuals
-              </Button>
-            </Link>
-            <Link href="/for-companies">
-              <Button variant="outline" size="lg" className="text-lg px-8">
-                For Companies (API)
-              </Button>
-            </Link>
+      {/* Bottom CTA Section with Audience Toggle */}
+      <section className="py-20 px-4 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+              Ready to protect your budget from currency swings?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              In minutes, get currency insurance for your next payment—or route to the right setup for your business.
+            </p>
+
+            {/* Audience Toggle */}
+            <div className="inline-flex items-center rounded-xl border border-border p-1.5 bg-muted/30 mb-8">
+              <button
+                onClick={() => setAudienceType('individuals')}
+                className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
+                  audienceType === 'individuals'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/70 hover:text-foreground'
+                }`}
+              >
+                Individuals
+              </button>
+              <button
+                onClick={() => setAudienceType('companies')}
+                className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
+                  audienceType === 'companies'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/70 hover:text-foreground'
+                }`}
+              >
+                Companies
+              </button>
+            </div>
+
+            {/* Dynamic CTA Button */}
+            <div className="flex justify-center items-center mb-6">
+              {audienceType === 'individuals' ? (
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/auth")}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                >
+                  Get Currency Insurance
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/for-companies")}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                >
+                  View API Quickstart
+                </Button>
+              )}
+            </div>
+
+            {/* Helper Text */}
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+              Individuals and businesses use the same core idea: hedging works like insurance—pay a known cost to reduce uncertainty.
+            </p>
           </div>
         </div>
       </section>
