@@ -228,13 +228,13 @@ export default function LandingPage() {
                 </div>
 
                 <p className="text-xl md:text-2xl font-medium mb-6 text-foreground">
-                  The simplest way to insure your money against unpredictable currency markets
+                  {t("landing.tagline")}
                 </p>
 
                 {/* Audience Toggle */}
                 <div className="mb-8 max-w-lg mx-auto lg:mx-0">
                   <p className="text-base md:text-lg font-semibold text-foreground mb-4 text-center lg:text-left">
-                    I'm using Hedgi for:
+                    {t("landing.audienceLabel")}
                   </p>
                   <div className="flex items-center gap-2 p-1.5 bg-muted rounded-xl">
                     <button
@@ -247,7 +247,7 @@ export default function LandingPage() {
                       }`}
                     >
                       <User className="h-5 w-5" />
-                      Individuals
+                      {t("landing.individuals")}
                     </button>
                     <button
                       type="button"
@@ -259,13 +259,13 @@ export default function LandingPage() {
                       }`}
                     >
                       <Building2 className="h-5 w-5" />
-                      Companies
+                      {t("landing.companies")}
                     </button>
                   </div>
                   <p className="text-sm md:text-base text-foreground/80 mt-3 text-center lg:text-left leading-relaxed">
                     {audienceType === 'individuals' 
-                      ? 'Lock rates for travel, tuition, subscriptions, or big purchases.'
-                      : 'Embed rate locks for customers—or hedge your own treasury exposure.'}
+                      ? t("landing.individualsHelper")
+                      : t("landing.companiesHelper")}
                   </p>
                 </div>
 
@@ -284,7 +284,7 @@ export default function LandingPage() {
                     onClick={() => navigate(audienceType === 'individuals' ? '/for-individuals' : '/for-companies')}
                     className="px-6 py-3 text-base md:text-lg font-semibold"
                   >
-                    {audienceType === 'individuals' ? 'For Individuals' : 'For Companies'}
+                    {audienceType === 'individuals' ? t("landing.forIndividuals") : t("landing.forCompanies")}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </div>
@@ -308,9 +308,9 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <CheckCircle className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Instant Protection</h3>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">{t("landing.instantProtection")}</h3>
                 <p className="text-muted-foreground">
-                  Lock a rate today for your chosen time window and remove FX surprises from your plan.
+                  {t("landing.instantProtectionDesc")}
                 </p>
               </div>
 
@@ -318,9 +318,9 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Real-Time Monitoring</h3>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">{t("landing.realTimeMonitoring")}</h3>
                 <p className="text-muted-foreground">
-                  Live pricing and alerts, check rates anytime and hedge when you're ready.
+                  {t("landing.realTimeMonitoringDesc")}
                 </p>
               </div>
 
@@ -328,9 +328,9 @@ export default function LandingPage() {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <DollarSign className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Transparent Pricing</h3>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">{t("landing.transparentPricing")}</h3>
                 <p className="text-muted-foreground">
-                  See an all-in estimate up front, with clear costs, not confusing fine print.
+                  {t("landing.transparentPricingDesc")}
                 </p>
               </div>
             </div>
@@ -342,10 +342,10 @@ export default function LandingPage() {
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-                Ready to protect your budget from currency swings?
+                {t("landing.bottomCtaTitle")}
               </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                In minutes, get currency insurance for your next payment—or route to the right setup for your business.
+                {t("landing.bottomCtaBody")}
               </p>
 
               {/* Audience Toggle */}
@@ -358,7 +358,7 @@ export default function LandingPage() {
                       : 'text-foreground/70 hover:text-foreground'
                   }`}
                 >
-                  Individuals
+                  {t("landing.individuals")}
                 </button>
                 <button
                   onClick={() => setAudienceType('companies')}
@@ -368,7 +368,7 @@ export default function LandingPage() {
                       : 'text-foreground/70 hover:text-foreground'
                   }`}
                 >
-                  Companies
+                  {t("landing.companies")}
                 </button>
               </div>
 
@@ -380,7 +380,7 @@ export default function LandingPage() {
                     onClick={() => navigate("/auth")}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
                   >
-                    Get Currency Insurance
+                    {t("cta.Get Currency Insurance")}
                   </Button>
                 ) : (
                   <Button
@@ -388,14 +388,14 @@ export default function LandingPage() {
                     onClick={() => navigate("/for-companies")}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
                   >
-                    View API Quickstart
+                    {t("landing.viewApiQuickstart")}
                   </Button>
                 )}
               </div>
 
               {/* Helper Text */}
               <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-                Individuals and businesses use the same core idea: hedging works like insurance—pay a known cost to reduce uncertainty.
+                {t("landing.bottomCtaHelper")}
               </p>
             </div>
           </div>
