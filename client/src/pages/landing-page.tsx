@@ -232,37 +232,37 @@ export default function LandingPage() {
                 </p>
 
                 {/* Audience Toggle */}
-                <div className="mb-6 max-w-md mx-auto lg:mx-0">
-                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center lg:text-left">
+                <div className="mb-8 max-w-lg mx-auto lg:mx-0">
+                  <p className="text-base md:text-lg font-semibold text-foreground mb-4 text-center lg:text-left">
                     I'm using Hedgi for:
                   </p>
-                  <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+                  <div className="flex items-center gap-2 p-1.5 bg-muted rounded-xl">
                     <button
                       type="button"
                       onClick={() => setAudienceType('individuals')}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-2 px-5 py-3 rounded-lg text-base md:text-lg font-semibold transition-colors flex-1 justify-center ${
                         audienceType === 'individuals'
                           ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                          : 'text-foreground/70 hover:text-foreground'
                       }`}
                     >
-                      <User className="h-4 w-4" />
+                      <User className="h-5 w-5" />
                       Individuals
                     </button>
                     <button
                       type="button"
                       onClick={() => setAudienceType('companies')}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-2 px-5 py-3 rounded-lg text-base md:text-lg font-semibold transition-colors flex-1 justify-center ${
                         audienceType === 'companies'
                           ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                          : 'text-foreground/70 hover:text-foreground'
                       }`}
                     >
-                      <Building2 className="h-4 w-4" />
+                      <Building2 className="h-5 w-5" />
                       Companies (API)
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center lg:text-left">
+                  <p className="text-sm md:text-base text-foreground/80 mt-3 text-center lg:text-left leading-relaxed">
                     {audienceType === 'individuals' 
                       ? 'Lock rates for travel, tuition, subscriptions, or big purchases.'
                       : 'Embed rate locks for customers—or hedge your own treasury exposure.'}
@@ -278,13 +278,15 @@ export default function LandingPage() {
                   >
                     {t("Start Hedging Now")}
                   </Button>
-                  <Link 
-                    href={audienceType === 'individuals' ? '/for-individuals' : '/for-companies'}
-                    className="text-primary hover:text-primary/80 font-medium flex items-center gap-1 text-sm"
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate(audienceType === 'individuals' ? '/for-individuals' : '/for-companies')}
+                    className="px-6 py-3 text-base md:text-lg font-semibold"
                   >
                     {audienceType === 'individuals' ? 'For Individuals' : 'For Companies (API)'}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </Button>
                 </div>
               </div>
 
@@ -347,23 +349,23 @@ export default function LandingPage() {
               </p>
 
               {/* Audience Toggle */}
-              <div className="inline-flex items-center rounded-full border border-border p-1 bg-muted/30 mb-8">
+              <div className="inline-flex items-center rounded-xl border border-border p-1.5 bg-muted/30 mb-8">
                 <button
                   onClick={() => setAudienceType('individuals')}
-                  className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
                     audienceType === 'individuals'
                       ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
+                      : 'text-foreground/70 hover:text-foreground'
                   }`}
                 >
                   Individuals
                 </button>
                 <button
                   onClick={() => setAudienceType('companies')}
-                  className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
                     audienceType === 'companies'
                       ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
+                      : 'text-foreground/70 hover:text-foreground'
                   }`}
                 >
                   Companies (API)
