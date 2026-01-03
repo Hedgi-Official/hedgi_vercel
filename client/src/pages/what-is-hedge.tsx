@@ -62,11 +62,11 @@ export default function WhatIsHedge() {
             </div>
           </div>
           
-          <p className="text-lg md:text-xl text-justify mb-8">
-            Hedging is a financial strategy designed to minimize risk by protecting against fluctuations in prices, 
-            interest rates, currencies, or other market uncertainties. Simply put, hedging acts like insurance, 
-            shielding investors, companies, and individuals from unexpected financial losses caused by volatile 
-            market movements.
+          <p className="text-lg md:text-xl text-justify mb-4">
+            Hedging is a risk-management technique that reduces uncertainty by offsetting an exposure with another position. In currency hedging, the goal is simple: make a future exchange rate more predictable, so your costs or revenues do not swing with the market.
+          </p>
+          <p className="text-sm text-muted-foreground text-center mb-8">
+            Think of it like "locking" an exchange rate for a defined amount and time window.
           </p>
         </div>
       </section>
@@ -74,47 +74,46 @@ export default function WhatIsHedge() {
       {/* Institutional Hedging Section */}
       <section className="py-16 px-4 bg-background">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-bold mb-8 text-center">How Do Institutions Use Hedging?</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center">How Do Businesses Use Currency Hedging?</h2>
           
           <p className="text-lg mb-8">
-            Businesses and financial institutions regularly use hedging to protect their operations and profits.
+            Businesses hedge to keep pricing, margins, and cash flow predictable when they earn or pay in foreign currency.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
-                <Plane className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Airlines</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p>Hedge fuel costs to safeguard against rising oil prices.</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-col items-center">
-                <Wheat className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Agricultural</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p>Hedge crop prices to ensure predictable revenues.</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-col items-center">
                 <Building2 className="h-12 w-12 text-primary mb-2" />
-                <CardTitle className="text-center">Corporations</CardTitle>
+                <CardTitle className="text-center">Import / Export</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Hedge currency risks to manage international operations.</p>
+                <p>Lock rates for upcoming invoices so a shipment's cost or revenue does not change before payment.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-col items-center">
+                <DollarSign className="h-12 w-12 text-primary mb-2" />
+                <CardTitle className="text-center">Global Payroll & Contractors</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p>Hedge monthly USD/EUR payroll so operating expenses stay stable in local currency.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-col items-center">
+                <Shield className="h-12 w-12 text-primary mb-2" />
+                <CardTitle className="text-center">Platforms</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p>Offer customers predictable rates while hedging the platform's own FX exposure in the background.</p>
               </CardContent>
             </Card>
           </div>
           
           <p className="text-lg text-justify text-muted-foreground">
-            This sophisticated approach has traditionally been reserved for large corporations and financial institutions, 
-            which have access to specialized financial products and teams of financial experts.
+            Businesses typically use tools like forwards, options, and swaps to manage currency risk, choosing the hedge size and duration based on their exposure.
           </p>
         </div>
       </section>
@@ -125,7 +124,7 @@ export default function WhatIsHedge() {
           <h2 className="text-3xl font-bold mb-8 text-center">But What About Individuals?</h2>
           
           <p className="text-lg mb-8">
-            Individuals face similar risks—especially when it comes to currency fluctuations. Consider scenarios such as:
+            Individuals face the same currency risk. If you have a future expense or goal in another currency, exchange rates can change the total cost.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -135,7 +134,7 @@ export default function WhatIsHedge() {
                 <CardTitle className="text-center">Education</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Overseas education costs that fluctuate due to exchange rates.</p>
+                <p>Tuition and living costs abroad can rise if your currency weakens.</p>
               </CardContent>
             </Card>
             
@@ -145,7 +144,7 @@ export default function WhatIsHedge() {
                 <CardTitle className="text-center">Property</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Property purchases abroad becoming unexpectedly expensive.</p>
+                <p>A foreign down payment can become more expensive before you close.</p>
               </CardContent>
             </Card>
             
@@ -155,17 +154,17 @@ export default function WhatIsHedge() {
                 <CardTitle className="text-center">Travel</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Travel expenses increasing sharply because of sudden currency changes.</p>
+                <p>Trips can cost more if the exchange rate moves against you.</p>
               </CardContent>
             </Card>
             
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-col items-center">
-                <DollarSign className="h-12 w-12 text-primary mb-2" />
+                <TrendingUp className="h-12 w-12 text-primary mb-2" />
                 <CardTitle className="text-center">Investments</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p>Investments and savings losing value simply due to currency volatility.</p>
+                <p>Returns can change when you convert back to your home currency.</p>
               </CardContent>
             </Card>
           </div>
@@ -187,20 +186,23 @@ export default function WhatIsHedge() {
               </CardHeader>
               <CardContent className="flex flex-col flex-grow">
                 <p className="mb-4 flex-grow">
-                  A Brazilian family plans a trip to Disney World, costing R$30,000 at today's exchange rate. 
-                  If the US dollar appreciates, the same trip might later cost R$35,000 or more.
+                  A Brazilian family plans a trip priced in USD. If the dollar strengthens before they pay, the trip costs more in BRL.
                 </p>
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex justify-between mb-2">
-                    <span>Initial Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Trip Budget (USD):</span>
+                    <span className="font-bold">$5,000</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span>Exchange Rate Changes:</span>
-                    <span className="font-bold text-destructive">+ R$5,000</span>
+                    <span>Exchange Rate Change:</span>
+                    <span className="font-bold text-destructive">+16%</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Hedge Cost:</span>
+                    <span className="font-bold">R$0</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
-                    <span>Final Cost:</span>
+                    <span>Final Cost (BRL):</span>
                     <span className="font-bold text-destructive">R$35,000</span>
                   </div>
                 </div>
@@ -216,31 +218,29 @@ export default function WhatIsHedge() {
               </CardHeader>
               <CardContent className="flex flex-col flex-grow">
                 <p className="mb-4 flex-grow">
-                  The family locks in today's exchange rate, guaranteeing their trip will cost exactly 
-                  R$30,000 regardless of future currency movements.
+                  The family locks an exchange rate for the trip budget. If the dollar strengthens, the locked rate helps keep the BRL cost predictable.
                 </p>
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex justify-between mb-2">
-                    <span>Initial Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Trip Budget (USD):</span>
+                    <span className="font-bold">$5,000</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span>Exchange Rate Changes:</span>
-                    <span className="font-bold text-green-500">R$0</span>
+                    <span>Exchange Rate Change:</span>
+                    <span className="font-bold text-green-500">Locked</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span>Hedge Cost:</span>
+                    <span className="font-bold">R$900</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
-                    <span>Final Cost:</span>
-                    <span className="font-bold">R$30,000</span>
+                    <span>Final Cost (BRL):</span>
+                    <span className="font-bold">R$30,900</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
-          <p className="text-lg text-justify mb-8 text-muted-foreground">
-            Unfortunately, most financial institutions do not offer hedging solutions tailored to 
-            the unique needs and scale of individual customers.
-          </p>
         </div>
       </section>
       
@@ -249,62 +249,37 @@ export default function WhatIsHedge() {
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-3xl font-bold mb-8 text-center">Try It Yourself: Currency Hedge Simulator</h2>
           <p className="text-lg text-center mb-8">
-            See how currency hedging can protect your future expenses from exchange rate volatility.
+            Choose a currency pair, amount, and expiration date to estimate the cost of locking a rate.
           </p>
           
           <CurrencySimulator showGraph={false} />
+          
+          <p className="text-sm text-muted-foreground text-center mt-6">
+            A hedge has a cost, just like insurance. The goal is predictability.
+          </p>
         </div>
       </section>
       
-      {/* Hedgi Introduction Section */}
+      {/* Ready to Use Hedgi CTA Section */}
       <section className="py-16 px-4 bg-background">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex justify-center mb-6">
-            <Umbrella className="h-16 w-16 text-primary" />
-          </div>
-          
-          <h2 className="text-3xl font-bold mb-6 text-center">
-            Introducing Hedgi: Hedging Solutions Designed for You
+        <div className="container mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-bold mb-6">
+            Ready to use Hedgi?
           </h2>
           
-          <p className="text-lg text-justify mb-8">
-            At Hedgi, we believe everyone deserves access to financial peace of mind. That's why we've built 
-            hedging solutions specifically tailored to individuals, making it easy, transparent, and affordable 
-            to protect your money against currency risks.
+          <p className="text-lg text-muted-foreground mb-8">
+            Choose your path to see the right workflow and setup.
           </p>
           
-          <div className="space-y-4 max-w-2xl mx-auto mb-10">
-            <div className="flex items-start gap-3">
-              <div className="bg-primary rounded-full p-1 mt-1">
-                <Check className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <p>Secure today's favorable exchange rates for future expenses.</p>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="bg-primary rounded-full p-1 mt-1">
-                <Check className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <p>Protect your finances from unexpected market movements.</p>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="bg-primary rounded-full p-1 mt-1">
-                <Check className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <p>Enjoy the same sophisticated risk management tools that large corporations use—but designed specifically for your individual needs.</p>
-            </div>
-          </div>
-          
-          <p className="text-lg text-justify mb-8">
-            Take control of your financial future and protect yourself from currency volatility. 
-            Hedging isn't just for large institutions anymore—it's for you.
-          </p>
-          
-          <div className="flex justify-center">
-            <Link href="/dashboard">
-              <Button size="lg" className="text-lg">
-                Discover How Easy Hedging Can Be with Hedgi
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/for-individuals">
+              <Button size="lg" className="text-lg px-8">
+                For Individuals
+              </Button>
+            </Link>
+            <Link href="/for-companies">
+              <Button variant="outline" size="lg" className="text-lg px-8">
+                For Companies (API)
               </Button>
             </Link>
           </div>

@@ -1,0 +1,101 @@
+1) Hero: “What is Hedging?”
+
+Title: What is Hedging?
+
+Body paragraph (replace current):
+Hedging is a risk-management technique that reduces uncertainty by offsetting an exposure with another position. In currency hedging, the goal is simple: make a future exchange rate more predictable, so your costs or revenues do not swing with the market. 
+Federal Reserve Bank of Chicago
++1
+
+Small helper line under the USD/BRL graphic (optional):
+Think of it like “locking” an exchange rate for a defined amount and time window. 
+AllianzGI
+
+2) Section: “How Do Institutions Use Hedging?”
+
+Change the title to (more specific):
+How Do Businesses Use Currency Hedging?
+
+Subtitle (replace current):
+Businesses hedge to keep pricing, margins, and cash flow predictable when they earn or pay in foreign currency.
+
+Replace the 3 cards with currency-specific examples:
+
+Card 1 — Import / Export
+Lock rates for upcoming invoices so a shipment’s cost or revenue does not change before payment.
+
+Card 2 — Global Payroll & Contractors
+Hedge monthly USD/EUR payroll so operating expenses stay stable in local currency.
+
+Card 3 — Platforms (Remittance, Marketplaces, Crypto)
+Offer customers predictable rates while hedging the platform’s own FX exposure in the background.
+
+Small paragraph under cards (replace current):
+Businesses typically use tools like forwards, options, and swaps to manage currency risk, choosing the hedge size and duration based on their exposure. 
+Bank for International Settlements
++1
+
+3) Section: “But What About Individuals?”
+
+Keep the title. Replace the intro sentence with:
+Individuals face the same currency risk. If you have a future expense or goal in another currency, exchange rates can change the total cost.
+
+Tighten the 4 cards (small edits):
+
+Education
+Tuition and living costs abroad can rise if your currency weakens.
+
+Property
+A foreign down payment can become more expensive before you close.
+
+Travel
+Trips can cost more if the exchange rate moves against you.
+
+Investments
+Returns can change when you convert back to your home currency.
+
+4) Example block: “Hedging a Family Trip…”
+
+Keep the layout. Update the copy to include the tradeoff and remove absolute phrasing.
+
+Without Hedging (text):
+A Brazilian family plans a trip priced in USD. If the dollar strengthens before they pay, the trip costs more in BRL.
+
+With Hedging (text):
+The family locks an exchange rate for the trip budget. If the dollar strengthens, the locked rate helps keep the BRL cost predictable. 
+AllianzGI
+
+Update the little table rows (suggested rows):
+
+Trip Budget (USD): $X
+
+Exchange Rate Change: +/–
+
+Hedge Cost: R$___
+
+Final Cost (BRL): R$___
+
+(Your current example shows “R$0” impact with hedging but doesn’t show the hedging cost, so adding that row makes the concept feel real.)
+
+5) Simulator block
+
+Title (keep or slightly tighten): Try It Yourself: Currency Hedge Simulator
+
+Subtitle (tighten):
+Choose a currency pair, amount, and expiration date to estimate the cost of locking a rate.
+
+Tiny helper line under the simulator (optional):
+A hedge has a cost, just like insurance. The goal is predictability.
+
+6) Replace the final “Introducing Hedgi…” marketing block with a clean router CTA
+
+Title: Ready to use Hedgi?
+
+Body:
+Choose your path to see the right workflow and setup.
+
+Buttons (side-by-side):
+
+For Individuals
+
+For Companies (API)
