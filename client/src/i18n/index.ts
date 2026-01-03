@@ -60,7 +60,7 @@ const enUS = {
       'You must be at least 18 years old to use this service': 'You must be at least 18 years old to use this service'
     },
     simulator: {
-      title: 'Currency Hedge Placement',
+      title: 'Simulate Your Hedge',
       targetCurrency: 'Target Currency',
       baseCurrency: 'Base Currency',
       tradeDirection: 'Trade Direction',

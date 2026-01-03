@@ -4,15 +4,17 @@ import { CurrencySimulator } from "@/components/currency-simulator";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/header";
 import { Skyline } from "@/components/skyline";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { User, Building2, ArrowRight, CheckCircle, Zap, DollarSign } from "lucide-react";
 /*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
+  const [audienceType, setAudienceType] = useState<'individuals' | 'companies'>('individuals');
 
   // Refs
   const colRef = useRef<HTMLDivElement>(null);        // left column wrapper
@@ -225,26 +227,115 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <p className="text-xl md:text-2xl font-medium mb-4 text-foreground">
-                  The Simplest Way to Insure Your Money Against Unpredictable Markets.
+                <p className="text-xl md:text-2xl font-medium mb-6 text-foreground">
+                  The simplest way to insure your money against unpredictable currency markets
                 </p>
-                <p className="text-lg md:text-xl mb-8 text-muted-foreground max-w-xl mx-auto lg:mx-0">
-                  {t("Professional currency hedging made simple")}
-                </p>
-                <Button
-                  size="lg"
-                  onClick={() => navigate("/auth")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg w-full sm:w-auto"
-                >
-                  {t("Start Hedging Now")}
-                </Button>
+
+                {/* Audience Toggle */}
+                <div className="mb-6 max-w-md mx-auto lg:mx-0">
+                  <p className="text-sm font-medium text-muted-foreground mb-3 text-center lg:text-left">
+                    I'm using Hedgi for:
+                  </p>
+                  <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setAudienceType('individuals')}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                        audienceType === 'individuals'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <User className="h-4 w-4" />
+                      Individuals
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAudienceType('companies')}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                        audienceType === 'companies'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      Companies (API)
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 text-center lg:text-left">
+                    {audienceType === 'individuals' 
+                      ? 'Lock rates for travel, tuition, subscriptions, or big purchases.'
+                      : 'Embed rate locks for customers—or hedge your own treasury exposure.'}
+                  </p>
+                </div>
+
+                {/* CTAs */}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <Button
+                    size="lg"
+                    onClick={() => navigate("/auth")}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg w-full sm:w-auto"
+                  >
+                    {t("Start Hedging Now")}
+                  </Button>
+                  <Link 
+                    href={audienceType === 'individuals' ? '/for-individuals' : '/for-companies'}
+                    className="text-primary hover:text-primary/80 font-medium flex items-center gap-1 text-sm"
+                  >
+                    {audienceType === 'individuals' ? 'For Individuals' : 'For Companies (API)'}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
 
               {/* Right side - Currency Simulator */}
               <div className="lg:mt-0 mt-8">
                 <div className="bg-background rounded-2xl p-6 border border-border shadow-sm">
+                  <div className="mb-4">
+                    <h3 className="text-xl font-semibold text-foreground">Simulate Your Hedge</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Pick a currency pair, direction, amount, and expiration date to see an estimated hedge cost.
+                    </p>
+                  </div>
                   <CurrencySimulator showGraph={false} />
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Feature Cards Section */}
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                  <CheckCircle className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Instant Protection</h3>
+                <p className="text-muted-foreground">
+                  Lock a rate today for your chosen time window and remove FX surprises from your plan.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Real-Time Monitoring</h3>
+                <p className="text-muted-foreground">
+                  Live pricing and alerts, check rates anytime and hedge when you're ready.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-xl bg-background border border-border hover:border-primary/20 transition-colors">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                  <DollarSign className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Transparent Pricing</h3>
+                <p className="text-muted-foreground">
+                  See an all-in estimate up front, with clear costs, not confusing fine print.
+                </p>
               </div>
             </div>
           </div>
