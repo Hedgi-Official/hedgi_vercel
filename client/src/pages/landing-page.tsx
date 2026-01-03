@@ -335,37 +335,86 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Clean CTA Section */}
+        {/* Bottom CTA Section with Audience Toggle */}
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-foreground">{t("cta.Ready to Protect Your Money?")}</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
+                Ready to protect your budget from currency swings?
+              </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                {t("cta.ctaDescription")}
+                In minutes, get currency insurance for your next payment—or route to the right setup for your business.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                <Button
-                  size="lg"
-                  onClick={() => navigate("/auth")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+              {/* Audience Toggle */}
+              <div className="inline-flex items-center rounded-full border border-border p-1 bg-muted/30 mb-8">
+                <button
+                  onClick={() => setAudienceType('individuals')}
+                  className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                    audienceType === 'individuals'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  {t("cta.Get Currency Insurance")}
-                </Button>
-
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <span>or</span>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => navigate("/for-individuals")}
-                  className="px-8 py-4 text-lg"
+                  Individuals
+                </button>
+                <button
+                  onClick={() => setAudienceType('companies')}
+                  className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                    audienceType === 'companies'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  {t("For Individuals")}
-                </Button>
+                  Companies (API)
+                </button>
               </div>
+
+              {/* Dynamic CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+                {audienceType === 'individuals' ? (
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={() => navigate("/auth")}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                    >
+                      Get Currency Insurance
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => navigate("/for-companies")}
+                      className="px-8 py-4 text-lg"
+                    >
+                      For Companies (API)
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={() => navigate("/for-companies")}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                    >
+                      View API Quickstart
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => navigate("/for-individuals")}
+                      className="px-8 py-4 text-lg"
+                    >
+                      For Individuals
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Helper Text */}
+              <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+                Individuals and businesses use the same core idea: hedging works like insurance—pay a known cost to reduce uncertainty.
+              </p>
             </div>
           </div>
         </section>
