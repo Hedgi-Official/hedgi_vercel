@@ -370,44 +370,24 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              {/* Dynamic CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+              {/* Dynamic CTA Button */}
+              <div className="flex justify-center items-center mb-6">
                 {audienceType === 'individuals' ? (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={() => navigate("/auth")}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                    >
-                      Get Currency Insurance
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate("/for-companies")}
-                      className="px-8 py-4 text-lg"
-                    >
-                      For Companies (API)
-                    </Button>
-                  </>
+                  <Button
+                    size="lg"
+                    onClick={() => navigate("/auth")}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                  >
+                    Get Currency Insurance
+                  </Button>
                 ) : (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={() => navigate("/for-companies")}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                    >
-                      View API Quickstart
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate("/for-individuals")}
-                      className="px-8 py-4 text-lg"
-                    >
-                      For Individuals
-                    </Button>
-                  </>
+                  <Button
+                    size="lg"
+                    onClick={() => navigate("/for-companies")}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                  >
+                    View API Quickstart
+                  </Button>
                 )}
               </div>
 
