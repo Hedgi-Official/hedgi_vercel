@@ -281,26 +281,6 @@ export default function ForIndividuals() {
             </div>
           </section>
 
-          {/* Lifestyle Section */}
-          <section className="py-12 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="max-w-4xl mx-auto text-center">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  {t('forIndividuals.lifestyleTitle')}
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  {t('forIndividuals.lifestyleSubtitle')}
-                </p>
-                <p className="text-lg font-medium text-foreground mb-2">
-                  {t('forIndividuals.lifestyleSectionTitle')}
-                </p>
-                <p className="text-muted-foreground">
-                  {t('forIndividuals.lifestyleSectionSubtitle')}
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* Use Cases Section */}
           <section className="py-16 bg-muted/30">
             <div className="container mx-auto px-4">
@@ -308,6 +288,12 @@ export default function ForIndividuals() {
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
                   {t('forIndividuals.useCasesTitle')}
                 </h2>
+                <p className="text-lg font-medium text-foreground mb-2">
+                  {t('forIndividuals.lifestyleSectionTitle')}
+                </p>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  {t('forIndividuals.lifestyleSectionSubtitle')}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
