@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
 // English translations
 const enUS = {
@@ -663,14 +664,22 @@ const ptBR = {
 };
 
 i18n
+  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
       'en-US': enUS,
-      'pt-BR': ptBR
+      'pt-BR': ptBR,
+      'en': enUS,
+      'pt': ptBR
     },
-    lng: 'en-US', // default language
+    supportedLngs: ['en-US', 'pt-BR', 'en', 'pt'],
     fallbackLng: 'en-US',
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      caches: typeof window !== 'undefined' ? ['localStorage'] : [],
+      lookupLocalStorage: 'hedgi-language'
+    },
     interpolation: {
       escapeValue: false
     }

@@ -8,6 +8,9 @@ export function LanguageSelector() {
 
   const setLanguage = (lang: 'en-US' | 'pt-BR') => {
     i18n.changeLanguage(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hedgi-language', lang);
+    }
   };
 
   return (
