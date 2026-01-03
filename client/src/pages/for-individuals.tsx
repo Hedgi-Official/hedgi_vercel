@@ -14,7 +14,6 @@ import {
   Shield,
   Clock,
   ArrowRight,
-  Users,
   Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -188,75 +187,59 @@ export default function ForIndividuals() {
         <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
         <main className="flex-1">
-          {/* Hero Section */}
-          <section className="py-16 md:py-24 bg-gradient-to-b from-primary/5 to-background">
+          {/* Hero Section - Two Column Layout */}
+          <section className="py-16 md:py-24">
             <div className="container mx-auto px-4">
-              <div className="max-w-4xl mx-auto text-center">
-                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-                  <Users className="w-4 h-4" />
-                  {t('forIndividuals.pill')}
-                </div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
-                  {t('forIndividuals.heroTitle')}
-                </h1>
-                <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  {t('forIndividuals.heroSubtitle')}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
-                    <Link href="/auth?type=individual">
-                      {t('cta.Get Currency Insurance')}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild>
-                    <a href="#try-it">{t('forIndividuals.trySimulator')}</a>
-                  </Button>
-                </div>
-
-                {/* Benefit Chips */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-primary" />
-                    <div className="text-left">
-                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip1Title')}</p>
-                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip1Desc')}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    <div className="text-left">
-                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip2Title')}</p>
-                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip2Desc')}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    <div className="text-left">
-                      <p className="font-medium text-foreground text-sm">{t('forIndividuals.chip3Title')}</p>
-                      <p className="text-xs text-muted-foreground">{t('forIndividuals.chip3Desc')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Lifestyle Section */}
-          <section className="py-16">
-            <div className="container mx-auto px-4">
-              <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-                    {t('forIndividuals.lifestyleTitle')}
-                  </h2>
-                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    {t('forIndividuals.lifestyleSubtitle')}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                {/* Left Column - Text */}
+                <div>
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
+                    {t('forIndividuals.heroTitle')}
+                  </h1>
+                  <p className="text-xl text-muted-foreground mb-8">
+                    {t('forIndividuals.heroSubtitle')}
                   </p>
+                  
+                  {/* Benefit Chips */}
+                  <div className="flex flex-col gap-4 mb-8">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip1Title')}</span>
+                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip1Desc')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip2Title')}</span>
+                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip2Desc')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground text-sm">{t('forIndividuals.chip3Title')}</span>
+                        <span className="text-muted-foreground text-sm"> — {t('forIndividuals.chip3Desc')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
+                      <Link href="/auth?type=individual">
+                        {t('cta.Get Currency Insurance')}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" asChild>
+                      <a href="#try-it">{t('forIndividuals.trySimulator')}</a>
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Images */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                {/* Right Column - Images Grid */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="relative rounded-xl overflow-hidden aspect-square">
                     <img
                       src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
@@ -294,15 +277,26 @@ export default function ForIndividuals() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
 
-                <div className="text-center">
-                  <h3 className="text-xl md:text-2xl font-semibold mb-2 text-foreground">
-                    {t('forIndividuals.lifestyleSectionTitle')}
-                  </h3>
-                  <p className="text-muted-foreground max-w-2xl mx-auto">
-                    {t('forIndividuals.lifestyleSectionSubtitle')}
-                  </p>
-                </div>
+          {/* Lifestyle Section */}
+          <section className="py-12 bg-muted/30">
+            <div className="container mx-auto px-4">
+              <div className="max-w-4xl mx-auto text-center">
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
+                  {t('forIndividuals.lifestyleTitle')}
+                </h2>
+                <p className="text-muted-foreground mb-4">
+                  {t('forIndividuals.lifestyleSubtitle')}
+                </p>
+                <p className="text-lg font-medium text-foreground mb-2">
+                  {t('forIndividuals.lifestyleSectionTitle')}
+                </p>
+                <p className="text-muted-foreground">
+                  {t('forIndividuals.lifestyleSectionSubtitle')}
+                </p>
               </div>
             </div>
           </section>
