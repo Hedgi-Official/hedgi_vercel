@@ -259,7 +259,7 @@ export default function LandingPage() {
                       }`}
                     >
                       <Building2 className="h-5 w-5" />
-                      Companies (API)
+                      Companies
                     </button>
                   </div>
                   <p className="text-sm md:text-base text-foreground/80 mt-3 text-center lg:text-left leading-relaxed">
@@ -284,7 +284,7 @@ export default function LandingPage() {
                     onClick={() => navigate(audienceType === 'individuals' ? '/for-individuals' : '/for-companies')}
                     className="px-6 py-3 text-base md:text-lg font-semibold"
                   >
-                    {audienceType === 'individuals' ? 'For Individuals' : 'For Companies (API)'}
+                    {audienceType === 'individuals' ? 'For Individuals' : 'For Companies'}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </div>
@@ -368,7 +368,7 @@ export default function LandingPage() {
                       : 'text-foreground/70 hover:text-foreground'
                   }`}
                 >
-                  Companies (API)
+                  Companies
                 </button>
               </div>
 
