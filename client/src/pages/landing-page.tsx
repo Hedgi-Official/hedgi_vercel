@@ -291,12 +291,6 @@ export default function LandingPage() {
               {/* Right side - Currency Simulator */}
               <div className="lg:mt-0 mt-8">
                 <div className="bg-background rounded-2xl p-6 border border-border shadow-sm">
-                  <div className="mb-4">
-                    <h3 className="text-xl font-semibold text-foreground">Simulate Your Hedge</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Pick a currency pair, direction, amount, and expiration date to see an estimated hedge cost.
-                    </p>
-                  </div>
                   <CurrencySimulator showGraph={false} />
                 </div>
               </div>

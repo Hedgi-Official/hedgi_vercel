@@ -254,6 +254,9 @@ export function CurrencySimulator({
             <BarChart2 className="mr-2 h-5 w-5" />
             {t('simulator.title')}
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pick a currency pair, direction, amount, and expiration date to see an estimated hedge cost.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
