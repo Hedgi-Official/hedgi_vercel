@@ -752,7 +752,7 @@ export default function ForCompanies() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <p className="text-xs text-muted-foreground">Try endpoints live in our Swagger-style documentation.</p>
-                  <Button variant="ghost" size="sm" className="mt-2 px-0 text-primary hover:text-primary/80 text-xs" asChild>
+                  <Button variant="ghost" size="sm" className="mt-2 px-0 text-foreground font-semibold hover:text-foreground/80 text-xs" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                       Explore docs <ExternalLink className="w-3 h-3" />
                     </a>
