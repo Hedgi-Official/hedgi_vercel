@@ -510,7 +510,7 @@ export default function ForIndividuals() {
           </section>
 
           {/* CTA Section */}
-          <section className="py-16 bg-primary/5">
+          <section className="py-16 bg-background">
             <div className="container mx-auto px-4 text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
                 {t('forIndividuals.ctaTitle')}
