@@ -185,7 +185,7 @@ export default function LandingPage() {
                   {/* Scaler wrapper (no transform) */}
                   <div className="w-full overflow-hidden">
                     <span ref={scalerRef} className="inline-block origin-center lg:origin-left">
-                      <h1 ref={h1Ref} className="font-bold mb-0 sm:mb-1" style={{ fontSize: "120px", lineHeight: "1.14" }}>
+                      <h1 ref={h1Ref} className="font-bold mb-0 sm:mb-1" style={{ fontSize: "96px", lineHeight: "1.14" }}>
                         <span ref={line1Ref} className="text-foreground block whitespace-nowrap">
                           {t("Protect the value")}
                         </span>
