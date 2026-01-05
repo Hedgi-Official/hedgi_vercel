@@ -1,0 +1,70 @@
+Aqui vai uma tradução PT-BR natural e “drop-in” da versão mais atual da página Sobre nós, mantendo termos em inglês quando ajudam (ex.: FX, API) e alinhando com o tom que vocês já adotaram no site (“seguro cambial”, “travar taxa”, linguagem direta):
+
+Sobre nós (PT-BR)
+
+Gestão de risco cambial para pessoas e plataformas.
+A Hedgi ajuda pessoas a travar taxas para transações futuras e ajuda empresas a embutir proteção cambial em seus produtos e operações por meio de uma API simples e programável.
+
+Pessoas
+Empresas
+Obter seguro cambial
+
+Um motor de FX. Duas formas de usar.
+
+Proteja um pagamento futuro em minutos
+Escolha um par de moedas, valor e um prazo de proteção. A Hedgi mostra um custo estimado da proteção e ajuda você a travar uma taxa para o que você vai pagar mais adiante.
+
+Explorar Pessoas
+
+Integre proteção cambial via API
+Ofereça taxas protegidas aos usuários ou faça hedge da sua própria exposição a FX com cotações, execução e workflows programáticos.
+
+Explorar Empresas
+
+Por que pessoas e empresas escolhem a Hedgi
+
+Simples por design
+Sem configuração “pesada” de finanças. Inputs claros, outputs claros e uma experiência pensada para pagamentos reais — não para telas de trading.
+
+Resultados previsíveis
+Seguro cambial funciona como uma “trava” de orçamento: você paga um custo conhecido para reduzir a incerteza causada pelas oscilações do câmbio.
+
+Feito para fluxos do mundo real
+De mensalidades e viagens a invoices de fornecedores e plataformas cross-border — a Hedgi foi desenhada em torno de como o dinheiro realmente circula.
+
+Como funciona
+
+Você nos diz o que precisa proteger, escolhe por quanto tempo, e a Hedgi cuida do resto.
+
+Defina a exposição
+Par de moedas + valor + data
+
+Escolha o prazo de proteção
+Dias, semanas ou meses — de acordo com quando o pagamento acontece
+
+Fique protegido
+Você ganha um resultado mais claro e previsível, mesmo se o FX oscilar
+
+Aprenda o básico em O que é hedge?
+|
+Veja as implementações:
+Pessoas
+Para Empresas
+
+Quem somos
+
+A Hedgi está construindo gestão de risco cambial que parece simples: para que pessoas possam planejar com antecedência e empresas possam oferecer experiências com proteção cambial dentro do próprio produto.
+
+Como falar com a gente
+
+Para dúvidas, parcerias ou pilotos de API e integrações, fale com o nosso time a qualquer momento.
+
+guilherme@hedgi.ai
+
+Pronto para proteger seu próximo pagamento das oscilações do câmbio?
+
+Obtenha seguro cambial em minutos — ou vá direto para a configuração ideal para a sua empresa.
+
+Pessoas
+Empresas
+Obter seguro cambial
