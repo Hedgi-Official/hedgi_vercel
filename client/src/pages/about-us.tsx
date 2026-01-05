@@ -264,7 +264,7 @@ export default function AboutUs() {
                 </p>
                 <a 
                     href={`mailto:${t('aboutUs.emailMain')}`}
-                    className="text-primary hover:text-primary/80 font-medium"
+                    className="text-primary hover:text-primary/80 font-bold"
                   >
                     {t('aboutUs.emailMain')}
                   </a>
@@ -332,10 +332,6 @@ export default function AboutUs() {
                   </Button>
                 )}
               </div>
-
-              <p className="text-sm text-muted-foreground">
-                {t('aboutUs.ctaSmallText')}
-              </p>
             </div>
           </div>
         </section>
