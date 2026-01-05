@@ -518,7 +518,7 @@ export default function ForCompanies() {
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
               <div>
                 <p className="text-2xl md:text-3xl font-bold text-foreground">~$9 trillion</p>
-                <p className="text-sm text-muted-foreground">Transacted daily in currencies</p>
+                <p className="text-sm text-muted-foreground">Daily volume transacted in currencies</p>
               </div>
               <div className="hidden md:block w-px h-12 bg-border" />
               <div>
