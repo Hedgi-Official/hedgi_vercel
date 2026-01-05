@@ -250,7 +250,7 @@ export default function ForIndividuals() {
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
-                      alt="Happy customers using Hedgi"
+                      alt={t('forIndividuals.imageAlt')}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
