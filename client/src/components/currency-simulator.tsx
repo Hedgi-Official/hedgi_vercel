@@ -262,7 +262,7 @@ export function CurrencySimulator({
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <Globe className="mr-2 h-4 w-4 text-primary" />
-              Trade Pair
+              Currencies
             </label>
             <Select
               value={targetCurrency}
@@ -270,7 +270,7 @@ export function CurrencySimulator({
             >
               <SelectTrigger><SelectValue placeholder="Select pair" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="USD">BRL/USD</SelectItem>
+                <SelectItem value="USD">USDBRL</SelectItem>
               </SelectContent>
             </Select>
           </div>
