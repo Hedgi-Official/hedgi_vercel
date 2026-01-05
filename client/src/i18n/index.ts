@@ -728,7 +728,7 @@ const ptBR = {
       realTimeMonitoringDesc: 'Cotações ao vivo e alertas. Confira quando quiser e faça hedge quando estiver pronto.',
       transparentPricing: 'Preço transparente',
       transparentPricingDesc: 'Veja uma estimativa completa antes de confirmar, com custos claros, sem letras miúdas.',
-      bottomCtaTitle: 'Pronto para proteger seu orçamento das oscilações do câmbio?',
+      bottomCtaTitle: 'Pronto para proteger seu orçamento da volatilidade cambial?',
       bottomCtaBody: 'Em minutos, faça um seguro cambial para seu próximo pagamento ou encontre a configuração ideal para a sua empresa.',
       getCurrencyInsurance: 'Obter seguro cambial',
       bottomCtaHelper: 'Pessoas e empresas usam a mesma ideia central: hedge funciona como um seguro; você paga um custo conhecido para reduzir a incerteza.',
@@ -822,7 +822,7 @@ const ptBR = {
       chatThinking: 'Pensando...',
       simulatorTitle: 'Simule Seu Hedge',
       simulatorHelper: 'Escolha a direção, valor e vencimento para estimar o custo do hedge.',
-      ctaTitle: 'Pronto para proteger seu orçamento das oscilações cambiais?',
+      ctaTitle: 'Pronto para proteger seu orçamento da volatilidade cambial?',
       ctaBody: 'Obtenha seguro cambial para seu próximo pagamento em minutos.'
     },
     footer: {
