@@ -64,6 +64,7 @@ const enUS = {
       title: 'Simulate Your Hedge',
       subtitle: 'Choose the currency pair, direction, amount and expiration date to see an estimate of the hedge cost.',
       currencyPair: 'Currency Pair',
+      selectPair: 'Select pair',
       targetCurrency: 'Target Currency',
       baseCurrency: 'Base Currency',
       tradeDirection: 'Trade Direction',
@@ -439,7 +440,7 @@ const ptBR = {
     welcome: 'Bem-vindo ao Hedgi',
     description: 'Sua plataforma completa de hedge cambial',
     'Get Started': 'Começar',
-    'Start Hedging Now': 'Comece a Proteger Agora',
+    'Start Hedging Now': 'Começar agora',
     'Protect the value': 'Proteja o valor',
     'of your': 'do seu',
     'Professional currency hedging made simple': 'Hedge cambial profissional simplificado',
@@ -510,6 +511,7 @@ const ptBR = {
       title: 'Simule seu hedge',
       subtitle: 'Escolha o par de moedas, a direção, o valor e a data de vencimento para ver uma estimativa do custo do hedge.',
       currencyPair: 'Par de moedas',
+      selectPair: 'Selecione o par',
       targetCurrency: 'Moeda Alvo',
       baseCurrency: 'Moeda Base',
       tradeDirection: 'Direção da operação',
@@ -598,10 +600,7 @@ const ptBR = {
     'Sell USD': 'Vender USD',
     'Direction': 'Direção',
     'What is a Hedge?': 'O que é um Hedge?',
-    'What is Hedging?': 'O que é Hedging?',
     'Using Hedgi': 'Usando a Hedgi',
-    'About Us': 'Sobre Nós',
-    'For Companies': 'Para Empresas',
     'Page Under Construction': 'Página Em Construção',
     'Coming Soon': 'Esta página está em construção. Por favor, volte em breve.',
     'Developer Access': 'Acesso de Desenvolvedor',
@@ -708,7 +707,7 @@ const ptBR = {
     cta: {
       'Ready to Protect Your Money?': 'Pronto para Proteger seu Dinheiro?',
       'ctaDescription': 'Pare de perder dinheiro com flutuações cambiais ao comprar de outros países. Com a Hedgi, a proteção cambial se torna tão simples quanto contratar um seguro — automática, acessível e sem estresse.',
-      'Get Currency Insurance': 'Obter Seguro Cambial'
+      'Get Currency Insurance': 'Contratar um Hedge'
     },
     landing: {
       tagline: 'O jeito mais simples de proteger seu dinheiro das oscilações do câmbio.',

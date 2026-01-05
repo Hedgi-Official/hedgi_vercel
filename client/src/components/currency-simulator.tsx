@@ -255,20 +255,20 @@ export function CurrencySimulator({
             {t('simulator.title')}
           </CardTitle>
           <p className="text-base text-muted-foreground mt-2">
-            Pick a currency pair, direction, amount, and expiration date to see an estimated hedge cost.
+            {t('simulator.subtitle')}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <Globe className="mr-2 h-4 w-4 text-primary" />
-              Currencies
+              {t('simulator.currencyPair')}
             </label>
             <Select
               value={targetCurrency}
               onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
             >
-              <SelectTrigger><SelectValue placeholder="Select pair" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('simulator.selectPair')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="USD">USDBRL</SelectItem>
               </SelectContent>
