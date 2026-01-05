@@ -383,8 +383,8 @@ const enUS = {
     },
     aboutUs: {
       badge: 'About Hedgi',
-      headline: 'Currency insurance—built for people and platforms.',
-      subheadline: 'Hedgi helps individuals lock in rates for upcoming spending, and helps companies embed FX protection into their products and operations—through a simple, programmable API.',
+      headline: 'Currency risk management for people and platforms.',
+      subheadline: 'Hedgi helps individuals lock in rates for upcoming transactions and helps companies embed FX protection into their products and operations through a simple, programmable API.',
       forIndividuals: 'For Individuals',
       forCompanies: 'For Companies (API)',
       getCurrencyInsurance: 'Get Currency Insurance',
@@ -811,8 +811,8 @@ const ptBR = {
     },
     aboutUs: {
       badge: 'Sobre o Hedgi',
-      headline: 'Seguro cambial—feito para pessoas e plataformas.',
-      subheadline: 'O Hedgi ajuda indivíduos a travar taxas para gastos futuros, e ajuda empresas a incorporar proteção cambial em seus produtos e operações—através de uma API simples e programável.',
+      headline: 'Gestão de risco cambial para pessoas e plataformas.',
+      subheadline: 'O Hedgi ajuda indivíduos a travar taxas para transações futuras e ajuda empresas a incorporar proteção cambial em seus produtos e operações através de uma API simples e programável.',
       forIndividuals: 'Para Pessoas Físicas',
       forCompanies: 'Para Empresas (API)',
       getCurrencyInsurance: 'Obter Seguro Cambial',
