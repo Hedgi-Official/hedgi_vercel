@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { Skyline } from "@/components/skyline";
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { useEffect, useRef, useState } from "react";
 import { User, Building2, ArrowRight, CheckCircle, Zap, DollarSign } from "lucide-react";
 /*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
@@ -40,6 +41,11 @@ export default function LandingPage() {
     const SAFETY = 0.992;  // tiny margin so we never wrap
     const EPS = 0.75;      // subpixel buffer
     const mql = window.matchMedia("(min-width: 1024px)"); // tailwind lg
+    
+    // Get English translations for consistent measurement
+    const tEn = i18n.getFixedT('en');
+    const enLine1 = tEn('Protect the value');
+    const enLine2 = tEn('of your') + ' USD'; // USD is the longest currency
 
     const isDesktop = () => mql.matches;
 
@@ -51,24 +57,40 @@ export default function LandingPage() {
       h1.style.lineHeight = mobile ? "1.02" : "1.14";
     };
 
-    const measureLinesAtBase = () => {
-      const l1 = line1Ref.current, l2 = line2Ref.current;
-      if (!l1 || !l2) return 0;
-      const prevWS1 = l1.style.whiteSpace;
-      l1.style.whiteSpace = "nowrap"; // l2 already nowrap via classes
-
-      const w1 = l1.getBoundingClientRect().width;
-      const w2 = l2.getBoundingClientRect().width;
+    const measureEnglishWidthAtBase = () => {
+      const h1 = h1Ref.current;
+      if (!h1) return 0;
+      
+      // Create hidden measurement element with same styling as h1
+      const measureEl = document.createElement('span');
+      measureEl.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        white-space: nowrap;
+        font-size: ${BASE_PX}px;
+        font-weight: bold;
+        font-family: ${getComputedStyle(h1).fontFamily};
+      `;
+      
+      // Measure English line 1
+      measureEl.textContent = enLine1;
+      document.body.appendChild(measureEl);
+      const w1 = measureEl.getBoundingClientRect().width;
+      
+      // Measure English line 2
+      measureEl.textContent = enLine2;
+      const w2 = measureEl.getBoundingClientRect().width;
+      
+      document.body.removeChild(measureEl);
+      
       const widest = Math.max(w1, w2) || 1;
 
-      // cache per mode to avoid jitter from TypingEffect
+      // cache per mode to avoid jitter
       if (isDesktop()) {
         maxLineDesktop.current = Math.max(maxLineDesktop.current, widest);
-        l1.style.whiteSpace = prevWS1;
         return maxLineDesktop.current;
       } else {
         maxLineMobile.current = Math.max(maxLineMobile.current, widest);
-        l1.style.whiteSpace = prevWS1;
         return maxLineMobile.current;
       }
     };
@@ -92,7 +114,7 @@ export default function LandingPage() {
 
       // 2) Pick target width by mode
       const targetWidth = isDesktop() ? skylineWidth() : columnWidth();
-      const widestLineAtBase = measureLinesAtBase();
+      const widestLineAtBase = measureEnglishWidthAtBase();
       if (!targetWidth || !widestLineAtBase) return;
 
       // 3) Compute scale and set ACTUAL font size
