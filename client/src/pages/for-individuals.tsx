@@ -250,7 +250,7 @@ export default function ForIndividuals() {
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
-                      alt={t('forIndividuals.imageAlt')}
+                      alt={t('forIndividuals.imageAlt1')}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -259,7 +259,7 @@ export default function ForIndividuals() {
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/woman-9193216_640.jpg"
-                      alt="Professional using currency protection"
+                      alt={t('forIndividuals.imageAlt2')}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -268,7 +268,7 @@ export default function ForIndividuals() {
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/family-1542595_640.jpg"
-                      alt="Family securing their financial future"
+                      alt={t('forIndividuals.imageAlt3')}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -277,7 +277,7 @@ export default function ForIndividuals() {
                   <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/gautham-krishna-fy466BrLmgg-unsplash_1750022560441-min.jpg"
-                      alt="Experienced investor with peace of mind"
+                      alt={t('forIndividuals.imageAlt4')}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />

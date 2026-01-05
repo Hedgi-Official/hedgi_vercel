@@ -1,0 +1,100 @@
+Versão PT-BR revisada (drop-in)
+Hero
+
+Seguro cambial para o seu dia a dia
+Se você vai pagar, receber ou gastar em moeda estrangeira, o câmbio pode mudar o custo final. A Hedgi ajuda você a deixar isso mais previsível em poucos minutos.
+
+Câmbio protegido — estime o custo e trave o câmbio por um prazo
+
+Configuração simples — sem jargão: valor + data
+
+Prazo flexível — de dias a meses
+
+CTA primário: Obter seguro cambial
+CTA secundário: Experimentar o simulador
+
+Bloco de imagens (substituir os textos em inglês)
+
+Pessoas usando a Hedgi no dia a dia
+
+Profissional protegendo um pagamento internacional
+
+Família planejando uma viagem com mais previsibilidade
+
+Estudante organizando o orçamento do semestre
+
+Freelancer reduzindo a incerteza na conversão
+
+Seção de motivos / posicionamento
+
+Feito para a vida internacional do dia a dia
+Hedge não é só para grandes empresas. Pessoas físicas usam para manter despesas reais mais previsíveis.
+
+Motivos comuns pelos quais as pessoas usam a Hedgi
+
+Compras online
+Quando você compra em outra moeda, o valor final pode mudar até a compra ser liquidada. Trave o câmbio por um prazo e mantenha o total mais previsível.
+Compras internacionais, assinaturas, pré-vendas
+
+Viagens
+Defina um orçamento antes de viajar. Se o câmbio mudar, seu plano não precisa mudar.
+Hotéis, voos, pacotes, compras
+
+Estudantes no exterior
+Mensalidade e aluguel são fixos em moeda estrangeira, mas sua renda nem sempre é. Proteja o orçamento do semestre.
+Mensalidade, moradia, seguro saúde, custo de vida
+
+Profissionais remotos (freelancers)
+Recebe em USD ou EUR e converte para outra moeda? Reduza o risco de uma “semana ruim” de conversão antes de sacar.
+Freelancers, consultoria, creators, afiliados
+
+Como funciona
+
+Como funciona
+Proteção cambial em três passos simples.
+
+Defina o que você quer proteger
+Escolha o par de moedas e o valor da sua próxima transação.
+
+Escolha o prazo
+Selecione a data de vencimento (dias, semanas ou meses).
+
+Trave o câmbio e ganhe previsibilidade
+Veja o custo estimado do hedge e proteja seu valor por esse período.
+
+CTA: Criar conta
+
+Experimente você mesmo
+
+Experimente você mesmo
+Faça uma estimativa rápida — ou peça para o assistente ajudar.
+
+Assistente de IA da Hedgi
+Diga o que você vai pagar (viagem, mensalidade, fatura) e quando. Eu sugiro uma configuração simples de hedge.
+Placeholder: “Vou pagar US$ 3.000 em 30 dias…”
+
+Simule seu hedge
+Escolha direção, valor e vencimento para estimar o custo do hedge.
+
+Direção da operação: Comprar USD / Vender USD
+
+Valor em USD (múltiplos de 1.000): 10.000
+
+Data de vencimento: 12 de janeiro de 2026
+
+Prazo do hedge: 7 dias
+
+Botão: Calcular custo do hedge
+
+Margem (BRL)
+Recomendado: 2× o custo do hedge • Mínimo: 20%
+(500)
+
+CTA final
+
+Pronto para proteger seu orçamento das oscilações do câmbio?
+Obtenha seguro cambial para seu próximo pagamento em minutos.
+
+CTA: Obter seguro cambial
+
+Rodapé: © 2026 Hedgi. Todos os direitos reservados.
