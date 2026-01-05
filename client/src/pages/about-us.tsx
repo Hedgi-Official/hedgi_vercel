@@ -219,7 +219,7 @@ export default function AboutUs() {
 
             {/* Links Row */}
             <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <Link href="/what-is-hedging" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
+              <Link href="/what-is-hedge" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
                 {t('aboutUs.learnBasics')} <ArrowRight className="h-3 w-3" />
               </Link>
               <span className="text-foreground font-bold">|</span>
