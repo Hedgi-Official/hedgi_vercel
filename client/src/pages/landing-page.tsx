@@ -36,7 +36,7 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const BASE_PX = 120;   // measure at this base, then set actual font-size = BASE_PX * scale
+    const BASE_PX = 96;   // measure at this base, then set actual font-size = BASE_PX * scale
     const SAFETY = 0.992;  // tiny margin so we never wrap
     const EPS = 0.75;      // subpixel buffer
     const mql = window.matchMedia("(min-width: 1024px)"); // tailwind lg
