@@ -332,7 +332,7 @@ const enUS = {
     forIndividuals: {
       pill: 'For Individuals',
       heroTitle: 'Currency insurance for real life payments',
-      heroSubtitle: "If you'll spend, earn, or pay in a foreign currency, exchange rates can change your total cost. Hedgi helps you make it predictable in minutes.",
+      heroSubtitle: "If you'll spend, earn, or pay in a foreign currency, exchange rates can change your total cost or your plans. Hedgi helps you make them predictable in minutes.",
       trySimulator: 'Try the Simulator',
       chip1Title: 'Protected rate',
       chip1Desc: 'Estimate cost and lock a rate window',
@@ -760,7 +760,7 @@ const ptBR = {
     forIndividuals: {
       pill: 'Para Pessoas Físicas',
       heroTitle: 'Seguro cambial para pagamentos do dia a dia',
-      heroSubtitle: 'Se você vai gastar, receber ou pagar em moeda estrangeira, as taxas de câmbio podem mudar seu custo total. O Hedgi ajuda você a torná-lo previsível em minutos.',
+      heroSubtitle: 'Se você vai gastar, receber ou pagar em moeda estrangeira, as taxas de câmbio podem mudar seu custo total ou seus planos. O Hedgi ajuda você a torná-los previsíveis em minutos.',
       trySimulator: 'Experimente o Simulador',
       chip1Title: 'Taxa protegida',
       chip1Desc: 'Estime o custo e trave uma janela de taxa',
