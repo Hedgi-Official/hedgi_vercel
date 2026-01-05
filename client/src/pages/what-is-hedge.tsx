@@ -36,7 +36,7 @@ export default function WhatIsHedge() {
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-background to-muted py-16 px-4">
+      <section className="bg-gradient-to-b from-background to-muted py-10 md:py-16 px-4">
         <div className="container mx-auto max-w-4xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center">{t("whatIsHedging.title")}</h1>
           

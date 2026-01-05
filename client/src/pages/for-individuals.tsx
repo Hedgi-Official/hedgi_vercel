@@ -189,7 +189,7 @@ export default function ForIndividuals() {
 
         <main className="flex-1">
           {/* Hero Section - Two Column Layout */}
-          <section className="py-16 md:py-24">
+          <section className="py-10 md:py-16">
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 {/* Left Column - Text */}
@@ -247,7 +247,7 @@ export default function ForIndividuals() {
 
                 {/* Right Column - Images Grid */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/jarritos-mexican-soda-OXerfDPf6mk-unsplash_1750022560440-min.jpg"
                       alt="Happy customers using Hedgi"
@@ -256,7 +256,7 @@ export default function ForIndividuals() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
-                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/woman-9193216_640.jpg"
                       alt="Professional using currency protection"
@@ -265,7 +265,7 @@ export default function ForIndividuals() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
-                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/family-1542595_640.jpg"
                       alt="Family securing their financial future"
@@ -274,7 +274,7 @@ export default function ForIndividuals() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
-                  <div className="relative rounded-xl overflow-hidden aspect-square">
+                  <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
                     <img
                       src="/images/gautham-krishna-fy466BrLmgg-unsplash_1750022560441-min.jpg"
                       alt="Experienced investor with peace of mind"
