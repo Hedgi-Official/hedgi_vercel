@@ -65,7 +65,7 @@ export default function WhatIsHedge() {
           <p className="text-lg md:text-xl text-justify mb-4">
             {t("whatIsHedging.heroParagraph")}
           </p>
-          <p className="text-base md:text-lg text-foreground/80 text-center mb-8">
+          <p className="text-sm md:text-base font-semibold text-foreground text-center mb-8">
             {t("whatIsHedging.heroHelper")}
           </p>
         </div>

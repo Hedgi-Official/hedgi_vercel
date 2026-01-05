@@ -295,7 +295,7 @@ const enUS = {
     whatIsHedging: {
       title: 'What is Hedging?',
       heroParagraph: 'Hedging is a risk-management technique that reduces uncertainty by offsetting an exposure with another position. In currency hedging, the goal is simple: make a future exchange rate more predictable, so your costs or revenues do not swing with the market.',
-      heroHelper: 'Think of it like "locking" an exchange rate for a defined amount and time window.',
+      heroHelper: 'Think of it like "locking" an exchange rate for a predetermined amount and time window.',
       businessTitle: 'How Do Businesses Use Currency Hedging?',
       businessSubtitle: 'Businesses hedge to keep pricing, margins, and cash flow predictable when they earn or pay in foreign currency.',
       importExport: 'Import / Export',
@@ -723,7 +723,7 @@ const ptBR = {
     whatIsHedging: {
       title: 'O que é Hedging?',
       heroParagraph: 'Hedging é uma técnica de gestão de risco que reduz a incerteza ao compensar uma exposição com outra posição. No hedge cambial, o objetivo é simples: tornar uma taxa de câmbio futura mais previsível, para que seus custos ou receitas não oscilem com o mercado.',
-      heroHelper: 'Pense nisso como "travar" uma taxa de câmbio por um valor e período definidos.',
+      heroHelper: 'Pense nisso como "travar" uma taxa de câmbio por um valor e período predeterminados.',
       businessTitle: 'Como as Empresas Usam Hedge Cambial?',
       businessSubtitle: 'Empresas fazem hedge para manter preços, margens e fluxo de caixa previsíveis quando ganham ou pagam em moeda estrangeira.',
       importExport: 'Importação / Exportação',
