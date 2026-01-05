@@ -386,6 +386,9 @@ const enUS = {
       ctaTitle: 'Ready to protect your budget from currency swings?',
       ctaBody: 'Get currency insurance for your next payment in minutes.'
     },
+    footer: {
+      copyright: '© 2026 Hedgi. All rights reserved.'
+    },
     aboutUs: {
       badge: 'About Hedgi',
       headline: 'Currency risk management for people and platforms.',
@@ -819,6 +822,9 @@ const ptBR = {
       simulatorHelper: 'Escolha a direção, valor e vencimento para estimar o custo do hedge.',
       ctaTitle: 'Pronto para proteger seu orçamento das oscilações cambiais?',
       ctaBody: 'Obtenha seguro cambial para seu próximo pagamento em minutos.'
+    },
+    footer: {
+      copyright: '© 2026 Hedgi. Todos os direitos reservados.'
     },
     aboutUs: {
       badge: 'Sobre o Hedgi',
