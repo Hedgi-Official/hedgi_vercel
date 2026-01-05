@@ -3,6 +3,7 @@ import { TypingEffect } from "@/components/typing-effect";
 import { CurrencySimulator } from "@/components/currency-simulator";
 import { useUser } from "@/hooks/use-user";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Skyline } from "@/components/skyline";
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -400,6 +401,8 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        <Footer />
       </main>
     </div>
   );

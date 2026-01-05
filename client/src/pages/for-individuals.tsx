@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { EnhancedCurrencySimulator } from "@/components/enhanced-currency-simulator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -525,6 +526,8 @@ export default function ForIndividuals() {
               </Button>
             </div>
           </section>
+
+          <Footer />
         </main>
       </div>
     </TooltipProvider>

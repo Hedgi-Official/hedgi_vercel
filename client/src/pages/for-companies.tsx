@@ -1,4 +1,5 @@
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -845,24 +846,7 @@ export default function ForCompanies() {
           </div>
         </section>
 
-        <footer className="py-12 border-t bg-muted/20">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <img src="/Hedgi.png?v=4" alt="Hedgi Logo" className="h-8 w-auto rounded" />
-                <span className="text-sm text-muted-foreground">Currency Hedging API</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-                <a href="/about-us" className="hover:text-foreground transition-colors">About</a>
-                <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">API Docs</a>
-                <a href="mailto:contact@hedgi.ai" className="hover:text-foreground transition-colors">Contact</a>
-              </div>
-            </div>
-            <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-              <p>&copy; {new Date().getFullYear()} Hedgi. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </main>
     </div>
   );

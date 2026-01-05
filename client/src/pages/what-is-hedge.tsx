@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -323,6 +324,8 @@ export default function WhatIsHedge() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </>
   );
 }
