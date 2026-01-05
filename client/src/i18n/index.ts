@@ -720,7 +720,7 @@ const ptBR = {
       forCompanies: 'Para empresas',
       instantProtection: 'Proteção imediata',
       instantProtectionDesc: 'Trave uma taxa hoje pelo prazo que você escolher e elimine surpresas do câmbio do seu planejamento.',
-      realTimeMonitoring: 'Acompanhamento em tempo real',
+      realTimeMonitoring: 'Acompanhamento',
       realTimeMonitoringDesc: 'Cotações ao vivo e alertas. Confira quando quiser e faça hedge quando estiver pronto.',
       transparentPricing: 'Preço transparente',
       transparentPricingDesc: 'Veja uma estimativa completa antes de confirmar, com custos claros, sem letras miúdas.',
