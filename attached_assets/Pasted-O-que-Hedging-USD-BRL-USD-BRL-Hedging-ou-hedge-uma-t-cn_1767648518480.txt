@@ -1,0 +1,67 @@
+O que é Hedging?
+USD
+BRL
+USD=BRL
+
+Hedging (ou “hedge”) é uma técnica de gestão de risco que reduz a incerteza: você compensa uma exposição com outra posição.
+
+No hedge cambial, a ideia é simples: deixar o câmbio futuro mais previsível, para que seus custos ou receitas não oscilem junto com o mercado.
+
+Pense nisso como “travar” uma taxa de câmbio para um valor e um prazo definidos.
+
+Como as empresas usam hedge cambial?
+Empresas fazem hedge para manter preços, margens e fluxo de caixa mais previsíveis quando recebem ou pagam em moeda estrangeira.
+
+Importação / Exportação
+Trave o câmbio de faturas futuras para que o custo (ou a receita) de um embarque não mude antes do pagamento.
+
+Folha Global e Prestadores
+Proteja a folha mensal em USD/EUR para manter as despesas operacionais estáveis na moeda local.
+
+Plataformas
+Ofereça taxas mais previsíveis para o cliente, enquanto faz hedge da exposição cambial da plataforma “nos bastidores”.
+
+Na prática, empresas costumam usar instrumentos como contratos a termo (forwards), opções e swaps para gerenciar risco cambial, escolhendo tamanho e duração do hedge de acordo com a exposição.
+
+E as pessoas físicas?
+Pessoas físicas enfrentam o mesmo risco cambial. Se você tem uma despesa ou meta futura em outra moeda, o câmbio pode mudar o custo total.
+
+Educação
+Mensalidades e custo de vida no exterior podem subir se a sua moeda enfraquecer.
+
+Imóveis
+Uma entrada (ou pagamento) em moeda estrangeira pode ficar mais cara até o fechamento.
+
+Viagens
+A viagem pode custar mais se o câmbio se mover contra você.
+
+Investimentos
+O retorno pode mudar quando você converte de volta para a sua moeda.
+
+Exemplo: protegendo uma viagem em família para a Disney World
+Sem hedge
+Uma família brasileira planeja uma viagem cotada em USD. Se o dólar se valoriza antes do pagamento, a viagem fica mais cara em BRL.
+
+Orçamento da viagem (USD):
+US$ 5.000
+Variação do câmbio:
++16%
+Custo do hedge:
+R$ 0
+Custo final (BRL):
+R$ 35.000
+
+Com hedge
+A família “trava” uma taxa de câmbio para o orçamento da viagem. Se o dólar se valoriza, a taxa travada ajuda a manter o custo em BRL mais previsível.
+
+Orçamento da viagem (USD):
+US$ 5.000
+Variação do câmbio:
+Travado
+Custo do hedge:
+R$ 900
+Custo final (BRL):
+R$ 30.900
+
+Experimente: simulador de hedge cambial
+Escolha um par de moedas, valor e data de vencimento para estimar o custo de “travar” uma taxa.

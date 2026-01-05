@@ -403,7 +403,7 @@ export default function LandingPage() {
                     onClick={() => navigate("/auth")}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
                   >
-                    {t("cta.Get Currency Insurance")}
+                    {t("landing.getCurrencyInsurance")}
                   </Button>
                 ) : (
                   <Button
