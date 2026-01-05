@@ -219,15 +219,15 @@ export default function AboutUs() {
 
             {/* Links Row */}
             <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <Link href="/what-is-hedging" className="text-primary hover:text-primary/80 flex items-center gap-1">
+              <Link href="/what-is-hedging" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
                 {t('aboutUs.learnBasics')} <ArrowRight className="h-3 w-3" />
               </Link>
-              <span className="text-muted-foreground">|</span>
-              <span className="text-muted-foreground">{t('aboutUs.seeImplementations')}</span>
-              <Link href="/for-individuals" className="text-primary hover:text-primary/80 flex items-center gap-1">
+              <span className="text-foreground font-bold">|</span>
+              <span className="text-foreground font-bold">{t('aboutUs.seeImplementations')}</span>
+              <Link href="/for-individuals" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
                 {t('aboutUs.individuals')} <ArrowRight className="h-3 w-3" />
               </Link>
-              <Link href="/for-companies" className="text-primary hover:text-primary/80 flex items-center gap-1">
+              <Link href="/for-companies" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
                 {t('aboutUs.forCompanies')} <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
