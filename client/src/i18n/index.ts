@@ -724,7 +724,7 @@ const ptBR = {
       realTimeMonitoringDesc: 'Cotações ao vivo e alertas. Confira quando quiser e faça hedge quando estiver pronto.',
       transparentPricing: 'Preço transparente',
       transparentPricingDesc: 'Veja uma estimativa completa antes de confirmar, com custos claros, sem letras miúdas.',
-      bottomCtaTitle: 'Pronto para proteger seu orçamento das oscilações do câmbio?',
+      bottomCtaTitle: 'Pronto para proteger seu orçamento da volatilidade cambial?',
       bottomCtaBody: 'Em minutos, faça um seguro cambial para seu próximo pagamento ou encontre a configuração ideal para sua empresa.',
       bottomCtaHelper: 'Pessoas e empresas usam a mesma ideia central: hedge funciona como um seguro; você paga um custo conhecido para reduzir a incerteza.',
       viewApiQuickstart: 'Ver Quickstart da API',
