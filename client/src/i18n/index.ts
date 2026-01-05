@@ -416,14 +416,14 @@ const enUS = {
       learnBasics: 'Learn the basics in What is Hedging?',
       seeImplementations: 'See implementations:',
       whoWeAreTitle: 'Who we are',
-      whoWeAreBody: 'Hedgi is building currency risk management infrastructure that feels simple so individuals can plan ahead, and companies can ship protected experiences inside their products.',
+      whoWeAreBody: 'Hedgi is building currency risk management that feels simple so individuals can plan ahead, and companies can ship protected experiences inside their products.',
       howToReachUsTitle: 'How to reach us',
       howToReachUsBody: 'For questions and partnerships or API pilots and integrations reach our team anytime.',
       emailMain: 'guilherme@hedgi.ai',
       emailPartnerships: '',
       emailPartnershipsAddress: '',
       ctaHeadline: 'Ready to protect your next payment from currency swings?',
-      ctaBody: 'Get currency insurance in minutes—or route to the right setup for your company.',
+      ctaBody: 'Get currency insurance in minutes or route to the right setup for your company.',
       ctaSmallText: 'Individuals and businesses use the same core idea: pay a known cost to reduce uncertainty.'
     }
   }
@@ -844,14 +844,14 @@ const ptBR = {
       learnBasics: 'Aprenda o básico em O que é Hedge?',
       seeImplementations: 'Veja implementações:',
       whoWeAreTitle: 'Quem somos',
-      whoWeAreBody: 'O Hedgi está construindo infraestrutura de gestão de risco cambial que parece simples para que indivíduos possam planejar com antecedência, e empresas possam entregar experiências protegidas dentro de seus produtos.',
+      whoWeAreBody: 'O Hedgi está construindo gestão de risco cambial que parece simples para que indivíduos possam planejar com antecedência, e empresas possam entregar experiências protegidas dentro de seus produtos.',
       howToReachUsTitle: 'Como nos encontrar',
       howToReachUsBody: 'Para dúvidas e parcerias ou pilotos de API e integrações entre em contato com nossa equipe a qualquer momento.',
       emailMain: 'guilherme@hedgi.ai',
       emailPartnerships: '',
       emailPartnershipsAddress: '',
       ctaHeadline: 'Pronto para proteger seu próximo pagamento das oscilações cambiais?',
-      ctaBody: 'Obtenha seguro cambial em minutos—ou encontre a configuração certa para sua empresa.',
+      ctaBody: 'Obtenha seguro cambial em minutos ou encontre a configuração certa para sua empresa.',
       ctaSmallText: 'Pessoas físicas e empresas usam a mesma ideia central: pagar um custo conhecido para reduzir a incerteza.'
     }
   }
