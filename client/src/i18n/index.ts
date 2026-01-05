@@ -288,8 +288,8 @@ const enUS = {
       transparentPricing: 'Transparent Pricing',
       transparentPricingDesc: 'See an all-in estimate up front, with clear costs, not confusing fine print.',
       bottomCtaTitle: 'Ready to protect your budget from currency swings?',
-      bottomCtaBody: 'In minutes, get currency insurance for your next payment—or route to the right setup for your business.',
-      bottomCtaHelper: 'Individuals and businesses use the same core idea: hedging works like insurance—pay a known cost to reduce uncertainty.',
+      bottomCtaBody: 'In minutes, get currency insurance for your next payment or find the right setup for your business.',
+      bottomCtaHelper: 'Individuals and businesses leverage the same core idea: hedging works like insurance, pay a known cost to reduce uncertainty.',
       viewApiQuickstart: 'View API Quickstart'
     },
     whatIsHedging: {
@@ -716,8 +716,8 @@ const ptBR = {
       transparentPricing: 'Preços Transparentes',
       transparentPricingDesc: 'Veja uma estimativa completa antecipadamente, com custos claros, sem letras miúdas confusas.',
       bottomCtaTitle: 'Pronto para proteger seu orçamento das oscilações cambiais?',
-      bottomCtaBody: 'Em minutos, obtenha seguro cambial para seu próximo pagamento—ou veja a configuração certa para sua empresa.',
-      bottomCtaHelper: 'Indivíduos e empresas usam a mesma ideia central: hedge funciona como seguro—pague um custo conhecido para reduzir a incerteza.',
+      bottomCtaBody: 'Em minutos, obtenha seguro cambial para seu próximo pagamento ou encontre a configuração certa para sua empresa.',
+      bottomCtaHelper: 'Indivíduos e empresas aproveitam a mesma ideia central: hedge funciona como seguro, pague um custo conhecido para reduzir a incerteza.',
       viewApiQuickstart: 'Ver Início Rápido da API'
     },
     whatIsHedging: {
