@@ -920,7 +920,7 @@ const ptBR = {
       simulatorHelper: 'Escolha direção, valor e vencimento para estimar o custo do hedge.',
       marginLabel: 'Margem (BRL)',
       marginHelper: 'Recomendado: 2× o custo do hedge • Mínimo: 20%',
-      ctaTitle: 'Pronto para proteger seu orçamento das oscilações do câmbio?',
+      ctaTitle: 'Pronto para proteger seu orçamento da volatilidade cambial?',
       ctaBody: 'Obtenha seguro cambial para seu próximo pagamento em minutos.',
       imageAlt1: 'Pessoas usando a Hedgi no dia a dia',
       imageAlt2: 'Profissional protegendo um pagamento internacional',
@@ -1061,7 +1061,7 @@ const ptBR = {
       emailMain: 'guilherme@hedgi.ai',
       emailPartnerships: '',
       emailPartnershipsAddress: '',
-      ctaHeadline: 'Pronto para proteger seu próximo pagamento das oscilações do câmbio?',
+      ctaHeadline: 'Pronto para proteger seu orçamento da volatilidade cambial?',
       ctaBody: 'Obtenha seguro cambial em minutos, ou vá direto para a configuração ideal para a sua empresa.',
       ctaSmallText: 'Pessoas e empresas usam a mesma ideia central: pagar um custo conhecido para reduzir a incerteza.'
     }
