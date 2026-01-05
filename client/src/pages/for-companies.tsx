@@ -281,6 +281,7 @@ const CodeSnippet = () => {
 };
 
 const SandboxRequestForm = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     company: '',
     useCase: '',
@@ -296,35 +297,35 @@ const SandboxRequestForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="company">Company Name</Label>
+        <Label htmlFor="company">{t('companiesPage.formCompanyLabel')}</Label>
         <Input 
           id="company" 
-          placeholder="Your company name"
+          placeholder={t('companiesPage.formCompanyPlaceholder')}
           value={formData.company}
           onChange={(e) => setFormData({ ...formData, company: e.target.value })}
         />
       </div>
       <div>
-        <Label htmlFor="useCase">Use Case</Label>
+        <Label htmlFor="useCase">{t('companiesPage.formUseCaseLabel')}</Label>
         <Select value={formData.useCase} onValueChange={(value) => setFormData({ ...formData, useCase: value })}>
           <SelectTrigger>
-            <SelectValue placeholder="Select your use case" />
+            <SelectValue placeholder={t('companiesPage.formUseCasePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="remittance">Remittance / Cross-border Payments</SelectItem>
-            <SelectItem value="crypto">Crypto On/Off-Ramp Operations</SelectItem>
-            <SelectItem value="import-export">Import / Export Trade</SelectItem>
-            <SelectItem value="media-spend">Foreign Media Spend / Affiliates</SelectItem>
-            <SelectItem value="treasury">Treasury / Internal FX Management</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="remittance">{t('companiesPage.formUseCaseRemittance')}</SelectItem>
+            <SelectItem value="crypto">{t('companiesPage.formUseCaseCrypto')}</SelectItem>
+            <SelectItem value="import-export">{t('companiesPage.formUseCaseImportExport')}</SelectItem>
+            <SelectItem value="media-spend">{t('companiesPage.formUseCaseMedia')}</SelectItem>
+            <SelectItem value="treasury">{t('companiesPage.formUseCaseTreasury')}</SelectItem>
+            <SelectItem value="other">{t('companiesPage.formUseCaseOther')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div>
-        <Label htmlFor="volume">Monthly FX Volume</Label>
+        <Label htmlFor="volume">{t('companiesPage.formVolumeLabel')}</Label>
         <Select value={formData.volumeBand} onValueChange={(value) => setFormData({ ...formData, volumeBand: value })}>
           <SelectTrigger>
-            <SelectValue placeholder="Select volume band" />
+            <SelectValue placeholder={t('companiesPage.formVolumePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="under-100k">Under $100K</SelectItem>
@@ -336,17 +337,17 @@ const SandboxRequestForm = () => {
         </Select>
       </div>
       <div>
-        <Label htmlFor="email">Work Email</Label>
+        <Label htmlFor="email">{t('companiesPage.formEmailLabel')}</Label>
         <Input 
           id="email" 
           type="email"
-          placeholder="you@company.com"
+          placeholder={t('companiesPage.formEmailPlaceholder')}
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
         />
       </div>
       <Button type="submit" className="w-full">
-        Request Sandbox Access
+        {t('companiesPage.requestSandbox')}
       </Button>
     </form>
   );
@@ -468,40 +469,40 @@ export default function ForCompanies() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
-                  Every cross-border transaction is a potential FX liability.
+                  {t('companiesPage.heroTitle')}
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
-                  Hedgi is the Currency Hedging API that works with your existing payout/settlement flow. Built for teams that want to embed hedging in their product or hedge internal FX exposure.
+                  {t('companiesPage.heroSubtitle')}
                 </p>
                 <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap mb-6">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span>Exposure</span>
+                    <span>{t('companiesPage.stepExposure')}</span>
                   </div>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Simulate</span>
+                  <span>{t('companiesPage.stepSimulate')}</span>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Quote</span>
+                  <span>{t('companiesPage.stepQuote')}</span>
                   <ArrowRight className="w-4 h-4" />
-                  <span>Hedge</span>
+                  <span>{t('companiesPage.stepHedge')}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
                     <DialogTrigger asChild>
                       <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        Request Sandbox Access
+                        {t('companiesPage.requestSandbox')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Request Sandbox Access</DialogTitle>
+                        <DialogTitle>{t('companiesPage.requestSandbox')}</DialogTitle>
                       </DialogHeader>
                       <SandboxRequestForm />
                     </DialogContent>
                   </Dialog>
                   <Button size="lg" variant="outline" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      View Docs <ExternalLink className="w-4 h-4" />
+                      {t('companiesPage.viewDocs')} <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
                 </div>
@@ -517,13 +518,13 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
               <div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">~$9 trillion</p>
-                <p className="text-sm text-muted-foreground">Daily volume transacted in currencies</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{t('companiesPage.socialProofVolume')}</p>
+                <p className="text-sm text-muted-foreground">{t('companiesPage.socialProofVolumeDesc')}</p>
               </div>
               <div className="hidden md:block w-px h-12 bg-border" />
               <div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground">$1 quadrillion</p>
-                <p className="text-sm text-muted-foreground">In cross-border payments and crypto in 2024</p>
+                <p className="text-2xl md:text-3xl font-bold text-foreground">{t('companiesPage.socialProofPayments')}</p>
+                <p className="text-sm text-muted-foreground">{t('companiesPage.socialProofPaymentsDesc')}</p>
               </div>
             </div>
           </div>
@@ -541,47 +542,47 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                Built for your use case
+                {t('companiesPage.useCasesTitle')}
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Whether you're building a product or managing treasury, Hedgi adapts to your workflow.
+                {t('companiesPage.useCasesSubtitle')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
               <SolutionCard
                 icon={Building2}
-                title="Remittance Firms"
-                pain="Currency volatility between quote and settlement erodes margins on cross-border transfers."
-                outcome="Offer locked FX rates at checkout and protect your margin on every transfer."
+                title={t('companiesPage.remittanceTitle')}
+                pain={t('companiesPage.remittancePain')}
+                outcome={t('companiesPage.remittanceOutcome')}
               />
 
               <SolutionCard
                 icon={Bitcoin}
-                title="Crypto Firms"
-                pain="Settlement timing gaps and treasury conversions create unhedged FX exposure."
-                outcome="Hedge FX exposure created by on/off-ramp operations and treasury management."
+                title={t('companiesPage.cryptoTitle')}
+                pain={t('companiesPage.cryptoPain')}
+                outcome={t('companiesPage.cryptoOutcome')}
               />
 
               <SolutionCard
                 icon={Ship}
-                title="Import / Export Companies"
-                pain="Long payment cycles from PO to shipment to payment leave margin vulnerable to FX moves."
-                outcome="Protect margin on payables and receivables throughout the trade cycle."
+                title={t('companiesPage.importExportTitle')}
+                pain={t('companiesPage.importExportPain')}
+                outcome={t('companiesPage.importExportOutcome')}
               />
 
               <SolutionCard
                 icon={Target}
-                title="Affiliate & Performance Marketers"
-                pain="Foreign media spend in multiple currencies makes CAC/ROAS unpredictable."
-                outcome="Stabilize customer acquisition costs by hedging forecasted spend currency."
+                title={t('companiesPage.affiliateTitle')}
+                pain={t('companiesPage.affiliatePain')}
+                outcome={t('companiesPage.affiliateOutcome')}
               />
 
               <SolutionCard
                 icon={Globe}
-                title="Global Workforce Companies"
-                pain="Employees abroad face salary volatility when paid in foreign currencies."
-                outcome="Offer FX protection as an employee benefit for international team members."
+                title={t('companiesPage.globalWorkforceTitle')}
+                pain={t('companiesPage.globalWorkforcePain')}
+                outcome={t('companiesPage.globalWorkforceOutcome')}
               />
 
               <Card className="h-full hover:border-primary/40 transition-colors bg-primary/5 border-primary/20">
@@ -589,20 +590,20 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mb-2">
                     <ArrowRight className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Other Use Cases</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.otherUseCasesTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 pt-0">
-                  <p className="text-xs text-muted-foreground">FX risk is a growing reality for global companies operating across borders.</p>
-                  <p className="text-xs font-medium text-foreground">Think Hedgi might be a fit for your business model? Get in touch.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.otherUseCasesPain')}</p>
+                  <p className="text-xs font-medium text-foreground">{t('companiesPage.otherUseCasesOutcome')}</p>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="px-0 text-foreground font-bold hover:text-foreground/80 text-xs">
-                        Request access <ArrowRight className="w-3 h-3 ml-1" />
+                        {t('companiesPage.requestAccess')} <ArrowRight className="w-3 h-3 ml-1" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Request Sandbox Access</DialogTitle>
+                        <DialogTitle>{t('companiesPage.requestSandbox')}</DialogTitle>
                       </DialogHeader>
                       <SandboxRequestForm />
                     </DialogContent>
@@ -617,10 +618,10 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                How it works
+                {t('companiesPage.howItWorksTitle')}
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Four simple steps to protect your FX exposure
+                {t('companiesPage.howItWorksSubtitle')}
               </p>
             </div>
 
@@ -630,32 +631,32 @@ export default function ForCompanies() {
                   <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
                     <span className="text-xl font-bold text-primary">1</span>
                   </div>
-                  <h3 className="font-semibold text-sm mb-1">Detect Exposure</h3>
-                  <p className="text-xs text-muted-foreground">Identify FX exposure in your transactions</p>
+                  <h3 className="font-semibold text-sm mb-1">{t('companiesPage.step1Title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.step1Desc')}</p>
                 </div>
 
                 <div className="text-center">
                   <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
                     <span className="text-xl font-bold text-primary">2</span>
                   </div>
-                  <h3 className="font-semibold text-sm mb-1">Request Quote</h3>
-                  <p className="text-xs text-muted-foreground">Call the API for a real-time hedge quote</p>
+                  <h3 className="font-semibold text-sm mb-1">{t('companiesPage.step2Title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.step2Desc')}</p>
                 </div>
 
                 <div className="text-center">
                   <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
                     <span className="text-xl font-bold text-primary">3</span>
                   </div>
-                  <h3 className="font-semibold text-sm mb-1">Lock & Execute</h3>
-                  <p className="text-xs text-muted-foreground">Convert the quote to a hedge</p>
+                  <h3 className="font-semibold text-sm mb-1">{t('companiesPage.step3Title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.step3Desc')}</p>
                 </div>
 
                 <div className="text-center">
                   <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
                     <span className="text-xl font-bold text-primary">4</span>
                   </div>
-                  <h3 className="font-semibold text-sm mb-1">Track & Reconcile</h3>
-                  <p className="text-xs text-muted-foreground">Receive webhooks and generate reports</p>
+                  <h3 className="font-semibold text-sm mb-1">{t('companiesPage.step4Title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.step4Desc')}</p>
                 </div>
               </div>
 
@@ -676,10 +677,10 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                Hedging infrastructure you can call.
+                {t('companiesPage.apiTitle')}
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Everything you need to integrate currency hedging into your product, accessible via REST API.
+                {t('companiesPage.apiSubtitle')}
               </p>
             </div>
 
@@ -689,10 +690,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <Zap className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Get Hedge Quotes</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiQuotesTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Price an exposure programmatically with real-time market rates.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiQuotesDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -701,10 +702,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <Lock className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Lock Rates & Execute</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiLockTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Convert quotes to hedges and lock in your rates instantly.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiLockDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -713,10 +714,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Track Positions</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiTrackTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Monitor what's open vs hedged with complete exposure visibility.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiTrackDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -725,10 +726,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <TrendingDown className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Cost Optimization</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiCostTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Hedgi automatically selects the best liquidity providers based on your hedge parameters.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiCostDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -737,10 +738,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Reporting & Exports</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiReportsTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Generate finance-ready summaries and audit-compliant reports.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiReportsDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -749,13 +750,13 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mb-2">
                     <Code className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">Interactive Docs</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiDocsTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">Try endpoints live in our Swagger-style documentation.</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiDocsDesc')}</p>
                   <Button variant="ghost" size="sm" className="mt-2 px-0 text-foreground font-semibold hover:text-foreground/80 text-xs" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                      Explore docs <ExternalLink className="w-3 h-3" />
+                      {t('companiesPage.exploreDocs')} <ExternalLink className="w-3 h-3" />
                     </a>
                   </Button>
                 </CardContent>
@@ -769,10 +770,10 @@ export default function ForCompanies() {
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  Built for financial workflows
+                  {t('companiesPage.securityTitle')}
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Enterprise-grade security and reliability for your hedging operations
+                  {t('companiesPage.securitySubtitle')}
                 </p>
               </div>
 
@@ -782,8 +783,8 @@ export default function ForCompanies() {
                     <Shield className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">API Key Authentication</h3>
-                    <p className="text-xs text-muted-foreground">Secure access with least-privilege API keys</p>
+                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityApiKeyTitle')}</h3>
+                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityApiKeyDesc')}</p>
                   </div>
                 </div>
 
@@ -792,8 +793,8 @@ export default function ForCompanies() {
                     <Check className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">Idempotency Support</h3>
-                    <p className="text-xs text-muted-foreground">Safe retries with idempotency keys and rate limits</p>
+                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityIdempotencyTitle')}</h3>
+                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityIdempotencyDesc')}</p>
                   </div>
                 </div>
 
@@ -802,8 +803,8 @@ export default function ForCompanies() {
                     <Server className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">VPS Encrypted Traffic</h3>
-                    <p className="text-xs text-muted-foreground">All data encrypted via HTTPS with secure database storage</p>
+                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityEncryptionTitle')}</h3>
+                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityEncryptionDesc')}</p>
                   </div>
                 </div>
 
@@ -812,8 +813,8 @@ export default function ForCompanies() {
                     <FileText className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm mb-0.5">Audit Logs</h3>
-                    <p className="text-xs text-muted-foreground">Complete audit trail for compliance requirements</p>
+                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityAuditTitle')}</h3>
+                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityAuditDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -825,19 +826,19 @@ export default function ForCompanies() {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                Become a launch design partner
+                {t('companiesPage.partnerTitle')}
               </h2>
               <p className="text-muted-foreground mb-6">
-                Join our early access program and help shape the future of programmatic FX hedging.
+                {t('companiesPage.partnerSubtitle')}
               </p>
 
               <Card className="p-5 md:p-6">
                 <SandboxRequestForm />
                 <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs text-muted-foreground mb-3">Or explore our documentation first:</p>
+                  <p className="text-xs text-muted-foreground mb-3">{t('companiesPage.docsFirst')}</p>
                   <Button variant="outline" size="sm" asChild>
                     <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      View API Docs <ExternalLink className="w-3 h-3" />
+                      {t('companiesPage.viewApiDocs')} <ExternalLink className="w-3 h-3" />
                     </a>
                   </Button>
                 </div>
