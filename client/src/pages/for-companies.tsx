@@ -596,7 +596,7 @@ export default function ForCompanies() {
                   <p className="text-xs font-medium text-foreground">Think Hedgi might be a fit for your business model? Get in touch.</p>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="px-0 text-primary hover:text-primary/80 text-xs">
+                      <Button variant="ghost" size="sm" className="px-0 text-foreground font-bold hover:text-foreground/80 text-xs">
                         Request access <ArrowRight className="w-3 h-3 ml-1" />
                       </Button>
                     </DialogTrigger>
