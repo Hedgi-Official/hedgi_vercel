@@ -929,7 +929,7 @@ const ptBR = {
     },
     companiesPage: {
       heroTitle: 'Toda transação cross-border pode virar uma exposição a FX.',
-      heroSubtitle: 'A Hedgi é a API de hedge cambial que se integra ao seu fluxo atual de payout/settlement (pagamento e liquidação). Feita para times que querem embutir hedge no produto ou proteger a exposição cambial interna.',
+      heroSubtitle: 'A Hedgi é a API de hedge cambial que se integra ao seu fluxo atual de pagamento e liquidação. Feita para times que querem embutir hedge no produto ou proteger a exposição cambial interna.',
       stepExposure: 'Exposição',
       stepSimulate: 'Simular',
       stepQuote: 'Cotação',
