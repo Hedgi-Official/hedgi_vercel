@@ -936,7 +936,7 @@ const ptBR = {
       stepHedge: 'Hedge',
       requestSandbox: 'Solicitar acesso ao Sandbox',
       viewDocs: 'Ver Docs',
-      socialProofVolume: '≈ US$ 9 trilhões',
+      socialProofVolume: '~$9 trilhões',
       socialProofVolumeSource: 'Reuters',
       socialProofVolumeDesc: 'Volume diário negociado em moedas',
       socialProofPayments: 'US$ 1 quatrilhão',
