@@ -40,16 +40,16 @@ const UseCaseCard = ({
   example: string; 
 }) => {
   return (
-    <Card className="h-full hover:border-primary/40 transition-colors">
+    <Card className="h-full hover:border-primary/40 transition-colors flex flex-col">
       <CardHeader className="pb-2">
         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
           <Icon className="w-5 h-5 text-primary" />
         </div>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 pt-0">
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <p className="text-xs text-primary/80">{example}</p>
+      <CardContent className="flex flex-col flex-grow pt-0">
+        <p className="text-sm text-muted-foreground mb-3">{description}</p>
+        <p className="text-xs font-semibold text-foreground mt-auto">{example}</p>
       </CardContent>
     </Card>
   );
