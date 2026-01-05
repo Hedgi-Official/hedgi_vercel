@@ -105,7 +105,7 @@ export default function AboutUs() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">{t('aboutUs.cardABody')}</p>
-                  <Link href="/for-individuals" className="inline-flex items-center text-primary hover:text-primary/80 font-medium text-sm">
+                  <Link href="/for-individuals" className="inline-flex items-center text-primary hover:text-primary/80 font-bold text-sm">
                     {t('aboutUs.cardALink')} <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </CardContent>
@@ -121,7 +121,7 @@ export default function AboutUs() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">{t('aboutUs.cardBBody')}</p>
-                  <Link href="/for-companies" className="inline-flex items-center text-primary hover:text-primary/80 font-medium text-sm">
+                  <Link href="/for-companies" className="inline-flex items-center text-primary hover:text-primary/80 font-bold text-sm">
                     {t('aboutUs.cardBLink')} <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </CardContent>
