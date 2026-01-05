@@ -262,23 +262,12 @@ export default function AboutUs() {
                 <p className="text-muted-foreground mb-4">
                   {t('aboutUs.howToReachUsBody')}
                 </p>
-                <div className="space-y-2">
-                  <a 
+                <a 
                     href={`mailto:${t('aboutUs.emailMain')}`}
-                    className="text-primary hover:text-primary/80 font-medium block"
+                    className="text-primary hover:text-primary/80 font-medium"
                   >
                     {t('aboutUs.emailMain')}
                   </a>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aboutUs.emailPartnerships')}{' '}
-                    <a 
-                      href={`mailto:${t('aboutUs.emailPartnershipsAddress')}`}
-                      className="text-primary hover:text-primary/80"
-                    >
-                      {t('aboutUs.emailPartnershipsAddress')}
-                    </a>
-                  </p>
-                </div>
               </div>
             </div>
           </div>
