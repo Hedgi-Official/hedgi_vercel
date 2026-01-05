@@ -95,10 +95,12 @@ export default function LandingPage() {
       const widestLineAtBase = measureLinesAtBase();
       if (!targetWidth || !widestLineAtBase) return;
 
-      // 3) Compute scale and set ACTUAL font size
+      // 3) Compute scale and set ACTUAL font size (capped at MAX_PX)
+      const MAX_PX = 85; // maximum font size cap
       const raw = ((targetWidth - EPS) / widestLineAtBase) * SAFETY;
       const scale = Math.min(1, Math.max(0.1, raw)); // clamp for sanity
-      h1.style.fontSize = `${BASE_PX * scale}px`;
+      const computedSize = BASE_PX * scale;
+      h1.style.fontSize = `${Math.min(computedSize, MAX_PX)}px`;
       // line-height already set in applyBase()
     };
 
