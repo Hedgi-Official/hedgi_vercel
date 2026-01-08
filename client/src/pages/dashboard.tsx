@@ -151,8 +151,10 @@ export default function Dashboard() {
     },
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on component remount if data exists
+    refetchOnReconnect: false, // Don't refetch on reconnect
     refetchInterval: 10000, // Refresh every 10 seconds
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    staleTime: 8000, // Consider data fresh for 8 seconds to prevent overlapping requests
   });
 
   // Fetch trade history with 10-second polling
@@ -175,8 +177,10 @@ export default function Dashboard() {
     },
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on component remount if data exists
+    refetchOnReconnect: false, // Don't refetch on reconnect
     refetchInterval: 10000, // Refresh every 10 seconds
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    staleTime: 8000, // Consider data fresh for 8 seconds to prevent overlapping requests
   });
 
   const checkTradeStatusMutation = useMutation({

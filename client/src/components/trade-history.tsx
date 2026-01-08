@@ -52,7 +52,9 @@ export function TradeHistory() {
     },
     enabled: expanded, // Only fetch when expanded
     refetchInterval: expanded ? 10000 : false, // Refresh every 10 seconds when expanded
-    staleTime: 5000, // Consider data fresh for 5 seconds
+    staleTime: 8000, // Consider data fresh for 8 seconds to prevent overlapping requests
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   });
 
   // Format date for display

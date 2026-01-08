@@ -36,5 +36,9 @@ export function useFBSRate(symbol: string = 'USDBRL') {
       }
     },
     refetchInterval: 5000, // Refresh every 5 seconds
+    staleTime: 4000, // Consider data fresh for 4 seconds to prevent overlapping requests
+    refetchOnMount: false, // Don't refetch on component remount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   });
 }

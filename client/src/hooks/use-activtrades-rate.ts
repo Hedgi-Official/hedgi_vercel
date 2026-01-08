@@ -40,6 +40,10 @@ export function useActivTradesRate(symbol: string = 'USDBRL') {
       }
     },
     refetchInterval: 15000, // Refresh every 15 seconds (less frequent to reduce load)
+    staleTime: 12000, // Consider data fresh for 12 seconds to prevent overlapping requests
+    refetchOnMount: false, // Don't refetch on component remount if data exists
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
     retry: 2, // Retry failed requests 2 times
     retryDelay: 3000, // Wait 3 seconds between retries
   });
