@@ -41,7 +41,7 @@ export function MercadoPagoBrickModal({
     console.log('[MercadoPago Brick Modal] Starting payment status polling for txId:', txId);
     setIsPollingPayment(true);
     
-    const maxAttempts = 80; // Poll for 80 seconds
+    const maxAttempts = 80; // Poll for 160 seconds (80 attempts * 2s interval)
     let attempts = 0;
     
     const poll = async () => {
@@ -101,7 +101,7 @@ export function MercadoPagoBrickModal({
         
         // Continue polling if payment is still pending
         if (attempts < maxAttempts) {
-          setTimeout(poll, 1000);
+          setTimeout(poll, 2000);
         } else {
           console.log('[MercadoPago Brick Modal] Payment polling timeout');
           setPaymentResult({ 
@@ -114,7 +114,7 @@ export function MercadoPagoBrickModal({
       } catch (error) {
         console.error('[MercadoPago Brick Modal] Payment polling error:', error);
         if (attempts < maxAttempts) {
-          setTimeout(poll, 1000);
+          setTimeout(poll, 2000);
         } else {
           setPaymentResult({ 
             status: 'error', 
