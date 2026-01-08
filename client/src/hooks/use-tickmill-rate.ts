@@ -9,45 +9,27 @@ export interface TickmillRateResponse {
   broker: string;
 }
 
-const inFlightRequests = new Map<string, Promise<TickmillRateResponse>>();
-
 export function useTickmillRate(symbol: string = 'USDBRL') {
   return useQuery({
     queryKey: ['tickmill-rate', symbol],
-    queryFn: async ({ signal }) => {
-      const requestKey = `tickmill-rate-${symbol}`;
-      
-      if (inFlightRequests.has(requestKey)) {
-        console.log('[useTickmillRate] Request already in-flight for', symbol, '- reusing');
-        return inFlightRequests.get(requestKey)!;
-      }
-      
-      const fetchPromise = (async () => {
-        try {
-          console.log('[useTickmillRate] Fetching rate for', symbol);
+    queryFn: async () => {
+      try {
+        console.log('[useTickmillRate] Fetching rate for', symbol);
 
-          const response = await fetch(`/api/tickmill-rate?symbol=${symbol}`, { signal });
+        const response = await fetch(`/api/tickmill-rate?symbol=${symbol}`);
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json() as TickmillRateResponse;
-          console.log('[useTickmillRate] Rate data:', data);
-          return data;
-        } catch (error) {
-          console.error('[useTickmillRate] Rate fetch error:', error);
-          throw error;
-        } finally {
-          inFlightRequests.delete(requestKey);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      })();
-      
-      inFlightRequests.set(requestKey, fetchPromise);
-      return fetchPromise;
+
+        const data = await response.json() as TickmillRateResponse;
+        console.log('[useTickmillRate] Rate data:', data);
+        return data;
+      } catch (error) {
+        console.error('[useTickmillRate] Rate fetch error:', error);
+        throw error;
+      }
     },
-    refetchInterval: 5000,
-    staleTime: 4000,
-    refetchOnWindowFocus: false,
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
 }
