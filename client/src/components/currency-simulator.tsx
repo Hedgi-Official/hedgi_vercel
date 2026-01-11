@@ -11,7 +11,8 @@ import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDays
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe, TrendingUp, Target, AlertTriangle } from 'lucide-react';
+import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe, TrendingUp, Target, AlertTriangle, Info } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { isSyntheticPair, getSyntheticConfig, formatPairForBackend, formatPairDisplay } from '@/lib/synthetic-pairs';
 
 
@@ -98,6 +99,41 @@ export function CurrencySimulator({
           </div>
         </TooltipContent>
       </Tooltip>
+    );
+  };
+
+  const InfoPopover = ({ 
+    icon: Icon, 
+    titleKey: popoverTitleKey, 
+    helpKey 
+  }: { 
+    icon: ComponentType<{ className?: string }>; 
+    titleKey: string; 
+    helpKey: string | ReactNode;
+  }) => {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button 
+            type="button"
+            className="inline-flex items-center justify-center ml-1 text-muted-foreground hover:text-primary transition-colors focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" className="p-0 max-w-xs">
+          <div className="bg-card rounded-lg p-4">
+            <div className="flex flex-col items-center mb-3">
+              <Icon className="h-7 w-7 text-primary mb-2" />
+              <h4 className="font-bold text-foreground">{t(popoverTitleKey)}</h4>
+            </div>
+            <div className="text-sm text-foreground">
+              {typeof helpKey === 'string' ? t(helpKey) : helpKey}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   };
   const [amount, setAmount] = useState(10000);
@@ -417,7 +453,14 @@ export function CurrencySimulator({
                   helpKey="simulator.currentRateHelp"
                 >
                   <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
-                    <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                    <p className="text-sm text-muted-foreground inline-flex items-center">
+                      {t('simulator.currentRate')}
+                      <InfoPopover 
+                        icon={TrendingUp} 
+                        titleKey="simulator.currentRate" 
+                        helpKey="simulator.currentRateHelp" 
+                      />
+                    </p>
                     <p className="text-xl md:text-2xl font-bold">
                       {simulation.rate.toFixed(4)}
                     </p>
@@ -438,7 +481,18 @@ export function CurrencySimulator({
                   }
                 >
                   <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
-                    <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                    <p className="text-sm text-muted-foreground inline-flex items-center">
+                      {t('simulator.breakEvenRate')}
+                      <InfoPopover 
+                        icon={Target} 
+                        titleKey="simulator.breakEvenRate" 
+                        helpKey={
+                          <span dangerouslySetInnerHTML={{ 
+                            __html: t(tradeDirection === 'buy' ? 'simulator.breakEvenRateHelpBuy' : 'simulator.breakEvenRateHelpSell') 
+                          }} />
+                        }
+                      />
+                    </p>
                     <p className="text-xl md:text-2xl font-bold">
                       {simulation.breakEvenRate.toFixed(4)}
                     </p>
@@ -457,7 +511,14 @@ export function CurrencySimulator({
                   helpKey="simulator.closureRateHelp"
                 >
                   <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
-                    <p className="text-sm text-muted-foreground">{t('simulator.closureRate')}</p>
+                    <p className="text-sm text-muted-foreground inline-flex items-center">
+                      {t('simulator.closureRate')}
+                      <InfoPopover 
+                        icon={AlertTriangle} 
+                        titleKey="simulator.closureRate" 
+                        helpKey="simulator.closureRateHelp" 
+                      />
+                    </p>
                     <p className="text-xl md:text-2xl font-bold">
                       {(() => {
                         const entryPrice = simulation.rate;
