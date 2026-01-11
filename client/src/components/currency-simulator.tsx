@@ -364,7 +364,8 @@ export function CurrencySimulator({
           {simulation && (
             <>
               {/* Current Rate, Break-Even Rate, and Stop Loss Rate Display */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+              <p className="text-sm font-medium text-muted-foreground pt-4">{t('simulator.ratesHeader')}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-xl md:text-2xl font-bold">
@@ -390,7 +391,7 @@ export function CurrencySimulator({
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Stop Loss Rate</p>
+                  <p className="text-sm text-muted-foreground">{t('simulator.closureRate')}</p>
                   <p className="text-xl md:text-2xl font-bold">
                     {(() => {
                       const entryPrice = simulation.rate;
@@ -425,7 +426,10 @@ export function CurrencySimulator({
                   <div className="flex justify-between font-medium">
                     <span>{t('simulator.totalCost')}</span>
                     <span>
-                      {simulation.costDetails.hedgeCost.toFixed(2)} {baseCurrency}
+                      {(() => {
+                        const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+                        return simulation.costDetails.hedgeCost.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      })()} {t('simulator.reais')}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
@@ -439,34 +443,32 @@ export function CurrencySimulator({
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center">
                   <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                  {t('simulator.margin')} ({baseCurrency})
+                  {t('simulator.margin')}
                 </label>
                 <div className="text-sm text-black mb-2">
                   {t('simulator.marginRecommendation')}
                 </div>
                 <Input
                   type="text"
-                  value={marginInput || (margin ?? simulation.costDetails.hedgeCost * 2).toString()}
+                  inputMode="decimal"
+                  value={(() => {
+                    const val = margin ?? simulation.costDetails.hedgeCost * 2;
+                    const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+                    return val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
                   onChange={e => {
-                    let value = e.target.value;
+                    const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+                    const decimalSep = locale === 'pt-BR' ? ',' : '.';
+                    const thousandSep = locale === 'pt-BR' ? '.' : ',';
                     
-                    // Allow only numbers and decimal point
+                    let value = e.target.value;
+                    // Remove thousand separators, keep decimal separator
+                    value = value.split(thousandSep).join('');
+                    // Normalize decimal separator to period for parsing
+                    value = value.replace(decimalSep, '.');
+                    // Remove non-numeric characters except period
                     value = value.replace(/[^\d.]/g, '');
                     
-                    // Remove leading zeros except when followed by decimal point
-                    if (value.length > 1 && value.startsWith('0') && value[1] !== '.') {
-                      value = value.replace(/^0+/, '');
-                    }
-                    
-                    // Ensure only one decimal point
-                    const parts = value.split('.');
-                    if (parts.length > 2) {
-                      value = parts[0] + '.' + parts.slice(1).join('');
-                    }
-                    
-                    setMarginInput(value);
-                    
-                    // Update margin state only if it's a valid number or empty
                     if (value === '') {
                       setMargin(0);
                     } else {
@@ -476,12 +478,11 @@ export function CurrencySimulator({
                       }
                     }
                   }}
-                  onBlur={e => {
-                    const inputValue = parseFloat(e.target.value) || 0;
+                  onBlur={() => {
+                    const inputValue = margin ?? 0;
                     const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
                     const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
                     setMargin(finalValue);
-                    setMarginInput(finalValue.toFixed(2));
                   }}
                 />
               </div>
