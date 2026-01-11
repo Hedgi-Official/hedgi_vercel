@@ -80,9 +80,13 @@ export function CurrencySimulator({
   }) => {
     if (!showTooltips) return <>{children}</>;
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side="bottom" className="p-0 max-w-xs">
+      <Tooltip delayDuration={100}>
+        <TooltipTrigger asChild>
+          <div tabIndex={0} className="outline-none">
+            {children}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="p-0 max-w-xs z-50">
           <div className="bg-card rounded-lg shadow-md p-4">
             <div className="flex flex-col items-center mb-3">
               <Icon className="h-7 w-7 text-primary mb-2" />
@@ -412,7 +416,7 @@ export function CurrencySimulator({
                   titleKey="simulator.currentRate"
                   helpKey="simulator.currentRateHelp"
                 >
-                  <div className="space-y-1 cursor-help">
+                  <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                     <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                     <p className="text-xl md:text-2xl font-bold">
                       {simulation.rate.toFixed(4)}
@@ -433,7 +437,7 @@ export function CurrencySimulator({
                     }} />
                   }
                 >
-                  <div className="space-y-1 cursor-help">
+                  <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                     <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                     <p className="text-xl md:text-2xl font-bold">
                       {simulation.breakEvenRate.toFixed(4)}
@@ -452,7 +456,7 @@ export function CurrencySimulator({
                   titleKey="simulator.closureRate"
                   helpKey="simulator.closureRateHelp"
                 >
-                  <div className="space-y-1 cursor-help">
+                  <div className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
                     <p className="text-sm text-muted-foreground">{t('simulator.closureRate')}</p>
                     <p className="text-xl md:text-2xl font-bold">
                       {(() => {
