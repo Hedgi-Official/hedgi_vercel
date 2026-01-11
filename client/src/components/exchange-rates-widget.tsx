@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useActivTradesRate } from "@/hooks/use-activtrades-rate";
 import { useTickmillRate } from "@/hooks/use-tickmill-rate";
 import { useFBSRate } from "@/hooks/use-fbs-rate";
-import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -49,8 +49,7 @@ export function ExchangeRatesWidget() {
         <div className="text-xs font-medium text-muted-foreground mb-2">{brokerLabel}</div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
-              <TrendingDown className="h-3 w-3 text-red-500" />
+            <div className="text-xs text-muted-foreground mb-0.5">
               {t('exchangeRates.salePrice')}
             </div>
             <div className="text-sm font-semibold text-foreground">
@@ -58,8 +57,7 @@ export function ExchangeRatesWidget() {
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
-              <TrendingUp className="h-3 w-3 text-green-500" />
+            <div className="text-xs text-muted-foreground mb-0.5">
               {t('exchangeRates.purchasePrice')}
             </div>
             <div className="text-sm font-semibold text-foreground">

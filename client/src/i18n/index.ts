@@ -70,6 +70,7 @@ const enUS = {
     },
     simulator: {
       title: 'Simulate Your Hedge',
+      titleDashboard: 'Place Your Hedge',
       subtitle: 'Choose the currency pair, direction, amount and expiration date to see an estimate of the hedge cost.',
       currencyPair: 'Currency Pair',
       selectPair: 'Select pair',
@@ -628,6 +629,7 @@ const ptBR = {
     },
     simulator: {
       title: 'Simule seu hedge',
+      titleDashboard: 'Faça seu Hedge',
       subtitle: 'Escolha o par de moedas, a direção, o valor e a data de vencimento para ver uma estimativa do custo do hedge.',
       currencyPair: 'Par de moedas',
       selectPair: 'Selecione o par',

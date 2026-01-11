@@ -31,6 +31,7 @@ export interface TradeResponse {
 
 interface Props {
   showGraph?: boolean;
+  titleKey?: string;
   onPlaceHedge?: (
     hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
     paymentToken?: string
@@ -53,6 +54,7 @@ export interface SimulationResult {
 
 export function CurrencySimulator({
   showGraph = true,
+  titleKey = 'simulator.title',
   onPlaceHedge,
   onOrdersUpdated
 }: Props) {
@@ -253,7 +255,7 @@ export function CurrencySimulator({
         <CardHeader>
           <CardTitle className="flex items-center">
             <BarChart2 className="mr-2 h-5 w-5" />
-            {t('simulator.title')}
+            {t(titleKey)}
           </CardTitle>
           <p className="text-base text-muted-foreground mt-2">
             {t('simulator.subtitle')}

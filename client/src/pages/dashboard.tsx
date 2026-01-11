@@ -1156,67 +1156,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top Row: Exchange Rates + New Hedge side-by-side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Live Exchange Rates */}
-          <ExchangeRatesWidget />
-          
-          {/* New Hedge Creation */}
-          <Card className="h-full">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                {t('New Hedge')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <CurrencySimulator
-                showGraph={false}
-                onPlaceHedge={(hedgePayload) => { 
-                  console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
-
-                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  const hedgeCost = (hedgePayload as HedgeWithCost).cost ? Number((hedgePayload as HedgeWithCost).cost) : 0;
-                  const paymentAmount = Number((margin + hedgeCost).toFixed(2));
-
-                  setPaymentAmount(paymentAmount.toString());
-                  setPendingHedgeData(hedgePayload);
-                  setShowPaymentModal(true);
-
-                  return Promise.resolve({
-                    ask: 0,
-                    bid: 0,
-                    comment: "Payment modal opened",
-                    deal: 0,
-                    order: 0,
-                    price: 0,
-                    request: {},
-                    request_id: 0,
-                    retcode: 0,
-                    retcode_external: 0,
-                    volume: 0
-                  });
-                }}
-                onOrdersUpdated={() => {
-                  queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-                  queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-                }}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Active Trades Section */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8">
-          <div className="px-6 py-5 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Activity className="h-4 w-4 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">{t('Active Trades')}</h3>
-            </div>
-          </div>
-              <div className="p-6">
+        {/* Main Layout: Left column (Exchange Rates + Active Trades) | Right column (New Hedge - wider) */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+          {/* Left Column: Exchange Rates + Active Trades stacked */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Live Exchange Rates */}
+            <ExchangeRatesWidget />
+            
+            {/* Active Trades Section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-blue-600" />
+                  {t('Active Trades')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
                 {(() => {
                   const legTradeIds = new Set(
                     syntheticTrades.flatMap(st => st.legs.map(leg => leg.tradeId))
@@ -1263,7 +1218,46 @@ export default function Dashboard() {
                     </div>
                   );
                 })()}
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Right Column: New Hedge (wider) */}
+          <div className="lg:col-span-3">
+            <CurrencySimulator
+              showGraph={false}
+              titleKey="simulator.titleDashboard"
+              onPlaceHedge={(hedgePayload) => { 
+                console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
+
+                const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
+                const hedgeCost = (hedgePayload as HedgeWithCost).cost ? Number((hedgePayload as HedgeWithCost).cost) : 0;
+                const paymentAmount = Number((margin + hedgeCost).toFixed(2));
+
+                setPaymentAmount(paymentAmount.toString());
+                setPendingHedgeData(hedgePayload);
+                setShowPaymentModal(true);
+
+                return Promise.resolve({
+                  ask: 0,
+                  bid: 0,
+                  comment: "Payment modal opened",
+                  deal: 0,
+                  order: 0,
+                  price: 0,
+                  request: {},
+                  request_id: 0,
+                  retcode: 0,
+                  retcode_external: 0,
+                  volume: 0
+                });
+              }}
+              onOrdersUpdated={() => {
+                queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+              }}
+            />
+          </div>
         </div>
 
         {/* Trade History Section */}
