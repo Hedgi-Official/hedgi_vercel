@@ -368,7 +368,7 @@ export function CurrencySimulator({
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
                   <p className="text-xl md:text-2xl font-bold">
-                    {simulation.rate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                    {simulation.rate.toFixed(4)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {tradeDirection === 'buy' ?
@@ -379,7 +379,7 @@ export function CurrencySimulator({
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
                   <p className="text-xl md:text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)} {`${targetCurrency}/${baseCurrency}`}
+                    {simulation.breakEvenRate.toFixed(4)}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
@@ -401,7 +401,7 @@ export function CurrencySimulator({
                         Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
                         Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
                       return stopLossRate.toFixed(4);
-                    })()} {`${targetCurrency}/${baseCurrency}`}
+                    })()}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {(() => {
