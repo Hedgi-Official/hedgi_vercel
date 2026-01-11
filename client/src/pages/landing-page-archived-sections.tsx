@@ -148,3 +148,86 @@ export const BottomCtaSection = ({
    landing.viewApiQuickstart
    landing.bottomCtaHelper
 */
+
+/* ============================================
+   FOR COMPANIES PAGE - ARCHIVED SECTIONS
+   Date archived: January 11, 2026
+   ============================================ */
+
+// Required imports for WorldMapVisualization:
+// import { ComposableMap, Geographies, Geography, Marker, Line } from "react-simple-maps";
+
+/* ============================================
+   WORLD MAP VISUALIZATION COMPONENT
+   (Currency map with animated markers and connection lines)
+   ============================================ */
+
+export const WorldMapVisualization = () => {
+  const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+  
+  const currencyMarkers = [
+    { coordinates: [-74.006, 40.7128], currency: "$", color: "#22c55e", name: "USD" },
+    { coordinates: [-46.6333, -23.5505], currency: "R$", color: "#f59e0b", name: "BRL" },
+    { coordinates: [8.6821, 50.1109], currency: "€", color: "#3b82f6", name: "EUR" },
+    { coordinates: [-0.1276, 51.5074], currency: "£", color: "#8b5cf6", name: "GBP" },
+    { coordinates: [72.8777, 19.076], currency: "₹", color: "#ec4899", name: "INR" },
+    { coordinates: [116.4074, 39.9042], currency: "¥", color: "#f97316", name: "CNY" },
+    { coordinates: [151.2093, -33.8688], currency: "A$", color: "#06b6d4", name: "AUD" },
+    { coordinates: [139.6917, 35.6895], currency: "¥", color: "#a855f7", name: "JPY" },
+    { coordinates: [28.0473, -26.2041], currency: "R", color: "#14b8a6", name: "ZAR" },
+  ];
+
+  return (
+    <div className="relative w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0a1628 0%, #1a2744 50%, #0a1628 100%)" }}>
+      {/* ComposableMap component with Geographies, Lines, and Markers would go here */}
+      {/* See original for-companies.tsx for full implementation */}
+    </div>
+  );
+};
+
+/* ============================================
+   SOCIAL PROOF / VOLUME STATS SECTION
+   (Daily volume transacted and cross-border payment volumes)
+   ============================================ */
+
+export const SocialProofSection = ({ t }: { t: (key: string) => string }) => (
+  <section className="py-12 bg-muted/30">
+    <div className="container mx-auto px-4">
+      <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
+        <div>
+          <p className="text-2xl md:text-3xl font-bold text-foreground">{t('companiesPage.socialProofVolume')}</p>
+          <p className="text-sm text-muted-foreground">{t('companiesPage.socialProofVolumeDesc')}</p>
+        </div>
+        <div className="hidden md:block w-px h-12 bg-border" />
+        <div>
+          <p className="text-2xl md:text-3xl font-bold text-foreground">{t('companiesPage.socialProofPayments')}</p>
+          <p className="text-sm text-muted-foreground">{t('companiesPage.socialProofPaymentsDesc')}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+/* ============================================
+   MAP SECTION WRAPPER
+   ============================================ */
+
+export const MapSection = () => (
+  <section className="py-8 md:py-12">
+    <div className="container mx-auto px-4">
+      <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
+        {/* <WorldMapVisualization /> */}
+      </div>
+    </div>
+  </section>
+);
+
+/* ============================================
+   TRANSLATION KEYS USED (For Companies Page):
+   ============================================
+   
+   companiesPage.socialProofVolume (e.g. "$2.5B+")
+   companiesPage.socialProofVolumeDesc (e.g. "Daily volume transacted")
+   companiesPage.socialProofPayments (e.g. "150+")
+   companiesPage.socialProofPaymentsDesc (e.g. "Cross-border payment corridors")
+*/
