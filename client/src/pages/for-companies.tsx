@@ -449,7 +449,7 @@ export default function ForCompanies() {
   );
 
   const renderMainPage = () => (
-    <div className="min-h-screen bg-background">
+    <div className="page-container bg-background">
       <div className="absolute inset-0 opacity-3 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
@@ -463,8 +463,8 @@ export default function ForCompanies() {
         </svg>
       </div>
 
-      <main className="relative z-10">
-        <section className="py-10 md:py-16">
+      <main className="page-main relative z-10">
+        <section className="page-section">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>

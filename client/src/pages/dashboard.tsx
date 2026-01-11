@@ -1078,7 +1078,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
+    <div className="page-container bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
       <Header username={user?.username} onLogout={handleLogout} />
       
       {/* Dashboard Header */}

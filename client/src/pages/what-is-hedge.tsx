@@ -32,11 +32,12 @@ export default function WhatIsHedge() {
   };
 
   return (
-    <>
+    <div className="page-container">
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-background to-muted py-10 md:py-16 px-4">
+      <main className="page-main">
+        {/* Hero Section */}
+        <section className="page-section bg-gradient-to-b from-background to-muted px-4">
         <div className="container mx-auto max-w-4xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center">{t("whatIsHedging.title")}</h1>
           
@@ -73,7 +74,7 @@ export default function WhatIsHedge() {
       </section>
       
       {/* Institutional Hedging Section */}
-      <section className="py-16 px-4 bg-background">
+      <section className="page-section px-4 bg-background">
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-3xl font-bold mb-8 text-center">{t("whatIsHedging.businessTitle")}</h2>
           
@@ -120,7 +121,7 @@ export default function WhatIsHedge() {
       </section>
       
       {/* Individual Hedging Section */}
-      <section className="py-16 px-4 bg-muted">
+      <section className="page-section px-4 bg-muted">
         <div className="container mx-auto max-w-4xl">
           <h2 className="text-3xl font-bold mb-8 text-center">{t("whatIsHedging.individualsTitle")}</h2>
           
@@ -325,8 +326,9 @@ export default function WhatIsHedge() {
         </div>
       </section>
 
-      <Footer />
-    </>
+        <Footer />
+      </main>
+    </div>
   );
 }
 

@@ -205,9 +205,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="page-container bg-background">
       <Header showAuthButton={false} />
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center">
+      <div className="container mx-auto px-4 page-section flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center">{t('auth.Welcome back')}</CardTitle>

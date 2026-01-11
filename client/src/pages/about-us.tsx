@@ -31,12 +31,12 @@ export default function AboutUs() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="page-container bg-background">
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
-      <main className="relative z-10">
+      <main className="page-main relative z-10">
         {/* Hero Section */}
-        <section className="py-10 md:py-16">
+        <section className="page-section">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">

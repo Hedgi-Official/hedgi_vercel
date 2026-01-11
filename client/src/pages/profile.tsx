@@ -183,10 +183,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="page-container bg-gradient-to-br from-background via-background to-muted/30">
       <Header showAuthButton={false} username={user?.username} onLogout={handleLogout} />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 page-section">
         <div className="max-w-4xl mx-auto">
           {/* Header Section */}
           <div className="mb-8">

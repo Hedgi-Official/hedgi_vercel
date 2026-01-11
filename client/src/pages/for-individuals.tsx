@@ -184,12 +184,12 @@ export default function ForIndividuals() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="page-container bg-background">
         <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
-        <main className="flex-1">
+        <main className="page-main">
           {/* Hero Section - Two Column Layout */}
-          <section className="py-10 md:py-16">
+          <section className="page-section">
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 {/* Left Column - Text */}
