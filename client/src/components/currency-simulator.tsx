@@ -270,7 +270,7 @@ export function CurrencySimulator({
             >
               <SelectTrigger><SelectValue placeholder={t('simulator.selectPair')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="USD">USDBRL</SelectItem>
+                <SelectItem value="USD">{t('currencyPairs.USDBRL')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

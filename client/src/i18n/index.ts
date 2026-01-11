@@ -152,7 +152,7 @@ const enUS = {
     'Sell USD': 'Sell USD',
     'Direction': 'Direction',
     currencyPairs: {
-      'USDBRL': 'USD/BRL - US Dollar/Brazilian Real',
+      'USDBRL': 'US Dollar and Brazilian Real',
       'EURUSD': 'EUR/USD - Euro/US Dollar',
       'USDMXN': 'USD/MXN - US Dollar/Mexican Peso',
       'BRLUSD': 'BRL/USD - Brazilian Real/US Dollar',
@@ -597,7 +597,7 @@ const ptBR = {
       'You must be at least 18 years old to use this service': 'Você precisa ter pelo menos 18 anos para usar esse serviço',
     },
     currencyPairs: {
-      'USDBRL': 'USD/BRL - Dólar Americano/Real Brasileiro',
+      'USDBRL': 'Dólar Americano e Real Brasileiro',
       'EURUSD': 'EUR/USD - Euro/Dólar Americano',
       'USDMXN': 'USD/MXN - Dólar Americano/Peso Mexicano',
       'BRLUSD': 'BRL/USD - Real Brasileiro/Dólar Americano',
