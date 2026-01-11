@@ -240,7 +240,7 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section 
           ref={heroSectionRef}
-          className="page-section-hero relative overflow-hidden flex-1"
+          className="page-section-hero-landing relative overflow-hidden flex-1"
           style={lockedPadding !== null ? { paddingTop: `${lockedPadding}px` } : undefined}
         >
           <div className="container mx-auto px-4 relative z-10">

@@ -189,7 +189,7 @@ export default function ForIndividuals() {
 
         <main className="page-main">
           {/* Hero Section - Two Column Layout */}
-          <section className="page-section py-16 lg:py-20">
+          <section className="page-section-hero-subpage">
             <div className="container mx-auto px-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 {/* Left Column - Text */}

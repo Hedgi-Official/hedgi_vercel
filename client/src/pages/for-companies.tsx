@@ -332,7 +332,7 @@ export default function ForCompanies() {
       </div>
 
       <main className="page-main relative z-10">
-        <section className="page-section py-16 lg:py-20">
+        <section className="page-section-hero-subpage">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <div className="space-y-12">
