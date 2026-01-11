@@ -12,7 +12,7 @@
     --section-py: clamp(1.5rem, 3vh, 4rem);
     --section-py-hero: clamp(1.5rem, 3vh, 4rem);
     --section-py-hero-landing: clamp(2rem, 4vh, 5rem);
-    --section-py-hero-subpage: clamp(1rem, 2vh, 2.5rem);
+    --section-py-hero-subpage: clamp(2rem, 6vh, 5rem);
     --content-gap: clamp(0.75rem, 1.5vh, 1.5rem);
     --container-max: 80rem; /* 1280px */
   }
