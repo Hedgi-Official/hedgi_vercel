@@ -307,10 +307,7 @@ export function CurrencySimulator({
             <Input
               type="text"
               inputMode="numeric"
-              value={(() => {
-                const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
-                return amount.toLocaleString(locale, { maximumFractionDigits: 0 });
-              })()}
+              value={amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               onChange={e => {
                 const raw = e.currentTarget.value.replace(/[^\d]/g, '');
                 const parsed = parseInt(raw, 10);
