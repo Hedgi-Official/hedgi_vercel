@@ -342,16 +342,16 @@ export default function ForCompanies() {
                 <p className="text-xl text-muted-foreground">
                   {t('companiesPage.heroSubtitle')}
                 </p>
-                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-4 md:gap-6 text-base md:text-lg font-semibold text-foreground flex-wrap">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div className="w-3 h-3 rounded-full bg-primary" />
                     <span>{t('companiesPage.stepExposure')}</span>
                   </div>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5 text-primary" />
                   <span>{t('companiesPage.stepSimulate')}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5 text-primary" />
                   <span>{t('companiesPage.stepQuote')}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5 text-primary" />
                   <span>{t('companiesPage.stepHedge')}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
