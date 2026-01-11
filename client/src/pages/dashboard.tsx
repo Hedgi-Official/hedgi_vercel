@@ -1157,21 +1157,21 @@ export default function Dashboard() {
         </div>
 
         {/* Main Layout: Left column (Exchange Rates + Active Trades) | Right column (New Hedge - wider) */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 items-stretch">
           {/* Left Column: Exchange Rates + Active Trades stacked */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Live Exchange Rates */}
+          <div className="lg:col-span-2 flex flex-col gap-4 h-full">
+            {/* Live Exchange Rates - Fixed size */}
             <ExchangeRatesWidget />
             
-            {/* Active Trades Section */}
-            <Card>
-              <CardHeader className="pb-3">
+            {/* Active Trades Section - Expands to fill remaining space */}
+            <Card className="flex-1 flex flex-col min-h-[200px]">
+              <CardHeader className="pb-2 flex-none">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Activity className="h-4 w-4 text-blue-600" />
                   {t('Active Trades')}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 flex-1 overflow-y-auto">
                 {(() => {
                   const legTradeIds = new Set(
                     syntheticTrades.flatMap(st => st.legs.map(leg => leg.tradeId))
@@ -1185,18 +1185,18 @@ export default function Dashboard() {
 
                   if (filteredActiveTrades.length === 0 && openSyntheticTrades.length === 0) {
                     return (
-                      <div className="text-center py-12">
-                        <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <Shield className="h-8 w-8 text-gray-300" />
+                      <div className="text-center py-8">
+                        <div className="h-12 w-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                          <Shield className="h-6 w-6 text-gray-300" />
                         </div>
-                        <p className="text-gray-900 font-medium mb-2">{t('No active trades')}</p>
-                        <p className="text-sm text-gray-500">Your hedged positions will appear here</p>
+                        <p className="text-gray-900 font-medium mb-1 text-sm">{t('No active trades')}</p>
+                        <p className="text-xs text-gray-500">Your hedged positions will appear here</p>
                       </div>
                     );
                   }
 
                   return (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {openSyntheticTrades.map((syntheticTrade) => (
                         <SyntheticTradeItem 
                           key={syntheticTrade.syntheticTradeId}
@@ -1222,8 +1222,8 @@ export default function Dashboard() {
             </Card>
           </div>
           
-          {/* Right Column: New Hedge (wider) */}
-          <div className="lg:col-span-3">
+          {/* Right Column: New Hedge (wider) - fills height */}
+          <div className="lg:col-span-3 flex">
             <CurrencySimulator
               showGraph={false}
               titleKey="simulator.titleDashboard"

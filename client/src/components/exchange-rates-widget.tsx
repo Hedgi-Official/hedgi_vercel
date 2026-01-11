@@ -72,15 +72,15 @@ export function ExchangeRatesWidget() {
   const isLoading = isLoadingActivTrades || isLoadingTickmill || isLoadingFBS;
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
+    <Card className="flex-none h-[280px] flex flex-col">
+      <CardHeader className="pb-2 flex-none">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             {t('Live Exchange Rates')}
             {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </CardTitle>
           <Select value={selectedPair} onValueChange={setSelectedPair}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
+            <SelectTrigger className="w-[120px] h-7 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -93,19 +93,19 @@ export function ExchangeRatesWidget() {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="pt-0 flex-1 overflow-y-auto space-y-2">
         {(isLoadingActivTrades && isLoadingTickmill && isLoadingFBS) ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
           </div>
         ) : (
           <>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {renderRateCard(t('exchangeRates.brokerA'), activtradesRate, activtradesError)}
               {renderRateCard(t('exchangeRates.brokerB'), tickmillRate, tickmillError)}
               {renderRateCard(t('exchangeRates.brokerC'), fbsRate, fbsError)}
             </div>
-            <div className="text-xs text-muted-foreground p-2 bg-amber-50 border border-amber-200 rounded-md">
+            <div className="text-[10px] text-muted-foreground p-1.5 bg-amber-50 border border-amber-200 rounded">
               {t('Market Hours Notice')}
             </div>
           </>
