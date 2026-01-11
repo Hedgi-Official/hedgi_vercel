@@ -397,7 +397,7 @@ const enUS = {
       imageAlt4: 'Student organizing semester budget'
     },
     companiesPage: {
-      heroTitle: 'Every cross-border transaction is a potential FX liability.',
+      heroTitle: 'Cross-border transactions are potential FX liabilities.',
       heroSubtitle: 'Hedgi is the Currency Hedging API that works with your existing payout/settlement flow. Built for teams that want to embed hedging in their product or hedge internal FX exposure.',
       stepExposure: 'Exposure',
       stepSimulate: 'Simulate',
@@ -934,7 +934,7 @@ const ptBR = {
       imageAlt4: 'Estudante organizando o orçamento do semestre'
     },
     companiesPage: {
-      heroTitle: 'Toda transação cross-border pode virar uma exposição a FX.',
+      heroTitle: 'Toda transação cross-border é uma exposição a FX.',
       heroSubtitle: 'A Hedgi é a API de hedge cambial que se integra ao seu fluxo atual de pagamento e liquidação. Feita para times que querem embutir hedge no produto ou proteger a exposição cambial interna.',
       stepExposure: 'Exposição',
       stepSimulate: 'Simular',
