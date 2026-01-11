@@ -8,7 +8,7 @@ import { Skyline } from "@/components/skyline";
 import { useLocation, Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { User, Building2, ArrowRight } from "lucide-react";
 /*import CurrencyNewsFeed from "@/components/CurrencyNewsFeed"; */
 
@@ -17,6 +17,7 @@ export default function LandingPage() {
   const { user, logout } = useUser();
   const { t } = useTranslation();
   const [audienceType, setAudienceType] = useState<'individuals' | 'companies'>('individuals');
+  const [lockedPadding, setLockedPadding] = useState<number | null>(null);
 
   // Refs
   const colRef = useRef<HTMLDivElement>(null);        // left column wrapper
@@ -25,10 +26,49 @@ export default function LandingPage() {
   const line1Ref = useRef<HTMLSpanElement>(null);     // line 1
   const line2Ref = useRef<HTMLSpanElement>(null);     // line 2
   const skylineWrapRef = useRef<HTMLDivElement>(null);// Skyline wrapper
+  const heroSectionRef = useRef<HTMLElement>(null);   // hero section for centering
+  const hasLockedPadding = useRef(false);             // track if we've locked the padding
 
   // Track max observed line width per mode (mobile/desktop) to avoid jitter
   const maxLineMobile = useRef<number>(0);
   const maxLineDesktop = useRef<number>(0);
+  
+  // Lock the initial centered position on desktop so it doesn't shift when simulator expands
+  useLayoutEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    
+    const lockCenterPosition = () => {
+      if (hasLockedPadding.current || !mql.matches) return;
+      
+      const heroSection = heroSectionRef.current;
+      if (!heroSection) return;
+      
+      // Get the main content area height (viewport minus header and footer)
+      const header = document.querySelector('nav');
+      const footer = document.querySelector('footer');
+      const headerHeight = header?.getBoundingClientRect().height || 56;
+      const footerHeight = footer?.getBoundingClientRect().height || 48;
+      const availableHeight = window.innerHeight - headerHeight - footerHeight;
+      
+      // Get the hero content height
+      const heroContent = heroSection.querySelector('.container');
+      const contentHeight = heroContent?.getBoundingClientRect().height || 0;
+      
+      // Calculate padding to center the content
+      const padding = Math.max(0, (availableHeight - contentHeight) / 2);
+      
+      setLockedPadding(padding);
+      hasLockedPadding.current = true;
+    };
+    
+    // Wait for fonts and layout to settle
+    const timer = setTimeout(lockCenterPosition, 100);
+    (document as any).fonts?.ready?.then(() => {
+      setTimeout(lockCenterPosition, 50);
+    });
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Preload hero image
   useEffect(() => {
@@ -198,7 +238,11 @@ export default function LandingPage() {
 
       <main className="page-main relative z-10 lg:min-h-0">
         {/* Hero Section */}
-        <section className="page-section-hero relative overflow-hidden flex-1">
+        <section 
+          ref={heroSectionRef}
+          className="page-section-hero relative overflow-hidden flex-1"
+          style={lockedPadding !== null ? { paddingTop: `${lockedPadding}px` } : undefined}
+        >
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] items-start">
               {/* Left side - Hero content */}
