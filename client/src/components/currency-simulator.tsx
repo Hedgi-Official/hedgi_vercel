@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactNode, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/l
 import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates, getMinimumHedgeDate } from '@/lib/utils';
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
 import { isSyntheticPair, getSyntheticConfig, formatPairForBackend, formatPairDisplay } from '@/lib/synthetic-pairs';
 
@@ -32,6 +33,7 @@ export interface TradeResponse {
 interface Props {
   showGraph?: boolean;
   titleKey?: string;
+  showTooltips?: boolean;
   onPlaceHedge?: (
     hedgeData: Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt">,
     paymentToken?: string
@@ -55,10 +57,48 @@ export interface SimulationResult {
 export function CurrencySimulator({
   showGraph = true,
   titleKey = 'simulator.title',
+  showTooltips = false,
   onPlaceHedge,
   onOrdersUpdated
 }: Props) {
   const { t } = useTranslation();
+  
+  const getTradeDirectionHelp = () => {
+    if (tradeDirection === 'buy') {
+      return t('simulator.buyHelp');
+    }
+    return t('simulator.sellHelp');
+  };
+  
+  const TooltipWrapper = ({ 
+    children, 
+    icon: Icon, 
+    titleKey: tooltipTitleKey, 
+    helpKey 
+  }: { 
+    children: ReactNode; 
+    icon: ComponentType<{ className?: string }>; 
+    titleKey: string; 
+    helpKey?: string | ReactNode;
+  }) => {
+    if (!showTooltips) return <>{children}</>;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent side="bottom" className="p-0 max-w-xs">
+          <div className="bg-card rounded-lg shadow-md p-4">
+            <div className="flex flex-col items-center mb-3">
+              <Icon className="h-7 w-7 text-primary mb-2" />
+              <h4 className="font-bold text-foreground">{t(tooltipTitleKey)}</h4>
+            </div>
+            <div className="text-sm text-foreground">
+              {typeof helpKey === 'string' ? t(helpKey) : helpKey}
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
   const [amount, setAmount] = useState(10000);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(
     () => {
@@ -249,7 +289,7 @@ export function CurrencySimulator({
 
   
 
-  return (
+  const content = (
     <>
       <Card className="w-full h-full bg-background shadow-lg relative z-10">
         <CardHeader>
@@ -262,99 +302,103 @@ export function CurrencySimulator({
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <Globe className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.currencyPair')}
-            </label>
-            <Select
-              value={targetCurrency}
-              onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
-            >
-              <SelectTrigger><SelectValue placeholder={t('simulator.selectPair')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USD">{t('currencyPairs.USDBRL')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Direction */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.tradeDirection')}
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={tradeDirection === 'buy' ? 'default' : 'outline'}
-                onClick={() => setTradeDirection('buy')}
+          <TooltipWrapper icon={Globe} titleKey="simulator.currencyPair" helpKey="simulator.currencyPairHelp">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Globe className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.currencyPair')}
+              </label>
+              <Select
+                value={targetCurrency}
+                onValueChange={v => setTargetCurrency(v as SupportedCurrency)}
               >
-                {t('simulator.buy')}
-              </Button>
-              <Button
-                variant={tradeDirection === 'sell' ? 'default' : 'outline'}
-                onClick={() => setTradeDirection('sell')}
-              >
-                {t('simulator.sell')}
-              </Button>
+                <SelectTrigger><SelectValue placeholder={t('simulator.selectPair')} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">{t('currencyPairs.USDBRL')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </TooltipWrapper>
 
-          {/* Amount */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <DollarSign className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.amount')} {t('simulator.multiplesOf1000')}
-            </label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
-              onChange={e => {
-                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
-                const parsed = parseInt(raw, 10);
-                if (!isNaN(parsed)) setAmount(parsed);
-                else if (raw === '') setAmount(0);
-              }}
-              onBlur={e => {
-                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
-                const parsed = parseInt(raw, 10);
-                if (isNaN(parsed) || parsed === 0) {
-                  setAmount(1000);
-                  return;
-                }
-                const snapped = Math.round(parsed / 1000) * 1000;
-                setAmount(snapped || 1000);
-              }}
-              required
-            />
-          </div>
+          <TooltipWrapper icon={ArrowUpDown} titleKey="simulator.tradeDirection" helpKey={getTradeDirectionHelp()}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.tradeDirection')}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={tradeDirection === 'buy' ? 'default' : 'outline'}
+                  onClick={() => setTradeDirection('buy')}
+                >
+                  {t('simulator.buy')}
+                </Button>
+                <Button
+                  variant={tradeDirection === 'sell' ? 'default' : 'outline'}
+                  onClick={() => setTradeDirection('sell')}
+                >
+                  {t('simulator.sell')}
+                </Button>
+              </div>
+            </div>
+          </TooltipWrapper>
 
-          {/* Expiration Date */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <Clock className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.expirationDate')}
-            </label>
-            <DatePicker
-              value={expirationDate}
-              onValueChange={setExpirationDate}
-              minDate={getMinimumHedgeDate()}
-              maxDate={(() => {
-                const maxDate = new Date();
-                maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
-                return maxDate;
-              })()}
-              placeholder={t('simulator.selectExpirationDate')}
-            />
-            {expirationDate && (
-              <p className="text-sm text-muted-foreground">
-                {t('simulator.hedgeDuration').replace('{days}', getDaysBetweenDates(new Date(), expirationDate).toString())}
-              </p>
-            )}
-          </div>
+          <TooltipWrapper icon={DollarSign} titleKey="simulator.amount" helpKey="simulator.amountHelp">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <DollarSign className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.amount')} {t('simulator.multiplesOf1000')}
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
+                onChange={e => {
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  const parsed = parseInt(raw, 10);
+                  if (!isNaN(parsed)) setAmount(parsed);
+                  else if (raw === '') setAmount(0);
+                }}
+                onBlur={e => {
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  const parsed = parseInt(raw, 10);
+                  if (isNaN(parsed) || parsed === 0) {
+                    setAmount(1000);
+                    return;
+                  }
+                  const snapped = Math.round(parsed / 1000) * 1000;
+                  setAmount(snapped || 1000);
+                }}
+                required
+              />
+            </div>
+          </TooltipWrapper>
 
-          {/* Simulate */}
+          <TooltipWrapper icon={Clock} titleKey="simulator.expirationDate" helpKey="simulator.expirationDateHelp">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Clock className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.expirationDate')}
+              </label>
+              <DatePicker
+                value={expirationDate}
+                onValueChange={setExpirationDate}
+                minDate={getMinimumHedgeDate()}
+                maxDate={(() => {
+                  const maxDate = new Date();
+                  maxDate.setFullYear(maxDate.getFullYear() + 1); // Maximum 1 year from now
+                  return maxDate;
+                })()}
+                placeholder={t('simulator.selectExpirationDate')}
+              />
+              {expirationDate && (
+                <p className="text-sm text-muted-foreground">
+                  {t('simulator.hedgeDuration').replace('{days}', getDaysBetweenDates(new Date(), expirationDate).toString())}
+                </p>
+              )}
+            </div>
+          </TooltipWrapper>
+
           <Button onClick={handleSimulate} className="w-full">
             {t('simulator.calculateCost')}
           </Button>
@@ -501,4 +545,6 @@ export function CurrencySimulator({
       </Card>
       </>
   );
+
+  return showTooltips ? <TooltipProvider>{content}</TooltipProvider> : content;
 }

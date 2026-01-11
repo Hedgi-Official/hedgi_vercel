@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { EnhancedCurrencySimulator } from "@/components/enhanced-currency-simulator";
+import { CurrencySimulator } from "@/components/currency-simulator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { 
@@ -500,7 +500,7 @@ export default function ForIndividuals() {
                         </p>
                       </CardHeader>
                       <CardContent>
-                        <EnhancedCurrencySimulator showGraph={false} />
+                        <CurrencySimulator showGraph={false} showTooltips={true} />
                       </CardContent>
                     </Card>
                   </div>
