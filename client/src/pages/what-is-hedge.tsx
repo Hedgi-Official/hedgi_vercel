@@ -37,7 +37,7 @@ export default function WhatIsHedge() {
       
       <main className="page-main">
         {/* Hero Section */}
-        <section className="page-section bg-gradient-to-b from-background to-muted px-4">
+        <section className="page-section-hero-subpage bg-gradient-to-b from-background to-muted px-4">
         <div className="container mx-auto max-w-4xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center">{t("whatIsHedging.title")}</h1>
           

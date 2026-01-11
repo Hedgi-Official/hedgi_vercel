@@ -36,7 +36,7 @@ export default function AboutUs() {
 
       <main className="page-main relative z-10">
         {/* Hero Section */}
-        <section className="page-section">
+        <section className="page-section-hero-subpage">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
