@@ -488,12 +488,13 @@ export function CurrencySimulator({
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={(() => {
-                    const val = margin ?? simulation.costDetails.hedgeCost * 2;
-                    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                  })()}
+                  value={marginInput !== '' ? marginInput : (margin ?? simulation.costDetails.hedgeCost * 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   onChange={e => {
-                    let value = e.target.value;
+                    const value = e.target.value;
+                    setMarginInput(value);
+                  }}
+                  onBlur={() => {
+                    let value = marginInput;
                     // Remove thousand separators (period), keep decimal separator (comma)
                     value = value.split('.').join('');
                     // Normalize decimal separator to period for parsing
@@ -501,20 +502,12 @@ export function CurrencySimulator({
                     // Remove non-numeric characters except period
                     value = value.replace(/[^\d.]/g, '');
                     
-                    if (value === '') {
-                      setMargin(0);
-                    } else {
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue)) {
-                        setMargin(numValue);
-                      }
-                    }
-                  }}
-                  onBlur={() => {
-                    const inputValue = margin ?? 0;
+                    const numValue = value === '' ? 0 : parseFloat(value);
                     const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
-                    const finalValue = inputValue < minimumMargin ? minimumMargin : inputValue;
+                    const finalValue = isNaN(numValue) || numValue < minimumMargin ? minimumMargin : numValue;
+                    
                     setMargin(finalValue);
+                    setMarginInput('');
                   }}
                 />
               </div>
