@@ -32,7 +32,7 @@
   }
   
   .page-container-fit {
-    @apply min-h-screen lg:h-screen lg:max-h-screen flex flex-col lg:overflow-hidden;
+    @apply min-h-screen lg:min-h-screen flex flex-col lg:overflow-auto;
   }
   
   .page-main {
