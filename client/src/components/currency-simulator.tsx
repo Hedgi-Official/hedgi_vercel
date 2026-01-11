@@ -111,6 +111,7 @@ export function CurrencySimulator({
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [margin, setMargin] = useState<number | null>(null);
   const [marginInput, setMarginInput] = useState<string>('');
+  const [isMarginFocused, setIsMarginFocused] = useState(false);
   const [isPlacingHedge, setIsPlacingHedge] = useState(false);
   const [hedgeError, setHedgeError] = useState<string | null>(null);
 
@@ -488,12 +489,17 @@ export function CurrencySimulator({
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={marginInput !== '' ? marginInput : (margin ?? simulation.costDetails.hedgeCost * 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  value={isMarginFocused ? marginInput : (margin ?? simulation.costDetails.hedgeCost * 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  onFocus={() => {
+                    setIsMarginFocused(true);
+                    const currentValue = margin ?? simulation.costDetails.hedgeCost * 2;
+                    setMarginInput(currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                  }}
                   onChange={e => {
-                    const value = e.target.value;
-                    setMarginInput(value);
+                    setMarginInput(e.target.value);
                   }}
                   onBlur={() => {
+                    setIsMarginFocused(false);
                     let value = marginInput;
                     // Remove thousand separators (period), keep decimal separator (comma)
                     value = value.split('.').join('');
