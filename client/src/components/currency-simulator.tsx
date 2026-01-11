@@ -11,7 +11,7 @@ import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDays
 import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
 import type { Hedge } from '@db/schema';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe } from 'lucide-react';
+import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe, TrendingUp, Target, AlertTriangle } from 'lucide-react';
 import { isSyntheticPair, getSyntheticConfig, formatPairForBackend, formatPairDisplay } from '@/lib/synthetic-pairs';
 
 
@@ -407,57 +407,79 @@ export function CurrencySimulator({
               {/* Current Rate, Break-Even Rate, and Stop Loss Rate Display */}
               <p className="text-sm font-medium text-muted-foreground pt-4">{t('simulator.ratesHeader')}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
-                  <p className="text-xl md:text-2xl font-bold">
-                    {simulation.rate.toFixed(4)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tradeDirection === 'buy' ?
-                      t('simulator.buyWith').replace('{target}', targetCurrency).replace('{base}', baseCurrency) :
-                      t('simulator.sellFor').replace('{target}', targetCurrency).replace('{base}', baseCurrency)}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
-                  <p className="text-xl md:text-2xl font-bold">
-                    {simulation.breakEvenRate.toFixed(4)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
-                      const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{t('simulator.closureRate')}</p>
-                  <p className="text-xl md:text-2xl font-bold">
-                    {(() => {
-                      const entryPrice = simulation.rate;
-                      const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
-                      const volume = amount;
-                      // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
-                      const stopLossRate = tradeDirection === 'sell' ? 
-                        Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
-                        Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
-                      return stopLossRate.toFixed(4);
-                    })()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {(() => {
-                      const entryPrice = simulation.rate;
-                      const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
-                      const volume = amount;
-                      const stopLossRate = tradeDirection === 'sell' ? 
-                        Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
-                        Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
-                      const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;
-                      return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
-                    })()}
-                  </p>
-                </div>
+                <TooltipWrapper
+                  icon={TrendingUp}
+                  titleKey="simulator.currentRate"
+                  helpKey="simulator.currentRateHelp"
+                >
+                  <div className="space-y-1 cursor-help">
+                    <p className="text-sm text-muted-foreground">{t('simulator.currentRate')}</p>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {simulation.rate.toFixed(4)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tradeDirection === 'buy' ?
+                        t('simulator.buyWith').replace('{target}', targetCurrency).replace('{base}', baseCurrency) :
+                        t('simulator.sellFor').replace('{target}', targetCurrency).replace('{base}', baseCurrency)}
+                    </p>
+                  </div>
+                </TooltipWrapper>
+                <TooltipWrapper
+                  icon={Target}
+                  titleKey="simulator.breakEvenRate"
+                  helpKey={
+                    <span dangerouslySetInnerHTML={{ 
+                      __html: t(tradeDirection === 'buy' ? 'simulator.breakEvenRateHelpBuy' : 'simulator.breakEvenRateHelpSell') 
+                    }} />
+                  }
+                >
+                  <div className="space-y-1 cursor-help">
+                    <p className="text-sm text-muted-foreground">{t('simulator.breakEvenRate')}</p>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {simulation.breakEvenRate.toFixed(4)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {(() => {
+                        const currentRate = tradeDirection === 'buy' ? simulation.rate : simulation.rate;
+                        const percentDiff = ((simulation.breakEvenRate - currentRate) / currentRate) * 100;
+                        return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                      })()}
+                    </p>
+                  </div>
+                </TooltipWrapper>
+                <TooltipWrapper
+                  icon={AlertTriangle}
+                  titleKey="simulator.closureRate"
+                  helpKey="simulator.closureRateHelp"
+                >
+                  <div className="space-y-1 cursor-help">
+                    <p className="text-sm text-muted-foreground">{t('simulator.closureRate')}</p>
+                    <p className="text-xl md:text-2xl font-bold">
+                      {(() => {
+                        const entryPrice = simulation.rate;
+                        const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
+                        const volume = amount;
+                        // Fix the calculation: for sell orders, add margin/volume; for buy orders, subtract margin/volume
+                        const stopLossRate = tradeDirection === 'sell' ? 
+                          Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                          Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                        return stopLossRate.toFixed(4);
+                      })()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {(() => {
+                        const entryPrice = simulation.rate;
+                        const currentMargin = margin !== null ? margin : (simulation.costDetails.hedgeCost * 2);
+                        const volume = amount;
+                        const stopLossRate = tradeDirection === 'sell' ? 
+                          Math.round((entryPrice + (currentMargin / volume)) * 1000000) / 1000000 :
+                          Math.round((entryPrice - (currentMargin / volume)) * 1000000) / 1000000;
+                        const percentDiff = ((stopLossRate - entryPrice) / entryPrice) * 100;
+                        return `(${percentDiff >= 0 ? '+' : ''}${percentDiff.toFixed(2)}%)`;
+                      })()}
+                    </p>
+                  </div>
+                </TooltipWrapper>
               </div>
 
               {/* Hedge cost display */}
