@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,29 +302,31 @@ export function CurrencySimulator({
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <DollarSign className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.amount')} {targetCurrency} {t('simulator.multiplesOf1000')}
+              {t('simulator.amount')} {t('simulator.multiplesOf1000')}
             </label>
             <Input
-              type="number"
-                step={1000}
-                min={0}
-                defaultValue={amount}            // <-- uncontrolled, initial value from state
-                onChange={e => {
-                  const v = e.currentTarget.valueAsNumber;
-                  if (!isNaN(v)) setAmount(v);   // keep state roughly in sync when they use the stepper
-                }}
-                onBlur={e => {
-                  const raw = parseFloat(e.currentTarget.value);
-                  // if they left it blank or non-numeric, revert to last valid
-                  if (isNaN(raw)) {
-                    e.currentTarget.value = amount.toString();
-                    return;
-                  }
-                  // snap to nearest 1 000 (use floor/ceil if you prefer)
-                  const snapped = Math.round(raw / 1000) * 1000;
-                  setAmount(snapped);
-                  e.currentTarget.value = snapped.toString();
-                }}
+              type="text"
+              inputMode="numeric"
+              value={(() => {
+                const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
+                return amount.toLocaleString(locale, { maximumFractionDigits: 0 });
+              })()}
+              onChange={e => {
+                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                const parsed = parseInt(raw, 10);
+                if (!isNaN(parsed)) setAmount(parsed);
+                else if (raw === '') setAmount(0);
+              }}
+              onBlur={e => {
+                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                const parsed = parseInt(raw, 10);
+                if (isNaN(parsed) || parsed === 0) {
+                  setAmount(1000);
+                  return;
+                }
+                const snapped = Math.round(parsed / 1000) * 1000;
+                setAmount(snapped || 1000);
+              }}
               required
             />
           </div>
