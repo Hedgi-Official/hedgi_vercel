@@ -179,7 +179,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen bg-background relative overflow-hidden flex flex-col">
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 opacity-3 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
@@ -196,14 +196,14 @@ export default function LandingPage() {
 
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
 
-      <main className="relative z-10">
+      <main className="relative z-10 flex-1 flex flex-col lg:min-h-0">
         {/* Hero Section */}
-        <section className="relative py-10 md:py-16 overflow-hidden">
+        <section className="relative py-6 md:py-8 lg:py-4 xl:py-6 overflow-hidden flex-1 flex items-center">
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               {/* Left side - Hero content */}
               <div ref={colRef} className="text-center lg:text-left">
-                <div className="mb-6">
+                <div className="mb-4 lg:mb-3 xl:mb-4">
                   {/* Scaler wrapper (no transform) */}
                   <div className="w-full overflow-hidden">
                     <span ref={scalerRef} className="inline-block origin-center lg:origin-left">
@@ -239,53 +239,53 @@ export default function LandingPage() {
                     className="
                       mx-auto lg:mx-0
                       w-full lg:max-w-xl
-                      mt-6 sm:mt-8
+                      mt-4 sm:mt-6 lg:mt-4 xl:mt-5
                       overflow-hidden
                       lg:[&>div>svg]:h-auto
                       [&>div]:mt-0
-                      [&>div]:mb-2
+                      [&>div]:mb-1 lg:mb-0.5
                     "
                   >
                     <Skyline />
                   </div>
                 </div>
 
-                <p className="text-xl md:text-2xl font-medium mb-6 text-foreground">
+                <p className="text-lg md:text-xl lg:text-lg xl:text-xl font-medium mb-4 lg:mb-3 xl:mb-4 text-foreground">
                   {t("landing.tagline")}
                 </p>
 
                 {/* Audience Toggle */}
-                <div className="mb-8 max-w-lg mx-auto lg:mx-0">
-                  <p className="text-base md:text-lg font-semibold text-foreground mb-4 text-center lg:text-left">
+                <div className="mb-6 lg:mb-4 xl:mb-6 max-w-lg mx-auto lg:mx-0">
+                  <p className="text-sm md:text-base lg:text-sm xl:text-base font-semibold text-foreground mb-3 lg:mb-2 xl:mb-3 text-center lg:text-left">
                     {t("landing.audienceLabel")}
                   </p>
-                  <div className="flex items-center gap-2 p-1.5 bg-muted rounded-xl">
+                  <div className="flex items-center gap-2 p-1 lg:p-1 bg-muted rounded-xl">
                     <button
                       type="button"
                       onClick={() => setAudienceType('individuals')}
-                      className={`flex items-center gap-2 px-5 py-3 rounded-lg text-base md:text-lg font-semibold transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-2 px-4 py-2 lg:px-3 lg:py-1.5 xl:px-4 xl:py-2 rounded-lg text-sm md:text-base lg:text-sm xl:text-base font-semibold transition-colors flex-1 justify-center ${
                         audienceType === 'individuals'
                           ? 'bg-background text-foreground shadow-sm'
                           : 'text-foreground/70 hover:text-foreground'
                       }`}
                     >
-                      <User className="h-5 w-5" />
+                      <User className="h-4 w-4 lg:h-4 lg:w-4" />
                       {t("landing.individuals")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setAudienceType('companies')}
-                      className={`flex items-center gap-2 px-5 py-3 rounded-lg text-base md:text-lg font-semibold transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-2 px-4 py-2 lg:px-3 lg:py-1.5 xl:px-4 xl:py-2 rounded-lg text-sm md:text-base lg:text-sm xl:text-base font-semibold transition-colors flex-1 justify-center ${
                         audienceType === 'companies'
                           ? 'bg-background text-foreground shadow-sm'
                           : 'text-foreground/70 hover:text-foreground'
                       }`}
                     >
-                      <Building2 className="h-5 w-5" />
+                      <Building2 className="h-4 w-4 lg:h-4 lg:w-4" />
                       {t("landing.companies")}
                     </button>
                   </div>
-                  <p className="text-sm md:text-base text-foreground/80 mt-3 text-center lg:text-left leading-relaxed">
+                  <p className="text-xs md:text-sm lg:text-xs xl:text-sm text-foreground/80 mt-2 lg:mt-1.5 xl:mt-2 text-center lg:text-left leading-relaxed">
                     {audienceType === 'individuals' 
                       ? t("landing.individualsHelper")
                       : t("landing.companiesHelper")}
@@ -293,11 +293,11 @@ export default function LandingPage() {
                 </div>
 
                 {/* CTAs */}
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-3 lg:gap-2 xl:gap-3">
                   <Button
                     size="lg"
                     onClick={() => navigate("/auth")}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg w-full sm:w-auto"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 lg:px-5 lg:py-2 xl:px-6 xl:py-3 text-base lg:text-sm xl:text-base w-full sm:w-auto"
                   >
                     {t("Start Hedging Now")}
                   </Button>
@@ -305,17 +305,17 @@ export default function LandingPage() {
                     variant="outline"
                     size="lg"
                     onClick={() => navigate(audienceType === 'individuals' ? '/for-individuals' : '/for-companies')}
-                    className="px-6 py-3 text-base md:text-lg font-semibold"
+                    className="px-5 py-2 lg:px-4 lg:py-1.5 xl:px-5 xl:py-2 text-sm md:text-base lg:text-sm xl:text-base font-semibold"
                   >
                     {audienceType === 'individuals' ? t("landing.forIndividuals") : t("landing.forCompanies")}
-                    <ArrowRight className="h-5 w-5 ml-2" />
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               </div>
 
               {/* Right side - Currency Simulator */}
-              <div className="lg:mt-0 mt-8">
-                <div className="bg-background rounded-2xl p-6 border border-border shadow-sm">
+              <div className="lg:mt-0 mt-6">
+                <div className="bg-background rounded-2xl p-4 lg:p-4 xl:p-5 border border-border shadow-sm">
                   <CurrencySimulator showGraph={false} />
                 </div>
               </div>
