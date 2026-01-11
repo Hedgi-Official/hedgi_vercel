@@ -130,14 +130,14 @@ const CodeSnippet = () => {
   };
 
   return (
-    <div className="bg-zinc-900 rounded-xl p-6 md:p-8 text-sm md:text-base font-mono overflow-x-auto shadow-xl">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="w-3 h-3 rounded-full bg-red-500" />
-        <div className="w-3 h-3 rounded-full bg-yellow-500" />
-        <div className="w-3 h-3 rounded-full bg-green-500" />
-        <span className="text-zinc-500 ml-2 text-sm">hedge-order.ts</span>
+    <div className="bg-zinc-900 rounded-xl p-4 md:p-6 text-[11px] md:text-xs lg:text-sm font-mono shadow-xl max-h-[50vh] overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+        <span className="text-zinc-500 ml-2 text-xs">hedge-order.ts</span>
       </div>
-      <pre className="text-zinc-300 whitespace-pre leading-relaxed">
+      <pre className="text-zinc-300 whitespace-pre leading-normal">
         {codeLines.map((segment, i) => 
           segment.type === 'break' ? segment.text : (
             <span key={i} className={getColor(segment.type)}>{segment.text}</span>

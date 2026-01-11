@@ -59,7 +59,8 @@
   .page-section-hero-subpage {
     padding-top: var(--section-py-hero-subpage);
     padding-bottom: var(--section-py-hero-subpage);
-    min-height: 65vh;
+    min-height: clamp(500px, 60vh, 700px);
+    max-height: 75vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
