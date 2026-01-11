@@ -1156,38 +1156,66 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Live Exchange Rates Section */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8 overflow-hidden">
-          <div className="px-8 py-6 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900">Live Exchange Rates</h2>
-              <div className="flex items-center gap-2 ml-auto">
-                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-500">Live</span>
-              </div>
-            </div>
-          </div>
-          <div className="p-0">
-            <ExchangeRatesWidget />
-          </div>
+        {/* Top Row: Exchange Rates + New Hedge side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Live Exchange Rates */}
+          <ExchangeRatesWidget />
+          
+          {/* New Hedge Creation */}
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                {t('New Hedge')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CurrencySimulator
+                showGraph={false}
+                onPlaceHedge={(hedgePayload) => { 
+                  console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
+
+                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
+                  const hedgeCost = (hedgePayload as HedgeWithCost).cost ? Number((hedgePayload as HedgeWithCost).cost) : 0;
+                  const paymentAmount = Number((margin + hedgeCost).toFixed(2));
+
+                  setPaymentAmount(paymentAmount.toString());
+                  setPendingHedgeData(hedgePayload);
+                  setShowPaymentModal(true);
+
+                  return Promise.resolve({
+                    ask: 0,
+                    bid: 0,
+                    comment: "Payment modal opened",
+                    deal: 0,
+                    order: 0,
+                    price: 0,
+                    request: {},
+                    request_id: 0,
+                    retcode: 0,
+                    retcode_external: 0,
+                    volume: 0
+                  });
+                }}
+                onOrdersUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
+                }}
+              />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Trading Interface Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-          {/* Active Trades */}
-          <div className="xl:col-span-2">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-fit">
-              <div className="px-6 py-5 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{t('Active Trades')}</h3>
-                </div>
+        {/* Active Trades Section */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-8">
+          <div className="px-6 py-5 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                <Activity className="h-4 w-4 text-blue-600" />
               </div>
+              <h3 className="text-lg font-semibold text-gray-900">{t('Active Trades')}</h3>
+            </div>
+          </div>
               <div className="p-6">
                 {(() => {
                   const legTradeIds = new Set(
@@ -1236,68 +1264,6 @@ export default function Dashboard() {
                   );
                 })()}
               </div>
-            </div>
-          </div>
-
-          {/* New Hedge Creation */}
-          <div className="xl:col-span-3">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <div className="px-6 py-5 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{t('New Hedge')}</h3>
-                  <span className="text-sm text-gray-500 ml-2">• Create currency protection</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <CurrencySimulator
-                showGraph={false}
-                onPlaceHedge={(hedgePayload) => { 
-                  console.log("📝 [Dashboard] CurrencySimulator onPlaceHedge called with:", hedgePayload);
-
-                  // Calculate payment amount using actual hedge costs and margin
-                  const margin = hedgePayload.margin ? Number(hedgePayload.margin) : 0;
-                  const hedgeCost = (hedgePayload as HedgeWithCost).cost ? Number((hedgePayload as HedgeWithCost).cost) : 0;
-                  const paymentAmount = Number((margin + hedgeCost).toFixed(2));
-
-                  console.log("💰 [Dashboard] Payment calculation:");
-                  console.log("- Margin:", margin);
-                  console.log("- Hedge cost:", hedgeCost);
-                  console.log("- Total payment amount:", paymentAmount);
-
-                  console.log("✅ [Dashboard] Opening Mercado Pago Brick modal popup");
-                  console.log("Payment amount:", paymentAmount);
-
-                  // Set data and open modal popup
-                  setPaymentAmount(paymentAmount.toString());
-                  setPendingHedgeData(hedgePayload);
-                  setShowPaymentModal(true);
-
-                  // Return a resolved promise immediately to prevent infinite loading
-                  return Promise.resolve({
-                    ask: 0,
-                    bid: 0,
-                    comment: "Payment modal opened",
-                    deal: 0,
-                    order: 0,
-                    price: 0,
-                    request: {},
-                    request_id: 0,
-                    retcode: 0,
-                    retcode_external: 0,
-                    volume: 0
-                  });
-                }}
-                onOrdersUpdated={() => {
-                  queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-                  queryClient.invalidateQueries({ queryKey: ['/api/trades/history'] });
-                }}
-              />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Trade History Section */}
