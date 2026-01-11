@@ -28,42 +28,32 @@ export function ExchangeRatesWidget() {
   ) => {
     if (error) {
       return (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border">
-          <div className="text-xs font-medium text-muted-foreground mb-2">{brokerLabel}</div>
-          <div className="text-destructive text-xs">{t('exchangeRates.error')}</div>
+        <div className="bg-muted/50 rounded-lg px-3 py-2 border border-border grid grid-cols-3 items-center gap-2">
+          <div className="text-xs font-medium text-muted-foreground">{brokerLabel}</div>
+          <div className="col-span-2 text-destructive text-xs">{t('exchangeRates.error')}</div>
         </div>
       );
     }
     
     if (rate && rate.error) {
       return (
-        <div className="bg-muted/50 rounded-lg p-3 border border-border">
-          <div className="text-xs font-medium text-muted-foreground mb-2">{brokerLabel}</div>
-          <div className="text-destructive text-xs">{rate.error}</div>
+        <div className="bg-muted/50 rounded-lg px-3 py-2 border border-border grid grid-cols-3 items-center gap-2">
+          <div className="text-xs font-medium text-muted-foreground">{brokerLabel}</div>
+          <div className="col-span-2 text-destructive text-xs">{rate.error}</div>
         </div>
       );
     }
 
     return (
-      <div className="bg-muted/50 rounded-lg p-3 border border-border">
-        <div className="text-xs font-medium text-muted-foreground mb-2">{brokerLabel}</div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <div className="text-xs text-muted-foreground mb-0.5">
-              {t('exchangeRates.salePrice')}
-            </div>
-            <div className="text-sm font-semibold text-foreground">
-              {rate ? rate.bid.toFixed(4) : '—'}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground mb-0.5">
-              {t('exchangeRates.purchasePrice')}
-            </div>
-            <div className="text-sm font-semibold text-foreground">
-              {rate ? rate.ask.toFixed(4) : '—'}
-            </div>
-          </div>
+      <div className="bg-muted/50 rounded-lg px-3 py-2 border border-border grid grid-cols-3 items-center gap-2">
+        <div className="text-xs font-medium text-muted-foreground">{brokerLabel}</div>
+        <div className="text-center">
+          <div className="text-[10px] text-muted-foreground">{t('exchangeRates.salePrice')}</div>
+          <div className="text-sm font-semibold text-foreground">{rate ? rate.bid.toFixed(4) : '—'}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[10px] text-muted-foreground">{t('exchangeRates.purchasePrice')}</div>
+          <div className="text-sm font-semibold text-foreground">{rate ? rate.ask.toFixed(4) : '—'}</div>
         </div>
       </div>
     );
@@ -72,7 +62,7 @@ export function ExchangeRatesWidget() {
   const isLoading = isLoadingActivTrades || isLoadingTickmill || isLoadingFBS;
 
   return (
-    <Card className="flex-none h-[360px] flex flex-col">
+    <Card className="flex-none flex flex-col">
       <CardHeader className="pb-2 flex-none">
         <div className="flex items-center gap-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
