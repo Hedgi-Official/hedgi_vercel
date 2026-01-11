@@ -1118,7 +1118,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900">{activeTrades.length}</div>
-                <div className="text-sm text-gray-500">Active Hedges</div>
+                <div className="text-sm text-gray-500">{t('Active Hedges')}</div>
               </div>
             </div>
           </div>
@@ -1130,7 +1130,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900">{trades.length}</div>
-                <div className="text-sm text-gray-500">Total Trades</div>
+                <div className="text-sm text-gray-500">{t('Total Trades')}</div>
               </div>
             </div>
           </div>
@@ -1148,9 +1148,9 @@ export default function Dashboard() {
                 <div className={`text-lg font-semibold ${
                   activeTrades.length > 0 ? 'text-primary' : 'text-amber-600'
                 }`}>
-                  {activeTrades.length > 0 ? 'Protected' : 'Unprotected'}
+                  {activeTrades.length > 0 ? t('Protected') : t('Unprotected')}
                 </div>
-                <div className="text-sm text-gray-500">Currency Status</div>
+                <div className="text-sm text-gray-500">{t('Currency Status')}</div>
               </div>
             </div>
           </div>
@@ -1190,7 +1190,7 @@ export default function Dashboard() {
                           <Shield className="h-6 w-6 text-gray-300" />
                         </div>
                         <p className="text-gray-900 font-medium mb-1 text-sm">{t('No active trades')}</p>
-                        <p className="text-xs text-gray-500">Your hedged positions will appear here</p>
+                        <p className="text-xs text-gray-500">{t('Your hedged positions will appear here')}</p>
                       </div>
                     );
                   }
@@ -1267,8 +1267,8 @@ export default function Dashboard() {
               <div className="h-8 w-8 bg-purple-50 rounded-lg flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-purple-600" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">Trade History</h2>
-              <span className="text-sm text-gray-500 ml-2">• View past transactions</span>
+              <h2 className="text-xl font-semibold text-gray-900">{t('Trade History')}</h2>
+              <span className="text-sm text-gray-500 ml-2">• {t('View past transactions')}</span>
             </div>
           </div>
           <div className="p-8">
