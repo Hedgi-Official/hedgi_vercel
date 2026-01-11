@@ -189,20 +189,20 @@ export default function ForIndividuals() {
 
         <main className="page-main">
           {/* Hero Section - Two Column Layout */}
-          <section className="page-section">
+          <section className="page-section py-16 lg:py-20">
             <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 {/* Left Column - Text */}
-                <div>
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
+                <div className="space-y-8">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
                     {t('forIndividuals.heroTitle')}
                   </h1>
-                  <p className="text-xl text-muted-foreground mb-8">
+                  <p className="text-xl text-muted-foreground">
                     {t('forIndividuals.heroSubtitle')}
                   </p>
                   
                   {/* Benefit Chips */}
-                  <div className="flex flex-col gap-5 mb-8">
+                  <div className="flex flex-col gap-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                         <Shield className="w-6 h-6 text-primary" />
@@ -232,7 +232,7 @@ export default function ForIndividuals() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4 pt-2">
                     <Button size="lg" className="bg-primary hover:bg-primary/90" asChild>
                       <Link href="/auth?type=individual">
                         {t('cta.Get Currency Insurance')}

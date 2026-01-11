@@ -130,14 +130,14 @@ const CodeSnippet = () => {
   };
 
   return (
-    <div className="bg-zinc-900 rounded-lg p-4 md:p-6 text-sm font-mono overflow-x-auto">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-zinc-900 rounded-xl p-6 md:p-8 text-sm md:text-base font-mono overflow-x-auto shadow-xl">
+      <div className="flex items-center gap-2 mb-6">
         <div className="w-3 h-3 rounded-full bg-red-500" />
         <div className="w-3 h-3 rounded-full bg-yellow-500" />
         <div className="w-3 h-3 rounded-full bg-green-500" />
-        <span className="text-zinc-500 ml-2 text-xs">hedge-order.ts</span>
+        <span className="text-zinc-500 ml-2 text-sm">hedge-order.ts</span>
       </div>
-      <pre className="text-zinc-300 whitespace-pre">
+      <pre className="text-zinc-300 whitespace-pre leading-relaxed">
         {codeLines.map((segment, i) => 
           segment.type === 'break' ? segment.text : (
             <span key={i} className={getColor(segment.type)}>{segment.text}</span>
@@ -332,17 +332,17 @@ export default function ForCompanies() {
       </div>
 
       <main className="page-main relative z-10">
-        <section className="page-section">
+        <section className="page-section py-16 lg:py-20">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground leading-tight">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              <div className="space-y-8">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
                   {t('companiesPage.heroTitle')}
                 </h1>
-                <p className="text-xl text-muted-foreground mb-8">
+                <p className="text-xl text-muted-foreground">
                   {t('companiesPage.heroSubtitle')}
                 </p>
-                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap mb-6">
+                <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground flex-wrap">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-primary" />
                     <span>{t('companiesPage.stepExposure')}</span>
@@ -354,7 +354,7 @@ export default function ForCompanies() {
                   <ArrowRight className="w-4 h-4" />
                   <span>{t('companiesPage.stepHedge')}</span>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
                     <DialogTrigger asChild>
                       <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -375,7 +375,7 @@ export default function ForCompanies() {
                   </Button>
                 </div>
               </div>
-              <div>
+              <div className="lg:py-4">
                 <CodeSnippet />
               </div>
             </div>
