@@ -55,7 +55,10 @@ export default function LandingPage() {
       const contentHeight = heroContent?.getBoundingClientRect().height || 0;
       
       // Calculate padding to center the content
-      const padding = Math.max(0, (availableHeight - contentHeight) / 2);
+      // Ensure minimum 5% of viewport height as top padding
+      const minPadding = window.innerHeight * 0.05;
+      const centeredPadding = (availableHeight - contentHeight) / 2;
+      const padding = Math.max(minPadding, centeredPadding);
       
       setLockedPadding(padding);
       hasLockedPadding.current = true;

@@ -52,13 +52,17 @@
   }
   
   .page-section-hero-landing {
-    padding-top: var(--section-py-hero-landing);
+    padding-top: max(5vh, var(--section-py-hero-landing));
     padding-bottom: var(--section-py-hero);
   }
   
   .page-section-hero-subpage {
     padding-top: var(--section-py-hero-subpage);
     padding-bottom: var(--section-py-hero-subpage);
+    min-height: 65vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   
   .content-gap {
