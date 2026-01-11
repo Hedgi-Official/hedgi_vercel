@@ -63,11 +63,8 @@ export function CurrencySimulator({
 }: Props) {
   const { t } = useTranslation();
   
-  const getTradeDirectionHelp = () => {
-    if (tradeDirection === 'buy') {
-      return t('simulator.buyHelp');
-    }
-    return t('simulator.sellHelp');
+  const getTradeDirectionHelpKey = () => {
+    return tradeDirection === 'buy' ? 'simulator.buyHelp' : 'simulator.sellHelp';
   };
   
   const TooltipWrapper = ({ 
@@ -320,7 +317,7 @@ export function CurrencySimulator({
             </div>
           </TooltipWrapper>
 
-          <TooltipWrapper icon={ArrowUpDown} titleKey="simulator.tradeDirection" helpKey={getTradeDirectionHelp()}>
+          <TooltipWrapper icon={ArrowUpDown} titleKey="simulator.tradeDirection" helpKey={getTradeDirectionHelpKey()}>
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <ArrowUpDown className="mr-2 h-4 w-4 text-primary" />
