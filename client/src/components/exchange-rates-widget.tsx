@@ -72,9 +72,9 @@ export function ExchangeRatesWidget() {
   const isLoading = isLoadingActivTrades || isLoadingTickmill || isLoadingFBS;
 
   return (
-    <Card className="flex-none h-[280px] flex flex-col">
+    <Card className="flex-none h-[360px] flex flex-col">
       <CardHeader className="pb-2 flex-none">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             {t('Live Exchange Rates')}
             {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
