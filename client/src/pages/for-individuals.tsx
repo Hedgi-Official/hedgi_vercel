@@ -492,17 +492,7 @@ export default function ForIndividuals() {
                 {/* Enhanced Currency Simulator */}
                 <div className="order-1 lg:order-2">
                   <div ref={simulatorRef}>
-                    <Card className="shadow-lg">
-                      <CardHeader>
-                        <CardTitle>{t('forIndividuals.simulatorTitle')}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {t('forIndividuals.simulatorHelper')}
-                        </p>
-                      </CardHeader>
-                      <CardContent>
-                        <CurrencySimulator showGraph={false} showTooltips={true} />
-                      </CardContent>
-                    </Card>
+                    <CurrencySimulator showGraph={false} showTooltips={true} />
                   </div>
                 </div>
               </div>
