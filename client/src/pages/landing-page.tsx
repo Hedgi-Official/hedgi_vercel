@@ -198,9 +198,9 @@ export default function LandingPage() {
 
       <main className="page-main relative z-10 lg:min-h-0">
         {/* Hero Section */}
-        <section className="page-section-hero relative overflow-hidden flex-1 flex items-center">
+        <section className="page-section-hero relative overflow-hidden flex-1">
           <div className="container mx-auto px-4 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] items-start">
               {/* Left side - Hero content */}
               <div ref={colRef} className="text-center lg:text-left">
                 <div className="mb-[clamp(0.75rem,1.5vh,1.5rem)]">
