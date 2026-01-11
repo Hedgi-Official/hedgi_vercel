@@ -59,11 +59,15 @@
   .page-section-hero-subpage {
     padding-top: var(--section-py-hero-subpage);
     padding-bottom: var(--section-py-hero-subpage);
-    min-height: clamp(500px, 60vh, 700px);
-    max-height: 75vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  }
+  
+  @media (min-width: 1024px) {
+    .page-section-hero-subpage {
+      min-height: clamp(500px, 60vh, 700px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
   }
   
   .content-gap {
