@@ -286,13 +286,13 @@ export function CurrencySimulator({
                 variant={tradeDirection === 'buy' ? 'default' : 'outline'}
                 onClick={() => setTradeDirection('buy')}
               >
-                {t('simulator.buy')} {targetCurrency}
+                {t('simulator.buy')}
               </Button>
               <Button
                 variant={tradeDirection === 'sell' ? 'default' : 'outline'}
                 onClick={() => setTradeDirection('sell')}
               >
-                {t('simulator.sell')} {targetCurrency}
+                {t('simulator.sell')}
               </Button>
             </div>
           </div>
