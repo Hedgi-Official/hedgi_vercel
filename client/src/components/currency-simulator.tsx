@@ -426,10 +426,7 @@ export function CurrencySimulator({
                   <div className="flex justify-between font-medium">
                     <span>{t('simulator.totalCost')}</span>
                     <span>
-                      {(() => {
-                        const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
-                        return simulation.costDetails.hedgeCost.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                      })()} {t('simulator.reais')}
+                      {simulation.costDetails.hedgeCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {t('simulator.reais')}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
@@ -453,19 +450,14 @@ export function CurrencySimulator({
                   inputMode="decimal"
                   value={(() => {
                     const val = margin ?? simulation.costDetails.hedgeCost * 2;
-                    const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
-                    return val.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   })()}
                   onChange={e => {
-                    const locale = i18n.language === 'pt' ? 'pt-BR' : 'en-US';
-                    const decimalSep = locale === 'pt-BR' ? ',' : '.';
-                    const thousandSep = locale === 'pt-BR' ? '.' : ',';
-                    
                     let value = e.target.value;
-                    // Remove thousand separators, keep decimal separator
-                    value = value.split(thousandSep).join('');
+                    // Remove thousand separators (period), keep decimal separator (comma)
+                    value = value.split('.').join('');
                     // Normalize decimal separator to period for parsing
-                    value = value.replace(decimalSep, '.');
+                    value = value.replace(',', '.');
                     // Remove non-numeric characters except period
                     value = value.replace(/[^\d.]/g, '');
                     
