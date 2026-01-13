@@ -119,8 +119,9 @@ export default function AuthPage() {
   const handleSubmit = async (action: "login" | "register") => {
     try {
       if (action === "register") {
-        const dataToValidate = { ...registerData, userType: accountType };
-        const validationResult = createRegisterSchema(t, accountType).safeParse(dataToValidate);
+        // Always validate as individual (business temporarily deactivated)
+        const dataToValidate = { ...registerData, userType: 'individual' };
+        const validationResult = createRegisterSchema(t, 'individual').safeParse(dataToValidate);
         if (!validationResult.success) {
           toast({
             variant: "destructive",
@@ -144,10 +145,10 @@ export default function AuthPage() {
         const responseData = await response.json();
         result = { ok: response.ok, message: responseData.message };
       } else {
-        // Include accountType in registration data
+        // Include accountType in registration data (always individual - business temporarily deactivated)
         const registrationPayload = {
           ...registerData,
-          userType: accountType,
+          userType: 'individual',
         };
         
         // Use the proper authentication endpoint with session management
@@ -240,7 +241,8 @@ export default function AuthPage() {
                   {t('Business')}
                 </button>
               </div>
-              {accountType === 'business' && (
+              {/* Business message temporarily hidden - all accounts treated as individual */}
+              {false && accountType === 'business' && (
                 <p className="text-xs text-center text-muted-foreground mt-2">
                   Business accounts include API access and team features
                 </p>
@@ -380,8 +382,8 @@ export default function AuthPage() {
                   />
                 </>
 
-                {/* Business-specific fields */}
-                {accountType === 'business' && (
+                {/* Business-specific fields - temporarily hidden, all accounts treated as individual */}
+                {false && accountType === 'business' && (
                   <>
                     <Input
                       placeholder="Company Name"
