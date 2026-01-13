@@ -137,6 +137,8 @@ export function CurrencySimulator({
     );
   };
   const [amount, setAmount] = useState(10000);
+  const [amountInput, setAmountInput] = useState<string>('');
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(
     () => {
       const date = new Date();
@@ -390,22 +392,31 @@ export function CurrencySimulator({
               <Input
                 type="text"
                 inputMode="numeric"
-                value={amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
+                value={isAmountFocused ? amountInput : amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
                 onChange={e => {
                   const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  setAmountInput(raw);
                   const parsed = parseInt(raw, 10);
                   if (!isNaN(parsed)) setAmount(parsed);
                   else if (raw === '') setAmount(0);
                 }}
+                onFocus={e => {
+                  setIsAmountFocused(true);
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  setAmountInput(raw);
+                }}
                 onBlur={e => {
+                  setIsAmountFocused(false);
                   const raw = e.currentTarget.value.replace(/[^\d]/g, '');
                   const parsed = parseInt(raw, 10);
                   if (isNaN(parsed) || parsed === 0) {
                     setAmount(1000);
+                    setAmountInput('1000');
                     return;
                   }
                   const snapped = Math.round(parsed / 1000) * 1000;
                   setAmount(snapped || 1000);
+                  setAmountInput((snapped || 1000).toString());
                 }}
                 required
               />
