@@ -19,8 +19,6 @@ import {
   Activity,
   Globe,
   Headphones,
-  TrendingDown,
-  AlertTriangle,
   Terminal
 } from "lucide-react";
 import {
@@ -312,63 +310,85 @@ export default function Developers() {
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       <main>
-        {/* Opening Narrative */}
-        <section className="py-20 md:py-28">
+        {/* Developer-focused Hero */}
+        <section className="py-16 md:py-24 border-b">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="inline-flex items-center gap-2 text-sm text-amber-600 bg-amber-500/10 px-3 py-1.5 rounded-full mb-8">
-                <AlertTriangle className="w-4 h-4" />
-                The problem we're solving
-              </div>
-              
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
-                You're a fintech in São Paulo. Your client just paid $50,000 to a supplier in Chicago.
-              </h1>
-              
-              <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="p-6 rounded-xl border-2 border-red-500/20 bg-red-500/5">
-                  <div className="flex items-center gap-2 text-red-500 mb-4">
-                    <TrendingDown className="w-5 h-5" />
-                    <span className="font-semibold">Without hedging</span>
+            <div className="max-w-5xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-full mb-6">
+                    <Terminal className="w-4 h-4" />
+                    Hedging API
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    The Real weakens 3% before settlement. Your client loses R$ 7,500 on a single transaction.
+                  
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+                    Lock exchange rates with one API call
+                  </h1>
+                  
+                  <p className="text-xl text-muted-foreground mb-8">
+                    Create, monitor, and settle currency hedges programmatically. 
+                    Built for fintechs, payment platforms, and treasury systems.
                   </p>
-                  <div className="text-3xl font-bold text-red-500">-R$ 7,500</div>
-                  <div className="text-sm text-muted-foreground">Lost to currency movement</div>
+                  
+                  <div className="flex flex-wrap gap-4 mb-8">
+                    <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
+                      Get API keys
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                    
+                    <Button size="lg" variant="outline" asChild>
+                      <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer">
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        API Reference
+                        <ExternalLink className="w-3 h-3 ml-2" />
+                      </a>
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      REST API
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      Webhooks
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      Sandbox
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="p-6 rounded-xl border-2 border-emerald-500/20 bg-emerald-500/5">
-                  <div className="flex items-center gap-2 text-emerald-500 mb-4">
-                    <Shield className="w-5 h-5" />
-                    <span className="font-semibold">With Hedgi</span>
+                <div className="bg-zinc-950 rounded-xl p-6 font-mono text-sm">
+                  <div className="flex items-center gap-2 mb-4 text-zinc-500">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="ml-2 text-xs">Create a hedge</span>
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    One API call locks the rate. Your client pays exactly what they budgeted—no surprises.
-                  </p>
-                  <div className="text-3xl font-bold text-emerald-500">R$ 0</div>
-                  <div className="text-sm text-muted-foreground">Currency exposure eliminated</div>
+                  <pre className="text-emerald-400 overflow-x-auto">
+{`curl -X POST https://api.hedgi.ai/v1/hedges \\
+  -H "Authorization: Bearer sk_test_..." \\
+  -d '{
+    "currency_pair": "USDBRL",
+    "amount": 50000,
+    "direction": "buy",
+    "expires_at": "2026-02-14"
+  }'`}
+                  </pre>
+                  <div className="mt-4 pt-4 border-t border-zinc-800 text-zinc-400">
+                    <span className="text-zinc-500">// Response</span>
+                    <pre className="mt-2 text-blue-400">
+{`{
+  "id": "hdg_abc123",
+  "status": "active",
+  "locked_rate": 5.1234
+}`}
+                    </pre>
+                  </div>
                 </div>
-              </div>
-              
-              <p className="text-xl text-muted-foreground mb-8">
-                Our API lets you build currency protection directly into your payment flows. 
-                <span className="text-foreground font-medium"> Three endpoints. One integration. Zero FX surprises.</span>
-              </p>
-              
-              <div className="flex flex-wrap gap-4">
-                <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
-                  Start building
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-                
-                <Button size="lg" variant="outline" asChild>
-                  <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    API Reference
-                    <ExternalLink className="w-3 h-3 ml-2" />
-                  </a>
-                </Button>
               </div>
             </div>
           </div>
