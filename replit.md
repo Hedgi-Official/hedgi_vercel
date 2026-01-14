@@ -31,7 +31,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 
 ### Trading Integration
 - **Broker API**: Direct integration with external broker API at `http://3.145.164.47`
-- **Supported Brokers**: Tickmill, ActivTrades, FBS
+- **Liquidity**: Multiple liquidity sources for best execution
 - **Trade Management**: Real-time trade execution, monitoring, and closure
 - **Currency Pairs**: USDBRL, EURUSD, USDMXN support
 

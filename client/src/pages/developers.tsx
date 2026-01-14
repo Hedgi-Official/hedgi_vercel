@@ -578,12 +578,10 @@ export default function Developers() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {['ActivTrades', 'Tickmill', 'FBS'].map((broker) => (
-                      <div key={broker} className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-sm">{broker}</span>
-                      </div>
-                    ))}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-sm">Multiple liquidity sources</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
