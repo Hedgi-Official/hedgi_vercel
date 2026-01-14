@@ -6,7 +6,6 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 import "@/i18n";
 
-import LandingPage from "@/pages/landing-page";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import Profile from "@/pages/profile";
@@ -33,7 +32,7 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={LandingPage} />
+      <Route path="/" component={ForCompanies} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
@@ -46,7 +45,6 @@ function Router() {
       </Route>
       <Route path="/what-is-hedge" component={WhatIsHedge} />
       <Route path="/for-individuals" component={ForIndividuals} />
-      <Route path="/for-companies" component={ForCompanies} />
       <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>
