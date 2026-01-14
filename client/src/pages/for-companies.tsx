@@ -324,6 +324,52 @@ export default function ForCompanies() {
           </div>
         </section>
 
+        {/* Story Case: The Real Cost of Currency Risk */}
+        <section className="py-12 md:py-20 border-b">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-10">
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
+                  {t('companiesPage.storyCaseTitle', { defaultValue: 'The real cost of unprotected payments' })}
+                </h2>
+                <p className="text-muted-foreground">
+                  {t('companiesPage.storyCaseSubtitle', { defaultValue: 'A fintech in São Paulo processes a $50,000 payment to a US supplier' })}
+                </p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+                <div className="p-6 rounded-xl border-2 border-red-500/20 bg-red-500/5">
+                  <div className="flex items-center gap-2 text-red-500 mb-4">
+                    <TrendingDown className="w-5 h-5" />
+                    <span className="font-semibold">{t('companiesPage.withoutHedging', { defaultValue: 'Without hedging' })}</span>
+                  </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t('companiesPage.withoutHedgingDesc', { defaultValue: 'The Real weakens 3% before settlement. Your client loses R$ 7,500 on a single transaction.' })}
+                  </p>
+                  <div className="text-3xl font-bold text-red-500">-R$ 7,500</div>
+                  <div className="text-sm text-muted-foreground">{t('companiesPage.lostToCurrency', { defaultValue: 'Lost to currency movement' })}</div>
+                </div>
+                
+                <div className="p-6 rounded-xl border-2 border-emerald-500/20 bg-emerald-500/5">
+                  <div className="flex items-center gap-2 text-emerald-500 mb-4">
+                    <Shield className="w-5 h-5" />
+                    <span className="font-semibold">{t('companiesPage.withHedgi', { defaultValue: 'With Hedgi' })}</span>
+                  </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t('companiesPage.withHedgiDesc', { defaultValue: 'One API call locks the rate. Your client pays exactly what they budgeted—no surprises.' })}
+                  </p>
+                  <div className="text-3xl font-bold text-emerald-500">R$ 0</div>
+                  <div className="text-sm text-muted-foreground">{t('companiesPage.exposureEliminated', { defaultValue: 'Currency exposure eliminated' })}</div>
+                </div>
+              </div>
+              
+              <p className="text-center text-lg text-muted-foreground mt-8">
+                {t('companiesPage.storyCaseCTA', { defaultValue: 'Protect every transaction with a simple API integration.' })}
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="py-10 md:py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-8">
