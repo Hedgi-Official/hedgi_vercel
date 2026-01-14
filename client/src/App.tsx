@@ -11,7 +11,6 @@ import Dashboard from "@/pages/dashboard";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
-import ForIndividuals from "@/pages/for-individuals";
 import AboutUs from "@/pages/about-us";
 import ForCompanies from "@/pages/for-companies";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -44,7 +43,6 @@ function Router() {
         {user ? <Profile /> : <AuthPage />}
       </Route>
       <Route path="/what-is-hedge" component={WhatIsHedge} />
-      <Route path="/for-individuals" component={ForIndividuals} />
       <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>

@@ -51,12 +51,6 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
             <Link href="/what-is-hedge">
               <Button variant="ghost">{t('What is Hedging?')}</Button>
             </Link>
-            <Link href="/for-individuals">
-              <Button variant="ghost">{t('For Individuals')}</Button>
-            </Link>
-            <Link href="/for-companies">
-              <Button variant="ghost">{t('For Companies')}</Button>
-            </Link>
             <Link href="/about-us">
               <Button variant="ghost">{t('About Us')}</Button>
             </Link>
@@ -120,16 +114,6 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
               <Link href="/what-is-hedge">
                 <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
                   {t('What is Hedging?')}
-                </Button>
-              </Link>
-              <Link href="/for-individuals">
-                <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
-                  {t('For Individuals')}
-                </Button>
-              </Link>
-              <Link href="/for-companies">
-                <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
-                  {t('For Companies')}
                 </Button>
               </Link>
               <Link href="/about-us">
