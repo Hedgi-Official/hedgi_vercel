@@ -104,7 +104,8 @@ router.post("/api/pending-orders/batch", requireAuth, async (req: Request, res: 
         clientRef: o.client_ref || null,
         batchId: batchIdToUse,
         metadata: o.metadata || {},
-        status: "pending" as const,
+        status: (o.status === "failed" ? "failed" : o.status === "scheduled" ? "scheduled" : "pending") as "pending" | "failed" | "scheduled",
+        resultError: o.result_error || null,
       };
     });
 

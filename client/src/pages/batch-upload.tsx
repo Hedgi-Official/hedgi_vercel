@@ -321,34 +321,64 @@ async function fetchRatesForSymbols(symbols: string[]): Promise<ExchangeRates> {
   
   const uniqueSymbols = Array.from(new Set(symbols));
   
-  await Promise.all(
+  const results = await Promise.allSettled(
     uniqueSymbols.map(async (symbol) => {
-      try {
-        const res = await fetch(`/api/hedgi/quotes/simulate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            symbol,
-            direction: "buy",
-            volume: 0.1,
-            duration_days: 1,
-            best_only: true,
-          }),
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          if (data.brokers && data.brokers.length > 0) {
-            const best = data.brokers.find((b: any) => b.recommended) || data.brokers[0];
-            rates[symbol] = { bid: best.bid, ask: best.ask };
-          }
-        }
-      } catch (e) {
-        console.error(`Failed to fetch rate for ${symbol}:`, e);
+      const res = await fetch(`/api/hedgi/quotes/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          symbol,
+          direction: "buy",
+          volume: 0.1,
+          duration_days: 1,
+          best_only: true,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Rate fetch failed for ${symbol}: ${res.status} - ${errorText}`);
+        throw new Error(`API returned ${res.status} for ${symbol}`);
       }
+      
+      const data = await res.json();
+      console.log(`Rate response for ${symbol}:`, JSON.stringify(data));
+      
+      if (data.brokers && data.brokers.length > 0) {
+        const best = data.brokers.find((b: any) => b.recommended) || data.brokers[0];
+        if (best.bid && best.ask) {
+          return { symbol, bid: best.bid, ask: best.ask };
+        }
+      }
+      
+      if (data.bid && data.ask) {
+        return { symbol, bid: data.bid, ask: data.ask };
+      }
+      
+      if (data.rate || data.price) {
+        const rate = data.rate || data.price;
+        return { symbol, bid: rate, ask: rate };
+      }
+      
+      console.error(`Unexpected response structure for ${symbol}:`, data);
+      throw new Error(`No rate data in response for ${symbol}`);
     })
   );
+  
+  const errors: string[] = [];
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled" && result.value) {
+      const { symbol, bid, ask } = result.value;
+      rates[symbol] = { bid, ask };
+    } else if (result.status === "rejected") {
+      errors.push(`${uniqueSymbols[index]}: ${result.reason.message}`);
+    }
+  });
+  
+  if (errors.length > 0) {
+    console.warn("Rate fetch errors:", errors.join("; "));
+  }
   
   return rates;
 }
@@ -567,6 +597,15 @@ export default function BatchUpload() {
       
       const rates = await fetchRatesForSymbols(rateSymbols);
       
+      const missingRates = rateSymbols.filter(s => !rates[s]);
+      if (missingRates.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Missing exchange rates",
+          description: `Could not fetch rates for: ${missingRates.join(", ")}. Synthetic pairs will show errors.`,
+        });
+      }
+      
       const expandedOrders = expandSyntheticPairs(orders, rates);
       
       setParsedOrders(expandedOrders);
@@ -645,6 +684,7 @@ export default function BatchUpload() {
           direction: p.netDirection,
           volume: p.netVolume,
           duration_days: p.durationDays,
+          payment_date: p.paymentDate,
         }));
       
       const results = await Promise.all(
@@ -656,9 +696,40 @@ export default function BatchUpload() {
             body: JSON.stringify(order),
           });
           const data = await res.json();
-          return { order, success: res.ok, data };
+          const errorCode = !res.ok ? (data.code || data.error_code || `HTTP_${res.status}`) : null;
+          const errorMessage = !res.ok ? (data.message || data.error || JSON.stringify(data)) : null;
+          return { order, success: res.ok, data, errorCode, errorMessage };
         })
       );
+      
+      const failedOrders = results.filter(r => !r.success);
+      if (failedOrders.length > 0) {
+        try {
+          const pendingRes = await fetch("/api/pending-orders/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              orders: failedOrders.map(r => ({
+                symbol: r.order.symbol,
+                direction: r.order.direction,
+                volume: r.order.volume,
+                duration_days: r.order.duration_days,
+                payment_date: r.order.payment_date || "Immediate",
+                execute_at: new Date().toISOString(),
+                status: "failed",
+                result_error: `[${r.errorCode}] ${r.errorMessage}`,
+                metadata: { original_order: r.order, api_response: r.data },
+              })),
+            }),
+          });
+          if (!pendingRes.ok) {
+            console.error("Failed to save failed orders to pending queue");
+          }
+        } catch (e) {
+          console.error("Error saving failed orders to pending queue:", e);
+        }
+      }
       
       return results;
     },
@@ -666,13 +737,21 @@ export default function BatchUpload() {
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
       
-      toast({
-        title: "Batch execution complete",
-        description: `${successCount} orders executed${failCount > 0 ? `, ${failCount} failed` : ""}`,
-        variant: failCount > 0 ? "destructive" : "default",
-      });
+      if (failCount > 0) {
+        toast({
+          title: "Batch execution complete",
+          description: `${successCount} orders executed, ${failCount} failed and added to pending queue for retry`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Batch execution complete", 
+          description: `${successCount} orders executed successfully`,
+        });
+      }
       
       queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
       setParsedOrders([]);
       setRawOrders([]);
       setNetPositions([]);
@@ -728,9 +807,82 @@ export default function BatchUpload() {
     },
   });
 
-  const handleExecute = () => {
+  const handleExecute = async () => {
     if (executionMode === "immediate") {
-      executeNowMutation.mutate(netPositions);
+      if (nettingMode === "timeline" && segmentedNetting) {
+        const initialOrders = segmentedNetting.executionOrders.filter(o => o.isInitial);
+        const futureAdjustments = segmentedNetting.executionOrders.filter(o => !o.isInitial && o.volume > 0);
+        
+        if (futureAdjustments.length > 0) {
+          try {
+            const scheduleRes = await fetch("/api/pending-orders/batch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                orders: futureAdjustments.map(o => ({
+                  symbol: o.symbol,
+                  direction: o.direction,
+                  volume: o.volume,
+                  duration_days: 0,
+                  payment_date: o.paymentDate,
+                  execute_at: o.executeAt,
+                  metadata: { type: "timeline_adjustment", isAdjustment: true },
+                })),
+              }),
+            });
+            if (scheduleRes.ok) {
+              const data = await scheduleRes.json();
+              toast({
+                title: "Future adjustments scheduled",
+                description: `${data.count} adjustment orders saved to pending queue`,
+              });
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Failed to schedule adjustments",
+                description: "Future adjustment orders could not be saved",
+              });
+            }
+          } catch (e) {
+            console.error("Failed to schedule future adjustments:", e);
+            toast({
+              variant: "destructive",
+              title: "Scheduling error",
+              description: "Could not save future adjustments to pending queue",
+            });
+          }
+        }
+        
+        const positionMap = new Map<string, { symbol: string; signedNet: number; paymentDate: string }>();
+        initialOrders.forEach(o => {
+          const key = o.symbol;
+          const existing = positionMap.get(key);
+          const signedVol = o.direction === "buy" ? o.volume : -o.volume;
+          if (existing) {
+            existing.signedNet += signedVol;
+          } else {
+            positionMap.set(key, { symbol: o.symbol, signedNet: signedVol, paymentDate: o.paymentDate });
+          }
+        });
+        
+        const netPositionsFromInitial: NetPosition[] = Array.from(positionMap.values())
+          .filter(p => Math.abs(p.signedNet) > 0.0001)
+          .map(p => ({
+            symbol: p.symbol,
+            netDirection: p.signedNet > 0 ? "buy" as const : "sell" as const,
+            netVolume: Math.abs(p.signedNet),
+            paymentDate: p.paymentDate,
+            durationDays: 0,
+            longVolume: p.signedNet > 0 ? p.signedNet : 0,
+            shortVolume: p.signedNet < 0 ? -p.signedNet : 0,
+            notional: Math.abs(p.signedNet) * LOT_SIZE,
+          }));
+        
+        executeNowMutation.mutate(netPositionsFromInitial);
+      } else {
+        executeNowMutation.mutate(netPositions);
+      }
     } else {
       scheduleOrdersMutation.mutate(parsedOrders);
     }
