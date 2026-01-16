@@ -1,8 +1,8 @@
 import { Router, Request, Response } from "express";
 import fetch from "node-fetch";
 import { db } from "@db";
-import { users } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { users, hiddenClosedOrders } from "@db/schema";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -251,6 +251,63 @@ router.get("/api/hedgi/health", async (_req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[Hedgi API] Health check error:", error);
     return res.status(500).json({ error: error.message || "Health check failed" });
+  }
+});
+
+router.get("/api/hedgi/hidden-orders", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const hidden = await db.query.hiddenClosedOrders.findMany({
+      where: eq(hiddenClosedOrders.userId, userId),
+    });
+    return res.json({ orderIds: hidden.map(h => h.orderId) });
+  } catch (error: any) {
+    console.error("[Hedgi API] Get hidden orders error:", error);
+    return res.status(500).json({ error: error.message || "Failed to get hidden orders" });
+  }
+});
+
+router.post("/api/hedgi/hidden-orders", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { orderId } = req.body;
+    
+    if (!orderId) {
+      return res.status(400).json({ error: "orderId is required" });
+    }
+
+    const existing = await db.query.hiddenClosedOrders.findFirst({
+      where: and(eq(hiddenClosedOrders.userId, userId), eq(hiddenClosedOrders.orderId, orderId)),
+    });
+
+    if (existing) {
+      return res.json({ success: true, message: "Already hidden" });
+    }
+
+    await db.insert(hiddenClosedOrders).values({
+      userId,
+      orderId: String(orderId),
+    });
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error("[Hedgi API] Hide order error:", error);
+    return res.status(500).json({ error: error.message || "Failed to hide order" });
+  }
+});
+
+router.delete("/api/hedgi/hidden-orders/:orderId", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const orderId = req.params.orderId;
+
+    await db.delete(hiddenClosedOrders)
+      .where(and(eq(hiddenClosedOrders.userId, userId), eq(hiddenClosedOrders.orderId, orderId)));
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error("[Hedgi API] Unhide order error:", error);
+    return res.status(500).json({ error: error.message || "Failed to unhide order" });
   }
 });
 

@@ -156,6 +156,44 @@ export default function CorporateDashboard() {
     enabled: !!user && user.userType === "business",
   });
 
+  const hiddenOrdersQuery = useQuery({
+    queryKey: ["hidden-orders"],
+    queryFn: async () => {
+      const res = await fetch("/api/hedgi/hidden-orders", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to fetch hidden orders");
+      }
+      return res.json();
+    },
+    enabled: !!user && user.userType === "business",
+  });
+
+  const hideClosedOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await fetch("/api/hedgi/hidden-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ orderId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to hide order");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hidden-orders"] });
+      toast({ title: "Order removed from history" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Failed to hide order", description: error.message });
+    },
+  });
+
   const pendingOrdersQuery = useQuery({
     queryKey: ["pending-orders"],
     queryFn: async () => {
@@ -322,12 +360,16 @@ export default function CorporateDashboard() {
   };
 
   const orders = ordersQuery.data?.orders || [];
+  const hiddenOrderIds = new Set(hiddenOrdersQuery.data?.orderIds || []);
   const openOrders = orders.filter((o: Order) => o.status === "OPEN" || o.status === "open");
-  const closedOrders = orders.filter((o: Order) => o.status === "CLOSED" || o.status === "closed");
+  const closedOrders = orders.filter((o: Order) => 
+    (o.status === "CLOSED" || o.status === "closed") && !hiddenOrderIds.has(String(o.order_id))
+  );
   const pendingOrders = pendingOrdersQuery.data?.orders || [];
-  const activePendingCount = pendingOrders.filter((o: any) => 
-    o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed"
-  ).length;
+  const activePendingOrders = pendingOrders.filter((o: any) => 
+    o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed" && o.status !== "failed"
+  );
+  const activePendingCount = activePendingOrders.length;
   const cancelledOrders = pendingOrders.filter((o: any) => o.status === "cancelled");
   const failedOrders = pendingOrders.filter((o: any) => o.status === "failed");
 
@@ -853,7 +895,7 @@ export default function CorporateDashboard() {
                   <div className="flex items-center justify-center py-8">
                     <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : (pendingOrdersQuery.data?.orders || []).length === 0 ? (
+                ) : activePendingOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <Clock className="w-12 h-12 mb-4 opacity-20" />
                     <p>No pending orders</p>
@@ -874,7 +916,7 @@ export default function CorporateDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(pendingOrdersQuery.data?.orders || []).map((order: any) => (
+                      {activePendingOrders.map((order: any) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-mono">{order.id}</TableCell>
                           <TableCell>{order.symbol}</TableCell>
@@ -947,6 +989,7 @@ export default function CorporateDashboard() {
                         <TableHead>Exit</TableHead>
                         <TableHead>Realized P&L</TableHead>
                         <TableHead>Closed</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -992,6 +1035,18 @@ export default function CorporateDashboard() {
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {closedDate ? new Date(closedDate).toLocaleDateString() : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => hideClosedOrderMutation.mutate(String(order.order_id))}
+                                disabled={hideClosedOrderMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Delete
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );

@@ -132,6 +132,20 @@ export const pendingOrderRelations = relations(pendingOrders, ({ one }) => ({
   }),
 }));
 
+export const hiddenClosedOrders = pgTable('hidden_closed_orders', {
+  id:        serial('id').primaryKey(),
+  userId:    integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  orderId:   text('order_id').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const hiddenClosedOrderRelations = relations(hiddenClosedOrders, ({ one }) => ({
+  user: one(users, {
+    fields:    [hiddenClosedOrders.userId],
+    references:[users.id],
+  }),
+}));
+
 import { z } from 'zod';
 
 export const insertUserSchema = createInsertSchema(users).extend({
