@@ -447,12 +447,11 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
       return dateA.getTime() - dateB.getTime();
     });
     
-    let previousNetVolume = 0;
-    let previousNetDirection: "buy" | "sell" | "flat" = "flat";
+    let previousSignedNet = 0;
     
     for (let i = 0; i < sortedDates.length; i++) {
       const startDate = sortedDates[i];
-      const endDate = sortedDates[i + 1] || startDate;
+      const endDate = sortedDates[i + 1] || null;
       const startDateObj = parseDateDDMMYYYY(startDate);
       
       if (!startDateObj) continue;
@@ -460,74 +459,60 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
       const activeOrders = symbolOrders.filter(order => {
         const orderExpiry = parseDateDDMMYYYY(order.payment_date || "");
         if (!orderExpiry) return false;
-        return orderExpiry >= startDateObj;
+        return orderExpiry > startDateObj || (i === 0 && orderExpiry >= startDateObj);
       });
       
-      if (activeOrders.length === 0) continue;
-      
-      let longVolume = 0;
-      let shortVolume = 0;
-      
+      let signedNet = 0;
       activeOrders.forEach(order => {
         if (order.direction === "buy") {
-          longVolume += order.volume;
+          signedNet += order.volume;
         } else {
-          shortVolume += order.volume;
+          signedNet -= order.volume;
         }
       });
+      signedNet = Number(signedNet.toFixed(4));
       
-      const netVolume = Number(Math.abs(longVolume - shortVolume).toFixed(4));
+      const netVolume = Math.abs(signedNet);
       let netDirection: "buy" | "sell" | "flat" = "flat";
-      if (longVolume > shortVolume) netDirection = "buy";
-      else if (shortVolume > longVolume) netDirection = "sell";
+      if (signedNet > 0) netDirection = "buy";
+      else if (signedNet < 0) netDirection = "sell";
       
       const isAdjustment = i > 0;
-      const adjustmentDelta = isAdjustment ? 
-        (netDirection === previousNetDirection ? 
-          netVolume - previousNetVolume : 
-          netVolume + previousNetVolume) : 0;
+      const delta = signedNet - previousSignedNet;
       
       segments.push({
         symbol,
         startDate,
-        endDate,
-        netVolume,
+        endDate: endDate || startDate,
+        netVolume: Number(netVolume.toFixed(4)),
         netDirection,
         notional: netVolume * LOT_SIZE,
         isAdjustment,
-        adjustmentDelta: isAdjustment ? Number(Math.abs(adjustmentDelta).toFixed(4)) : undefined,
+        adjustmentDelta: isAdjustment ? Number(Math.abs(delta).toFixed(4)) : undefined,
         ordersInSegment: activeOrders.length,
       });
       
-      if (i === 0 && netDirection !== "flat") {
+      if (i === 0 && signedNet !== 0) {
         executionOrders.push({
           symbol,
-          direction: netDirection,
-          volume: netVolume,
+          direction: signedNet > 0 ? "buy" : "sell",
+          volume: Number(Math.abs(signedNet).toFixed(4)),
           executeAt: new Date().toISOString(),
           isInitial: true,
-          paymentDate: endDate,
+          paymentDate: endDate || startDate,
         });
-      } else if (isAdjustment && adjustmentDelta !== 0) {
-        let adjustDirection: "buy" | "sell";
-        if (netDirection === previousNetDirection) {
-          adjustDirection = netVolume > previousNetVolume ? netDirection : (netDirection === "buy" ? "sell" : "buy");
-        } else {
-          adjustDirection = netDirection === "flat" ? (previousNetDirection === "buy" ? "sell" : "buy") : netDirection;
-        }
-        
+      } else if (isAdjustment && delta !== 0) {
         executionOrders.push({
           symbol,
-          direction: adjustDirection,
-          volume: Number(Math.abs(adjustmentDelta).toFixed(4)),
+          direction: delta > 0 ? "buy" : "sell",
+          volume: Number(Math.abs(delta).toFixed(4)),
           executeAt: startDateObj.toISOString(),
           isInitial: false,
-          paymentDate: endDate,
+          paymentDate: endDate || startDate,
         });
       }
       
-      previousNetVolume = netVolume;
-      previousNetDirection = netDirection;
+      previousSignedNet = signedNet;
     }
   });
   
