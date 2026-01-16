@@ -8,6 +8,7 @@ import "@/i18n";
 
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import CorporateDashboard from "@/pages/corporate-dashboard";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
@@ -38,7 +39,10 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
 
       <Route path="/dashboard">
-        {user ? <Dashboard /> : <AuthPage />}
+        {user ? (user.userType === 'business' ? <CorporateDashboard /> : <Dashboard />) : <AuthPage />}
+      </Route>
+      <Route path="/corporate-dashboard">
+        {user && user.userType === 'business' ? <CorporateDashboard /> : <AuthPage />}
       </Route>
       <Route path="/profile">
         {user ? <Profile /> : <AuthPage />}

@@ -13,6 +13,7 @@ import tickmillRouter from "./routes/tickmill-rate";
 import fbsRouter from "./routes/fbs-rate";
 import paymentRouter from "./routes/payment";
 import simulateRouter from "./routes/simulate";
+import hedgiApiRouter from "./routes/hedgi-api";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -462,6 +463,7 @@ export function registerRoutes(app: Express): Server {
   app.use(fbsRouter);
   // app.use(paymentRouter); // Removed - using payment routes from server/index.ts instead
   app.use(simulateRouter);
+  app.use(hedgiApiRouter);
 
   // User settings endpoints
   app.post("/api/user/update-pix", async (req: Request, res: Response) => {

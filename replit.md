@@ -81,6 +81,10 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- January 16, 2026. **Corporate user dashboard launched** - Full corporate trading console with API integration: simulate hedges, execute orders, monitor open positions with live P&L, close orders with confirmation. Business account toggle reactivated, HedgiTest user created for testing.
+- January 16, 2026. **Hedgi API proxy routes added** - Server-side proxy for secure API access: POST /api/hedgi/quotes/simulate, POST /api/hedgi/orders, GET /api/hedgi/orders, GET /api/hedgi/orders/:id, DELETE /api/hedgi/orders/:id. API keys stored securely in database per user.
+- January 16, 2026. **Added story case section to home page** - Visual comparison showing -R$7,500 loss without hedging vs R$0 with Hedgi for B2B context
+- January 16, 2026. **Developers page redesign** - Developer-focused hero with direct API showcase, removed story narrative (moved to home page)
 - January 14, 2026. **New Developers page launched** - World-class developer experience page inspired by Stripe/Resend/Spotify with interactive code playground, language tabs (Node.js, Python, cURL), parameter toggles, quick start guide, capabilities grid, SDK roadmap (Coming Q1 2026), security section, and sandbox request form
 - January 14, 2026. **Website restructuring** - Made ForCompanies the new home page, removed For Individuals and For Companies from navigation, archived old pages to client/src/pages/archive/ for future reuse
 - August 21, 2025. **Rebranded to currency insurance messaging** - Updated About Us page from "hedging" to "currency insurance" terminology, emphasizing protection for businesses buying from other countries, with real statistics (75% companies lose money, $9.8B lost to FX moves)
