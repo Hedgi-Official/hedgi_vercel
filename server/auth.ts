@@ -387,7 +387,10 @@ export function setupAuth(app: Express) {
           birthdate: result.data.birthdate ? new Date(result.data.birthdate) : null,
           password: hashedPassword,
           googleCalendarEnabled: false,
-          googleRefreshToken: null
+          googleRefreshToken: null,
+          userType: result.data.userType || 'individual',
+          companyName: result.data.companyName || null,
+          companyRole: result.data.companyRole || null,
         })
         .returning();
 
@@ -406,7 +409,10 @@ export function setupAuth(app: Express) {
             phoneNumber: createdUser.phoneNumber,
             nation: createdUser.nation,
             paymentIdentifier: createdUser.paymentIdentifier,
-            cpf: createdUser.cpf
+            cpf: createdUser.cpf,
+            userType: createdUser.userType,
+            companyName: createdUser.companyName,
+            companyRole: createdUser.companyRole,
           },
         });
       });

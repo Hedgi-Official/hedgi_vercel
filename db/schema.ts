@@ -32,6 +32,7 @@ export const users = pgTable('users', {
   userType:     text('user_type').default('individual').notNull(), // 'individual' or 'business'
   companyName:  text('company_name'), // For business accounts
   companyRole:  text('company_role'), // For business accounts
+  apiKey:       text('api_key'), // For corporate API access
 });
 
 export const hedges = pgTable('hedges', {

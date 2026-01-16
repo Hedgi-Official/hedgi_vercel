@@ -119,9 +119,9 @@ export default function AuthPage() {
   const handleSubmit = async (action: "login" | "register") => {
     try {
       if (action === "register") {
-        // Always validate as individual (business temporarily deactivated)
-        const dataToValidate = { ...registerData, userType: 'individual' };
-        const validationResult = createRegisterSchema(t, 'individual').safeParse(dataToValidate);
+        // Validate with the selected account type
+        const dataToValidate = { ...registerData, userType: accountType };
+        const validationResult = createRegisterSchema(t, accountType).safeParse(dataToValidate);
         if (!validationResult.success) {
           toast({
             variant: "destructive",
@@ -145,10 +145,10 @@ export default function AuthPage() {
         const responseData = await response.json();
         result = { ok: response.ok, message: responseData.message };
       } else {
-        // Include accountType in registration data (always individual - business temporarily deactivated)
+        // Include the selected account type in registration data
         const registrationPayload = {
           ...registerData,
-          userType: 'individual',
+          userType: accountType,
         };
         
         // Use the proper authentication endpoint with session management
