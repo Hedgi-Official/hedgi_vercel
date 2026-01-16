@@ -9,6 +9,7 @@ import "@/i18n";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import CorporateDashboard from "@/pages/corporate-dashboard";
+import BatchUpload from "@/pages/batch-upload";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
@@ -43,6 +44,9 @@ function Router() {
       </Route>
       <Route path="/corporate-dashboard">
         {user && user.userType === 'business' ? <CorporateDashboard /> : <AuthPage />}
+      </Route>
+      <Route path="/batch-upload">
+        {user && user.userType === 'business' ? <BatchUpload /> : <AuthPage />}
       </Route>
       <Route path="/profile">
         {user ? <Profile /> : <AuthPage />}

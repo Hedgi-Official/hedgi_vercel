@@ -14,6 +14,7 @@ import fbsRouter from "./routes/fbs-rate";
 import paymentRouter from "./routes/payment";
 import simulateRouter from "./routes/simulate";
 import hedgiApiRouter from "./routes/hedgi-api";
+import pendingOrdersRouter from "./routes/pending-orders";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -464,6 +465,7 @@ export function registerRoutes(app: Express): Server {
   // app.use(paymentRouter); // Removed - using payment routes from server/index.ts instead
   app.use(simulateRouter);
   app.use(hedgiApiRouter);
+  app.use(pendingOrdersRouter);
 
   // User settings endpoints
   app.post("/api/user/update-pix", async (req: Request, res: Response) => {

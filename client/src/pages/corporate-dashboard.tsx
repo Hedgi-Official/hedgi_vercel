@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Header } from "@/components/header";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { calculatePnL, formatPnL, LOT_SIZE } from "@/lib/pnl";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ import {
   DollarSign,
   Activity,
   BarChart3,
+  Upload,
+  FileSpreadsheet,
 } from "lucide-react";
 
 interface BrokerQuote {
@@ -148,6 +151,43 @@ export default function CorporateDashboard() {
     },
     refetchInterval: 10000,
     enabled: !!user && user.userType === "business",
+  });
+
+  const pendingOrdersQuery = useQuery({
+    queryKey: ["pending-orders"],
+    queryFn: async () => {
+      const res = await fetch("/api/pending-orders", {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to fetch pending orders");
+      }
+      return res.json();
+    },
+    refetchInterval: 30000,
+    enabled: !!user && user.userType === "business",
+  });
+
+  const cancelPendingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/pending-orders/${id}/cancel`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to cancel order");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
+      toast({ title: "Order cancelled" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Cancel failed", description: error.message });
+    },
   });
 
   const simulateMutation = useMutation({
@@ -277,18 +317,27 @@ export default function CorporateDashboard() {
               {user.companyName || "Your Company"} - API Trading Console
             </p>
           </div>
-          <Badge variant="outline" className="text-sm">
-            <Activity className="w-3 h-3 mr-1" />
-            API Connected
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Link href="/batch-upload">
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Batch Upload
+              </Button>
+            </Link>
+            <Badge variant="outline" className="text-sm">
+              <Activity className="w-3 h-3 mr-1" />
+              API Connected
+            </Badge>
+          </div>
         </div>
 
         <Tabs defaultValue="simulate" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="simulate">Simulate</TabsTrigger>
             <TabsTrigger value="open">
-              Open Orders ({openOrders.length})
+              Open ({openOrders.length})
             </TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
@@ -552,10 +601,20 @@ export default function CorporateDashboard() {
                     </TableHeader>
                     <TableBody>
                       {openOrders.map((order: Order) => {
-                        const currentPrice = order.direction?.toUpperCase() === "BUY" 
-                          ? order.current_bid 
-                          : order.current_ask;
-                        const pnl = order.unrealized_pnl;
+                        const pnlResult = calculatePnL({
+                          direction: order.direction || "",
+                          entryPrice: order.entry_price || 0,
+                          currentBid: order.current_bid,
+                          currentAsk: order.current_ask,
+                          volume: order.volume || 0,
+                          symbol: order.symbol || "",
+                        });
+                        
+                        const currentPrice = pnlResult?.currentPrice;
+                        const pnlUsd = pnlResult?.pnlUsd;
+                        const entryValue = pnlResult?.entryValue;
+                        const currentValue = pnlResult?.currentValue;
+                        
                         return (
                           <TableRow key={order.order_id}>
                             <TableCell className="font-mono">{order.order_id}</TableCell>
@@ -567,23 +626,33 @@ export default function CorporateDashboard() {
                             </TableCell>
                             <TableCell>{order.volume}</TableCell>
                             <TableCell className="font-mono">
-                              {order.entry_price?.toFixed(5) || "-"}
+                              <div>{order.entry_price?.toFixed(5) || "-"}</div>
+                              {entryValue !== undefined && (
+                                <div className="text-xs text-muted-foreground">
+                                  ${entryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="font-mono">
-                              {currentPrice?.toFixed(5) || "-"}
+                              <div>{currentPrice?.toFixed(5) || "-"}</div>
+                              {currentValue !== undefined && (
+                                <div className="text-xs text-muted-foreground">
+                                  ${currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell>
-                              {pnl !== undefined && pnl !== null ? (
-                                <span className={pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
-                                  {pnl >= 0 ? (
+                              {pnlUsd !== undefined && pnlUsd !== null ? (
+                                <span className={pnlUsd >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                  {pnlUsd >= 0 ? (
                                     <TrendingUp className="w-4 h-4 inline mr-1" />
                                   ) : (
                                     <TrendingDown className="w-4 h-4 inline mr-1" />
                                   )}
-                                  ${pnl.toFixed(2)}
+                                  {formatPnL(pnlUsd, "USD")}
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground">Fetching...</span>
+                                <span className="text-muted-foreground">Awaiting data...</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -602,6 +671,98 @@ export default function CorporateDashboard() {
                           </TableRow>
                         );
                       })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pending">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Pending Orders Queue</CardTitle>
+                  <CardDescription>
+                    Orders scheduled for future execution
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => pendingOrdersQuery.refetch()}
+                  disabled={pendingOrdersQuery.isFetching}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${pendingOrdersQuery.isFetching ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {pendingOrdersQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (pendingOrdersQuery.data?.orders || []).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <Clock className="w-12 h-12 mb-4 opacity-20" />
+                    <p>No pending orders</p>
+                    <p className="text-sm mt-2">Upload a CSV to schedule batch orders</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Symbol</TableHead>
+                        <TableHead>Direction</TableHead>
+                        <TableHead>Volume</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Scheduled</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(pendingOrdersQuery.data?.orders || []).map((order: any) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono">{order.id}</TableCell>
+                          <TableCell>{order.symbol}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.direction === "buy" ? "default" : "secondary"}>
+                              {order.direction?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{order.volume}</TableCell>
+                          <TableCell>{order.durationDays || 0}d</TableCell>
+                          <TableCell className="text-sm">
+                            {order.executeAt ? new Date(order.executeAt).toLocaleString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                order.status === "pending" ? "outline" :
+                                order.status === "executed" ? "default" :
+                                order.status === "cancelled" ? "secondary" :
+                                "destructive"
+                              }
+                            >
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => cancelPendingMutation.mutate(order.id)}
+                                disabled={cancelPendingMutation.isPending}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}

@@ -87,6 +87,24 @@ export const passwordResetTokens = pgTable('password_reset_tokens', {
   expiresAt: timestamp('expires_at').notNull(),
 });
 
+export const pendingOrders = pgTable('pending_orders', {
+  id:           serial('id').primaryKey(),
+  userId:       integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  symbol:       text('symbol').notNull(),
+  direction:    text('direction').notNull(),
+  volume:       numeric('volume', { precision: 10, scale: 4 }).notNull(),
+  durationDays: integer('duration_days').notNull().default(0),
+  executeAt:    timestamp('execute_at').notNull(),
+  status:       text('status').notNull().default('pending'),
+  clientRef:    text('client_ref'),
+  batchId:      text('batch_id'),
+  resultOrderId: integer('result_order_id'),
+  resultError:  text('result_error'),
+  metadata:     jsonb('metadata').default({}),
+  createdAt:    timestamp('created_at').defaultNow().notNull(),
+  executedAt:   timestamp('executed_at'),
+});
+
 export const userRelations = relations(users, ({ many }) => ({
   hedges: many(hedges),
   trades: many(trades),
@@ -106,6 +124,13 @@ export const tradeRelations = relations(trades, ({ one }) => ({
   }),
 }));
 
+export const pendingOrderRelations = relations(pendingOrders, ({ one }) => ({
+  user: one(users, {
+    fields:    [pendingOrders.userId],
+    references:[users.id],
+  }),
+}));
+
 import { z } from 'zod';
 
 export const insertUserSchema = createInsertSchema(users).extend({
@@ -118,3 +143,5 @@ export type Hedge    = typeof hedges.$inferSelect;
 export type NewHedge = typeof hedges.$inferInsert;
 export type Trade    = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
+export type PendingOrder = typeof pendingOrders.$inferSelect;
+export type NewPendingOrder = typeof pendingOrders.$inferInsert;
