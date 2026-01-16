@@ -128,6 +128,42 @@ router.get("/api/hedgi/orders", requireAuth, async (req: Request, res: Response)
     }
 
     const normalizedData = Array.isArray(data) ? { orders: data } : (data.orders ? data : { orders: [] });
+    
+    const openOrders = normalizedData.orders.filter((o: any) => 
+      o.status?.toUpperCase() === "OPEN"
+    );
+    
+    if (openOrders.length > 0) {
+      console.log("[Hedgi API] Fetching details for", openOrders.length, "open orders");
+      const detailPromises = openOrders.map(async (order: any) => {
+        try {
+          const detailRes = await fetch(`${HEDGI_API_BASE}/api/orders/${order.order_id}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (detailRes.ok) {
+            return await detailRes.json();
+          }
+          return order;
+        } catch {
+          return order;
+        }
+      });
+      
+      const enrichedOrders = await Promise.all(detailPromises);
+      const orderMap = new Map(enrichedOrders.map((o: any) => [o.order_id, o]));
+      
+      normalizedData.orders = normalizedData.orders.map((order: any) => {
+        if (order.status?.toUpperCase() === "OPEN" && orderMap.has(order.order_id)) {
+          return orderMap.get(order.order_id);
+        }
+        return order;
+      });
+    }
+    
     return res.json(normalizedData);
   } catch (error: any) {
     console.error("[Hedgi API] Fetch orders error:", error);
