@@ -96,3 +96,37 @@ export function formatPnL(pnl: number, currency = "USD"): string {
 export function formatPrice(price: number, decimals = 5): string {
   return price.toFixed(decimals);
 }
+
+export interface RealizedPnLInput {
+  direction: string;
+  entryPrice: number;
+  exitPrice: number;
+  volume: number;
+  symbol: string;
+}
+
+export function calculateRealizedPnL(input: RealizedPnLInput): number {
+  const { direction, entryPrice, exitPrice, volume, symbol } = input;
+  
+  const normalizedDirection = direction.toUpperCase();
+  const quoteCurrency = QUOTE_CURRENCIES[symbol] || "USD";
+  const baseCurrency = BASE_CURRENCIES[symbol] || symbol.slice(0, 3);
+  
+  const notionalVolume = volume * LOT_SIZE;
+  
+  let pnl: number;
+  if (normalizedDirection === "BUY") {
+    pnl = (exitPrice - entryPrice) * notionalVolume;
+  } else {
+    pnl = (entryPrice - exitPrice) * notionalVolume;
+  }
+  
+  let pnlUsd = pnl;
+  if (quoteCurrency !== "USD") {
+    if (baseCurrency === "USD") {
+      pnlUsd = pnl / exitPrice;
+    }
+  }
+  
+  return pnlUsd;
+}

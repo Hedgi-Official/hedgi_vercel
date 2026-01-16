@@ -9,7 +9,7 @@ import { useLocation, Link } from "wouter";
 import { Header } from "@/components/header";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { calculatePnL, formatPnL, LOT_SIZE } from "@/lib/pnl";
+import { calculatePnL, calculateRealizedPnL, formatPnL, LOT_SIZE } from "@/lib/pnl";
 import {
   Select,
   SelectContent,
@@ -802,8 +802,19 @@ export default function CorporateDashboard() {
                     <TableBody>
                       {closedOrders.map((order: Order) => {
                         const exitPrice = order.exit_price ?? order.close_price;
-                        const pnl = order.realized_pnl;
                         const closedDate = order.closed_at || order.timestamp;
+                        
+                        let pnl: number | null = null;
+                        if (exitPrice && order.entry_price && order.direction && order.volume && order.symbol) {
+                          pnl = calculateRealizedPnL({
+                            direction: order.direction,
+                            entryPrice: order.entry_price,
+                            exitPrice: exitPrice,
+                            volume: order.volume,
+                            symbol: order.symbol,
+                          });
+                        }
+                        
                         return (
                           <TableRow key={order.order_id}>
                             <TableCell className="font-mono">{order.order_id}</TableCell>
@@ -821,9 +832,9 @@ export default function CorporateDashboard() {
                               {exitPrice?.toFixed(5) || "-"}
                             </TableCell>
                             <TableCell>
-                              {pnl !== undefined && pnl !== null ? (
+                              {pnl !== null ? (
                                 <span className={pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
-                                  ${pnl.toFixed(2)}
+                                  {formatPnL(pnl, "USD")}
                                 </span>
                               ) : (
                                 "-"
