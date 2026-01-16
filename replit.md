@@ -81,6 +81,9 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- January 16, 2026. **Batch CSV upload and smart netting engine** - New /batch-upload page for uploading CSV files with hedge orders. Parses and validates orders (symbol, direction, volume), calculates net positions per currency pair, and executes net orders immediately or schedules for later. Smart netting reduces trading costs by offsetting long/short positions.
+- January 16, 2026. **Pending orders queue system** - New pending_orders database table with full CRUD API. Corporate dashboard now shows Pending tab with scheduled orders that can be cancelled. Server routes: GET/POST /api/pending-orders, POST /api/pending-orders/batch, PATCH /api/pending-orders/:id/cancel.
+- January 16, 2026. **Local P&L calculation framework** - Client-side P&L calculation utility (client/src/lib/pnl.ts) that computes entry value, current value, and P&L always expressed in USD. Uses 100,000 lot size standard and handles currency pair conversions for USDBRL, EURUSD, USDMXN, etc.
 - January 16, 2026. **Corporate user dashboard launched** - Full corporate trading console with API integration: simulate hedges, execute orders, monitor open positions with live P&L, close orders with confirmation. Business account toggle reactivated, HedgiTest user created for testing.
 - January 16, 2026. **Hedgi API proxy routes added** - Server-side proxy for secure API access: POST /api/hedgi/quotes/simulate, POST /api/hedgi/orders, GET /api/hedgi/orders, GET /api/hedgi/orders/:id, DELETE /api/hedgi/orders/:id. API keys stored securely in database per user.
 - January 16, 2026. **Added story case section to home page** - Visual comparison showing -R$7,500 loss without hedging vs R$0 with Hedgi for B2B context
