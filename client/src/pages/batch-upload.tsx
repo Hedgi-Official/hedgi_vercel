@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as XLSX from "xlsx";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
   TrendingDown,
   RefreshCw,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import { LOT_SIZE } from "@/lib/pnl";
 
@@ -43,6 +45,7 @@ interface ParsedOrder {
   symbol: string;
   direction: string;
   volume: number;
+  payment_date?: string;
   duration_days: number;
   execute_at?: string;
   client_ref?: string;
@@ -52,42 +55,87 @@ interface ParsedOrder {
 
 interface NetPosition {
   symbol: string;
+  paymentDate: string;
   longVolume: number;
   shortVolume: number;
   netVolume: number;
   netDirection: "buy" | "sell" | "flat";
   notional: number;
+  durationDays: number;
 }
 
 const VALID_SYMBOLS = ["USDBRL", "EURUSD", "USDMXN", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"];
 const VALID_DIRECTIONS = ["buy", "sell", "long", "short"];
 
-function parseCSV(content: string): ParsedOrder[] {
-  const lines = content.trim().split("\n");
-  if (lines.length < 2) return [];
+function parseDateDDMMYYYY(dateStr: string): Date | null {
+  if (!dateStr) return null;
   
-  const headerLine = lines[0].toLowerCase();
-  const headers = headerLine.split(",").map(h => h.trim().replace(/['"]/g, ""));
+  const cleaned = dateStr.trim();
+  const match = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    
+    if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 2020 && year <= 2100) {
+      return new Date(year, month, day);
+    }
+  }
+  
+  return null;
+}
+
+function formatDateDDMMYYYY(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function calculateDurationDays(paymentDate: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const payment = new Date(paymentDate);
+  payment.setHours(0, 0, 0, 0);
+  
+  const diffTime = payment.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
+function excelDateToJSDate(excelDate: number): Date {
+  const date = new Date((excelDate - 25569) * 86400 * 1000);
+  return date;
+}
+
+function parseRowsFromData(rows: string[][]): ParsedOrder[] {
+  if (rows.length < 2) return [];
+  
+  const headers = rows[0].map(h => h?.toString().toLowerCase().trim().replace(/['"]/g, "") || "");
   
   const symbolIdx = headers.findIndex(h => h === "symbol" || h === "pair" || h === "currency_pair");
   const directionIdx = headers.findIndex(h => h === "direction" || h === "side" || h === "type");
   const volumeIdx = headers.findIndex(h => h === "volume" || h === "size" || h === "amount" || h === "lots");
+  const paymentDateIdx = headers.findIndex(h => h === "payment_date" || h === "paymentdate" || h === "payment" || h === "date" || h === "expiry" || h === "expiry_date");
   const durationIdx = headers.findIndex(h => h === "duration" || h === "duration_days" || h === "days");
-  const executeAtIdx = headers.findIndex(h => h === "execute_at" || h === "scheduled" || h === "date");
+  const executeAtIdx = headers.findIndex(h => h === "execute_at" || h === "scheduled");
   const clientRefIdx = headers.findIndex(h => h === "client_ref" || h === "reference" || h === "ref" || h === "id");
 
   const orders: ParsedOrder[] = [];
   
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i].map(v => v?.toString().trim().replace(/['"]/g, "") || "");
+    if (values.every(v => !v)) continue;
     
-    const values = line.split(",").map(v => v.trim().replace(/['"]/g, ""));
     const errors: string[] = [];
     
     const symbol = symbolIdx >= 0 ? values[symbolIdx]?.toUpperCase() : "";
     const directionRaw = directionIdx >= 0 ? values[directionIdx]?.toLowerCase() : "";
     const volumeRaw = volumeIdx >= 0 ? parseFloat(values[volumeIdx]) : 0;
+    const paymentDateRaw = paymentDateIdx >= 0 ? values[paymentDateIdx] : "";
     const durationRaw = durationIdx >= 0 ? parseInt(values[durationIdx]) : 0;
     const executeAt = executeAtIdx >= 0 ? values[executeAtIdx] : undefined;
     const clientRef = clientRefIdx >= 0 ? values[clientRefIdx] : undefined;
@@ -103,12 +151,53 @@ function parseCSV(content: string): ParsedOrder[] {
     
     if (!volumeRaw || volumeRaw <= 0 || isNaN(volumeRaw)) errors.push("Invalid volume");
     
+    let paymentDate: Date | null = null;
+    let paymentDateStr = "";
+    let durationDays = durationRaw || 0;
+    
+    if (paymentDateRaw) {
+      const numericDate = parseFloat(paymentDateRaw);
+      if (!isNaN(numericDate) && numericDate > 40000 && numericDate < 60000) {
+        paymentDate = excelDateToJSDate(numericDate);
+      } else {
+        paymentDate = parseDateDDMMYYYY(paymentDateRaw);
+        
+        if (!paymentDate) {
+          const altMatch = paymentDateRaw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+          if (altMatch) {
+            const p1 = parseInt(altMatch[1], 10);
+            const p2 = parseInt(altMatch[2], 10);
+            let year = parseInt(altMatch[3], 10);
+            if (year < 100) year += 2000;
+            
+            if (p1 <= 12 && p2 <= 31) {
+              paymentDate = new Date(year, p1 - 1, p2);
+            } else if (p2 <= 12 && p1 <= 31) {
+              paymentDate = new Date(year, p2 - 1, p1);
+            }
+          }
+        }
+      }
+      
+      if (paymentDate) {
+        paymentDateStr = formatDateDDMMYYYY(paymentDate);
+        durationDays = calculateDurationDays(paymentDate);
+        
+        if (durationDays < 0) {
+          errors.push("Payment date is in the past");
+        }
+      } else {
+        errors.push(`Invalid date format: ${paymentDateRaw} (use dd/mm/yyyy)`);
+      }
+    }
+    
     orders.push({
       row: i + 1,
       symbol,
       direction,
       volume: volumeRaw || 0,
-      duration_days: durationRaw || 0,
+      payment_date: paymentDateStr,
+      duration_days: durationDays,
       execute_at: executeAt,
       client_ref: clientRef,
       valid: errors.length === 0,
@@ -119,22 +208,51 @@ function parseCSV(content: string): ParsedOrder[] {
   return orders;
 }
 
+function parseCSV(content: string): ParsedOrder[] {
+  const lines = content.trim().split("\n");
+  const rows = lines.map(line => line.split(",").map(v => v.trim().replace(/['"]/g, "")));
+  return parseRowsFromData(rows);
+}
+
+function parseExcel(buffer: ArrayBuffer): ParsedOrder[] {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+  
+  const data: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: "" });
+  return parseRowsFromData(data);
+}
+
 function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
   const validOrders = orders.filter(o => o.valid);
-  const positionMap = new Map<string, { long: number; short: number }>();
+  
+  const positionMap = new Map<string, { long: number; short: number; paymentDate: string; durationDays: number }>();
   
   validOrders.forEach(order => {
-    const existing = positionMap.get(order.symbol) || { long: 0, short: 0 };
+    const key = `${order.symbol}|${order.payment_date || "immediate"}`;
+    const existing = positionMap.get(key) || { 
+      long: 0, 
+      short: 0, 
+      paymentDate: order.payment_date || "Immediate",
+      durationDays: order.duration_days
+    };
+    
     if (order.direction === "buy") {
       existing.long += order.volume;
     } else {
       existing.short += order.volume;
     }
-    positionMap.set(order.symbol, existing);
+    
+    if (order.duration_days > existing.durationDays) {
+      existing.durationDays = order.duration_days;
+    }
+    
+    positionMap.set(key, existing);
   });
   
   const positions: NetPosition[] = [];
-  positionMap.forEach((pos, symbol) => {
+  positionMap.forEach((pos, key) => {
+    const [symbol] = key.split("|");
     const netVolume = Math.abs(pos.long - pos.short);
     let netDirection: "buy" | "sell" | "flat" = "flat";
     if (pos.long > pos.short) netDirection = "buy";
@@ -142,15 +260,28 @@ function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
     
     positions.push({
       symbol,
+      paymentDate: pos.paymentDate,
       longVolume: pos.long,
       shortVolume: pos.short,
       netVolume: Number(netVolume.toFixed(4)),
       netDirection,
       notional: netVolume * LOT_SIZE,
+      durationDays: pos.durationDays,
     });
   });
   
-  return positions.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  return positions.sort((a, b) => {
+    const symbolCompare = a.symbol.localeCompare(b.symbol);
+    if (symbolCompare !== 0) return symbolCompare;
+    
+    if (a.paymentDate === "Immediate") return -1;
+    if (b.paymentDate === "Immediate") return 1;
+    
+    const dateA = parseDateDDMMYYYY(a.paymentDate);
+    const dateB = parseDateDDMMYYYY(b.paymentDate);
+    if (dateA && dateB) return dateA.getTime() - dateB.getTime();
+    return a.paymentDate.localeCompare(b.paymentDate);
+  });
 }
 
 export default function BatchUpload() {
@@ -177,15 +308,27 @@ export default function BatchUpload() {
     if (!file) return;
     
     setFileName(file.name);
+    const extension = file.name.split('.').pop()?.toLowerCase();
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      const orders = parseCSV(content);
-      setParsedOrders(orders);
-      setNetPositions(calculateNetPositions(orders));
-    };
-    reader.readAsText(file);
+    if (extension === 'xlsx' || extension === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target?.result as ArrayBuffer;
+        const orders = parseExcel(buffer);
+        setParsedOrders(orders);
+        setNetPositions(calculateNetPositions(orders));
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const orders = parseCSV(content);
+        setParsedOrders(orders);
+        setNetPositions(calculateNetPositions(orders));
+      };
+      reader.readAsText(file);
+    }
   };
 
   const executeNowMutation = useMutation({
@@ -196,7 +339,7 @@ export default function BatchUpload() {
           symbol: p.symbol,
           direction: p.netDirection,
           volume: p.netVolume,
-          duration_days: 0,
+          duration_days: p.durationDays,
         }));
       
       const results = await Promise.all(
@@ -247,6 +390,7 @@ export default function BatchUpload() {
             direction: o.direction,
             volume: o.volume,
             duration_days: o.duration_days,
+            payment_date: o.payment_date,
             execute_at: o.execute_at || new Date().toISOString(),
             client_ref: o.client_ref,
           })),
@@ -302,7 +446,7 @@ export default function BatchUpload() {
           <div>
             <h1 className="text-2xl font-bold">Batch Hedge Upload</h1>
             <p className="text-muted-foreground">
-              Upload CSV file with hedge orders for smart netting and execution
+              Upload CSV or Excel file with hedge orders for smart netting by payment date
             </p>
           </div>
         </div>
@@ -312,23 +456,23 @@ export default function BatchUpload() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Upload CSV
+                Upload File
               </CardTitle>
               <CardDescription>
-                Required columns: symbol, direction, volume. Optional: duration_days, execute_at, client_ref
+                Required: symbol, direction, volume, payment_date (dd/mm/yyyy). Optional: duration_days, client_ref
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="border-2 border-dashed rounded-lg p-8 text-center">
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleFileUpload}
                   className="hidden"
-                  id="csv-upload"
+                  id="file-upload"
                 />
                 <label
-                  htmlFor="csv-upload"
+                  htmlFor="file-upload"
                   className="cursor-pointer flex flex-col items-center gap-4"
                 >
                   <FileSpreadsheet className="w-12 h-12 text-muted-foreground" />
@@ -339,8 +483,8 @@ export default function BatchUpload() {
                     </div>
                   ) : (
                     <div>
-                      <p className="font-medium">Drop CSV file here or click to upload</p>
-                      <p className="text-sm text-muted-foreground">Supports standard CSV format</p>
+                      <p className="font-medium">Drop CSV or Excel file here or click to upload</p>
+                      <p className="text-sm text-muted-foreground">Supports .csv, .xlsx, .xls formats</p>
                     </div>
                   )}
                 </label>
@@ -420,33 +564,40 @@ export default function BatchUpload() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="w-5 h-5" />
-                Net Position Summary
+                Net Position Summary by Payment Date
               </CardTitle>
               <CardDescription>
-                Smart netting calculates the optimal hedge position per currency pair
+                Orders are netted per currency pair and payment date timeline
               </CardDescription>
             </CardHeader>
             <CardContent>
               {netPositions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Calculator className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Upload a CSV to see net positions</p>
+                  <p>Upload a file to see net positions</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Symbol</TableHead>
+                      <TableHead>Payment Date</TableHead>
                       <TableHead>Long</TableHead>
                       <TableHead>Short</TableHead>
                       <TableHead>Net</TableHead>
-                      <TableHead>Notional</TableHead>
+                      <TableHead>Days</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {netPositions.map((pos) => (
-                      <TableRow key={pos.symbol}>
+                    {netPositions.map((pos, idx) => (
+                      <TableRow key={idx}>
                         <TableCell className="font-medium">{pos.symbol}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Calendar className="w-3 h-3" />
+                            {pos.paymentDate}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-emerald-600">
                           {pos.longVolume > 0 && (
                             <>
@@ -473,7 +624,7 @@ export default function BatchUpload() {
                           )}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          ${pos.notional.toLocaleString()}
+                          {pos.durationDays}d
                         </TableCell>
                       </TableRow>
                     ))}
@@ -488,7 +639,7 @@ export default function BatchUpload() {
           <Card className="mt-6">
             <CardHeader>
               <CardTitle>Parsed Orders</CardTitle>
-              <CardDescription>Review all orders from the uploaded CSV</CardDescription>
+              <CardDescription>Review all orders from the uploaded file</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-96 overflow-auto">
@@ -499,8 +650,8 @@ export default function BatchUpload() {
                       <TableHead>Symbol</TableHead>
                       <TableHead>Direction</TableHead>
                       <TableHead>Volume</TableHead>
+                      <TableHead>Payment Date</TableHead>
                       <TableHead>Duration</TableHead>
-                      <TableHead>Scheduled</TableHead>
                       <TableHead>Ref</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
@@ -518,10 +669,17 @@ export default function BatchUpload() {
                           )}
                         </TableCell>
                         <TableCell>{order.volume || "-"}</TableCell>
-                        <TableCell>{order.duration_days || 0}d</TableCell>
-                        <TableCell className="text-xs">
-                          {order.execute_at || "Immediate"}
+                        <TableCell>
+                          {order.payment_date ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Calendar className="w-3 h-3" />
+                              {order.payment_date}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
+                        <TableCell>{order.duration_days}d</TableCell>
                         <TableCell className="text-xs font-mono">
                           {order.client_ref || "-"}
                         </TableCell>

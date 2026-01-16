@@ -26,13 +26,33 @@ router.get("/api/pending-orders", requireAuth, async (req: Request, res: Respons
   }
 });
 
+function parseDateDDMMYYYY(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const cleaned = dateStr.trim();
+  const match = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 2020 && year <= 2100) {
+      return new Date(year, month, day);
+    }
+  }
+  return null;
+}
+
 router.post("/api/pending-orders", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { symbol, direction, volume, duration_days, execute_at, client_ref, batch_id, metadata } = req.body;
+    const { symbol, direction, volume, duration_days, execute_at, payment_date, client_ref, batch_id, metadata } = req.body;
     
     if (!symbol || !direction || !volume || !execute_at) {
       return res.status(400).json({ error: "Missing required fields: symbol, direction, volume, execute_at" });
+    }
+
+    let paymentDateValue: Date | null = null;
+    if (payment_date) {
+      paymentDateValue = parseDateDDMMYYYY(payment_date);
     }
 
     const [order] = await db.insert(pendingOrders).values({
@@ -42,6 +62,7 @@ router.post("/api/pending-orders", requireAuth, async (req: Request, res: Respon
       volume: volume.toString(),
       durationDays: duration_days || 0,
       executeAt: new Date(execute_at),
+      paymentDate: paymentDateValue,
       clientRef: client_ref || null,
       batchId: batch_id || null,
       metadata: metadata || {},
@@ -66,18 +87,26 @@ router.post("/api/pending-orders/batch", requireAuth, async (req: Request, res: 
 
     const batchIdToUse = batch_id || `batch_${Date.now()}`;
     
-    const ordersToInsert = ordersList.map((o: any) => ({
-      userId,
-      symbol: o.symbol?.toUpperCase() || "",
-      direction: o.direction?.toLowerCase() || "buy",
-      volume: (o.volume || 0).toString(),
-      durationDays: o.duration_days || 0,
-      executeAt: new Date(o.execute_at || Date.now()),
-      clientRef: o.client_ref || null,
-      batchId: batchIdToUse,
-      metadata: o.metadata || {},
-      status: "pending" as const,
-    }));
+    const ordersToInsert = ordersList.map((o: any) => {
+      let paymentDateValue: Date | null = null;
+      if (o.payment_date) {
+        paymentDateValue = parseDateDDMMYYYY(o.payment_date);
+      }
+      
+      return {
+        userId,
+        symbol: o.symbol?.toUpperCase() || "",
+        direction: o.direction?.toLowerCase() || "buy",
+        volume: (o.volume || 0).toString(),
+        durationDays: o.duration_days || 0,
+        executeAt: new Date(o.execute_at || Date.now()),
+        paymentDate: paymentDateValue,
+        clientRef: o.client_ref || null,
+        batchId: batchIdToUse,
+        metadata: o.metadata || {},
+        status: "pending" as const,
+      };
+    });
 
     const insertedOrders = await db.insert(pendingOrders).values(ordersToInsert).returning();
     

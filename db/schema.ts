@@ -95,6 +95,7 @@ export const pendingOrders = pgTable('pending_orders', {
   volume:       numeric('volume', { precision: 10, scale: 4 }).notNull(),
   durationDays: integer('duration_days').notNull().default(0),
   executeAt:    timestamp('execute_at').notNull(),
+  paymentDate:  timestamp('payment_date'),
   status:       text('status').notNull().default('pending'),
   clientRef:    text('client_ref'),
   batchId:      text('batch_id'),

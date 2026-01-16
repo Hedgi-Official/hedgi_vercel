@@ -81,6 +81,7 @@ Hedgi is a comprehensive currency hedging platform that allows users to protect 
 - **Ports**: Multiple port configuration for development (3000, 5000, 5001, etc.)
 
 ## Changelog
+- January 16, 2026. **Excel upload and payment date-based netting** - Batch upload now supports Excel formats (.xlsx, .xls) in addition to CSV. Added payment_date field (dd/mm/yyyy format) that automatically calculates duration_days until payment. Smart netting now groups by (symbol, paymentDate) for timeline-based hedge positioning. Database schema updated with payment_date column in pending_orders table.
 - January 16, 2026. **Batch CSV upload and smart netting engine** - New /batch-upload page for uploading CSV files with hedge orders. Parses and validates orders (symbol, direction, volume), calculates net positions per currency pair, and executes net orders immediately or schedules for later. Smart netting reduces trading costs by offsetting long/short positions.
 - January 16, 2026. **Pending orders queue system** - New pending_orders database table with full CRUD API. Corporate dashboard now shows Pending tab with scheduled orders that can be cancelled. Server routes: GET/POST /api/pending-orders, POST /api/pending-orders/batch, PATCH /api/pending-orders/:id/cancel.
 - January 16, 2026. **Local P&L calculation framework** - Client-side P&L calculation utility (client/src/lib/pnl.ts) that computes entry value, current value, and P&L always expressed in USD. Uses 100,000 lot size standard and handles currency pair conversions for USDBRL, EURUSD, USDMXN, etc.
