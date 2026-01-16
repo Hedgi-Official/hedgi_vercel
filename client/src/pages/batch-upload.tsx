@@ -64,7 +64,7 @@ interface NetPosition {
   durationDays: number;
 }
 
-const VALID_SYMBOLS = ["USDBRL", "EURUSD", "USDMXN", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"];
+const VALID_SYMBOLS = ["USDBRL", "EURUSD", "EURBRL", "USDMXN", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"];
 const VALID_DIRECTIONS = ["buy", "sell", "long", "short"];
 
 function parseDateDDMMYYYY(dateStr: string): Date | null {
