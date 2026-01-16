@@ -305,7 +305,7 @@ function expandSyntheticPairs(orders: ParsedOrder[], rates: ExchangeRates): Pars
         ...order,
         row: order.row,
         symbol: syntheticConfig.quoteLeg,
-        volume: Number(usdLots.toFixed(4)),
+        volume: Number(usdLots.toFixed(2)),
         client_ref: order.client_ref ? `${order.client_ref}_${syntheticConfig.quoteLeg}` : `synth_${order.row}_${syntheticConfig.quoteLeg}`,
       });
     } else {
@@ -423,7 +423,7 @@ function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
       paymentDate: pos.paymentDate,
       longVolume: pos.long,
       shortVolume: pos.short,
-      netVolume: Number(netVolume.toFixed(4)),
+      netVolume: Number(netVolume.toFixed(2)),
       netDirection,
       notional: netVolume * LOT_SIZE,
       durationDays: pos.durationDays,
@@ -500,7 +500,7 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
           signedNet -= order.volume;
         }
       });
-      signedNet = Number(signedNet.toFixed(4));
+      signedNet = Number(signedNet.toFixed(2));
       
       const netVolume = Math.abs(signedNet);
       let netDirection: "buy" | "sell" | "flat" = "flat";
@@ -514,11 +514,11 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
         symbol,
         startDate,
         endDate: endDate || startDate,
-        netVolume: Number(netVolume.toFixed(4)),
+        netVolume: Number(netVolume.toFixed(2)),
         netDirection,
         notional: netVolume * LOT_SIZE,
         isAdjustment,
-        adjustmentDelta: isAdjustment ? Number(Math.abs(delta).toFixed(4)) : undefined,
+        adjustmentDelta: isAdjustment ? Number(Math.abs(delta).toFixed(2)) : undefined,
         ordersInSegment: activeOrders.length,
       });
       
@@ -526,7 +526,7 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
         executionOrders.push({
           symbol,
           direction: signedNet > 0 ? "buy" : "sell",
-          volume: Number(Math.abs(signedNet).toFixed(4)),
+          volume: Number(Math.abs(signedNet).toFixed(2)),
           executeAt: new Date().toISOString(),
           isInitial: true,
           paymentDate: endDate || startDate,
@@ -535,7 +535,7 @@ function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
         executionOrders.push({
           symbol,
           direction: delta > 0 ? "buy" : "sell",
-          volume: Number(Math.abs(delta).toFixed(4)),
+          volume: Number(Math.abs(delta).toFixed(2)),
           executeAt: startDateObj.toISOString(),
           isInitial: false,
           paymentDate: endDate || startDate,
