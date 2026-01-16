@@ -301,6 +301,37 @@ export default function CorporateDashboard() {
   const orders = ordersQuery.data?.orders || [];
   const openOrders = orders.filter((o: Order) => o.status === "OPEN" || o.status === "open");
   const closedOrders = orders.filter((o: Order) => o.status === "CLOSED" || o.status === "closed");
+  const pendingOrders = pendingOrdersQuery.data?.orders || [];
+  const activePendingCount = pendingOrders.filter((o: any) => 
+    o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed"
+  ).length;
+
+  const dashboardStats = React.useMemo(() => {
+    let totalExposure = 0;
+    let totalPnL = 0;
+    let hasValidPnL = false;
+
+    openOrders.forEach((order: Order) => {
+      const notional = (order.volume || 0) * LOT_SIZE;
+      totalExposure += notional;
+
+      const pnlResult = calculatePnL({
+        direction: order.direction || "",
+        entryPrice: order.entry_price || 0,
+        currentBid: order.current_bid,
+        currentAsk: order.current_ask,
+        volume: order.volume || 0,
+        symbol: order.symbol || "",
+      });
+
+      if (pnlResult?.pnlUsd !== undefined && pnlResult.pnlUsd !== null) {
+        totalPnL += pnlResult.pnlUsd;
+        hasValidPnL = true;
+      }
+    });
+
+    return { totalExposure, totalPnL, hasValidPnL };
+  }, [openOrders]);
 
   if (!user || user.userType !== "business") {
     return null;
@@ -330,6 +361,72 @@ export default function CorporateDashboard() {
               API Connected
             </Badge>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Open Positions</p>
+                  <p className="text-2xl font-bold">{openOrders.length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Exposure</p>
+                  <p className="text-2xl font-bold">
+                    ${dashboardStats.totalExposure.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Unrealized P&L</p>
+                  <p className={`text-2xl font-bold ${dashboardStats.totalPnL >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {dashboardStats.hasValidPnL ? formatPnL(dashboardStats.totalPnL, "USD") : "—"}
+                  </p>
+                </div>
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${dashboardStats.totalPnL >= 0 ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+                  {dashboardStats.totalPnL >= 0 ? (
+                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pending Orders</p>
+                  <p className="text-2xl font-bold">{activePendingCount}</p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-orange-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="simulate" className="space-y-6">
@@ -596,6 +693,7 @@ export default function CorporateDashboard() {
                         <TableHead>Entry</TableHead>
                         <TableHead>Current</TableHead>
                         <TableHead>P&L</TableHead>
+                        <TableHead>Expiry</TableHead>
                         <TableHead>Broker</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -615,6 +713,19 @@ export default function CorporateDashboard() {
                         const pnlUsd = pnlResult?.pnlUsd;
                         const entryValue = pnlResult?.entryValue;
                         const currentValue = pnlResult?.currentValue;
+
+                        const orderAny = order as any;
+                        const openDateStr = order.timestamp || orderAny.opened_at || orderAny.created_at || orderAny.executed_at || orderAny.open_time;
+                        const openDate = openDateStr ? new Date(openDateStr) : null;
+                        const durationDays = orderAny.duration_days || orderAny.durationDays || orderAny.duration || 0;
+                        let expiryDate: Date | null = null;
+                        let daysRemaining: number | null = null;
+                        if (openDate && !isNaN(openDate.getTime()) && durationDays > 0) {
+                          expiryDate = new Date(openDate);
+                          expiryDate.setDate(expiryDate.getDate() + durationDays);
+                          const now = new Date();
+                          daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        }
                         
                         return (
                           <TableRow key={order.order_id}>
@@ -654,6 +765,20 @@ export default function CorporateDashboard() {
                                 </span>
                               ) : (
                                 <span className="text-muted-foreground">Awaiting data...</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {expiryDate ? (
+                                <div className="text-sm">
+                                  <div>{expiryDate.toLocaleDateString()}</div>
+                                  {daysRemaining !== null && (
+                                    <div className={`text-xs ${daysRemaining <= 3 ? "text-orange-500" : "text-muted-foreground"}`}>
+                                      {daysRemaining > 0 ? `${daysRemaining}d left` : daysRemaining === 0 ? "Today" : "Expired"}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
                             <TableCell>
