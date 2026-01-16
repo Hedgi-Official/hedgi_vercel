@@ -100,6 +100,7 @@ interface Order {
   unrealized_pnl?: number;
   realized_pnl?: number;
   close_price?: number;
+  exit_price?: number;
   closed_at?: string;
 }
 
@@ -800,7 +801,9 @@ export default function CorporateDashboard() {
                     </TableHeader>
                     <TableBody>
                       {closedOrders.map((order: Order) => {
+                        const exitPrice = order.exit_price ?? order.close_price;
                         const pnl = order.realized_pnl;
+                        const closedDate = order.closed_at || order.timestamp;
                         return (
                           <TableRow key={order.order_id}>
                             <TableCell className="font-mono">{order.order_id}</TableCell>
@@ -815,7 +818,7 @@ export default function CorporateDashboard() {
                               {order.entry_price?.toFixed(5) || "-"}
                             </TableCell>
                             <TableCell className="font-mono">
-                              {order.close_price?.toFixed(5) || "-"}
+                              {exitPrice?.toFixed(5) || "-"}
                             </TableCell>
                             <TableCell>
                               {pnl !== undefined && pnl !== null ? (
@@ -827,7 +830,7 @@ export default function CorporateDashboard() {
                               )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
-                              {order.closed_at ? new Date(order.closed_at).toLocaleDateString() : "-"}
+                              {closedDate ? new Date(closedDate).toLocaleDateString() : "-"}
                             </TableCell>
                           </TableRow>
                         );
