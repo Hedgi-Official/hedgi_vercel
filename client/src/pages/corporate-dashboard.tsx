@@ -54,28 +54,25 @@ import {
   BarChart3,
 } from "lucide-react";
 
+interface BrokerQuote {
+  broker: string;
+  bid: number;
+  ask: number;
+  total_cost_quote: number;
+  spread_cost_quote: number;
+  swap_cost_quote: number;
+  recommended: boolean;
+  savings_vs_worst: number;
+  market_open: boolean;
+}
+
 interface SimulateResponse {
-  best_venue: {
-    venue: string;
-    spread_pct: number;
-    swap_cost_daily: number;
-    total_cost_estimate: number;
-    estimated_entry_rate: number;
-  };
-  all_venues: Array<{
-    venue: string;
-    spread_pct: number;
-    swap_cost_daily: number;
-    total_cost_estimate: number;
-    available: boolean;
-  }>;
-  quote_valid_until: string;
-  request_echo: {
-    symbol: string;
-    direction: string;
-    volume: number;
-    duration_days: number;
-  };
+  symbol: string;
+  direction: string;
+  volume: number;
+  duration_days: number;
+  best_broker: string;
+  brokers: BrokerQuote[];
 }
 
 interface Order {
@@ -100,7 +97,7 @@ export default function CorporateDashboard() {
 
   const [simulateForm, setSimulateForm] = React.useState({
     symbol: "USDBRL",
-    direction: "BUY",
+    direction: "buy",
     volume: "0.1",
     duration_days: "7",
   });
@@ -150,14 +147,18 @@ export default function CorporateDashboard() {
         credentials: "include",
         body: JSON.stringify({
           symbol: data.symbol,
-          direction: data.direction,
+          direction: data.direction.toLowerCase(),
           volume: parseFloat(data.volume),
           duration_days: parseInt(data.duration_days),
+          best_only: false,
         }),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || error.detail || "Simulation failed");
+        const errorMsg = error.error || 
+          (Array.isArray(error.detail) ? error.detail.map((d: any) => d.msg).join(", ") : error.detail) || 
+          "Simulation failed";
+        throw new Error(errorMsg);
       }
       return res.json();
     },
@@ -178,14 +179,17 @@ export default function CorporateDashboard() {
         credentials: "include",
         body: JSON.stringify({
           symbol: simulateForm.symbol,
-          direction: simulateForm.direction,
+          direction: simulateForm.direction.toLowerCase(),
           volume: parseFloat(simulateForm.volume),
           duration_days: parseInt(simulateForm.duration_days),
         }),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || error.detail || "Order creation failed");
+        const errorMsg = error.error || 
+          (Array.isArray(error.detail) ? error.detail.map((d: any) => d.msg).join(", ") : error.detail) || 
+          "Order creation failed";
+        throw new Error(errorMsg);
       }
       return res.json();
     },
@@ -319,8 +323,8 @@ export default function CorporateDashboard() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="BUY">Buy (Long)</SelectItem>
-                            <SelectItem value="SELL">Sell (Short)</SelectItem>
+                            <SelectItem value="buy">Buy (Long)</SelectItem>
+                            <SelectItem value="sell">Sell (Short)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -381,62 +385,74 @@ export default function CorporateDashboard() {
                   </CardTitle>
                   <CardDescription>
                     {simulateResult
-                      ? `Valid until ${new Date(simulateResult.quote_valid_until).toLocaleTimeString()}`
+                      ? `${simulateResult.symbol} ${simulateResult.direction.toUpperCase()} ${simulateResult.volume} lots for ${simulateResult.duration_days} days`
                       : "Run a simulation to see results"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {simulateResult ? (
                     <div className="space-y-4">
-                      <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-muted-foreground">Best Venue</span>
-                          <Badge variant="secondary">{simulateResult.best_venue.venue}</Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Entry Rate</span>
-                            <p className="font-mono font-bold">
-                              {simulateResult.best_venue.estimated_entry_rate?.toFixed(5)}
-                            </p>
+                      {(() => {
+                        const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
+                        return bestBroker ? (
+                          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm text-muted-foreground">Recommended Broker</span>
+                              <Badge variant="secondary">{bestBroker.broker}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Bid/Ask</span>
+                                <p className="font-mono font-bold">
+                                  {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Spread Cost</span>
+                                <p className="font-mono font-bold">
+                                  ${bestBroker.spread_cost_quote?.toFixed(2)}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Swap Cost</span>
+                                <p className="font-mono">
+                                  ${bestBroker.swap_cost_quote?.toFixed(2)}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Total Cost</span>
+                                <p className="font-mono font-bold text-primary">
+                                  ${bestBroker.total_cost_quote?.toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                            {bestBroker.savings_vs_worst > 0 && (
+                              <div className="mt-2 text-xs text-emerald-600">
+                                Saves ${bestBroker.savings_vs_worst.toFixed(2)} vs worst option
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Spread</span>
-                            <p className="font-mono font-bold">
-                              {(simulateResult.best_venue.spread_pct * 100).toFixed(3)}%
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Daily Swap</span>
-                            <p className="font-mono">
-                              ${simulateResult.best_venue.swap_cost_daily?.toFixed(2)}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Total Cost Est.</span>
-                            <p className="font-mono font-bold text-primary">
-                              ${simulateResult.best_venue.total_cost_estimate?.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                        ) : null;
+                      })()}
 
-                      {simulateResult.all_venues && simulateResult.all_venues.length > 1 && (
+                      {simulateResult.brokers && simulateResult.brokers.length > 1 && (
                         <div>
-                          <h4 className="text-sm font-medium mb-2">All Venues</h4>
+                          <h4 className="text-sm font-medium mb-2">All Brokers</h4>
                           <div className="space-y-2">
-                            {simulateResult.all_venues.map((venue, i) => (
+                            {simulateResult.brokers.map((broker, i) => (
                               <div
                                 key={i}
                                 className={`flex items-center justify-between p-2 rounded text-sm ${
-                                  venue.available ? "bg-muted/50" : "bg-muted/20 opacity-50"
+                                  broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
                                 }`}
                               >
-                                <span>{venue.venue}</span>
+                                <div className="flex items-center gap-2">
+                                  <span>{broker.broker}</span>
+                                  {broker.recommended && <Badge variant="outline" className="text-xs">Best</Badge>}
+                                  {!broker.market_open && <Badge variant="destructive" className="text-xs">Closed</Badge>}
+                                </div>
                                 <span className="font-mono">
-                                  {venue.available
-                                    ? `$${venue.total_cost_estimate?.toFixed(2)}`
-                                    : "Unavailable"}
+                                  ${broker.total_cost_quote?.toFixed(2)}
                                 </span>
                               </div>
                             ))}
