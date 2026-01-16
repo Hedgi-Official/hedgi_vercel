@@ -40,7 +40,7 @@ const BASE_CURRENCIES: Record<string, string> = {
   USDCHF: "USD",
 };
 
-export function calculatePnL(input: PnLInput, usdConversionRate?: number): PnLResult | null {
+export function calculatePnL(input: PnLInput): PnLResult | null {
   const { direction, entryPrice, currentBid, currentAsk, volume, symbol } = input;
   
   const normalizedDirection = direction.toUpperCase();
@@ -71,12 +71,8 @@ export function calculatePnL(input: PnLInput, usdConversionRate?: number): PnLRe
   let pnlUsd = pnl;
   
   if (quoteCurrency !== "USD") {
-    if (usdConversionRate && usdConversionRate > 0) {
-      if (baseCurrency === "USD") {
-        pnlUsd = pnl / usdConversionRate;
-      } else {
-        pnlUsd = pnl / usdConversionRate;
-      }
+    if (baseCurrency === "USD") {
+      pnlUsd = pnl / currentPrice;
     } else {
       pnlUsd = pnl;
     }
