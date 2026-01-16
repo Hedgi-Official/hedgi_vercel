@@ -55,6 +55,8 @@ import {
   BarChart3,
   Upload,
   FileSpreadsheet,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 
 interface BrokerQuote {
@@ -191,6 +193,27 @@ export default function CorporateDashboard() {
     },
   });
 
+  const deletePendingMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/pending-orders/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete order");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
+      toast({ title: "Order permanently deleted" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Delete failed", description: error.message });
+    },
+  });
+
   const simulateMutation = useMutation({
     mutationFn: async (data: typeof simulateForm) => {
       const res = await fetch("/api/hedgi/quotes/simulate", {
@@ -305,6 +328,8 @@ export default function CorporateDashboard() {
   const activePendingCount = pendingOrders.filter((o: any) => 
     o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed"
   ).length;
+  const cancelledOrders = pendingOrders.filter((o: any) => o.status === "cancelled");
+  const failedOrders = pendingOrders.filter((o: any) => o.status === "failed");
 
   const dashboardStats = React.useMemo(() => {
     let totalExposure = 0;
@@ -896,7 +921,7 @@ export default function CorporateDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="history">
+          <TabsContent value="history" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Closed Positions</CardTitle>
@@ -971,6 +996,78 @@ export default function CorporateDashboard() {
                           </TableRow>
                         );
                       })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-muted-foreground" />
+                  Cancelled & Failed Orders
+                </CardTitle>
+                <CardDescription>
+                  {cancelledOrders.length + failedOrders.length} order{cancelledOrders.length + failedOrders.length !== 1 ? "s" : ""} in history
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {cancelledOrders.length === 0 && failedOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <XCircle className="w-12 h-12 mb-4 opacity-20" />
+                    <p>No cancelled or failed orders</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Symbol</TableHead>
+                        <TableHead>Direction</TableHead>
+                        <TableHead>Volume</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...cancelledOrders, ...failedOrders].map((order: any) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono">{order.id}</TableCell>
+                          <TableCell>{order.symbol}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.direction?.toUpperCase() === "BUY" ? "default" : "secondary"}>
+                              {order.direction?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{order.volume}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.status === "cancelled" ? "outline" : "destructive"}>
+                              {order.status === "cancelled" ? "Cancelled" : "Failed"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {order.paymentDate ? new Date(order.paymentDate).toLocaleDateString() : "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {order.updatedAt ? new Date(order.updatedAt).toLocaleDateString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => deletePendingMutation.mutate(order.id)}
+                              disabled={deletePendingMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}

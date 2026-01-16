@@ -149,14 +149,22 @@ router.delete("/api/pending-orders/:id", requireAuth, async (req: Request, res: 
     const userId = req.user!.id;
     const orderId = parseInt(req.params.id);
 
+    const order = await db.query.pendingOrders.findFirst({
+      where: and(eq(pendingOrders.id, orderId), eq(pendingOrders.userId, userId)),
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (order.status !== "cancelled" && order.status !== "failed") {
+      return res.status(400).json({ error: "Only cancelled or failed orders can be permanently deleted" });
+    }
+
     const [deleted] = await db
       .delete(pendingOrders)
-      .where(and(eq(pendingOrders.id, orderId), eq(pendingOrders.userId, userId), eq(pendingOrders.status, "pending")))
+      .where(and(eq(pendingOrders.id, orderId), eq(pendingOrders.userId, userId)))
       .returning();
-
-    if (!deleted) {
-      return res.status(404).json({ error: "Pending order not found or already executed" });
-    }
 
     return res.json({ success: true, deleted: deleted });
   } catch (error: any) {
