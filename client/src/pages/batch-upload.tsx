@@ -64,6 +64,30 @@ interface NetPosition {
   durationDays: number;
 }
 
+interface TimeSegment {
+  symbol: string;
+  startDate: string;
+  endDate: string;
+  netVolume: number;
+  netDirection: "buy" | "sell" | "flat";
+  notional: number;
+  isAdjustment: boolean;
+  adjustmentDelta?: number;
+  ordersInSegment: number;
+}
+
+interface SegmentedNetting {
+  segments: TimeSegment[];
+  executionOrders: Array<{
+    symbol: string;
+    direction: "buy" | "sell";
+    volume: number;
+    executeAt: string;
+    isInitial: boolean;
+    paymentDate: string;
+  }>;
+}
+
 const TRADABLE_SYMBOLS = ["USDBRL", "EURUSD", "USDMXN", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF"];
 
 interface SyntheticPairConfig {
@@ -390,6 +414,126 @@ function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
   });
 }
 
+function calculateTimeSegmentNetting(orders: ParsedOrder[]): SegmentedNetting {
+  const validOrders = orders.filter(o => o.valid && o.payment_date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = formatDateDDMMYYYY(today);
+  
+  const ordersBySymbol = new Map<string, ParsedOrder[]>();
+  validOrders.forEach(order => {
+    const existing = ordersBySymbol.get(order.symbol) || [];
+    existing.push(order);
+    ordersBySymbol.set(order.symbol, existing);
+  });
+  
+  const segments: TimeSegment[] = [];
+  const executionOrders: SegmentedNetting["executionOrders"] = [];
+  
+  ordersBySymbol.forEach((symbolOrders, symbol) => {
+    const expiryDates = new Set<string>();
+    expiryDates.add(todayStr);
+    
+    symbolOrders.forEach(order => {
+      if (order.payment_date) {
+        expiryDates.add(order.payment_date);
+      }
+    });
+    
+    const sortedDates = Array.from(expiryDates).sort((a, b) => {
+      const dateA = parseDateDDMMYYYY(a);
+      const dateB = parseDateDDMMYYYY(b);
+      if (!dateA || !dateB) return 0;
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    let previousNetVolume = 0;
+    let previousNetDirection: "buy" | "sell" | "flat" = "flat";
+    
+    for (let i = 0; i < sortedDates.length; i++) {
+      const startDate = sortedDates[i];
+      const endDate = sortedDates[i + 1] || startDate;
+      const startDateObj = parseDateDDMMYYYY(startDate);
+      
+      if (!startDateObj) continue;
+      
+      const activeOrders = symbolOrders.filter(order => {
+        const orderExpiry = parseDateDDMMYYYY(order.payment_date || "");
+        if (!orderExpiry) return false;
+        return orderExpiry >= startDateObj;
+      });
+      
+      if (activeOrders.length === 0) continue;
+      
+      let longVolume = 0;
+      let shortVolume = 0;
+      
+      activeOrders.forEach(order => {
+        if (order.direction === "buy") {
+          longVolume += order.volume;
+        } else {
+          shortVolume += order.volume;
+        }
+      });
+      
+      const netVolume = Number(Math.abs(longVolume - shortVolume).toFixed(4));
+      let netDirection: "buy" | "sell" | "flat" = "flat";
+      if (longVolume > shortVolume) netDirection = "buy";
+      else if (shortVolume > longVolume) netDirection = "sell";
+      
+      const isAdjustment = i > 0;
+      const adjustmentDelta = isAdjustment ? 
+        (netDirection === previousNetDirection ? 
+          netVolume - previousNetVolume : 
+          netVolume + previousNetVolume) : 0;
+      
+      segments.push({
+        symbol,
+        startDate,
+        endDate,
+        netVolume,
+        netDirection,
+        notional: netVolume * LOT_SIZE,
+        isAdjustment,
+        adjustmentDelta: isAdjustment ? Number(Math.abs(adjustmentDelta).toFixed(4)) : undefined,
+        ordersInSegment: activeOrders.length,
+      });
+      
+      if (i === 0 && netDirection !== "flat") {
+        executionOrders.push({
+          symbol,
+          direction: netDirection,
+          volume: netVolume,
+          executeAt: new Date().toISOString(),
+          isInitial: true,
+          paymentDate: endDate,
+        });
+      } else if (isAdjustment && adjustmentDelta !== 0) {
+        let adjustDirection: "buy" | "sell";
+        if (netDirection === previousNetDirection) {
+          adjustDirection = netVolume > previousNetVolume ? netDirection : (netDirection === "buy" ? "sell" : "buy");
+        } else {
+          adjustDirection = netDirection === "flat" ? (previousNetDirection === "buy" ? "sell" : "buy") : netDirection;
+        }
+        
+        executionOrders.push({
+          symbol,
+          direction: adjustDirection,
+          volume: Number(Math.abs(adjustmentDelta).toFixed(4)),
+          executeAt: startDateObj.toISOString(),
+          isInitial: false,
+          paymentDate: endDate,
+        });
+      }
+      
+      previousNetVolume = netVolume;
+      previousNetDirection = netDirection;
+    }
+  });
+  
+  return { segments, executionOrders };
+}
+
 export default function BatchUpload() {
   const [, navigate] = useLocation();
   const { user } = useUser();
@@ -399,7 +543,9 @@ export default function BatchUpload() {
   const [parsedOrders, setParsedOrders] = React.useState<ParsedOrder[]>([]);
   const [rawOrders, setRawOrders] = React.useState<ParsedOrder[]>([]);
   const [netPositions, setNetPositions] = React.useState<NetPosition[]>([]);
+  const [segmentedNetting, setSegmentedNetting] = React.useState<SegmentedNetting | null>(null);
   const [executionMode, setExecutionMode] = React.useState<"immediate" | "scheduled">("immediate");
+  const [nettingMode, setNettingMode] = React.useState<"simple" | "timeline">("timeline");
   const [fileName, setFileName] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasSyntheticPairs, setHasSyntheticPairs] = React.useState(false);
@@ -419,6 +565,7 @@ export default function BatchUpload() {
     if (syntheticOrders.length === 0) {
       setParsedOrders(orders);
       setNetPositions(calculateNetPositions(orders));
+      setSegmentedNetting(calculateTimeSegmentNetting(orders));
       return;
     }
     
@@ -438,6 +585,7 @@ export default function BatchUpload() {
       
       setParsedOrders(expandedOrders);
       setNetPositions(calculateNetPositions(expandedOrders));
+      setSegmentedNetting(calculateTimeSegmentNetting(expandedOrders));
       
       toast({
         title: "Synthetic pairs expanded",
@@ -447,6 +595,7 @@ export default function BatchUpload() {
       console.error("Failed to process synthetic pairs:", error);
       setParsedOrders(orders);
       setNetPositions(calculateNetPositions(orders));
+      setSegmentedNetting(calculateTimeSegmentNetting(orders));
       toast({
         variant: "destructive",
         title: "Rate fetch failed",
@@ -525,6 +674,7 @@ export default function BatchUpload() {
       setParsedOrders([]);
       setRawOrders([]);
       setNetPositions([]);
+      setSegmentedNetting(null);
       setFileName("");
       setHasSyntheticPairs(false);
     },
@@ -567,6 +717,7 @@ export default function BatchUpload() {
       setParsedOrders([]);
       setRawOrders([]);
       setNetPositions([]);
+      setSegmentedNetting(null);
       setFileName("");
       setHasSyntheticPairs(false);
     },
@@ -721,6 +872,7 @@ export default function BatchUpload() {
                         setParsedOrders([]);
                         setRawOrders([]);
                         setNetPositions([]);
+                        setSegmentedNetting(null);
                         setFileName("");
                         setHasSyntheticPairs(false);
                       }}
@@ -735,16 +887,119 @@ export default function BatchUpload() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="w-5 h-5" />
-                Net Position Summary by Payment Date
-              </CardTitle>
-              <CardDescription>
-                Orders are netted per currency pair and payment date timeline
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="w-5 h-5" />
+                    {nettingMode === "timeline" ? "Timeline Netting" : "Simple Netting"}
+                  </CardTitle>
+                  <CardDescription>
+                    {nettingMode === "timeline" 
+                      ? "Overlapping hedges netted until expiry, then readjusted"
+                      : "Orders grouped by symbol and payment date"}
+                  </CardDescription>
+                </div>
+                <Select value={nettingMode} onValueChange={(v) => setNettingMode(v as "simple" | "timeline")}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="timeline">Timeline</SelectItem>
+                    <SelectItem value="simple">Simple</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
-              {netPositions.length === 0 ? (
+              {nettingMode === "timeline" && segmentedNetting ? (
+                <div className="space-y-6">
+                  {segmentedNetting.segments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                      <Calculator className="w-12 h-12 mb-4 opacity-20" />
+                      <p>Upload a file to see net positions</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">Time Segments</h4>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Symbol</TableHead>
+                              <TableHead>Period</TableHead>
+                              <TableHead>Net Position</TableHead>
+                              <TableHead>Active Orders</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {segmentedNetting.segments.map((seg, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{seg.symbol}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-sm">
+                                    <Calendar className="w-3 h-3" />
+                                    {seg.startDate} {seg.endDate !== seg.startDate && `→ ${seg.endDate}`}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {seg.netDirection === "flat" ? (
+                                    <Badge variant="secondary">Flat</Badge>
+                                  ) : (
+                                    <Badge variant={seg.netDirection === "buy" ? "default" : "destructive"}>
+                                      {seg.netDirection.toUpperCase()} {seg.netVolume}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {seg.ordersInSegment} order(s)
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      
+                      {segmentedNetting.executionOrders.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-3">Execution Schedule</h4>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Symbol</TableHead>
+                                <TableHead>Action</TableHead>
+                                <TableHead>Volume</TableHead>
+                                <TableHead>Execute At</TableHead>
+                                <TableHead>Type</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {segmentedNetting.executionOrders.map((order, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="font-medium">{order.symbol}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={order.direction === "buy" ? "default" : "destructive"}>
+                                      {order.direction.toUpperCase()}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{order.volume}</TableCell>
+                                  <TableCell>
+                                    {order.isInitial ? "Now" : new Date(order.executeAt).toLocaleDateString()}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={order.isInitial ? "outline" : "secondary"}>
+                                      {order.isInitial ? "Initial" : "Adjustment"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : netPositions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Calculator className="w-12 h-12 mb-4 opacity-20" />
                   <p>Upload a file to see net positions</p>
