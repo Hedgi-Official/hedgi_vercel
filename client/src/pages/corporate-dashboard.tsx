@@ -76,17 +76,28 @@ interface SimulateResponse {
 }
 
 interface Order {
-  id: number;
+  order_id: number;
+  customer_id: string;
   symbol: string;
   direction: string;
   volume: number;
+  broker: string;
+  broker_ticket?: number;
+  entry_price: number;
   status: string;
-  entry_price?: number;
-  current_price?: number;
-  pnl?: number;
-  pnl_pct?: number;
-  created_at: string;
-  metadata?: Record<string, any>;
+  timestamp: string;
+  estimated_total_cost_quote?: number;
+  estimated_spread_cost_quote?: number;
+  estimated_swap_cost_quote?: number;
+  breakeven_rate?: number;
+  quote_currency?: string;
+  base_currency?: string;
+  current_bid?: number;
+  current_ask?: number;
+  unrealized_pnl?: number;
+  realized_pnl?: number;
+  close_price?: number;
+  closed_at?: string;
 }
 
 export default function CorporateDashboard() {
@@ -194,7 +205,7 @@ export default function CorporateDashboard() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: "Order created", description: `Order ID: ${data.id}` });
+      toast({ title: "Order created", description: `Order ID: ${data.order_id}` });
       queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
       setSimulateResult(null);
     },
@@ -242,7 +253,7 @@ export default function CorporateDashboard() {
 
   const confirmCloseOrder = () => {
     if (orderToClose) {
-      closeOrderMutation.mutate(orderToClose.id);
+      closeOrderMutation.mutate(orderToClose.order_id);
     }
   };
 
@@ -535,52 +546,62 @@ export default function CorporateDashboard() {
                         <TableHead>Entry</TableHead>
                         <TableHead>Current</TableHead>
                         <TableHead>P&L</TableHead>
+                        <TableHead>Broker</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {openOrders.map((order: Order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-mono">{order.id}</TableCell>
-                          <TableCell>{order.symbol}</TableCell>
-                          <TableCell>
-                            <Badge variant={order.direction === "BUY" ? "default" : "secondary"}>
-                              {order.direction}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{order.volume}</TableCell>
-                          <TableCell className="font-mono">
-                            {order.entry_price?.toFixed(5) || "-"}
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {order.current_price?.toFixed(5) || "-"}
-                          </TableCell>
-                          <TableCell>
-                            {order.pnl !== undefined ? (
-                              <span className={order.pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
-                                {order.pnl >= 0 ? (
-                                  <TrendingUp className="w-4 h-4 inline mr-1" />
-                                ) : (
-                                  <TrendingDown className="w-4 h-4 inline mr-1" />
-                                )}
-                                ${order.pnl.toFixed(2)}
-                              </span>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleCloseOrder(order)}
-                            >
-                              <Square className="w-3 h-3 mr-1" />
-                              Close
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {openOrders.map((order: Order) => {
+                        const currentPrice = order.direction?.toUpperCase() === "BUY" 
+                          ? order.current_bid 
+                          : order.current_ask;
+                        const pnl = order.unrealized_pnl;
+                        return (
+                          <TableRow key={order.order_id}>
+                            <TableCell className="font-mono">{order.order_id}</TableCell>
+                            <TableCell>{order.symbol}</TableCell>
+                            <TableCell>
+                              <Badge variant={order.direction?.toUpperCase() === "BUY" ? "default" : "secondary"}>
+                                {order.direction?.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{order.volume}</TableCell>
+                            <TableCell className="font-mono">
+                              {order.entry_price?.toFixed(5) || "-"}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {currentPrice?.toFixed(5) || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {pnl !== undefined && pnl !== null ? (
+                                <span className={pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                  {pnl >= 0 ? (
+                                    <TrendingUp className="w-4 h-4 inline mr-1" />
+                                  ) : (
+                                    <TrendingDown className="w-4 h-4 inline mr-1" />
+                                  )}
+                                  ${pnl.toFixed(2)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">Fetching...</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{order.broker}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleCloseOrder(order)}
+                              >
+                                <Square className="w-3 h-3 mr-1" />
+                                Close
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -613,40 +634,43 @@ export default function CorporateDashboard() {
                         <TableHead>Entry</TableHead>
                         <TableHead>Exit</TableHead>
                         <TableHead>Realized P&L</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Closed</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {closedOrders.map((order: Order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-mono">{order.id}</TableCell>
-                          <TableCell>{order.symbol}</TableCell>
-                          <TableCell>
-                            <Badge variant={order.direction === "BUY" ? "default" : "secondary"}>
-                              {order.direction}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{order.volume}</TableCell>
-                          <TableCell className="font-mono">
-                            {order.entry_price?.toFixed(5) || "-"}
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {order.current_price?.toFixed(5) || "-"}
-                          </TableCell>
-                          <TableCell>
-                            {order.pnl !== undefined ? (
-                              <span className={order.pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
-                                ${order.pnl.toFixed(2)}
-                              </span>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {closedOrders.map((order: Order) => {
+                        const pnl = order.realized_pnl;
+                        return (
+                          <TableRow key={order.order_id}>
+                            <TableCell className="font-mono">{order.order_id}</TableCell>
+                            <TableCell>{order.symbol}</TableCell>
+                            <TableCell>
+                              <Badge variant={order.direction?.toUpperCase() === "BUY" ? "default" : "secondary"}>
+                                {order.direction?.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{order.volume}</TableCell>
+                            <TableCell className="font-mono">
+                              {order.entry_price?.toFixed(5) || "-"}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {order.close_price?.toFixed(5) || "-"}
+                            </TableCell>
+                            <TableCell>
+                              {pnl !== undefined && pnl !== null ? (
+                                <span className={pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
+                                  ${pnl.toFixed(2)}
+                                </span>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {order.closed_at ? new Date(order.closed_at).toLocaleDateString() : "-"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -666,7 +690,7 @@ export default function CorporateDashboard() {
                 <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex justify-between">
                     <span>Order ID:</span>
-                    <span className="font-mono">{orderToClose.id}</span>
+                    <span className="font-mono">{orderToClose.order_id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Symbol:</span>
@@ -674,17 +698,21 @@ export default function CorporateDashboard() {
                   </div>
                   <div className="flex justify-between">
                     <span>Direction:</span>
-                    <span>{orderToClose.direction}</span>
+                    <span>{orderToClose.direction?.toUpperCase()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Volume:</span>
                     <span>{orderToClose.volume}</span>
                   </div>
-                  {orderToClose.pnl !== undefined && (
+                  <div className="flex justify-between">
+                    <span>Entry Price:</span>
+                    <span className="font-mono">{orderToClose.entry_price?.toFixed(5)}</span>
+                  </div>
+                  {orderToClose.unrealized_pnl !== undefined && orderToClose.unrealized_pnl !== null && (
                     <div className="flex justify-between">
                       <span>Current P&L:</span>
-                      <span className={orderToClose.pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
-                        ${orderToClose.pnl.toFixed(2)}
+                      <span className={orderToClose.unrealized_pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
+                        ${orderToClose.unrealized_pnl.toFixed(2)}
                       </span>
                     </div>
                   )}
