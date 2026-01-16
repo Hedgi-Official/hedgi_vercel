@@ -534,6 +534,7 @@ export default function BatchUpload() {
   const [fileName, setFileName] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasSyntheticPairs, setHasSyntheticPairs] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
 
   React.useEffect(() => {
     if (!user) {
@@ -591,10 +592,7 @@ export default function BatchUpload() {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
+  const processFile = (file: File) => {
     setFileName(file.name);
     const extension = file.name.split('.').pop()?.toLowerCase();
     
@@ -617,6 +615,25 @@ export default function BatchUpload() {
       };
       reader.readAsText(file);
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    processFile(file);
+  };
+
+  const handleFileDrop = (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(extension || '')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload a CSV or Excel file (.csv, .xlsx, .xls)",
+      });
+      return;
+    }
+    processFile(file);
   };
 
   const executeNowMutation = useMutation({
@@ -757,7 +774,35 @@ export default function BatchUpload() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <div 
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(true);
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    handleFileDrop(file);
+                  }
+                }}
+              >
                 <input
                   type="file"
                   accept=".csv,.xlsx,.xls"
@@ -776,6 +821,13 @@ export default function BatchUpload() {
                       <div>
                         <p className="font-medium">Processing synthetic pairs...</p>
                         <p className="text-sm text-muted-foreground">Fetching exchange rates for volume conversion</p>
+                      </div>
+                    </>
+                  ) : isDragging ? (
+                    <>
+                      <Upload className="w-12 h-12 text-primary" />
+                      <div>
+                        <p className="font-medium text-primary">Drop file here</p>
                       </div>
                     </>
                   ) : (
