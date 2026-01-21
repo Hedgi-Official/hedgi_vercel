@@ -277,7 +277,6 @@ export default function CorporateDashboard() {
     },
     onSuccess: (data) => {
       setSimulateResult(data);
-      toast({ title: "Simulation complete", description: "Quote generated successfully" });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Simulation failed", description: error.message });
