@@ -9,6 +9,7 @@ import { useLocation, Link } from "wouter";
 import { Header } from "@/components/header";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { calculatePnL, calculateRealizedPnL, formatPnL, LOT_SIZE } from "@/lib/pnl";
 import {
   Select,
@@ -155,6 +156,7 @@ export default function CorporateDashboard() {
   const { user, logout } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const [simulateForm, setSimulateForm] = React.useState({
     symbol: "USDBRL",
@@ -169,9 +171,7 @@ export default function CorporateDashboard() {
 
   // AI Assistant state
   const [chatOpen, setChatOpen] = React.useState(false);
-  const [chatMessages, setChatMessages] = React.useState<Array<{type: 'user' | 'bot', content: string}>>([
-    {type: 'bot', content: "Hi! I can help you set up a hedge simulation. Just tell me what you need - for example, 'I want to hedge $50,000 USD against BRL for 2 weeks'."}
-  ]);
+  const [chatMessages, setChatMessages] = React.useState<Array<{type: 'user' | 'bot', content: string}>>([]);
   const [chatInput, setChatInput] = React.useState('');
   const [chatLoading, setChatLoading] = React.useState(false);
   const [chatSessionId] = React.useState(() => `business-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
@@ -181,6 +181,13 @@ export default function CorporateDashboard() {
     await logout();
     navigate("/");
   };
+
+  // Initialize chat with translated welcome message
+  React.useEffect(() => {
+    if (chatMessages.length === 0) {
+      setChatMessages([{type: 'bot', content: t('corporateDashboard.aiWelcome')}]);
+    }
+  }, [t, chatMessages.length]);
 
   React.useEffect(() => {
     if (!user) {
@@ -198,7 +205,7 @@ export default function CorporateDashboard() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Failed to fetch orders");
+        throw new Error(error.error || t('corporateDashboard.fetchOrdersFailed'));
       }
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -241,10 +248,10 @@ export default function CorporateDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hidden-orders"] });
-      toast({ title: "Order removed from history" });
+      toast({ title: t('corporateDashboard.orderRemoved') });
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Failed to hide order", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.hideOrderFailed'), description: error.message });
     },
   });
 
@@ -278,10 +285,10 @@ export default function CorporateDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
-      toast({ title: "Order cancelled" });
+      toast({ title: t('corporateDashboard.orderCancelled') });
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Cancel failed", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.cancelFailed'), description: error.message });
     },
   });
 
@@ -299,10 +306,10 @@ export default function CorporateDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
-      toast({ title: "Order permanently deleted" });
+      toast({ title: t('corporateDashboard.orderDeleted') });
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Delete failed", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.deleteFailed'), description: error.message });
     },
   });
 
@@ -333,7 +340,7 @@ export default function CorporateDashboard() {
       setSimulateResult(data);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Simulation failed", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.simulationFailed'), description: error.message });
     },
   });
 
@@ -360,12 +367,12 @@ export default function CorporateDashboard() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: "Order created", description: `Order ID: ${data.order_id}` });
+      toast({ title: t('corporateDashboard.orderCreated'), description: `${t('corporateDashboard.orderId')}: ${data.order_id}` });
       queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
       setSimulateResult(null);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Order failed", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.orderFailed'), description: error.message });
     },
   });
 
@@ -382,13 +389,13 @@ export default function CorporateDashboard() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: "Order closed", description: `Final P&L: ${data.realized_pnl?.toFixed(2) || "N/A"}` });
+      toast({ title: t('corporateDashboard.orderClosed'), description: `${t('corporateDashboard.finalPnl')}: ${data.realized_pnl?.toFixed(2) || "N/A"}` });
       queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
       setCloseDialogOpen(false);
       setOrderToClose(null);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Close failed", description: error.message });
+      toast({ variant: "destructive", title: t('corporateDashboard.closeFailed'), description: error.message });
     },
   });
 
@@ -445,23 +452,23 @@ export default function CorporateDashboard() {
             });
             
             toast({
-              title: "Form auto-filled",
-              description: "The simulation parameters have been set based on your request. Click 'Simulate' when ready.",
+              title: t('corporateDashboard.formAutoFilled'),
+              description: t('corporateDashboard.formAutoFilledDesc'),
             });
           } else {
             toast({
               variant: "destructive",
-              title: "Invalid parameters",
-              description: "Some values from the AI response were invalid. Please fill the form manually.",
+              title: t('corporateDashboard.invalidParameters'),
+              description: t('corporateDashboard.invalidParametersDesc'),
             });
           }
         }
       } else {
-        setChatMessages(prev => [...prev, { type: 'bot', content: data.message || "Sorry, something went wrong. Please try again." }]);
+        setChatMessages(prev => [...prev, { type: 'bot', content: data.message || t('corporateDashboard.errorGeneric') }]);
       }
     } catch (error) {
       console.error('Chat error:', error);
-      setChatMessages(prev => [...prev, { type: 'bot', content: "I'm having trouble connecting. Please try again." }]);
+      setChatMessages(prev => [...prev, { type: 'bot', content: t('corporateDashboard.errorConnecting') }]);
     } finally {
       setChatLoading(false);
     }
@@ -539,21 +546,21 @@ export default function CorporateDashboard() {
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Corporate Dashboard</h1>
+            <h1 className="text-3xl font-bold">{t('corporateDashboard.title')}</h1>
             <p className="text-muted-foreground">
-              {user.companyName || "Your Company"} - API Trading Console
+              {user.companyName || t('corporateDashboard.yourCompany')} - {t('corporateDashboard.apiTradingConsole')}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/batch-upload">
               <Button variant="outline" size="sm">
                 <Upload className="w-4 h-4 mr-2" />
-                Batch Upload
+                {t('corporateDashboard.batchUpload')}
               </Button>
             </Link>
             <Badge variant="outline" className="text-sm">
               <Activity className="w-3 h-3 mr-1" />
-              API Connected
+              {t('corporateDashboard.apiConnected')}
             </Badge>
           </div>
         </div>
@@ -563,7 +570,7 @@ export default function CorporateDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Open Positions</p>
+                  <p className="text-sm text-muted-foreground">{t('corporateDashboard.openPositions')}</p>
                   <p className="text-2xl font-bold">{openOrders.length}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -577,7 +584,7 @@ export default function CorporateDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Exposure</p>
+                  <p className="text-sm text-muted-foreground">{t('corporateDashboard.totalExposure')}</p>
                   <p className="text-2xl font-bold">
                     ${dashboardStats.totalExposure.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </p>
@@ -593,7 +600,7 @@ export default function CorporateDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Unrealized P&L</p>
+                  <p className="text-sm text-muted-foreground">{t('corporateDashboard.unrealizedPnl')}</p>
                   <p className={`text-2xl font-bold ${dashboardStats.totalPnL >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                     {dashboardStats.hasValidPnL ? formatPnL(dashboardStats.totalPnL, "USD") : "—"}
                   </p>
@@ -613,7 +620,7 @@ export default function CorporateDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pending Orders</p>
+                  <p className="text-sm text-muted-foreground">{t('corporateDashboard.pendingOrders')}</p>
                   <p className="text-2xl font-bold">{activePendingCount}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
@@ -626,12 +633,12 @@ export default function CorporateDashboard() {
 
         <Tabs defaultValue="simulate" className="space-y-6">
           <TabsList className="grid w-full max-w-lg grid-cols-4">
-            <TabsTrigger value="simulate">Simulate</TabsTrigger>
+            <TabsTrigger value="simulate">{t('corporateDashboard.simulate')}</TabsTrigger>
             <TabsTrigger value="open">
-              Open ({openOrders.length})
+              {t('corporateDashboard.open')} ({openOrders.length})
             </TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="pending">{t('corporateDashboard.pending')}</TabsTrigger>
+            <TabsTrigger value="history">{t('corporateDashboard.history')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="simulate" className="space-y-6">
@@ -646,9 +653,9 @@ export default function CorporateDashboard() {
                           <Sparkles className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">AI Assistant</CardTitle>
+                          <CardTitle className="text-base">{t('corporateDashboard.aiAssistant')}</CardTitle>
                           <CardDescription>
-                            Describe your hedge and I'll fill in the form
+                            {t('corporateDashboard.aiAssistantDesc')}
                           </CardDescription>
                         </div>
                       </div>
@@ -708,7 +715,7 @@ export default function CorporateDashboard() {
                       <Input
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="e.g., I want to hedge $100,000 USD/BRL for 30 days..."
+                        placeholder={t('corporateDashboard.aiPlaceholder')}
                         disabled={chatLoading}
                         className="flex-1"
                       />
@@ -726,17 +733,17 @@ export default function CorporateDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />
-                    Simulate Hedge
+                    {t('corporateDashboard.simulateHedge')}
                   </CardTitle>
                   <CardDescription>
-                    Preview costs and venues before executing
+                    {t('corporateDashboard.previewCosts')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSimulate} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="symbol">Currency Pair</Label>
+                        <Label htmlFor="symbol">{t('corporateDashboard.currencyPair')}</Label>
                         <Select
                           value={simulateForm.symbol}
                           onValueChange={(v) => setSimulateForm((f) => ({ ...f, symbol: v }))}
@@ -753,7 +760,7 @@ export default function CorporateDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="direction">Direction</Label>
+                        <Label htmlFor="direction">{t('corporateDashboard.direction')}</Label>
                         <Select
                           value={simulateForm.direction}
                           onValueChange={(v) => setSimulateForm((f) => ({ ...f, direction: v }))}
@@ -762,8 +769,8 @@ export default function CorporateDashboard() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="buy">Buy (Long)</SelectItem>
-                            <SelectItem value="sell">Sell (Short)</SelectItem>
+                            <SelectItem value="buy">{t('corporateDashboard.buyLong')}</SelectItem>
+                            <SelectItem value="sell">{t('corporateDashboard.sellShort')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -771,7 +778,7 @@ export default function CorporateDashboard() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="volume">Volume (lots)</Label>
+                        <Label htmlFor="volume">{t('corporateDashboard.volumeLots')}</Label>
                         <Input
                           id="volume"
                           type="number"
@@ -783,7 +790,7 @@ export default function CorporateDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="duration">Duration (days)</Label>
+                        <Label htmlFor="duration">{t('corporateDashboard.durationDays')}</Label>
                         <Input
                           id="duration"
                           type="number"
@@ -803,12 +810,12 @@ export default function CorporateDashboard() {
                       {simulateMutation.isPending ? (
                         <>
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Simulating...
+                          {t('corporateDashboard.simulating')}
                         </>
                       ) : (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Simulate
+                          {t('corporateDashboard.simulate')}
                         </>
                       )}
                     </Button>
@@ -820,12 +827,12 @@ export default function CorporateDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5" />
-                    Quote Result
+                    {t('corporateDashboard.quoteResult')}
                   </CardTitle>
                   <CardDescription>
                     {simulateResult
                       ? `${simulateResult.symbol} ${simulateResult.direction.toUpperCase()} ${simulateResult.volume} lots for ${simulateResult.duration_days} days`
-                      : "Run a simulation to see results"}
+                      : t('corporateDashboard.runSimulation')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -845,18 +852,18 @@ export default function CorporateDashboard() {
                         return bestBroker ? (
                           <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-muted-foreground">Recommended Broker</span>
+                              <span className="text-sm text-muted-foreground">{t('corporateDashboard.recommendedBroker')}</span>
                               <Badge variant="secondary">{bestBroker.broker}</Badge>
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <span className="text-muted-foreground">Bid/Ask</span>
+                                <span className="text-muted-foreground">{t('corporateDashboard.bidAsk')}</span>
                                 <p className="font-mono font-bold">
                                   {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Spread Cost</span>
+                                <span className="text-muted-foreground">{t('corporateDashboard.spreadCost')}</span>
                                 <p className="font-mono font-bold">
                                   ${spreadCostUSD.toFixed(2)}
                                 </p>
@@ -867,7 +874,7 @@ export default function CorporateDashboard() {
                                 )}
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Swap Cost</span>
+                                <span className="text-muted-foreground">{t('corporateDashboard.swapCost')}</span>
                                 <p className="font-mono">
                                   ${swapCostUSD.toFixed(2)}
                                 </p>
@@ -878,7 +885,7 @@ export default function CorporateDashboard() {
                                 )}
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Total Cost</span>
+                                <span className="text-muted-foreground">{t('corporateDashboard.totalCost')}</span>
                                 <p className="font-mono font-bold text-primary">
                                   ${totalCostUSD.toFixed(2)}
                                 </p>
@@ -891,7 +898,7 @@ export default function CorporateDashboard() {
                             </div>
                             {savingsUSD > 0 && (
                               <div className="mt-2 text-xs text-emerald-600">
-                                Saves ${savingsUSD.toFixed(2)} vs worst option
+                                {t('corporateDashboard.savesVsWorst').replace('${amount}', savingsUSD.toFixed(2))}
                               </div>
                             )}
                           </div>
@@ -900,7 +907,7 @@ export default function CorporateDashboard() {
 
                       {simulateResult.brokers && simulateResult.brokers.length > 1 && (
                         <div>
-                          <h4 className="text-sm font-medium mb-2">All Brokers</h4>
+                          <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.allBrokers')}</h4>
                           <div className="space-y-2">
                             {simulateResult.brokers.map((broker, i) => {
                               const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, simulateResult.symbol, broker.bid || 1);
@@ -913,8 +920,8 @@ export default function CorporateDashboard() {
                                 >
                                   <div className="flex items-center gap-2">
                                     <span>{broker.broker}</span>
-                                    {broker.recommended && <Badge variant="outline" className="text-xs">Best</Badge>}
-                                    {!broker.market_open && <Badge variant="destructive" className="text-xs">Closed</Badge>}
+                                    {broker.recommended && <Badge variant="outline" className="text-xs">{t('corporateDashboard.best')}</Badge>}
+                                    {!broker.market_open && <Badge variant="destructive" className="text-xs">{t('corporateDashboard.closed')}</Badge>}
                                   </div>
                                   <span className="font-mono">
                                     ${brokerTotalUSD.toFixed(2)}
@@ -934,12 +941,12 @@ export default function CorporateDashboard() {
                         {createOrderMutation.isPending ? (
                           <>
                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Executing...
+                            {t('corporateDashboard.executing')}
                           </>
                         ) : (
                           <>
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Execute Order
+                            {t('corporateDashboard.executeOrder')}
                           </>
                         )}
                       </Button>
@@ -947,8 +954,8 @@ export default function CorporateDashboard() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                       <BarChart3 className="w-12 h-12 mb-4 opacity-20" />
-                      <p>No simulation results yet</p>
-                      <p className="text-sm">Fill in the form and click Simulate</p>
+                      <p>{t('corporateDashboard.noSimulationResults')}</p>
+                      <p className="text-sm">{t('corporateDashboard.fillFormAndSimulate')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -960,9 +967,9 @@ export default function CorporateDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Open Positions</CardTitle>
+                  <CardTitle>{t('corporateDashboard.openPositions')}</CardTitle>
                   <CardDescription>
-                    {openOrders.length} active hedge{openOrders.length !== 1 ? "s" : ""}
+                    {openOrders.length} {openOrders.length !== 1 ? t('corporateDashboard.activeHedgesPlural') : t('corporateDashboard.activeHedges')}
                   </CardDescription>
                 </div>
                 <Button
@@ -972,7 +979,7 @@ export default function CorporateDashboard() {
                   disabled={ordersQuery.isFetching}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${ordersQuery.isFetching ? "animate-spin" : ""}`} />
-                  Refresh
+                  {t('corporateDashboard.refresh')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -988,22 +995,22 @@ export default function CorporateDashboard() {
                 ) : openOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <Clock className="w-12 h-12 mb-4 opacity-20" />
-                    <p>No open positions</p>
+                    <p>{t('corporateDashboard.noOpenPositions')}</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Volume</TableHead>
-                        <TableHead>Entry</TableHead>
-                        <TableHead>Current</TableHead>
+                        <TableHead>{t('corporateDashboard.id')}</TableHead>
+                        <TableHead>{t('corporateDashboard.symbol')}</TableHead>
+                        <TableHead>{t('corporateDashboard.direction')}</TableHead>
+                        <TableHead>{t('corporateDashboard.volume')}</TableHead>
+                        <TableHead>{t('corporateDashboard.entry')}</TableHead>
+                        <TableHead>{t('corporateDashboard.current')}</TableHead>
                         <TableHead>P&L</TableHead>
-                        <TableHead>Expiry</TableHead>
-                        <TableHead>Broker</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('corporateDashboard.expiry')}</TableHead>
+                        <TableHead>{t('corporateDashboard.broker')}</TableHead>
+                        <TableHead>{t('corporateDashboard.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1072,7 +1079,7 @@ export default function CorporateDashboard() {
                                   {formatPnL(pnlUsd, "USD")}
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground">Awaiting data...</span>
+                                <span className="text-muted-foreground">{t('corporateDashboard.awaitingData')}</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -1081,7 +1088,7 @@ export default function CorporateDashboard() {
                                   <div>{expiryDate.toLocaleDateString()}</div>
                                   {daysRemaining !== null && (
                                     <div className={`text-xs ${daysRemaining <= 3 ? "text-orange-500" : "text-muted-foreground"}`}>
-                                      {daysRemaining > 0 ? `${daysRemaining}d left` : daysRemaining === 0 ? "Today" : "Expired"}
+                                      {daysRemaining > 0 ? `${daysRemaining} ${t('corporateDashboard.daysLeft')}` : daysRemaining === 0 ? t('corporateDashboard.today') : t('corporateDashboard.expired')}
                                     </div>
                                   )}
                                 </div>
@@ -1099,7 +1106,7 @@ export default function CorporateDashboard() {
                                 onClick={() => handleCloseOrder(order)}
                               >
                                 <Square className="w-3 h-3 mr-1" />
-                                Close
+                                {t('corporateDashboard.close')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1116,9 +1123,9 @@ export default function CorporateDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Pending Orders Queue</CardTitle>
+                  <CardTitle>{t('corporateDashboard.pendingOrdersQueue')}</CardTitle>
                   <CardDescription>
-                    Orders scheduled for future execution
+                    {t('corporateDashboard.scheduledForExecution')}
                   </CardDescription>
                 </div>
                 <Button
@@ -1128,7 +1135,7 @@ export default function CorporateDashboard() {
                   disabled={pendingOrdersQuery.isFetching}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${pendingOrdersQuery.isFetching ? "animate-spin" : ""}`} />
-                  Refresh
+                  {t('corporateDashboard.refresh')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -1139,21 +1146,21 @@ export default function CorporateDashboard() {
                 ) : activePendingOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <Clock className="w-12 h-12 mb-4 opacity-20" />
-                    <p>No pending orders</p>
-                    <p className="text-sm mt-2">Upload a CSV to schedule batch orders</p>
+                    <p>{t('corporateDashboard.noPendingOrders')}</p>
+                    <p className="text-sm mt-2">{t('corporateDashboard.uploadCsvToSchedule')}</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Volume</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Scheduled</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('corporateDashboard.id')}</TableHead>
+                        <TableHead>{t('corporateDashboard.symbol')}</TableHead>
+                        <TableHead>{t('corporateDashboard.direction')}</TableHead>
+                        <TableHead>{t('corporateDashboard.volume')}</TableHead>
+                        <TableHead>{t('corporateDashboard.durationDays')}</TableHead>
+                        <TableHead>{t('corporateDashboard.scheduled')}</TableHead>
+                        <TableHead>{t('corporateDashboard.status')}</TableHead>
+                        <TableHead>{t('corporateDashboard.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1191,7 +1198,7 @@ export default function CorporateDashboard() {
                                 onClick={() => cancelPendingMutation.mutate(order.id)}
                                 disabled={cancelPendingMutation.isPending}
                               >
-                                Cancel
+                                {t('corporateDashboard.cancel')}
                               </Button>
                             )}
                           </TableCell>
@@ -1207,30 +1214,30 @@ export default function CorporateDashboard() {
           <TabsContent value="history" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Closed Positions</CardTitle>
+                <CardTitle>{t('corporateDashboard.closedPositions')}</CardTitle>
                 <CardDescription>
-                  {closedOrders.length} completed hedge{closedOrders.length !== 1 ? "s" : ""}
+                  {closedOrders.length} {closedOrders.length !== 1 ? t('corporateDashboard.completedHedges') : t('corporateDashboard.completedHedge')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {closedOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <Clock className="w-12 h-12 mb-4 opacity-20" />
-                    <p>No closed positions yet</p>
+                    <p>{t('corporateDashboard.noClosedPositions')}</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Volume</TableHead>
-                        <TableHead>Entry</TableHead>
-                        <TableHead>Exit</TableHead>
-                        <TableHead>Realized P&L</TableHead>
-                        <TableHead>Closed</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('corporateDashboard.id')}</TableHead>
+                        <TableHead>{t('corporateDashboard.symbol')}</TableHead>
+                        <TableHead>{t('corporateDashboard.direction')}</TableHead>
+                        <TableHead>{t('corporateDashboard.volume')}</TableHead>
+                        <TableHead>{t('corporateDashboard.entry')}</TableHead>
+                        <TableHead>{t('corporateDashboard.exit')}</TableHead>
+                        <TableHead>{t('corporateDashboard.realizedPnl')}</TableHead>
+                        <TableHead>{t('corporateDashboard.closed')}</TableHead>
+                        <TableHead>{t('corporateDashboard.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1286,7 +1293,7 @@ export default function CorporateDashboard() {
                                 disabled={hideClosedOrderMutation.isPending}
                               >
                                 <Trash2 className="w-4 h-4 mr-1" />
-                                Delete
+                                {t('corporateDashboard.delete')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1302,30 +1309,30 @@ export default function CorporateDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <XCircle className="w-5 h-5 text-muted-foreground" />
-                  Cancelled & Failed Orders
+                  {t('corporateDashboard.cancelledFailedOrders')}
                 </CardTitle>
                 <CardDescription>
-                  {cancelledOrders.length + failedOrders.length} order{cancelledOrders.length + failedOrders.length !== 1 ? "s" : ""} in history
+                  {cancelledOrders.length + failedOrders.length} {cancelledOrders.length + failedOrders.length !== 1 ? t('corporateDashboard.ordersInHistoryPlural') : t('corporateDashboard.ordersInHistory')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {cancelledOrders.length === 0 && failedOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <XCircle className="w-12 h-12 mb-4 opacity-20" />
-                    <p>No cancelled or failed orders</p>
+                    <p>{t('corporateDashboard.noCancelledOrFailed')}</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Volume</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Payment Date</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('corporateDashboard.id')}</TableHead>
+                        <TableHead>{t('corporateDashboard.symbol')}</TableHead>
+                        <TableHead>{t('corporateDashboard.direction')}</TableHead>
+                        <TableHead>{t('corporateDashboard.volume')}</TableHead>
+                        <TableHead>{t('corporateDashboard.status')}</TableHead>
+                        <TableHead>{t('corporateDashboard.paymentDate')}</TableHead>
+                        <TableHead>{t('corporateDashboard.date')}</TableHead>
+                        <TableHead>{t('corporateDashboard.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1341,7 +1348,7 @@ export default function CorporateDashboard() {
                           <TableCell>{order.volume}</TableCell>
                           <TableCell>
                             <Badge variant={order.status === "cancelled" ? "outline" : "destructive"}>
-                              {order.status === "cancelled" ? "Cancelled" : "Failed"}
+                              {order.status === "cancelled" ? t('corporateDashboard.cancelled') : t('corporateDashboard.failed')}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm">
@@ -1359,7 +1366,7 @@ export default function CorporateDashboard() {
                               disabled={deletePendingMutation.isPending}
                             >
                               <Trash2 className="w-4 h-4 mr-1" />
-                              Delete
+                              {t('corporateDashboard.delete')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1376,34 +1383,34 @@ export default function CorporateDashboard() {
       <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Close Position</AlertDialogTitle>
+            <AlertDialogTitle>{t('corporateDashboard.closePosition')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to close this position?
+              {t('corporateDashboard.confirmClosePosition')}
               {orderToClose && (
                 <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
                   <div className="flex justify-between">
-                    <span>Order ID:</span>
+                    <span>{t('corporateDashboard.orderId')}:</span>
                     <span className="font-mono">{orderToClose.order_id}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Symbol:</span>
+                    <span>{t('corporateDashboard.symbol')}:</span>
                     <span>{orderToClose.symbol}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Direction:</span>
+                    <span>{t('corporateDashboard.direction')}:</span>
                     <span>{orderToClose.direction?.toUpperCase()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Volume:</span>
+                    <span>{t('corporateDashboard.volume')}:</span>
                     <span>{orderToClose.volume}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Entry Price:</span>
+                    <span>{t('corporateDashboard.entryPrice')}:</span>
                     <span className="font-mono">{orderToClose.entry_price?.toFixed(5)}</span>
                   </div>
                   {orderToClose.unrealized_pnl !== undefined && orderToClose.unrealized_pnl !== null && (
                     <div className="flex justify-between">
-                      <span>Current P&L:</span>
+                      <span>{t('corporateDashboard.currentPnl')}:</span>
                       <span className={orderToClose.unrealized_pnl >= 0 ? "text-emerald-500" : "text-red-500"}>
                         ${orderToClose.unrealized_pnl.toFixed(2)}
                       </span>
@@ -1414,13 +1421,13 @@ export default function CorporateDashboard() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('corporateDashboard.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmCloseOrder}
               disabled={closeOrderMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {closeOrderMutation.isPending ? "Closing..." : "Close Position"}
+              {closeOrderMutation.isPending ? t('corporateDashboard.closing') : t('corporateDashboard.closePosition')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
