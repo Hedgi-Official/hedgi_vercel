@@ -252,7 +252,7 @@ export default function WhatIsHedge() {
             {t("whatIsHedging.simulatorSubtitle")}
           </p>
           
-          <CurrencySimulator showGraph={false} />
+          <CurrencySimulator showGraph={false} showTooltips={true} />
           
           <p className="text-base md:text-lg text-foreground/80 text-center mt-6">
             {t("whatIsHedging.simulatorHelper")}
