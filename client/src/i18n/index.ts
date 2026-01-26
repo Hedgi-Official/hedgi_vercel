@@ -1179,7 +1179,7 @@ const ptBR = {
       socialProofPayments: 'US$ 1 quatrilhão',
       socialProofPaymentsSource: 'IMF',
       socialProofPaymentsDesc: 'Em pagamentos cross-border e cripto em 2024',
-      storyCaseTitle: 'O custo real de pagamentos desprotegidos',
+      storyCaseTitle: 'O custo real dos pagamentos internacionais',
       storyCaseSubtitle: 'Uma fintech em São Paulo processa um pagamento de $50.000 para um fornecedor nos EUA',
       withoutHedging: 'Sem hedge',
       withoutHedgingDesc: 'O Real desvaloriza 3% antes da liquidação. Seu cliente perde R$ 7.500 em uma única transação.',
