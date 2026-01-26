@@ -57,7 +57,7 @@ export default function AboutUs() {
         </section>
 
         {/* What We Do Section */}
-        <section className="py-16 bg-muted/30">
+        <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-2xl md:text-3xl font-bold mb-4 text-foreground">
@@ -192,14 +192,6 @@ export default function AboutUs() {
             <div className="flex flex-wrap justify-center gap-4 text-sm">
               <Link href="/what-is-hedge" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
                 {t('aboutUs.learnBasics')} <ArrowRight className="h-3 w-3" />
-              </Link>
-              <span className="text-foreground font-bold">|</span>
-              <span className="text-foreground font-bold">{t('aboutUs.seeImplementations')}</span>
-              <Link href="/for-individuals" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
-                {t('aboutUs.individuals')} <ArrowRight className="h-3 w-3" />
-              </Link>
-              <Link href="/for-companies" className="text-primary hover:text-primary/80 font-bold flex items-center gap-1">
-                {t('aboutUs.forCompanies')} <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           </div>
