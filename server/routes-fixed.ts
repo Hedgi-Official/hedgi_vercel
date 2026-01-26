@@ -1018,7 +1018,7 @@ export function registerRoutes(app: Express): Server {
       // Send notification email to guilherme@hedgi.ai
       await transporter.sendMail({
         to: 'guilherme@hedgi.ai',
-        from: 'hjalmar@hedgi.ai',
+        from: 'guilherme@hedgi.ai',
         subject: `New Sandbox Access Request: ${company}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
