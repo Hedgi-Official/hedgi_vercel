@@ -1197,7 +1197,7 @@ const ptBR = {
       cryptoPain: 'Gaps de tempo na liquidação e conversões de tesouraria criam exposição a FX sem proteção.',
       cryptoOutcome: 'Faça hedge da exposição gerada por operações de on/off-ramp e gestão de tesouraria.',
       importExportTitle: 'Importadoras e Exportadoras',
-      importExportPain: 'Ciclos longos de pagamento — do pedido (PO) ao embarque e à liquidação — deixam a margem vulnerável às oscilações do câmbio.',
+      importExportPain: 'Ciclos de pagamento longos, do pedido à liquidação, deixam a margem exposta à variação cambial.',
       importExportOutcome: 'Proteja margens de contas a pagar e a receber ao longo de todo o ciclo de comércio.',
       affiliateTitle: 'Afiliados e Marketing de Performance',
       affiliatePain: 'Gasto de mídia em múltiplas moedas torna CAC/ROAS imprevisíveis.',
