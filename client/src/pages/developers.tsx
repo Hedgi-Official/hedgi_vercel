@@ -313,7 +313,7 @@ export default function Developers() {
         {/* Developer-focused Hero */}
         <section className="py-12 md:py-16 border-b">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-4xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 text-sm bg-primary/10 px-3 py-1.5 rounded-full mb-6">
                 <Terminal className="w-4 h-4 text-primary" />
                 <span className="font-bold text-black">Hedging API</span>
