@@ -616,7 +616,8 @@ const enUS = {
       yourCompany: 'Your Company',
       errorConnecting: "I'm having trouble connecting. Please try again.",
       errorGeneric: 'Sorry, something went wrong. Please try again.',
-      fetchOrdersFailed: 'Failed to fetch orders'
+      fetchOrdersFailed: 'Failed to fetch orders',
+      simulateSummary: '{{symbol}} {{direction}} {{volume}} lots for {{days}} days'
     },
     developers: {
       badge: 'Hedging API',
@@ -1349,7 +1350,8 @@ const ptBR = {
       yourCompany: 'Sua Empresa',
       errorConnecting: 'Estou com dificuldade para conectar. Por favor, tente novamente.',
       errorGeneric: 'Desculpe, algo deu errado. Por favor, tente novamente.',
-      fetchOrdersFailed: 'Falha ao buscar ordens'
+      fetchOrdersFailed: 'Falha ao buscar ordens',
+      simulateSummary: '{{symbol}} {{direction}} {{volume}} lotes por {{days}} dias'
     },
     developers: {
       badge: 'API de Hedge',

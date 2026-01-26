@@ -831,7 +831,7 @@ export default function CorporateDashboard() {
                   </CardTitle>
                   <CardDescription>
                     {simulateResult
-                      ? `${simulateResult.symbol} ${simulateResult.direction.toUpperCase()} ${simulateResult.volume} lots for ${simulateResult.duration_days} days`
+                      ? t('corporateDashboard.simulateSummary', { symbol: simulateResult.symbol, direction: simulateResult.direction.toUpperCase(), volume: simulateResult.volume, days: simulateResult.duration_days })
                       : t('corporateDashboard.runSimulation')}
                   </CardDescription>
                 </CardHeader>
