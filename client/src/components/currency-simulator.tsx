@@ -383,48 +383,45 @@ export function CurrencySimulator({
             </div>
           </TooltipWrapper>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center">
-              <DollarSign className="mr-2 h-4 w-4 text-primary" />
-              {t('simulator.amount')} {t('simulator.multiplesOf1000')}
-              <InfoPopover 
-                icon={DollarSign} 
-                titleKey="simulator.amount" 
-                helpKey="simulator.amountHelp" 
+          <TooltipWrapper icon={DollarSign} titleKey="simulator.amount" helpKey="simulator.amountHelp">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <DollarSign className="mr-2 h-4 w-4 text-primary" />
+                {t('simulator.amount')} {t('simulator.multiplesOf1000')}
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={isAmountFocused ? amountInput : amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
+                onChange={e => {
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  setAmountInput(raw);
+                  const parsed = parseInt(raw, 10);
+                  if (!isNaN(parsed)) setAmount(parsed);
+                  else if (raw === '') setAmount(0);
+                }}
+                onFocus={e => {
+                  setIsAmountFocused(true);
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  setAmountInput(raw);
+                }}
+                onBlur={e => {
+                  setIsAmountFocused(false);
+                  const raw = e.currentTarget.value.replace(/[^\d]/g, '');
+                  const parsed = parseInt(raw, 10);
+                  if (isNaN(parsed) || parsed === 0) {
+                    setAmount(1000);
+                    setAmountInput('1000');
+                    return;
+                  }
+                  const snapped = Math.round(parsed / 1000) * 1000;
+                  setAmount(snapped || 1000);
+                  setAmountInput((snapped || 1000).toString());
+                }}
+                required
               />
-            </label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={isAmountFocused ? amountInput : amount.toLocaleString(i18n.language === 'pt-BR' ? 'pt-BR' : 'en-US', { maximumFractionDigits: 0 })}
-              onChange={e => {
-                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
-                setAmountInput(raw);
-                const parsed = parseInt(raw, 10);
-                if (!isNaN(parsed)) setAmount(parsed);
-                else if (raw === '') setAmount(0);
-              }}
-              onFocus={e => {
-                setIsAmountFocused(true);
-                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
-                setAmountInput(raw);
-              }}
-              onBlur={e => {
-                setIsAmountFocused(false);
-                const raw = e.currentTarget.value.replace(/[^\d]/g, '');
-                const parsed = parseInt(raw, 10);
-                if (isNaN(parsed) || parsed === 0) {
-                  setAmount(1000);
-                  setAmountInput('1000');
-                  return;
-                }
-                const snapped = Math.round(parsed / 1000) * 1000;
-                setAmount(snapped || 1000);
-                setAmountInput((snapped || 1000).toString());
-              }}
-              required
-            />
-          </div>
+            </div>
+          </TooltipWrapper>
 
           <TooltipWrapper icon={Clock} titleKey="simulator.expirationDate" helpKey="simulator.expirationDateHelp">
             <div className="space-y-2">
