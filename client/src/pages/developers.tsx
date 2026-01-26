@@ -362,18 +362,9 @@ export default function Developers() {
         </section>
 
         {/* Interactive Hedge Lifecycle */}
-        <section className="py-20 bg-muted/30">
+        <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-12">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                  The hedge lifecycle
-                </h2>
-                <p className="text-muted-foreground">
-                  Click each stage to see the API call and response
-                </p>
-              </div>
-              
               {/* Parameter Controls */}
               <div className="flex justify-center gap-6 mb-8">
                 <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2 border">
