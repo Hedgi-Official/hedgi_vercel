@@ -93,6 +93,37 @@ interface SimulateResponse {
   brokers: BrokerQuote[];
 }
 
+// Helper to get quote currency for a symbol
+function getQuoteCurrency(symbol: string): string {
+  // Currency pairs: BASE/QUOTE - quote is the currency costs are expressed in
+  // Only include the three supported pairs
+  const quoteCurrencies: Record<string, string> = {
+    'USDBRL': 'BRL',
+    'EURUSD': 'USD',
+    'USDMXN': 'MXN',
+  };
+  return quoteCurrencies[symbol] || 'USD';
+}
+
+// Helper to convert quote currency costs to USD
+// Only valid for pairs where USD is the base currency (USDBRL, USDMXN)
+// For EURUSD, the quote is already in USD so no conversion needed
+function convertCostToUSD(costInQuote: number, symbol: string, bidRate: number): number {
+  // For EURUSD, cost is already in USD
+  if (symbol === 'EURUSD') {
+    return costInQuote;
+  }
+  
+  // For USDBRL and USDMXN: USD is base, so bid rate = USD/quoteCurrency
+  // To convert quote currency to USD, divide by bid rate
+  if ((symbol === 'USDBRL' || symbol === 'USDMXN') && bidRate > 0) {
+    return costInQuote / bidRate;
+  }
+  
+  // For any other unsupported pairs, return as-is (can't reliably convert)
+  return costInQuote;
+}
+
 interface Order {
   order_id: number;
   customer_id: string;
@@ -802,6 +833,15 @@ export default function CorporateDashboard() {
                     <div className="space-y-4">
                       {(() => {
                         const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
+                        const quoteCurrency = getQuoteCurrency(simulateResult.symbol);
+                        const bidRate = bestBroker?.bid || 1;
+                        
+                        // Convert costs to USD for consistent display
+                        const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                        const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                        const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                        const savingsUSD = bestBroker ? convertCostToUSD(bestBroker.savings_vs_worst || 0, simulateResult.symbol, bidRate) : 0;
+                        
                         return bestBroker ? (
                           <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
@@ -818,25 +858,40 @@ export default function CorporateDashboard() {
                               <div>
                                 <span className="text-muted-foreground">Spread Cost</span>
                                 <p className="font-mono font-bold">
-                                  ${bestBroker.spread_cost_quote?.toFixed(2)}
+                                  ${spreadCostUSD.toFixed(2)}
                                 </p>
+                                {quoteCurrency !== 'USD' && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                  </p>
+                                )}
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Swap Cost</span>
                                 <p className="font-mono">
-                                  ${bestBroker.swap_cost_quote?.toFixed(2)}
+                                  ${swapCostUSD.toFixed(2)}
                                 </p>
+                                {quoteCurrency !== 'USD' && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
+                                  </p>
+                                )}
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Total Cost</span>
                                 <p className="font-mono font-bold text-primary">
-                                  ${bestBroker.total_cost_quote?.toFixed(2)}
+                                  ${totalCostUSD.toFixed(2)}
                                 </p>
+                                {quoteCurrency !== 'USD' && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
+                                  </p>
+                                )}
                               </div>
                             </div>
-                            {bestBroker.savings_vs_worst > 0 && (
+                            {savingsUSD > 0 && (
                               <div className="mt-2 text-xs text-emerald-600">
-                                Saves ${bestBroker.savings_vs_worst.toFixed(2)} vs worst option
+                                Saves ${savingsUSD.toFixed(2)} vs worst option
                               </div>
                             )}
                           </div>
@@ -847,23 +902,26 @@ export default function CorporateDashboard() {
                         <div>
                           <h4 className="text-sm font-medium mb-2">All Brokers</h4>
                           <div className="space-y-2">
-                            {simulateResult.brokers.map((broker, i) => (
-                              <div
-                                key={i}
-                                className={`flex items-center justify-between p-2 rounded text-sm ${
-                                  broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>{broker.broker}</span>
-                                  {broker.recommended && <Badge variant="outline" className="text-xs">Best</Badge>}
-                                  {!broker.market_open && <Badge variant="destructive" className="text-xs">Closed</Badge>}
+                            {simulateResult.brokers.map((broker, i) => {
+                              const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, simulateResult.symbol, broker.bid || 1);
+                              return (
+                                <div
+                                  key={i}
+                                  className={`flex items-center justify-between p-2 rounded text-sm ${
+                                    broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span>{broker.broker}</span>
+                                    {broker.recommended && <Badge variant="outline" className="text-xs">Best</Badge>}
+                                    {!broker.market_open && <Badge variant="destructive" className="text-xs">Closed</Badge>}
+                                  </div>
+                                  <span className="font-mono">
+                                    ${brokerTotalUSD.toFixed(2)}
+                                  </span>
                                 </div>
-                                <span className="font-mono">
-                                  ${broker.total_cost_quote?.toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
