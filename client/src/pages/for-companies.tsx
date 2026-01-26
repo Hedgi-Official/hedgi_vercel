@@ -356,7 +356,7 @@ export default function ForCompanies() {
                     <span className="font-semibold">{t('companiesPage.withHedgi', { defaultValue: 'With Hedgi' })}</span>
                   </div>
                   <p className="text-muted-foreground mb-4">
-                    {t('companiesPage.withHedgiDesc', { defaultValue: 'One API call locks the rate. Your client pays exactly what they budgeted—no surprises.' })}
+                    {t('companiesPage.withHedgiDesc', { defaultValue: 'One API call locks the rate. Your client pays exactly what they budgeted with no surprises.' })}
                   </p>
                   <div className="text-3xl font-bold text-emerald-500">R$ 0</div>
                   <div className="text-sm text-muted-foreground">{t('companiesPage.exposureEliminated', { defaultValue: 'Currency exposure eliminated' })}</div>
