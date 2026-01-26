@@ -57,7 +57,20 @@ import {
   FileSpreadsheet,
   Trash2,
   XCircle,
+  MessageSquare,
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface BrokerQuote {
   broker: string;
@@ -122,6 +135,16 @@ export default function CorporateDashboard() {
   const [simulateResult, setSimulateResult] = React.useState<SimulateResponse | null>(null);
   const [closeDialogOpen, setCloseDialogOpen] = React.useState(false);
   const [orderToClose, setOrderToClose] = React.useState<Order | null>(null);
+
+  // AI Assistant state
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [chatMessages, setChatMessages] = React.useState<Array<{type: 'user' | 'bot', content: string}>>([
+    {type: 'bot', content: "Hi! I can help you set up a hedge simulation. Just tell me what you need - for example, 'I want to hedge $50,000 USD against BRL for 2 weeks'."}
+  ]);
+  const [chatInput, setChatInput] = React.useState('');
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const [chatSessionId] = React.useState(() => `business-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const chatScrollRef = React.useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -338,6 +361,81 @@ export default function CorporateDashboard() {
     },
   });
 
+  // Scroll chat to bottom when messages change
+  React.useEffect(() => {
+    if (chatScrollRef.current) {
+      const scrollContainer = chatScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
+  }, [chatMessages]);
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { type: 'user', content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch('/api/chat/business-simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionId: chatSessionId
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setChatMessages(prev => [...prev, { type: 'bot', content: data.message }]);
+        
+        // Auto-fill form if we got complete data
+        if (data.complete && data.formData) {
+          const validSymbols = ['USDBRL', 'EURUSD', 'USDMXN'];
+          const validDirections = ['buy', 'sell'];
+          
+          const symbol = validSymbols.includes(data.formData.symbol) ? data.formData.symbol : null;
+          const direction = validDirections.includes(data.formData.direction) ? data.formData.direction : null;
+          const volume = typeof data.formData.volume === 'number' && data.formData.volume > 0 ? data.formData.volume : null;
+          const duration = typeof data.formData.duration_days === 'number' && data.formData.duration_days >= 1 && data.formData.duration_days <= 365 ? data.formData.duration_days : null;
+          
+          if (symbol && direction && volume && duration) {
+            setSimulateForm({
+              symbol,
+              direction,
+              volume: String(volume),
+              duration_days: String(duration),
+            });
+            
+            toast({
+              title: "Form auto-filled",
+              description: "The simulation parameters have been set based on your request. Click 'Simulate' when ready.",
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Invalid parameters",
+              description: "Some values from the AI response were invalid. Please fill the form manually.",
+            });
+          }
+        }
+      } else {
+        setChatMessages(prev => [...prev, { type: 'bot', content: data.message || "Sorry, something went wrong. Please try again." }]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setChatMessages(prev => [...prev, { type: 'bot', content: "I'm having trouble connecting. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const handleSimulate = (e: React.FormEvent) => {
     e.preventDefault();
     simulateMutation.mutate(simulateForm);
@@ -506,6 +604,92 @@ export default function CorporateDashboard() {
           </TabsList>
 
           <TabsContent value="simulate" className="space-y-6">
+            {/* AI Assistant Card */}
+            <Collapsible open={chatOpen} onOpenChange={setChatOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base">AI Assistant</CardTitle>
+                          <CardDescription>
+                            Describe your hedge and I'll fill in the form
+                          </CardDescription>
+                        </div>
+                      </div>
+                      {chatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    <div ref={chatScrollRef}>
+                      <ScrollArea className="h-[200px] w-full rounded-md border p-4 mb-4">
+                        <div className="space-y-4">
+                          {chatMessages.map((msg, idx) => (
+                            <div
+                              key={idx}
+                              className={`flex items-start gap-2 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                              {msg.type === 'bot' && (
+                                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                  <Bot className="h-3 w-3 text-primary" />
+                                </div>
+                              )}
+                              <div
+                                className={`rounded-lg px-3 py-2 max-w-[80%] text-sm ${
+                                  msg.type === 'user'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-muted'
+                                }`}
+                              >
+                                {msg.content}
+                              </div>
+                              {msg.type === 'user' && (
+                                <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                                  <User className="h-3 w-3 text-primary-foreground" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {chatLoading && (
+                            <div className="flex items-start gap-2">
+                              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <Bot className="h-3 w-3 text-primary" />
+                              </div>
+                              <div className="bg-muted rounded-lg px-3 py-2">
+                                <div className="flex gap-1">
+                                  <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                  <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                  <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                    <form onSubmit={handleChatSubmit} className="flex gap-2">
+                      <Input
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="e.g., I want to hedge $100,000 USD/BRL for 30 days..."
+                        disabled={chatLoading}
+                        className="flex-1"
+                      />
+                      <Button type="submit" size="icon" disabled={chatLoading || !chatInput.trim()}>
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </form>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
             <div className="grid lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
