@@ -1079,7 +1079,7 @@ const ptBR = {
       importExportDesc: 'Trave o câmbio de faturas futuras para que o custo (ou a receita) de um embarque não mude antes do pagamento.',
       globalPayroll: 'Folha Global e Prestadores',
       globalPayrollDesc: 'Proteja a folha mensal em USD/EUR para manter as despesas operacionais estáveis na moeda local.',
-      platforms: 'Plataformas',
+      platforms: 'Remessas e Fintechs',
       platformsDesc: 'Ofereça taxas mais previsíveis para o cliente, enquanto faz hedge da exposição cambial da plataforma "nos bastidores".',
       businessFooter: 'Na prática, empresas costumam usar instrumentos como contratos a termo (forwards), opções e swaps para gerenciar risco cambial, escolhendo tamanho e duração do hedge de acordo com a exposição.',
       individualsTitle: 'E as pessoas físicas?',
