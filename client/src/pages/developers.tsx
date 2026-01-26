@@ -316,9 +316,9 @@ export default function Developers() {
             <div className="max-w-5xl mx-auto">
               <div className="grid lg:grid-cols-2 gap-12 items-center">
                 <div>
-                  <div className="inline-flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-full mb-6">
-                    <Terminal className="w-4 h-4" />
-                    <span className="font-bold">Hedging API</span>
+                  <div className="inline-flex items-center gap-2 text-sm bg-primary/10 px-3 py-1.5 rounded-full mb-6">
+                    <Terminal className="w-4 h-4 text-primary" />
+                    <span className="font-bold text-black">Hedging API</span>
                   </div>
                   
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
@@ -345,18 +345,18 @@ export default function Developers() {
                     </Button>
                   </div>
                   
-                  <div className="flex gap-6 text-sm text-muted-foreground">
+                  <div className="flex gap-6 text-sm">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      REST API
+                      <span className="text-black">REST API</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      Webhooks
+                      <span className="text-black">Webhooks</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      Sandbox
+                      <span className="text-black">Sandbox</span>
                     </div>
                   </div>
                 </div>
