@@ -1374,7 +1374,7 @@ const ptBR = {
     developers: {
       badge: 'API de Hedge',
       heroTitle: 'Garanta a taxa de câmbio com uma chamada à API',
-      heroSubtitle: 'Crie, monitore e liquide hedges cambiais de forma programática. Feito para fintechs, plataformas de pagamento e sistemas de tesouraria.',
+      heroSubtitle: 'Crie, monitore e liquide hedges cambiais via API. Feito para fintechs, plataformas de pagamento e times de tesouraria.',
       getApiKeys: 'Obter chaves de API',
       apiReference: 'Referência da API',
       restApi: 'REST API',
