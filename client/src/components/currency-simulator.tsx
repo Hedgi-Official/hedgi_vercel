@@ -576,45 +576,47 @@ export function CurrencySimulator({
               </div>
 
               {/* Margin input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Briefcase className="mr-2 h-4 w-4 text-primary" />
-                  {t('simulator.margin')}
-                </label>
-                <div className="text-sm text-black mb-2">
-                  {t('simulator.marginRecommendation')}
+              <TooltipWrapper icon={Briefcase} titleKey="simulator.margin" helpKey="simulator.marginHelp">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center">
+                    <Briefcase className="mr-2 h-4 w-4 text-primary" />
+                    {t('simulator.margin')}
+                  </label>
+                  <div className="text-sm text-black mb-2">
+                    {t('simulator.marginRecommendation')}
+                  </div>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={isMarginFocused ? marginInput : (margin ?? simulation.costDetails.hedgeCost * 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    onFocus={() => {
+                      setIsMarginFocused(true);
+                      const currentValue = margin ?? simulation.costDetails.hedgeCost * 2;
+                      setMarginInput(currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                    }}
+                    onChange={e => {
+                      setMarginInput(e.target.value);
+                    }}
+                    onBlur={() => {
+                      setIsMarginFocused(false);
+                      let value = marginInput;
+                      // Remove thousand separators (period), keep decimal separator (comma)
+                      value = value.split('.').join('');
+                      // Normalize decimal separator to period for parsing
+                      value = value.replace(',', '.');
+                      // Remove non-numeric characters except period
+                      value = value.replace(/[^\d.]/g, '');
+                      
+                      const numValue = value === '' ? 0 : parseFloat(value);
+                      const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
+                      const finalValue = isNaN(numValue) || numValue < minimumMargin ? minimumMargin : numValue;
+                      
+                      setMargin(finalValue);
+                      setMarginInput('');
+                    }}
+                  />
                 </div>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={isMarginFocused ? marginInput : (margin ?? simulation.costDetails.hedgeCost * 2).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  onFocus={() => {
-                    setIsMarginFocused(true);
-                    const currentValue = margin ?? simulation.costDetails.hedgeCost * 2;
-                    setMarginInput(currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                  }}
-                  onChange={e => {
-                    setMarginInput(e.target.value);
-                  }}
-                  onBlur={() => {
-                    setIsMarginFocused(false);
-                    let value = marginInput;
-                    // Remove thousand separators (period), keep decimal separator (comma)
-                    value = value.split('.').join('');
-                    // Normalize decimal separator to period for parsing
-                    value = value.replace(',', '.');
-                    // Remove non-numeric characters except period
-                    value = value.replace(/[^\d.]/g, '');
-                    
-                    const numValue = value === '' ? 0 : parseFloat(value);
-                    const minimumMargin = Math.round((simulation.costDetails.hedgeCost * 0.2) * 100) / 100;
-                    const finalValue = isNaN(numValue) || numValue < minimumMargin ? minimumMargin : numValue;
-                    
-                    setMargin(finalValue);
-                    setMarginInput('');
-                  }}
-                />
-              </div>
+              </TooltipWrapper>
 
               {/* Place Hedge */}
               {onPlaceHedge && (
