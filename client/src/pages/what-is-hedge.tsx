@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -24,7 +23,6 @@ export default function WhatIsHedge() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
-  const [audienceType, setAudienceType] = useState<'individuals' | 'companies'>('individuals');
 
   const handleLogout = async () => {
     await logout();
@@ -262,7 +260,7 @@ export default function WhatIsHedge() {
         </div>
       </section>
       
-      {/* Bottom CTA Section with Audience Toggle */}
+      {/* Bottom CTA Section */}
       <section className="py-20 px-4 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
@@ -273,49 +271,23 @@ export default function WhatIsHedge() {
               {t("landing.bottomCtaBody")}
             </p>
 
-            {/* Audience Toggle */}
-            <div className="inline-flex items-center rounded-xl border border-border p-1.5 bg-muted/30 mb-8">
-              <button
-                onClick={() => setAudienceType('individuals')}
-                className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
-                  audienceType === 'individuals'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/70 hover:text-foreground'
-                }`}
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
+              <Button
+                size="lg"
+                onClick={() => navigate("/developers")}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
               >
-                {t("landing.individuals")}
-              </button>
-              <button
-                onClick={() => setAudienceType('companies')}
-                className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
-                  audienceType === 'companies'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/70 hover:text-foreground'
-                }`}
+                {t("landing.viewApiQuickstart")}
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate("/")}
+                className="px-8 py-4 text-lg"
               >
-                {t("landing.companies")}
-              </button>
-            </div>
-
-            {/* Dynamic CTA Button */}
-            <div className="flex justify-center items-center mb-6">
-              {audienceType === 'individuals' ? (
-                <Button
-                  size="lg"
-                  onClick={() => navigate("/auth")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                >
-                  {t("landing.getCurrencyInsurance")}
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={() => navigate("/for-companies")}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                >
-                  {t("landing.viewApiQuickstart")}
-                </Button>
-              )}
+                {t("landing.learnMore")}
+              </Button>
             </div>
 
             {/* Helper Text */}
