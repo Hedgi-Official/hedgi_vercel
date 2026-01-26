@@ -1202,7 +1202,7 @@ const ptBR = {
       affiliateTitle: 'Afiliados e Marketing de Performance',
       affiliatePain: 'Gasto de mídia em múltiplas moedas torna CAC/ROAS imprevisíveis.',
       affiliateOutcome: 'Estabilize o custo de aquisição fazendo hedge do spend previsto na moeda de compra.',
-      globalWorkforceTitle: 'Empresas com Força de Trabalho Global',
+      globalWorkforceTitle: 'Empresas com Equipes Globais',
       globalWorkforcePain: 'Funcionários no exterior sofrem volatilidade salarial quando são pagos em moeda estrangeira.',
       globalWorkforceOutcome: 'Ofereça proteção cambial como benefício para membros internacionais do time.',
       otherUseCasesTitle: 'Outros Casos de Uso',
