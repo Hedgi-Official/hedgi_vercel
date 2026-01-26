@@ -519,30 +519,15 @@ export default function Developers() {
                 <div className="grid md:grid-cols-3 gap-8">
                   <div className="p-6 rounded-xl border bg-card">
                     <Shield className="w-6 h-6 text-emerald-500 mb-3" />
-                    <h3 className="font-semibold mb-2">Enterprise security</h3>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• TLS 1.3 encryption</li>
-                      <li>• API key + request signing</li>
-                      <li>• SOC 2 Type II (in progress)</li>
-                    </ul>
+                    <h3 className="font-semibold">Enterprise security</h3>
                   </div>
                   <div className="p-6 rounded-xl border bg-card">
                     <Lock className="w-6 h-6 text-blue-500 mb-3" />
-                    <h3 className="font-semibold mb-2">Compliance ready</h3>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• GDPR compliant</li>
-                      <li>• Full audit logs</li>
-                      <li>• Data residency options</li>
-                    </ul>
+                    <h3 className="font-semibold">Compliance ready</h3>
                   </div>
                   <div className="p-6 rounded-xl border bg-card">
                     <Headphones className="w-6 h-6 text-purple-500 mb-3" />
-                    <h3 className="font-semibold mb-2">Dedicated support</h3>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• 24/7 engineering support</li>
-                      <li>• Private Slack channel</li>
-                      <li>• Integration assistance</li>
-                    </ul>
+                    <h3 className="font-semibold">Dedicated support</h3>
                   </div>
                 </div>
               </div>
