@@ -1,5 +1,4 @@
 import * as React from "react";
-import { useState } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import {
   Shield, 
   Zap, 
   Mail, 
-  Users, 
   ArrowRight,
   Target,
   BarChart3,
@@ -23,7 +21,6 @@ export default function AboutUs() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
-  const [selectedAudience, setSelectedAudience] = useState<'individuals' | 'companies'>('individuals');
 
   const handleLogout = async () => {
     await logout();
@@ -46,37 +43,11 @@ export default function AboutUs() {
                 {t('aboutUs.subheadline')}
               </p>
 
-              {/* Audience Toggle */}
-              <div className="inline-flex items-center bg-muted rounded-full p-1 mb-8">
-                <button
-                  onClick={() => setSelectedAudience('individuals')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    selectedAudience === 'individuals'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('aboutUs.individuals')}
-                </button>
-                <button
-                  onClick={() => setSelectedAudience('companies')}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
-                    selectedAudience === 'companies'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('aboutUs.companies')}
-                </button>
-              </div>
-
-              {/* Dynamic CTA Button */}
+              {/* CTA Button */}
               <div className="flex justify-center">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg" asChild>
-                  <Link href={selectedAudience === 'individuals' ? '/for-individuals' : '/for-companies'}>
-                    {selectedAudience === 'individuals' 
-                      ? t('aboutUs.getCurrencyInsurance') 
-                      : t('aboutUs.viewApiQuickstart')}
+                  <Link href="/developers">
+                    {t('aboutUs.viewApiQuickstart')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -95,27 +66,27 @@ export default function AboutUs() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Card A - For Individuals */}
+              {/* Card A - For Platforms */}
               <Card className="hover:border-primary/40 transition-colors h-full">
                 <CardHeader>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Users className="w-6 h-6 text-primary" />
+                    <Code className="w-6 h-6 text-primary" />
                   </div>
                   <CardTitle className="text-xl">{t('aboutUs.cardATitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">{t('aboutUs.cardABody')}</p>
-                  <Link href="/for-individuals" className="inline-flex items-center text-primary hover:text-primary/80 font-bold text-sm">
+                  <Link href="/for-companies" className="inline-flex items-center text-primary hover:text-primary/80 font-bold text-sm">
                     {t('aboutUs.cardALink')} <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </CardContent>
               </Card>
 
-              {/* Card B - For Companies */}
+              {/* Card B - For Treasury */}
               <Card className="hover:border-primary/40 transition-colors h-full">
                 <CardHeader>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Code className="w-6 h-6 text-primary" />
+                    <BarChart3 className="w-6 h-6 text-primary" />
                   </div>
                   <CardTitle className="text-xl">{t('aboutUs.cardBTitle')}</CardTitle>
                 </CardHeader>
@@ -284,54 +255,22 @@ export default function AboutUs() {
                 {t('aboutUs.ctaBody')}
               </p>
 
-              {/* Audience Toggle */}
-              <div className="inline-flex items-center rounded-xl border border-border p-1.5 bg-muted/30 mb-8">
-                <button
-                  onClick={() => setSelectedAudience('individuals')}
-                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
-                    selectedAudience === 'individuals'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-foreground/70 hover:text-foreground'
-                  }`}
+              {/* CTA Button */}
+              <div className="flex justify-center items-center mb-6">
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
+                  asChild
                 >
-                  {t('aboutUs.individuals')}
-                </button>
-                <button
-                  onClick={() => setSelectedAudience('companies')}
-                  className={`px-6 py-3 rounded-lg text-base md:text-lg font-semibold transition-all ${
-                    selectedAudience === 'companies'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-foreground/70 hover:text-foreground'
-                  }`}
-                >
-                  {t('aboutUs.companies')}
-                </button>
+                  <Link href="/developers">
+                    {t('aboutUs.viewApiQuickstart')}
+                  </Link>
+                </Button>
               </div>
 
-              {/* Dynamic CTA Button */}
-              <div className="flex justify-center items-center mb-6">
-                {selectedAudience === 'individuals' ? (
-                  <Button
-                    size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                    asChild
-                  >
-                    <Link href="/auth?type=individual">
-                      {t('aboutUs.getCurrencyInsurance')}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-                    asChild
-                  >
-                    <Link href="/for-companies">
-                      {t('aboutUs.viewApiQuickstart')}
-                    </Link>
-                  </Button>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground">
+                {t('aboutUs.ctaSmallText')}
+              </p>
             </div>
           </div>
         </section>
