@@ -311,83 +311,50 @@ export default function Developers() {
       
       <main>
         {/* Developer-focused Hero */}
-        <section className="py-16 md:py-24 border-b">
+        <section className="py-12 md:py-16 border-b">
           <div className="container mx-auto px-4">
-            <div className="max-w-5xl mx-auto">
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 text-sm bg-primary/10 px-3 py-1.5 rounded-full mb-6">
-                    <Terminal className="w-4 h-4 text-primary" />
-                    <span className="font-bold text-black">Hedging API</span>
-                  </div>
-                  
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-                    Lock exchange rates with one API call
-                  </h1>
-                  
-                  <p className="text-xl text-muted-foreground mb-8">
-                    Create, monitor, and settle currency hedges programmatically. 
-                    Built for fintechs, payment platforms, and treasury systems.
-                  </p>
-                  
-                  <div className="flex flex-wrap gap-4 mb-8">
-                    <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
-                      Get API keys
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                    
-                    <Button size="lg" variant="outline" asChild>
-                      <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer">
-                        <BookOpen className="w-4 h-4 mr-2" />
-                        API Reference
-                        <ExternalLink className="w-3 h-3 ml-2" />
-                      </a>
-                    </Button>
-                  </div>
-                  
-                  <div className="flex gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-black">REST API</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-black">Webhooks</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-black">Sandbox</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="max-w-3xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 text-sm bg-primary/10 px-3 py-1.5 rounded-full mb-6">
+                <Terminal className="w-4 h-4 text-primary" />
+                <span className="font-bold text-black">Hedging API</span>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
+                Lock exchange rates with one API call
+              </h1>
+              
+              <p className="text-xl text-muted-foreground mb-6">
+                Create, monitor, and settle currency hedges programmatically. 
+                Built for fintechs, payment platforms, and treasury systems.
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4 mb-6">
+                <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
+                  Get API keys
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
                 
-                <div className="bg-zinc-950 rounded-xl p-6 font-mono text-sm">
-                  <div className="flex items-center gap-2 mb-4 text-zinc-500">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="ml-2 text-xs">Create a hedge</span>
-                  </div>
-                  <pre className="text-emerald-400 overflow-x-auto">
-{`curl -X POST https://api.hedgi.ai/v1/hedges \\
-  -H "Authorization: Bearer sk_test_..." \\
-  -d '{
-    "currency_pair": "USDBRL",
-    "amount": 50000,
-    "direction": "buy",
-    "expires_at": "2026-02-14"
-  }'`}
-                  </pre>
-                  <div className="mt-4 pt-4 border-t border-zinc-800 text-zinc-400">
-                    <span className="text-zinc-500">// Response</span>
-                    <pre className="mt-2 text-blue-400">
-{`{
-  "id": "hdg_abc123",
-  "status": "active",
-  "locked_rate": 5.1234
-}`}
-                    </pre>
-                  </div>
+                <Button size="lg" variant="outline" asChild>
+                  <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer">
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    API Reference
+                    <ExternalLink className="w-3 h-3 ml-2" />
+                  </a>
+                </Button>
+              </div>
+              
+              <div className="flex justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-black">REST API</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-black">Webhooks</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-black">Sandbox</span>
                 </div>
               </div>
             </div>
