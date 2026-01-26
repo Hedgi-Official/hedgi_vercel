@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   Shield, 
   Copy,
@@ -41,7 +42,10 @@ const HedgeLifecycleStage = ({
   isComplete,
   onClick,
   title,
-  subtitle 
+  subtitle,
+  currentLabel,
+  completeLabel,
+  nextLabel
 }: { 
   stage: number;
   isActive: boolean;
@@ -49,6 +53,9 @@ const HedgeLifecycleStage = ({
   onClick: () => void;
   title: string;
   subtitle: string;
+  currentLabel: string;
+  completeLabel: string;
+  nextLabel: string;
 }) => (
   <button 
     onClick={onClick}
@@ -71,7 +78,7 @@ const HedgeLifecycleStage = ({
         {isComplete ? <Check className="w-4 h-4" /> : stage}
       </div>
       <span className={`text-xs uppercase tracking-wider ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-        {isActive ? 'Current' : isComplete ? 'Complete' : 'Next'}
+        {isActive ? currentLabel : isComplete ? completeLabel : nextLabel}
       </span>
     </div>
     <h3 className={`font-semibold mb-1 ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{title}</h3>
@@ -79,7 +86,7 @@ const HedgeLifecycleStage = ({
   </button>
 );
 
-const LiveConsole = ({ stage, pair, direction }: { stage: number; pair: string; direction: string }) => {
+const LiveConsole = ({ stage, pair, direction, translations }: { stage: number; pair: string; direction: string; translations: { liveConsole: string; copied: string; copyCurl: string; requestBody: string } }) => {
   const [copied, setCopied] = useState(false);
   
   const stageData = {
@@ -154,14 +161,14 @@ const LiveConsole = ({ stage, pair, direction }: { stage: number; pair: string; 
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex items-center gap-3">
           <Terminal className="w-4 h-4 text-zinc-500" />
-          <span className="text-zinc-400">Live Console</span>
+          <span className="text-zinc-400">{translations.liveConsole}</span>
         </div>
         <button 
           onClick={handleCopy}
           className="flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition-colors"
         >
           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Copied' : 'Copy cURL'}
+          {copied ? translations.copied : translations.copyCurl}
         </button>
       </div>
       
@@ -178,7 +185,7 @@ const LiveConsole = ({ stage, pair, direction }: { stage: number; pair: string; 
           
           {data.request && (
             <div className="bg-zinc-900 rounded-lg p-3 text-zinc-300">
-              <div className="text-xs text-zinc-500 mb-1">Request body</div>
+              <div className="text-xs text-zinc-500 mb-1">{translations.requestBody}</div>
               <pre className="text-emerald-400 whitespace-pre-wrap">{data.request}</pre>
             </div>
           )}
@@ -199,7 +206,27 @@ const LiveConsole = ({ stage, pair, direction }: { stage: number; pair: string; 
   );
 };
 
-const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
+interface SandboxFormTranslations {
+  formName: string;
+  formNamePlaceholder: string;
+  formCompany: string;
+  formCompanyPlaceholder: string;
+  formEmail: string;
+  formEmailPlaceholder: string;
+  formUseCase: string;
+  formUseCasePlaceholder: string;
+  formUseCaseCrossBorder: string;
+  formUseCaseTreasury: string;
+  formUseCaseTrade: string;
+  formUseCaseRemittance: string;
+  formUseCaseOther: string;
+  getSandboxAccess: string;
+  submitting: string;
+  successTitle: string;
+  successMessage: string;
+}
+
+const SandboxForm = ({ onClose, translations }: { onClose?: () => void; translations: SandboxFormTranslations }) => {
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -236,9 +263,9 @@ const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
         <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">You're on the list</h3>
+        <h3 className="text-xl font-semibold mb-2">{translations.successTitle}</h3>
         <p className="text-muted-foreground">
-          We'll send your sandbox credentials within 24 hours.
+          {translations.successMessage}
         </p>
       </div>
     );
@@ -248,10 +275,10 @@ const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="name" className="text-sm">Name</Label>
+          <Label htmlFor="name" className="text-sm">{translations.formName}</Label>
           <Input 
             id="name" 
-            placeholder="Jane Smith"
+            placeholder={translations.formNamePlaceholder}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
@@ -259,10 +286,10 @@ const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
           />
         </div>
         <div>
-          <Label htmlFor="company" className="text-sm">Company</Label>
+          <Label htmlFor="company" className="text-sm">{translations.formCompany}</Label>
           <Input 
             id="company" 
-            placeholder="Acme Inc."
+            placeholder={translations.formCompanyPlaceholder}
             value={formData.company}
             onChange={(e) => setFormData({ ...formData, company: e.target.value })}
             required
@@ -271,11 +298,11 @@ const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
         </div>
       </div>
       <div>
-        <Label htmlFor="email" className="text-sm">Work email</Label>
+        <Label htmlFor="email" className="text-sm">{translations.formEmail}</Label>
         <Input 
           id="email" 
           type="email"
-          placeholder="jane@company.com"
+          placeholder={translations.formEmailPlaceholder}
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
@@ -283,22 +310,22 @@ const SandboxForm = ({ onClose }: { onClose?: () => void }) => {
         />
       </div>
       <div>
-        <Label htmlFor="useCase" className="text-sm">What are you building?</Label>
+        <Label htmlFor="useCase" className="text-sm">{translations.formUseCase}</Label>
         <Select value={formData.useCase} onValueChange={(value) => setFormData({ ...formData, useCase: value })}>
           <SelectTrigger className="mt-1.5">
-            <SelectValue placeholder="Select use case" />
+            <SelectValue placeholder={translations.formUseCasePlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="payments">Cross-border payments</SelectItem>
-            <SelectItem value="treasury">Treasury management</SelectItem>
-            <SelectItem value="trade">Import/export trade</SelectItem>
-            <SelectItem value="remittance">Remittance platform</SelectItem>
-            <SelectItem value="other">Something else</SelectItem>
+            <SelectItem value="payments">{translations.formUseCaseCrossBorder}</SelectItem>
+            <SelectItem value="treasury">{translations.formUseCaseTreasury}</SelectItem>
+            <SelectItem value="trade">{translations.formUseCaseTrade}</SelectItem>
+            <SelectItem value="remittance">{translations.formUseCaseRemittance}</SelectItem>
+            <SelectItem value="other">{translations.formUseCaseOther}</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Submitting..." : "Get sandbox access"}
+        {isSubmitting ? translations.submitting : translations.getSandboxAccess}
       </Button>
     </form>
   );
@@ -311,10 +338,38 @@ export default function Developers() {
   const [activeStage, setActiveStage] = useState(1);
   const [selectedPair, setSelectedPair] = useState("USDBRL");
   const [selectedDirection, setSelectedDirection] = useState("buy");
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     await logout();
     navigate("/");
+  };
+
+  const consoleTranslations = {
+    liveConsole: t('developers.liveConsole'),
+    copied: t('developers.copied'),
+    copyCurl: t('developers.copyCurl'),
+    requestBody: t('developers.requestBody')
+  };
+
+  const formTranslations: SandboxFormTranslations = {
+    formName: t('developers.formName'),
+    formNamePlaceholder: t('developers.formNamePlaceholder'),
+    formCompany: t('developers.formCompany'),
+    formCompanyPlaceholder: t('developers.formCompanyPlaceholder'),
+    formEmail: t('developers.formEmail'),
+    formEmailPlaceholder: t('developers.formEmailPlaceholder'),
+    formUseCase: t('developers.formUseCase'),
+    formUseCasePlaceholder: t('developers.formUseCasePlaceholder'),
+    formUseCaseCrossBorder: t('developers.formUseCaseCrossBorder'),
+    formUseCaseTreasury: t('developers.formUseCaseTreasury'),
+    formUseCaseTrade: t('developers.formUseCaseTrade'),
+    formUseCaseRemittance: t('developers.formUseCaseRemittance'),
+    formUseCaseOther: t('developers.formUseCaseOther'),
+    getSandboxAccess: t('developers.getSandboxAccess'),
+    submitting: t('developers.submitting'),
+    successTitle: t('developers.successTitle'),
+    successMessage: t('developers.successMessage')
   };
 
   return (
@@ -328,28 +383,27 @@ export default function Developers() {
             <div className="max-w-4xl mx-auto text-center">
               <div className="inline-flex items-center gap-2 text-sm bg-primary/10 px-3 py-1.5 rounded-full mb-6">
                 <Terminal className="w-4 h-4 text-primary" />
-                <span className="font-bold text-black">Hedging API</span>
+                <span className="font-bold text-black">{t('developers.badge')}</span>
               </div>
               
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
-                Lock exchange rates with one API call
+                {t('developers.heroTitle')}
               </h1>
               
               <p className="text-xl text-muted-foreground mb-6">
-                Create, monitor, and settle currency hedges programmatically. 
-                Built for fintechs, payment platforms, and treasury systems.
+                {t('developers.heroSubtitle')}
               </p>
               
               <div className="flex flex-wrap justify-center gap-4 mb-6">
                 <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
-                  Get API keys
+                  {t('developers.getApiKeys')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 
                 <Button size="lg" variant="outline" asChild>
                   <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer">
                     <BookOpen className="w-4 h-4 mr-2" />
-                    API Reference
+                    {t('developers.apiReference')}
                     <ExternalLink className="w-3 h-3 ml-2" />
                   </a>
                 </Button>
@@ -358,15 +412,15 @@ export default function Developers() {
               <div className="flex justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span className="text-black">REST API</span>
+                  <span className="text-black">{t('developers.restApi')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span className="text-black">Webhooks</span>
+                  <span className="text-black">{t('developers.webhooks')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span className="text-black">Sandbox</span>
+                  <span className="text-black">{t('developers.sandbox')}</span>
                 </div>
               </div>
             </div>
@@ -380,7 +434,7 @@ export default function Developers() {
               {/* Parameter Controls */}
               <div className="flex justify-center gap-6 mb-8">
                 <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2 border">
-                  <span className="text-sm text-muted-foreground">Pair:</span>
+                  <span className="text-sm text-muted-foreground">{t('developers.pair')}</span>
                   <select 
                     value={selectedPair}
                     onChange={(e) => setSelectedPair(e.target.value)}
@@ -392,14 +446,14 @@ export default function Developers() {
                   </select>
                 </div>
                 <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2 border">
-                  <span className="text-sm text-muted-foreground">Direction:</span>
+                  <span className="text-sm text-muted-foreground">{t('developers.direction')}</span>
                   <select 
                     value={selectedDirection}
                     onChange={(e) => setSelectedDirection(e.target.value)}
                     className="bg-transparent text-sm font-medium focus:outline-none cursor-pointer"
                   >
-                    <option value="buy">Buy (protect imports)</option>
-                    <option value="sell">Sell (protect exports)</option>
+                    <option value="buy">{t('developers.buyProtectImports')}</option>
+                    <option value="sell">{t('developers.sellProtectExports')}</option>
                   </select>
                 </div>
               </div>
@@ -411,29 +465,38 @@ export default function Developers() {
                   isActive={activeStage === 1}
                   isComplete={activeStage > 1}
                   onClick={() => setActiveStage(1)}
-                  title="Create hedge"
-                  subtitle="Lock in today's rate for future payment"
+                  title={t('developers.stage1Title')}
+                  subtitle={t('developers.stage1Subtitle')}
+                  currentLabel={t('developers.current')}
+                  completeLabel={t('developers.complete')}
+                  nextLabel={t('developers.next')}
                 />
                 <HedgeLifecycleStage
                   stage={2}
                   isActive={activeStage === 2}
                   isComplete={activeStage > 2}
                   onClick={() => setActiveStage(2)}
-                  title="Monitor position"
-                  subtitle="Track P&L and market movements"
+                  title={t('developers.stage2Title')}
+                  subtitle={t('developers.stage2Subtitle')}
+                  currentLabel={t('developers.current')}
+                  completeLabel={t('developers.complete')}
+                  nextLabel={t('developers.next')}
                 />
                 <HedgeLifecycleStage
                   stage={3}
                   isActive={activeStage === 3}
                   isComplete={false}
                   onClick={() => setActiveStage(3)}
-                  title="Settle & close"
-                  subtitle="Close position and realize savings"
+                  title={t('developers.stage3Title')}
+                  subtitle={t('developers.stage3Subtitle')}
+                  currentLabel={t('developers.current')}
+                  completeLabel={t('developers.complete')}
+                  nextLabel={t('developers.next')}
                 />
               </div>
 
               {/* Live Console */}
-              <LiveConsole stage={activeStage} pair={selectedPair} direction={selectedDirection} />
+              <LiveConsole stage={activeStage} pair={selectedPair} direction={selectedDirection} translations={consoleTranslations} />
             </div>
           </div>
         </section>
@@ -448,34 +511,34 @@ export default function Developers() {
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
                     <Zap className="w-5 h-5 text-blue-500" />
                   </div>
-                  <h2 className="text-2xl font-bold">Build it</h2>
+                  <h2 className="text-2xl font-bold">{t('developers.buildIt')}</h2>
                 </div>
                 
                 <div className="grid md:grid-cols-2 gap-8">
                   <div>
-                    <h3 className="font-semibold mb-2">Simple REST API</h3>
+                    <h3 className="font-semibold mb-2">{t('developers.simpleRestApi')}</h3>
                     <p className="text-muted-foreground mb-4">
-                      Three core endpoints handle the complete hedge lifecycle. No complex SDKs to install—use any HTTP client.
+                      {t('developers.simpleRestApiDesc')}
                     </p>
                     <ul className="space-y-2">
                       <li className="flex items-center gap-2 text-sm">
                         <code className="bg-muted px-2 py-0.5 rounded text-xs">POST /v1/hedges</code>
-                        <span className="text-muted-foreground">Create a hedge</span>
+                        <span className="text-muted-foreground">{t('developers.createHedge')}</span>
                       </li>
                       <li className="flex items-center gap-2 text-sm">
                         <code className="bg-muted px-2 py-0.5 rounded text-xs">GET /v1/hedges/:id</code>
-                        <span className="text-muted-foreground">Check status</span>
+                        <span className="text-muted-foreground">{t('developers.checkStatus')}</span>
                       </li>
                       <li className="flex items-center gap-2 text-sm">
                         <code className="bg-muted px-2 py-0.5 rounded text-xs">POST /v1/hedges/:id/close</code>
-                        <span className="text-muted-foreground">Close position</span>
+                        <span className="text-muted-foreground">{t('developers.closePosition')}</span>
                       </li>
                     </ul>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Supported currencies</h3>
+                    <h3 className="font-semibold mb-2">{t('developers.supportedCurrencies')}</h3>
                     <p className="text-muted-foreground mb-4">
-                      Focus on emerging market pairs where volatility matters most.
+                      {t('developers.supportedCurrenciesDesc')}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {['USD/BRL', 'EUR/BRL', 'USD/MXN', 'EUR/USD', 'BRL/CNY'].map((pair) => (
@@ -494,26 +557,26 @@ export default function Developers() {
                   <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
                     <Activity className="w-5 h-5 text-purple-500" />
                   </div>
-                  <h2 className="text-2xl font-bold">Operate it</h2>
+                  <h2 className="text-2xl font-bold">{t('developers.operateIt')}</h2>
                 </div>
                 
                 <div className="grid md:grid-cols-3 gap-8">
                   <div>
-                    <h3 className="font-semibold mb-2">Webhooks</h3>
+                    <h3 className="font-semibold mb-2">{t('developers.webhooksTitle')}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Get notified when positions approach expiry, hit P&L thresholds, or require action.
+                      {t('developers.webhooksDesc')}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Real-time rates</h3>
+                    <h3 className="font-semibold mb-2">{t('developers.realTimeRates')}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Stream live bid/ask from multiple liquidity sources with sub-second updates.
+                      {t('developers.realTimeRatesDesc')}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Position dashboard</h3>
+                    <h3 className="font-semibold mb-2">{t('developers.positionDashboard')}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Monitor all active hedges, aggregate exposure, and P&L via API or our web dashboard.
+                      {t('developers.positionDashboardDesc')}
                     </p>
                   </div>
                 </div>
@@ -525,21 +588,21 @@ export default function Developers() {
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                     <Globe className="w-5 h-5 text-emerald-500" />
                   </div>
-                  <h2 className="text-2xl font-bold">Scale it</h2>
+                  <h2 className="text-2xl font-bold">{t('developers.scaleIt')}</h2>
                 </div>
                 
                 <div className="grid md:grid-cols-3 gap-8">
                   <div className="p-6 rounded-xl border bg-card">
                     <Shield className="w-6 h-6 text-emerald-500 mb-3" />
-                    <h3 className="font-semibold">Enterprise security</h3>
+                    <h3 className="font-semibold">{t('developers.enterpriseSecurity')}</h3>
                   </div>
                   <div className="p-6 rounded-xl border bg-card">
                     <Lock className="w-6 h-6 text-blue-500 mb-3" />
-                    <h3 className="font-semibold">Compliance ready</h3>
+                    <h3 className="font-semibold">{t('developers.complianceReady')}</h3>
                   </div>
                   <div className="p-6 rounded-xl border bg-card">
                     <Headphones className="w-6 h-6 text-purple-500 mb-3" />
-                    <h3 className="font-semibold">Dedicated support</h3>
+                    <h3 className="font-semibold">{t('developers.dedicatedSupport')}</h3>
                   </div>
                 </div>
               </div>
@@ -552,19 +615,19 @@ export default function Developers() {
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                Ready to eliminate currency risk?
+                {t('developers.ctaTitle')}
               </h2>
               <p className="text-muted-foreground mb-8">
-                Get sandbox access and ship your first hedge today.
+                {t('developers.ctaSubtitle')}
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Button size="lg" onClick={() => setIsSandboxOpen(true)}>
-                  Get API keys
+                  {t('developers.getApiKeys')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <a href="mailto:developers@hedgi.ai">
-                    Talk to an engineer
+                    {t('developers.talkToEngineer')}
                   </a>
                 </Button>
               </div>
@@ -572,15 +635,15 @@ export default function Developers() {
               <div className="flex justify-center gap-8 mt-12 pt-8 border-t">
                 <div>
                   <div className="text-2xl font-bold">99.9%</div>
-                  <div className="text-sm text-muted-foreground">Uptime SLA</div>
+                  <div className="text-sm text-muted-foreground">{t('developers.uptimeSla')}</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold">&lt;50ms</div>
-                  <div className="text-sm text-muted-foreground">Avg response</div>
+                  <div className="text-sm text-muted-foreground">{t('developers.avgResponse')}</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold">24/7</div>
-                  <div className="text-sm text-muted-foreground">Support</div>
+                  <div className="text-sm text-muted-foreground">{t('developers.support')}</div>
                 </div>
               </div>
             </div>
@@ -591,9 +654,9 @@ export default function Developers() {
       <Dialog open={isSandboxOpen} onOpenChange={setIsSandboxOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Request sandbox access</DialogTitle>
+            <DialogTitle>{t('developers.dialogTitle')}</DialogTitle>
           </DialogHeader>
-          <SandboxForm onClose={() => setIsSandboxOpen(false)} />
+          <SandboxForm onClose={() => setIsSandboxOpen(false)} translations={formTranslations} />
         </DialogContent>
       </Dialog>
 
