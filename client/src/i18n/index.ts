@@ -1417,7 +1417,7 @@ const ptBR = {
       complianceReady: 'Pronto para compliance',
       dedicatedSupport: 'Suporte dedicado',
       ctaTitle: 'Pronto para eliminar o risco cambial?',
-      ctaSubtitle: 'Obtenha acesso ao sandbox e coloque seu primeiro hedge no ar hoje.',
+      ctaSubtitle: 'Tenha acesso ao sandbox e coloque seu primeiro hedge no ar hoje.',
       talkToEngineer: 'Falar com um engenheiro',
       uptimeSla: 'SLA de Uptime',
       avgResponse: 'Resposta média',
