@@ -13,7 +13,6 @@ import BatchUpload from "@/pages/batch-upload";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
-import AboutUs from "@/pages/about-us";
 import ForCompanies from "@/pages/for-companies";
 import Developers from "@/pages/developers";
 import ForgotPassword from "@/pages/ForgotPassword";
@@ -53,7 +52,6 @@ function Router() {
       </Route>
       <Route path="/what-is-hedge" component={WhatIsHedge} />
       <Route path="/developers" component={Developers} />
-      <Route path="/about-us" component={AboutUs} />
       <Route component={NotFound} />
     </Switch>
   );
