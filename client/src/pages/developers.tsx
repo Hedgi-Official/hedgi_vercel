@@ -318,7 +318,7 @@ export default function Developers() {
                 <div>
                   <div className="inline-flex items-center gap-2 text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-full mb-6">
                     <Terminal className="w-4 h-4" />
-                    Hedging API
+                    <span className="font-bold">Hedging API</span>
                   </div>
                   
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
