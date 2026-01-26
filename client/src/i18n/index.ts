@@ -1092,7 +1092,7 @@ const ptBR = {
       travelDesc: 'A viagem pode custar mais se o câmbio se mover contra você.',
       investments: 'Investimentos',
       investmentsDesc: 'O retorno pode mudar quando você converte de volta para a sua moeda.',
-      exampleTitle: 'Exemplo: protegendo uma viagem em família para a Disney World',
+      exampleTitle: 'Exemplo: protegendo uma viagem em família para a Disney',
       withoutHedging: 'Sem hedge',
       withoutHedgingDesc: 'Uma família brasileira planeja uma viagem cotada em USD. Se o dólar se valoriza antes do pagamento, a viagem fica mais cara em BRL.',
       withHedging: 'Com hedge',
