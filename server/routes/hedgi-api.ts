@@ -129,41 +129,9 @@ router.get("/api/hedgi/orders", requireAuth, async (req: Request, res: Response)
 
     const normalizedData = Array.isArray(data) ? { orders: data } : (data.orders ? data : { orders: [] });
     
-    const ordersToEnrich = normalizedData.orders.filter((o: any) => {
-      const status = o.status?.toUpperCase();
-      return status === "OPEN" || status === "CLOSED";
-    });
-    
-    if (ordersToEnrich.length > 0) {
-      console.log("[Hedgi API] Fetching details for", ordersToEnrich.length, "orders");
-      const detailPromises = ordersToEnrich.map(async (order: any) => {
-        try {
-          const detailRes = await fetch(`${HEDGI_API_BASE}/api/orders/${order.order_id}`, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-          });
-          if (detailRes.ok) {
-            return await detailRes.json();
-          }
-          return order;
-        } catch {
-          return order;
-        }
-      });
-      
-      const enrichedOrders = await Promise.all(detailPromises);
-      const orderMap = new Map(enrichedOrders.map((o: any) => [o.order_id, o]));
-      
-      normalizedData.orders = normalizedData.orders.map((order: any) => {
-        if (orderMap.has(order.order_id)) {
-          return orderMap.get(order.order_id);
-        }
-        return order;
-      });
-    }
+    // Note: Removed per-order enrichment API calls to reduce load on api.hedgi.ai
+    // The main orders endpoint should return sufficient data for the dashboard
+    // Individual order details can be fetched on-demand when user clicks on an order
     
     return res.json(normalizedData);
   } catch (error: any) {

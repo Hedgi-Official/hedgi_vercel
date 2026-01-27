@@ -213,7 +213,7 @@ export default function CorporateDashboard() {
       }
       return data;
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000, // Reduced from 10s to 60s to lower API load
     enabled: !!user && user.userType === "business",
   });
 
