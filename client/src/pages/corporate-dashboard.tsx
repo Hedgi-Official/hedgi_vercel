@@ -97,31 +97,39 @@ interface SimulateResponse {
 // Helper to get quote currency for a symbol
 function getQuoteCurrency(symbol: string): string {
   // Currency pairs: BASE/QUOTE - quote is the currency costs are expressed in
-  // Only include the three supported pairs
   const quoteCurrencies: Record<string, string> = {
     'USDBRL': 'BRL',
-    'EURUSD': 'USD',
+    'EURBRL': 'BRL',
+    'GBPBRL': 'BRL',
+    'JPYBRL': 'BRL',
+    'CNHBRL': 'BRL',
     'USDMXN': 'MXN',
+    'EURUSD': 'USD',
+    'GBPUSD': 'USD',
+    'USDJPY': 'JPY',
+    'USDCNH': 'CNH',
   };
   return quoteCurrencies[symbol] || 'USD';
 }
 
 // Helper to convert quote currency costs to USD
-// Only valid for pairs where USD is the base currency (USDBRL, USDMXN)
-// For EURUSD, the quote is already in USD so no conversion needed
+// For pairs where USD is base (USDBRL, USDMXN, USDJPY, USDCNH): divide by bid rate
+// For pairs where USD is quote (EURUSD, GBPUSD): already in USD
+// For BRL cross pairs (EURBRL, GBPBRL, etc.): would need USDBRL rate for conversion
 function convertCostToUSD(costInQuote: number, symbol: string, bidRate: number): number {
-  // For EURUSD, cost is already in USD
-  if (symbol === 'EURUSD') {
+  // For pairs where USD is quote currency, cost is already in USD
+  if (symbol === 'EURUSD' || symbol === 'GBPUSD') {
     return costInQuote;
   }
   
-  // For USDBRL and USDMXN: USD is base, so bid rate = USD/quoteCurrency
-  // To convert quote currency to USD, divide by bid rate
-  if ((symbol === 'USDBRL' || symbol === 'USDMXN') && bidRate > 0) {
+  // For pairs where USD is base: divide by bid rate to get USD
+  const usdBasePairs = ['USDBRL', 'USDMXN', 'USDJPY', 'USDCNH'];
+  if (usdBasePairs.includes(symbol) && bidRate > 0) {
     return costInQuote / bidRate;
   }
   
-  // For any other unsupported pairs, return as-is (can't reliably convert)
+  // For cross pairs (EURBRL, GBPBRL, JPYBRL, CNHBRL), return as-is
+  // These would need additional rate data for accurate USD conversion
   return costInQuote;
 }
 
@@ -435,7 +443,7 @@ export default function CorporateDashboard() {
         
         // Auto-fill form if we got complete data
         if (data.complete && data.formData) {
-          const validSymbols = ['USDBRL', 'EURUSD', 'USDMXN'];
+          const validSymbols = ['USDBRL', 'EURBRL', 'GBPBRL', 'JPYBRL', 'CNHBRL', 'USDMXN', 'EURUSD', 'GBPUSD', 'USDJPY', 'USDCNH'];
           const validDirections = ['buy', 'sell'];
           
           const symbol = validSymbols.includes(data.formData.symbol) ? data.formData.symbol : null;
@@ -753,8 +761,15 @@ export default function CorporateDashboard() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="USDBRL">USD/BRL</SelectItem>
-                            <SelectItem value="EURUSD">EUR/USD</SelectItem>
+                            <SelectItem value="EURBRL">EUR/BRL</SelectItem>
+                            <SelectItem value="GBPBRL">GBP/BRL</SelectItem>
+                            <SelectItem value="JPYBRL">JPY/BRL</SelectItem>
+                            <SelectItem value="CNHBRL">CNH/BRL</SelectItem>
                             <SelectItem value="USDMXN">USD/MXN</SelectItem>
+                            <SelectItem value="EURUSD">EUR/USD</SelectItem>
+                            <SelectItem value="GBPUSD">GBP/USD</SelectItem>
+                            <SelectItem value="USDJPY">USD/JPY</SelectItem>
+                            <SelectItem value="USDCNH">USD/CNH</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
