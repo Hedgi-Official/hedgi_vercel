@@ -80,6 +80,9 @@ interface BrokerQuote {
   total_cost_quote: number;
   spread_cost_quote: number;
   swap_cost_quote: number;
+  total_cost_base: number;
+  spread_cost_base: number;
+  swap_cost_base: number;
   recommended: boolean;
   savings_vs_worst: number;
   market_open: boolean;
@@ -126,43 +129,16 @@ interface SimulateResponse {
   data_source?: string;
 }
 
-// Helper to get quote currency for a symbol
-function getQuoteCurrency(symbol: string): string {
-  // Currency pairs: BASE/QUOTE - quote is the currency costs are expressed in
-  const quoteCurrencies: Record<string, string> = {
-    'USDBRL': 'BRL',
-    'EURBRL': 'BRL',
-    'GBPBRL': 'BRL',
-    'JPYBRL': 'BRL',
-    'CNHBRL': 'BRL',
-    'USDMXN': 'MXN',
-    'EURUSD': 'USD',
-    'GBPUSD': 'USD',
-    'USDJPY': 'JPY',
-    'USDCNH': 'CNH',
-  };
-  return quoteCurrencies[symbol] || 'USD';
+// Helper to get base currency for a symbol (first 3 chars)
+function getBaseCurrency(symbol: string, apiBaseCurrency?: string): string {
+  if (apiBaseCurrency) return apiBaseCurrency;
+  return symbol.substring(0, 3);
 }
 
-// Helper to convert quote currency costs to USD
-// For pairs where USD is base (USDBRL, USDMXN, USDJPY, USDCNH): divide by bid rate
-// For pairs where USD is quote (EURUSD, GBPUSD): already in USD
-// For BRL cross pairs (EURBRL, GBPBRL, etc.): would need USDBRL rate for conversion
-function convertCostToUSD(costInQuote: number, symbol: string, bidRate: number): number {
-  // For pairs where USD is quote currency, cost is already in USD
-  if (symbol === 'EURUSD' || symbol === 'GBPUSD') {
-    return costInQuote;
-  }
-  
-  // For pairs where USD is base: divide by bid rate to get USD
-  const usdBasePairs = ['USDBRL', 'USDMXN', 'USDJPY', 'USDCNH'];
-  if (usdBasePairs.includes(symbol) && bidRate > 0) {
-    return costInQuote / bidRate;
-  }
-  
-  // For cross pairs (EURBRL, GBPBRL, JPYBRL, CNHBRL), return as-is
-  // These would need additional rate data for accurate USD conversion
-  return costInQuote;
+// Helper to get quote currency for a symbol (last 3 chars)
+function getQuoteCurrency(symbol: string, apiQuoteCurrency?: string): string {
+  if (apiQuoteCurrency) return apiQuoteCurrency;
+  return symbol.substring(3);
 }
 
 interface Order {
@@ -905,11 +881,8 @@ export default function CorporateDashboard() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {simulateResult.legs.map((leg) => {
                               const bestBroker = leg.brokers.find(b => b.recommended) || leg.brokers[0];
+                              const baseCurrency = leg.base_currency;
                               const quoteCurrency = leg.quote_currency;
-                              const bidRate = bestBroker?.bid || 1;
-                              const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, leg.symbol, bidRate) : 0;
-                              const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, leg.symbol, bidRate) : 0;
-                              const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, leg.symbol, bidRate) : 0;
                               
                               return (
                                 <div key={leg.leg_number} className="p-4 bg-muted/30 border rounded-lg">
@@ -939,20 +912,24 @@ export default function CorporateDashboard() {
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.spreadCost')}</span>
-                                          <p className="font-mono text-sm">${spreadCostUSD.toFixed(2)}</p>
-                                          {quoteCurrency !== 'USD' && (
-                                            <p className="text-xs text-muted-foreground">
-                                              ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
-                                            </p>
-                                          )}
+                                          <p className="font-mono text-sm">{bestBroker.spread_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                          </p>
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.swapCost')}</span>
-                                          <p className="font-mono text-sm">${swapCostUSD.toFixed(2)}</p>
+                                          <p className="font-mono text-sm">{bestBroker.swap_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
+                                          </p>
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.totalCost')}</span>
-                                          <p className="font-mono text-sm font-bold text-primary">${totalCostUSD.toFixed(2)}</p>
+                                          <p className="font-mono text-sm font-bold text-primary">{bestBroker.total_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
+                                          </p>
                                         </div>
                                       </div>
                                       
@@ -960,23 +937,20 @@ export default function CorporateDashboard() {
                                         <div className="mt-2 pt-2 border-t">
                                           <p className="text-xs text-muted-foreground mb-1">{t('corporateDashboard.allBrokers')}</p>
                                           <div className="space-y-1">
-                                            {leg.brokers.map((broker, i) => {
-                                              const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, leg.symbol, broker.bid || 1);
-                                              return (
-                                                <div
-                                                  key={i}
-                                                  className={`flex items-center justify-between px-2 py-1 rounded text-xs ${
-                                                    broker.market_open ? (broker.recommended ? "bg-emerald-500/10" : "bg-muted/50") : "bg-muted/20 opacity-50"
-                                                  }`}
-                                                >
-                                                  <div className="flex items-center gap-1">
-                                                    <span>{broker.broker}</span>
-                                                    {broker.recommended && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-                                                  </div>
-                                                  <span className="font-mono">${brokerTotalUSD.toFixed(2)}</span>
+                                            {leg.brokers.map((broker, i) => (
+                                              <div
+                                                key={i}
+                                                className={`flex items-center justify-between px-2 py-1 rounded text-xs ${
+                                                  broker.market_open ? (broker.recommended ? "bg-emerald-500/10" : "bg-muted/50") : "bg-muted/20 opacity-50"
+                                                }`}
+                                              >
+                                                <div className="flex items-center gap-1">
+                                                  <span>{broker.broker}</span>
+                                                  {broker.recommended && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                                                 </div>
-                                              );
-                                            })}
+                                                <span className="font-mono">{broker.total_cost_base?.toFixed(2)} {baseCurrency}</span>
+                                              </div>
+                                            ))}
                                           </div>
                                         </div>
                                       )}
@@ -991,13 +965,8 @@ export default function CorporateDashboard() {
                         <>
                           {(() => {
                             const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
-                            const quoteCurrency = getQuoteCurrency(simulateResult.symbol);
-                            const bidRate = bestBroker?.bid || 1;
-                            
-                            const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                            const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                            const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                            const savingsUSD = bestBroker ? convertCostToUSD(bestBroker.savings_vs_worst || 0, simulateResult.symbol, bidRate) : 0;
+                            const baseCurrency = getBaseCurrency(simulateResult.symbol, simulateResult.base_currency);
+                            const quoteCurrency = getQuoteCurrency(simulateResult.symbol, simulateResult.quote_currency);
                             
                             return bestBroker ? (
                               <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
@@ -1015,40 +984,34 @@ export default function CorporateDashboard() {
                                   <div>
                                     <span className="text-muted-foreground">{t('corporateDashboard.spreadCost')}</span>
                                     <p className="font-mono font-bold">
-                                      ${spreadCostUSD.toFixed(2)}
+                                      {bestBroker.spread_cost_base?.toFixed(2)} {baseCurrency}
                                     </p>
-                                    {quoteCurrency !== 'USD' && (
-                                      <p className="text-xs text-muted-foreground">
-                                        ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
-                                      </p>
-                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                      ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                    </p>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">{t('corporateDashboard.swapCost')}</span>
                                     <p className="font-mono">
-                                      ${swapCostUSD.toFixed(2)}
+                                      {bestBroker.swap_cost_base?.toFixed(2)} {baseCurrency}
                                     </p>
-                                    {quoteCurrency !== 'USD' && (
-                                      <p className="text-xs text-muted-foreground">
-                                        ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
-                                      </p>
-                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                      ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
+                                    </p>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">{t('corporateDashboard.totalCost')}</span>
                                     <p className="font-mono font-bold text-primary">
-                                      ${totalCostUSD.toFixed(2)}
+                                      {bestBroker.total_cost_base?.toFixed(2)} {baseCurrency}
                                     </p>
-                                    {quoteCurrency !== 'USD' && (
-                                      <p className="text-xs text-muted-foreground">
-                                        ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
-                                      </p>
-                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                      ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
+                                    </p>
                                   </div>
                                 </div>
-                                {savingsUSD > 0 && (
+                                {bestBroker.savings_vs_worst > 0 && (
                                   <div className="mt-2 text-xs text-emerald-600">
-                                    {t('corporateDashboard.savesVsWorst').replace('${amount}', savingsUSD.toFixed(2))}
+                                    Saves {bestBroker.savings_vs_worst?.toFixed(2)} {quoteCurrency} vs worst broker
                                   </div>
                                 )}
                               </div>
@@ -1060,7 +1023,7 @@ export default function CorporateDashboard() {
                               <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.allBrokers')}</h4>
                               <div className="space-y-2">
                                 {simulateResult.brokers.map((broker, i) => {
-                                  const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, simulateResult.symbol, broker.bid || 1);
+                                  const baseCurrency = getBaseCurrency(simulateResult.symbol, simulateResult.base_currency);
                                   return (
                                     <div
                                       key={i}
@@ -1074,7 +1037,7 @@ export default function CorporateDashboard() {
                                         {!broker.market_open && <Badge variant="destructive" className="text-xs">{t('corporateDashboard.closed')}</Badge>}
                                       </div>
                                       <span className="font-mono">
-                                        ${brokerTotalUSD.toFixed(2)}
+                                        {broker.total_cost_base?.toFixed(2)} {baseCurrency}
                                       </span>
                                     </div>
                                   );
