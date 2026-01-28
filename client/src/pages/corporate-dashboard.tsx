@@ -124,6 +124,8 @@ interface SimulateResponse {
   base_currency?: string;
   quote_currency?: string;
   synthetic_rate?: number;
+  breakeven_rate?: number;
+  usd_cost?: number;
   legs?: LegData[];
   summary?: CrossHedgeSummary;
   data_source?: string;
@@ -863,18 +865,25 @@ export default function CorporateDashboard() {
                     <div className="space-y-4">
                       {simulateResult.operations_required === 2 && simulateResult.legs ? (
                         <>
-                          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
-                            <div className="flex items-center gap-2 mb-2">
+                          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
+                            <div className="flex items-center gap-2 mb-3">
                               <Activity className="w-4 h-4 text-blue-500" />
                               <span className="text-sm font-medium">Cross Hedge (2 Operations)</span>
+                              <Badge variant="secondary" className="ml-auto">{simulateResult.best_broker}</Badge>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              Synthetic Rate: <span className="font-mono font-bold">{simulateResult.synthetic_rate?.toFixed(5)}</span>
-                              {simulateResult.summary && (
-                                <span className="ml-4">
-                                  Total Cost: <span className="font-mono font-bold">${simulateResult.summary.total_cost_base?.toFixed(2)}</span>
-                                </span>
-                              )}
+                            <div className="grid grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground text-xs">Synthetic Rate</span>
+                                <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Breakeven Rate</span>
+                                <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Total Cost</span>
+                                <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
+                              </div>
                             </div>
                           </div>
                           
