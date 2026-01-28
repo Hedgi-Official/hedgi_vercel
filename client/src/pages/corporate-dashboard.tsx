@@ -85,13 +85,45 @@ interface BrokerQuote {
   market_open: boolean;
 }
 
+interface LegData {
+  leg_number: number;
+  symbol: string;
+  direction: string;
+  volume: number;
+  base_currency: string;
+  quote_currency: string;
+  best_broker: string;
+  brokers: BrokerQuote[];
+  data_source: string;
+}
+
+interface CrossHedgeSummary {
+  total_cost_quote: number;
+  total_cost_base: number;
+  recommended_execution: {
+    leg_number: number;
+    symbol: string;
+    broker: string;
+    direction: string;
+    volume: number;
+  }[];
+}
+
 interface SimulateResponse {
   symbol: string;
   direction: string;
   volume: number;
   duration_days: number;
   best_broker: string;
-  brokers: BrokerQuote[];
+  brokers?: BrokerQuote[];
+  // Cross-hedge fields (operations_required === 2)
+  operations_required?: number;
+  base_currency?: string;
+  quote_currency?: string;
+  synthetic_rate?: number;
+  legs?: LegData[];
+  summary?: CrossHedgeSummary;
+  data_source?: string;
 }
 
 // Helper to get quote currency for a symbol
@@ -853,100 +885,205 @@ export default function CorporateDashboard() {
                 <CardContent>
                   {simulateResult ? (
                     <div className="space-y-4">
-                      {(() => {
-                        const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
-                        const quoteCurrency = getQuoteCurrency(simulateResult.symbol);
-                        const bidRate = bestBroker?.bid || 1;
-                        
-                        // Convert costs to USD for consistent display
-                        const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                        const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                        const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
-                        const savingsUSD = bestBroker ? convertCostToUSD(bestBroker.savings_vs_worst || 0, simulateResult.symbol, bidRate) : 0;
-                        
-                        return bestBroker ? (
-                          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-muted-foreground">{t('corporateDashboard.recommendedBroker')}</span>
-                              <Badge variant="secondary">{bestBroker.broker}</Badge>
+                      {simulateResult.operations_required === 2 && simulateResult.legs ? (
+                        <>
+                          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Activity className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm font-medium">Cross Hedge (2 Operations)</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">{t('corporateDashboard.bidAsk')}</span>
-                                <p className="font-mono font-bold">
-                                  {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">{t('corporateDashboard.spreadCost')}</span>
-                                <p className="font-mono font-bold">
-                                  ${spreadCostUSD.toFixed(2)}
-                                </p>
-                                {quoteCurrency !== 'USD' && (
-                                  <p className="text-xs text-muted-foreground">
-                                    ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
-                                  </p>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">{t('corporateDashboard.swapCost')}</span>
-                                <p className="font-mono">
-                                  ${swapCostUSD.toFixed(2)}
-                                </p>
-                                {quoteCurrency !== 'USD' && (
-                                  <p className="text-xs text-muted-foreground">
-                                    ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
-                                  </p>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">{t('corporateDashboard.totalCost')}</span>
-                                <p className="font-mono font-bold text-primary">
-                                  ${totalCostUSD.toFixed(2)}
-                                </p>
-                                {quoteCurrency !== 'USD' && (
-                                  <p className="text-xs text-muted-foreground">
-                                    ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
-                                  </p>
-                                )}
-                              </div>
+                            <div className="text-sm text-muted-foreground">
+                              Synthetic Rate: <span className="font-mono font-bold">{simulateResult.synthetic_rate?.toFixed(5)}</span>
+                              {simulateResult.summary && (
+                                <span className="ml-4">
+                                  Total Cost: <span className="font-mono font-bold">${simulateResult.summary.total_cost_base?.toFixed(2)}</span>
+                                </span>
+                              )}
                             </div>
-                            {savingsUSD > 0 && (
-                              <div className="mt-2 text-xs text-emerald-600">
-                                {t('corporateDashboard.savesVsWorst').replace('${amount}', savingsUSD.toFixed(2))}
-                              </div>
-                            )}
                           </div>
-                        ) : null;
-                      })()}
-
-                      {simulateResult.brokers && simulateResult.brokers.length > 1 && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.allBrokers')}</h4>
-                          <div className="space-y-2">
-                            {simulateResult.brokers.map((broker, i) => {
-                              const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, simulateResult.symbol, broker.bid || 1);
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {simulateResult.legs.map((leg) => {
+                              const bestBroker = leg.brokers.find(b => b.recommended) || leg.brokers[0];
+                              const quoteCurrency = leg.quote_currency;
+                              const bidRate = bestBroker?.bid || 1;
+                              const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, leg.symbol, bidRate) : 0;
+                              const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, leg.symbol, bidRate) : 0;
+                              const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, leg.symbol, bidRate) : 0;
+                              
                               return (
-                                <div
-                                  key={i}
-                                  className={`flex items-center justify-between p-2 rounded text-sm ${
-                                    broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span>{broker.broker}</span>
-                                    {broker.recommended && <Badge variant="outline" className="text-xs">{t('corporateDashboard.best')}</Badge>}
-                                    {!broker.market_open && <Badge variant="destructive" className="text-xs">{t('corporateDashboard.closed')}</Badge>}
+                                <div key={leg.leg_number} className="p-4 bg-muted/30 border rounded-lg">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline">Leg {leg.leg_number}</Badge>
+                                      <span className="font-medium">{leg.symbol}</span>
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {leg.direction.toUpperCase()} {leg.volume}
+                                    </Badge>
                                   </div>
-                                  <span className="font-mono">
-                                    ${brokerTotalUSD.toFixed(2)}
-                                  </span>
+                                  
+                                  {bestBroker && (
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">{t('corporateDashboard.recommendedBroker')}</span>
+                                        <Badge variant="secondary">{bestBroker.broker}</Badge>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                          <span className="text-muted-foreground text-xs">{t('corporateDashboard.bidAsk')}</span>
+                                          <p className="font-mono text-sm">
+                                            {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground text-xs">{t('corporateDashboard.spreadCost')}</span>
+                                          <p className="font-mono text-sm">${spreadCostUSD.toFixed(2)}</p>
+                                          {quoteCurrency !== 'USD' && (
+                                            <p className="text-xs text-muted-foreground">
+                                              ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground text-xs">{t('corporateDashboard.swapCost')}</span>
+                                          <p className="font-mono text-sm">${swapCostUSD.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground text-xs">{t('corporateDashboard.totalCost')}</span>
+                                          <p className="font-mono text-sm font-bold text-primary">${totalCostUSD.toFixed(2)}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {leg.brokers.length > 1 && (
+                                        <div className="mt-2 pt-2 border-t">
+                                          <p className="text-xs text-muted-foreground mb-1">{t('corporateDashboard.allBrokers')}</p>
+                                          <div className="space-y-1">
+                                            {leg.brokers.map((broker, i) => {
+                                              const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, leg.symbol, broker.bid || 1);
+                                              return (
+                                                <div
+                                                  key={i}
+                                                  className={`flex items-center justify-between px-2 py-1 rounded text-xs ${
+                                                    broker.market_open ? (broker.recommended ? "bg-emerald-500/10" : "bg-muted/50") : "bg-muted/20 opacity-50"
+                                                  }`}
+                                                >
+                                                  <div className="flex items-center gap-1">
+                                                    <span>{broker.broker}</span>
+                                                    {broker.recommended && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                                                  </div>
+                                                  <span className="font-mono">${brokerTotalUSD.toFixed(2)}</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                        </div>
-                      )}
+                        </>
+                      ) : simulateResult.brokers ? (
+                        <>
+                          {(() => {
+                            const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
+                            const quoteCurrency = getQuoteCurrency(simulateResult.symbol);
+                            const bidRate = bestBroker?.bid || 1;
+                            
+                            const spreadCostUSD = bestBroker ? convertCostToUSD(bestBroker.spread_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                            const swapCostUSD = bestBroker ? convertCostToUSD(bestBroker.swap_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                            const totalCostUSD = bestBroker ? convertCostToUSD(bestBroker.total_cost_quote || 0, simulateResult.symbol, bidRate) : 0;
+                            const savingsUSD = bestBroker ? convertCostToUSD(bestBroker.savings_vs_worst || 0, simulateResult.symbol, bidRate) : 0;
+                            
+                            return bestBroker ? (
+                              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm text-muted-foreground">{t('corporateDashboard.recommendedBroker')}</span>
+                                  <Badge variant="secondary">{bestBroker.broker}</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">{t('corporateDashboard.bidAsk')}</span>
+                                    <p className="font-mono font-bold">
+                                      {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">{t('corporateDashboard.spreadCost')}</span>
+                                    <p className="font-mono font-bold">
+                                      ${spreadCostUSD.toFixed(2)}
+                                    </p>
+                                    {quoteCurrency !== 'USD' && (
+                                      <p className="text-xs text-muted-foreground">
+                                        ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">{t('corporateDashboard.swapCost')}</span>
+                                    <p className="font-mono">
+                                      ${swapCostUSD.toFixed(2)}
+                                    </p>
+                                    {quoteCurrency !== 'USD' && (
+                                      <p className="text-xs text-muted-foreground">
+                                        ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">{t('corporateDashboard.totalCost')}</span>
+                                    <p className="font-mono font-bold text-primary">
+                                      ${totalCostUSD.toFixed(2)}
+                                    </p>
+                                    {quoteCurrency !== 'USD' && (
+                                      <p className="text-xs text-muted-foreground">
+                                        ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                {savingsUSD > 0 && (
+                                  <div className="mt-2 text-xs text-emerald-600">
+                                    {t('corporateDashboard.savesVsWorst').replace('${amount}', savingsUSD.toFixed(2))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
+
+                          {simulateResult.brokers && simulateResult.brokers.length > 1 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.allBrokers')}</h4>
+                              <div className="space-y-2">
+                                {simulateResult.brokers.map((broker, i) => {
+                                  const brokerTotalUSD = convertCostToUSD(broker.total_cost_quote || 0, simulateResult.symbol, broker.bid || 1);
+                                  return (
+                                    <div
+                                      key={i}
+                                      className={`flex items-center justify-between p-2 rounded text-sm ${
+                                        broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span>{broker.broker}</span>
+                                        {broker.recommended && <Badge variant="outline" className="text-xs">{t('corporateDashboard.best')}</Badge>}
+                                        {!broker.market_open && <Badge variant="destructive" className="text-xs">{t('corporateDashboard.closed')}</Badge>}
+                                      </div>
+                                      <span className="font-mono">
+                                        ${brokerTotalUSD.toFixed(2)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : null}
 
                       <Button
                         onClick={handleExecute}
