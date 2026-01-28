@@ -884,6 +884,23 @@ export default function CorporateDashboard() {
                               const baseCurrency = leg.base_currency;
                               const quoteCurrency = leg.quote_currency;
                               
+                              // Prioritize USD: determine which field contains USD values
+                              const usdIsBase = baseCurrency === 'USD';
+                              const usdIsQuote = quoteCurrency === 'USD';
+                              const otherCurrency = usdIsBase ? quoteCurrency : baseCurrency;
+                              
+                              // Get costs with USD as primary display
+                              const getPrimaryCost = (broker: BrokerQuote, field: 'spread' | 'swap' | 'total') => {
+                                if (usdIsBase) return broker[`${field}_cost_base` as keyof BrokerQuote] as number;
+                                if (usdIsQuote) return broker[`${field}_cost_quote` as keyof BrokerQuote] as number;
+                                return broker[`${field}_cost_base` as keyof BrokerQuote] as number; // fallback to base
+                              };
+                              const getSecondaryCost = (broker: BrokerQuote, field: 'spread' | 'swap' | 'total') => {
+                                if (usdIsBase) return broker[`${field}_cost_quote` as keyof BrokerQuote] as number;
+                                if (usdIsQuote) return broker[`${field}_cost_base` as keyof BrokerQuote] as number;
+                                return broker[`${field}_cost_quote` as keyof BrokerQuote] as number; // fallback to quote
+                              };
+                              
                               return (
                                 <div key={leg.leg_number} className="p-4 bg-muted/30 border rounded-lg">
                                   <div className="flex items-center justify-between mb-3">
@@ -912,23 +929,23 @@ export default function CorporateDashboard() {
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.spreadCost')}</span>
-                                          <p className="font-mono text-sm">{bestBroker.spread_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="font-mono text-sm">${getPrimaryCost(bestBroker, 'spread')?.toFixed(2)}</p>
                                           <p className="text-xs text-muted-foreground">
-                                            ({bestBroker.spread_cost_quote?.toFixed(2)} {quoteCurrency})
+                                            ({getSecondaryCost(bestBroker, 'spread')?.toFixed(2)} {otherCurrency})
                                           </p>
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.swapCost')}</span>
-                                          <p className="font-mono text-sm">{bestBroker.swap_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="font-mono text-sm">${getPrimaryCost(bestBroker, 'swap')?.toFixed(2)}</p>
                                           <p className="text-xs text-muted-foreground">
-                                            ({bestBroker.swap_cost_quote?.toFixed(2)} {quoteCurrency})
+                                            ({getSecondaryCost(bestBroker, 'swap')?.toFixed(2)} {otherCurrency})
                                           </p>
                                         </div>
                                         <div>
                                           <span className="text-muted-foreground text-xs">{t('corporateDashboard.totalCost')}</span>
-                                          <p className="font-mono text-sm font-bold text-primary">{bestBroker.total_cost_base?.toFixed(2)} {baseCurrency}</p>
+                                          <p className="font-mono text-sm font-bold text-primary">${getPrimaryCost(bestBroker, 'total')?.toFixed(2)}</p>
                                           <p className="text-xs text-muted-foreground">
-                                            ({bestBroker.total_cost_quote?.toFixed(2)} {quoteCurrency})
+                                            ({getSecondaryCost(bestBroker, 'total')?.toFixed(2)} {otherCurrency})
                                           </p>
                                         </div>
                                       </div>
@@ -948,7 +965,7 @@ export default function CorporateDashboard() {
                                                   <span>{broker.broker}</span>
                                                   {broker.recommended && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                                                 </div>
-                                                <span className="font-mono">{broker.total_cost_base?.toFixed(2)} {baseCurrency}</span>
+                                                <span className="font-mono">${getPrimaryCost(broker, 'total')?.toFixed(2)}</span>
                                               </div>
                                             ))}
                                           </div>
