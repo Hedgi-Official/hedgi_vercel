@@ -119,13 +119,15 @@ interface SimulateResponse {
   duration_days: number;
   best_broker: string;
   brokers?: BrokerQuote[];
-  // Cross-hedge fields (operations_required === 2)
+  // Common fields for both direct and cross-hedge
   operations_required?: number;
   base_currency?: string;
   quote_currency?: string;
   synthetic_rate?: number;
   breakeven_rate?: number;
+  percentage?: number;
   usd_cost?: number;
+  // Cross-hedge specific fields
   legs?: LegData[];
   summary?: CrossHedgeSummary;
   data_source?: string;
@@ -871,7 +873,7 @@ export default function CorporateDashboard() {
                               <span className="text-sm font-medium">Cross Hedge (2 Operations)</span>
                               <Badge variant="secondary" className="ml-auto">{simulateResult.best_broker}</Badge>
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
                                 <span className="text-muted-foreground text-xs">Synthetic Rate</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
@@ -879,10 +881,17 @@ export default function CorporateDashboard() {
                               <div>
                                 <span className="text-muted-foreground text-xs">Breakeven Rate</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ({simulateResult.percentage?.toFixed(2)}% {simulateResult.direction === 'buy' ? 'above' : 'below'} current)
+                                </p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground text-xs">Total Cost</span>
                                 <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Cost Impact</span>
+                                <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                               </div>
                             </div>
                           </div>
@@ -989,6 +998,35 @@ export default function CorporateDashboard() {
                         </>
                       ) : simulateResult.brokers ? (
                         <>
+                          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Activity className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm font-medium">Direct Hedge (1 Operation)</span>
+                              <Badge variant="secondary" className="ml-auto">{simulateResult.best_broker}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground text-xs">Current Rate</span>
+                                <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Breakeven Rate</span>
+                                <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  ({simulateResult.percentage?.toFixed(2)}% {simulateResult.direction === 'buy' ? 'above' : 'below'} current)
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Total Cost</span>
+                                <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground text-xs">Cost Impact</span>
+                                <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
+                              </div>
+                            </div>
+                          </div>
+
                           {(() => {
                             const bestBroker = simulateResult.brokers.find(b => b.recommended) || simulateResult.brokers[0];
                             const baseCurrency = getBaseCurrency(simulateResult.symbol, simulateResult.base_currency);
