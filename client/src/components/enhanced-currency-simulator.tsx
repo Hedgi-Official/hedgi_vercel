@@ -112,12 +112,12 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     if (currentRate && swapValues) {
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
-      hedgeCost =
-        Math.abs(
-          volumeInLots *
-            (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
-            (businessDays + wednesdays*2) * 1.1
-        ) + spreadCost;
+      // FBS swap formula: swapRate * 10 * lots * (businessDays + wednesdays×2) × 1.1
+      const swapCost = Math.abs(
+        (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
+          10 * volumeInLots * (businessDays + wednesdays*2) * 1.1
+      );
+      hedgeCost = swapCost + spreadCost;
 
       console.log('[EnhancedCurrencySimulator] Calculated hedge cost:', {
         volumeInLots,

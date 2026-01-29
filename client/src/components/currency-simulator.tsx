@@ -214,20 +214,18 @@ export function CurrencySimulator({
       // Calculate cost for each leg and sum them
       const volumeInLots = amount / 100000;
       
-      // Leg 1 cost
+      // Leg 1 cost - FBS swap formula: swapRate * 10 * lots * (businessDays + wednesdays×2) × 1.1
       const leg1SpreadCost = (leg1Rate.ask - leg1Rate.bid) * amount;
       const leg1SwapCost = Math.abs(
-        volumeInLots *
-          (tradeDirection === 'buy' ? leg1Rate.swap_long : leg1Rate.swap_short) *
-          (businessDays + wednesdays*2) * 1.1
+        (tradeDirection === 'buy' ? leg1Rate.swap_long : leg1Rate.swap_short) *
+          10 * volumeInLots * (businessDays + wednesdays*2) * 1.1
       );
       
-      // Leg 2 cost
+      // Leg 2 cost - FBS swap formula: swapRate * 10 * lots * (businessDays + wednesdays×2) × 1.1
       const leg2SpreadCost = (leg2Rate.ask - leg2Rate.bid) * amount;
       const leg2SwapCost = Math.abs(
-        volumeInLots *
-          (tradeDirection === 'buy' ? leg2Rate.swap_long : leg2Rate.swap_short) *
-          (businessDays + wednesdays*2) * 1.1
+        (tradeDirection === 'buy' ? leg2Rate.swap_long : leg2Rate.swap_short) *
+          10 * volumeInLots * (businessDays + wednesdays*2) * 1.1
       );
       
       // Total hedge cost is the sum of both legs
@@ -244,12 +242,12 @@ export function CurrencySimulator({
       
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;
-      hedgeCost =
-        Math.abs(
-          volumeInLots *
-            (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
-            (businessDays + wednesdays*2) * 1.1
-        ) + spreadCost;
+      // FBS swap formula: swapRate * 10 * lots * (businessDays + wednesdays×2) × 1.1
+      const swapCost = Math.abs(
+        (tradeDirection === 'buy' ? swapValues.swapLong : swapValues.swapShort) *
+          10 * volumeInLots * (businessDays + wednesdays*2) * 1.1
+      );
+      hedgeCost = swapCost + spreadCost;
     }
 
     // run your existing simulateHedge (fallback if no live rates)
