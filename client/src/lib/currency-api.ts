@@ -1,21 +1,18 @@
 import { z } from "zod";
 
-export const SUPPORTED_CURRENCIES = ['USD', 'BRL', 'CNY'] as const;
+export const SUPPORTED_CURRENCIES = ['USD', 'BRL'] as const;
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 export type CurrencyPair = `${SupportedCurrency}${SupportedCurrency}`;
 
-// Only allow USDBRL and BRLCNY pairs (BRLCNY is synthetic)
+// Only allow USDBRL pair for B2C
 export const ALLOWED_PAIRS = [
   { base: 'BRL' as const, target: 'USD' as const, isSynthetic: false },
-  { base: 'BRL' as const, target: 'CNY' as const, isSynthetic: true },
 ] as const;
 
 // Sample rates for development/testing
 const SAMPLE_RATES: Partial<Record<CurrencyPair, number>> = {
   'USDBRL': 5.34,
-  'USDCNY': 7.25,
   'BRLUSD': 0.187,
-  'BRLCNY': 0.736, // This is synthetic: USDBRL / USDCNY = 5.34 / 7.25
 };
 
 function generateHistoricalRates(baseRate: number, days: number) {
@@ -162,8 +159,7 @@ export async function simulateHedge(
 function getMostValuableCurrency(currency1: SupportedCurrency, currency2: SupportedCurrency): SupportedCurrency {
   const CURRENCY_VALUES: Record<SupportedCurrency, number> = {
     USD: 1,
-    BRL: 0.187,
-    CNY: 0.138
+    BRL: 0.187
   };
   return CURRENCY_VALUES[currency1] > CURRENCY_VALUES[currency2] ? currency1 : currency2;
 }
