@@ -881,16 +881,13 @@ export default function CorporateDashboard() {
                               <div>
                                 <span className="text-muted-foreground text-xs">Breakeven Rate</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  ({simulateResult.percentage?.toFixed(2)}% {simulateResult.direction === 'buy' ? 'above' : 'below'} current)
-                                </p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground text-xs">Total Cost</span>
                                 <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Cost Impact</span>
+                                <span className="text-muted-foreground text-xs">Breakeven Delta</span>
                                 <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                               </div>
                             </div>
@@ -1012,16 +1009,13 @@ export default function CorporateDashboard() {
                               <div>
                                 <span className="text-muted-foreground text-xs">Breakeven Rate</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  ({simulateResult.percentage?.toFixed(2)}% {simulateResult.direction === 'buy' ? 'above' : 'below'} current)
-                                </p>
                               </div>
                               <div>
                                 <span className="text-muted-foreground text-xs">Total Cost</span>
                                 <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Cost Impact</span>
+                                <span className="text-muted-foreground text-xs">Breakeven Delta</span>
                                 <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                               </div>
                             </div>
