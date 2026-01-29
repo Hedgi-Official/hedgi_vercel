@@ -8,7 +8,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/lib/currency-api';
 import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates, getMinimumHedgeDate } from '@/lib/utils';
-import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
+import { useFBSRate } from '@/hooks/use-fbs-rate';
 import type { Hedge } from '@db/schema';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DollarSign, ArrowUpDown, Clock, BarChart2, Briefcase, Globe, TrendingUp, Target, AlertTriangle, Info } from 'lucide-react';
@@ -166,8 +166,8 @@ export function CurrencySimulator({
   const leg1Symbol = syntheticConfig ? formatPairForBackend(syntheticConfig.legs[0]) : `${targetCurrency}${baseCurrency}`;
   const leg2Symbol = syntheticConfig ? formatPairForBackend(syntheticConfig.legs[1]) : null;
   
-  const { data: leg1Rate } = useActivTradesRate(leg1Symbol);
-  const { data: leg2RateRaw } = useActivTradesRate(leg2Symbol || 'USDBRL');
+  const { data: leg1Rate } = useFBSRate(leg1Symbol);
+  const { data: leg2RateRaw } = useFBSRate(leg2Symbol || 'USDBRL');
   
   // Fallback rates for pairs not supported by broker API
   const FALLBACK_RATES: Record<string, { bid: number; ask: number; swap_long: number; swap_short: number }> = {
@@ -179,8 +179,8 @@ export function CurrencySimulator({
     ? { ...FALLBACK_RATES[leg2Symbol] || leg2RateRaw, symbol: leg2Symbol, broker: 'fallback' }
     : leg2RateRaw;
   
-  // For regular pairs, use leg1Rate as activTradesRate. For synthetic, we'll compute combined rate
-  const activTradesRate = isSynthetic ? null : leg1Rate;
+  // For regular pairs, use leg1Rate as fbsRate. For synthetic, we'll compute combined rate
+  const fbsRate = isSynthetic ? null : leg1Rate;
 
   const handleSimulate = async () => {
     if (!expirationDate) {
@@ -237,10 +237,10 @@ export function CurrencySimulator({
         swapLong: leg1Rate.swap_long + leg2Rate.swap_long, 
         swapShort: leg1Rate.swap_short + leg2Rate.swap_short 
       };
-    } else if (activTradesRate) {
+    } else if (fbsRate) {
       // Regular pair
-      currentRate = { bid: activTradesRate.bid, ask: activTradesRate.ask };
-      swapValues = { swapLong: activTradesRate.swap_long, swapShort: activTradesRate.swap_short };
+      currentRate = { bid: fbsRate.bid, ask: fbsRate.ask };
+      swapValues = { swapLong: fbsRate.swap_long, swapShort: fbsRate.swap_short };
       
       const spreadCost = (currentRate.ask - currentRate.bid) * amount;
       const volumeInLots = amount / 100000;

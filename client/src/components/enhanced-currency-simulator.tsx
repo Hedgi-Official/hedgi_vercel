@@ -11,7 +11,7 @@ import { simulateHedge, SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/l
 import { CurrencyChart } from './currency-chart';
 import { calculateBusinessDays, countWednesdaysInNextDays, calculateBusinessDaysBetweenDates, countWednesdaysBetweenDates, getDaysBetweenDates, getMinimumHedgeDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useActivTradesRate } from '@/hooks/use-activtrades-rate';
+import { useFBSRate } from '@/hooks/use-fbs-rate';
 import type { Hedge } from '@db/schema';
 import { DollarSign, ArrowUpDown, Clock, TrendingUp, BarChart2, Briefcase, Users, Globe } from 'lucide-react';
 // Use StandaloneWindowPayment for complete isolation from React's refresh cycle
@@ -65,8 +65,8 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [pendingHedgeData, setPendingHedgeData] = useState<Omit<Hedge, "id" | "userId" | "status" | "createdAt" | "completedAt"> | null>(null);
 
-  // Get rates from ActivTrades API
-  const { data: activTradesRate, isLoading: isLoadingRate } = useActivTradesRate(`${targetCurrency}${baseCurrency}`);
+  // Get rates from FBS API
+  const { data: fbsRate, isLoading: isLoadingRate } = useFBSRate(`${targetCurrency}${baseCurrency}`);
 
   const handleSimulate = async () => {
     if (!expirationDate) {
@@ -79,18 +79,18 @@ export function EnhancedCurrencySimulator({ showGraph = true, onPlaceHedge, onOr
     let currentRate;
     let swapValues;
 
-    // Use the rates from ActivTrades API
-    if (activTradesRate) {
+    // Use the rates from FBS API
+    if (fbsRate) {
       currentRate = {
-        bid: activTradesRate.bid,
-        ask: activTradesRate.ask
+        bid: fbsRate.bid,
+        ask: fbsRate.ask
       };
       swapValues = {
-        swapLong: activTradesRate.swap_long,
-        swapShort: activTradesRate.swap_short
+        swapLong: fbsRate.swap_long,
+        swapShort: fbsRate.swap_short
       };
-      console.log('[EnhancedCurrencySimulator] Using ActivTrades rates:', currentRate);
-      console.log('[EnhancedCurrencySimulator] Using ActivTrades swap values:', swapValues);
+      console.log('[EnhancedCurrencySimulator] Using FBS rates:', currentRate);
+      console.log('[EnhancedCurrencySimulator] Using FBS swap values:', swapValues);
     }
 
     // Calculate duration in days from today to expiration date
