@@ -3,23 +3,14 @@ import { useActivTradesRate } from "@/hooks/use-activtrades-rate";
 import { useTickmillRate } from "@/hooks/use-tickmill-rate";
 import { useFBSRate } from "@/hooks/use-fbs-rate";
 import { Loader2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExchangeRate } from "@/types/exchange-rate";
 
-const CURRENCY_PAIRS = [
-  { value: "USDBRL", label: "USDBRL" },
-  { value: "EURUSD", label: "EURUSD" },
-  { value: "USDMXN", label: "USDMXN" }
-];
-
 export function ExchangeRatesWidget() {
   const { t } = useTranslation();
-  const [selectedPair, setSelectedPair] = useState("USDBRL");
-  const { data: activtradesRate, isLoading: isLoadingActivTrades, error: activtradesError } = useActivTradesRate(selectedPair);
-  const { data: tickmillRate, isLoading: isLoadingTickmill, error: tickmillError } = useTickmillRate(selectedPair);
-  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate(selectedPair);
+  const { data: activtradesRate, isLoading: isLoadingActivTrades, error: activtradesError } = useActivTradesRate("USDBRL");
+  const { data: tickmillRate, isLoading: isLoadingTickmill, error: tickmillError } = useTickmillRate("USDBRL");
+  const { data: fbsRate, isLoading: isLoadingFBS, error: fbsError } = useFBSRate("USDBRL");
 
   const renderRateCard = (
     brokerLabel: string, 
@@ -64,24 +55,10 @@ export function ExchangeRatesWidget() {
   return (
     <Card className="flex-none flex flex-col">
       <CardHeader className="pb-2 flex-none">
-        <div className="flex items-center gap-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            {t('Live Exchange Rates')}
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-          </CardTitle>
-          <Select value={selectedPair} onValueChange={setSelectedPair}>
-            <SelectTrigger className="w-[120px] h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCY_PAIRS.map(pair => (
-                <SelectItem key={pair.value} value={pair.value}>
-                  {t(`currencyPairs.${pair.value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          {t('Live Exchange Rates')} - USDBRL
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 flex-1 overflow-y-auto space-y-2">
         {(isLoadingActivTrades && isLoadingTickmill && isLoadingFBS) ? (
