@@ -626,7 +626,14 @@ const enUS = {
       errorConnecting: "I'm having trouble connecting. Please try again.",
       errorGeneric: 'Sorry, something went wrong. Please try again.',
       fetchOrdersFailed: 'Failed to fetch orders',
-      simulateSummary: '{{symbol}} {{direction}} {{volume}} lots for {{days}} days'
+      simulateSummary: '{{symbol}} {{direction}} {{volume}} lots for {{days}} days',
+      directHedge: 'Direct Hedge (1 Operation)',
+      crossHedge: 'Cross Hedge (2 Operations)',
+      currentRate: 'Current Rate',
+      syntheticRate: 'Synthetic Rate',
+      breakevenRate: 'Breakeven Rate',
+      breakevenDelta: 'Breakeven Delta',
+      savesVsWorstBroker: 'Saves {{amount}} vs worst broker'
     },
     developers: {
       badge: 'Hedging API',
@@ -1369,7 +1376,14 @@ const ptBR = {
       errorConnecting: 'Estou com dificuldade para conectar. Por favor, tente novamente.',
       errorGeneric: 'Desculpe, algo deu errado. Por favor, tente novamente.',
       fetchOrdersFailed: 'Falha ao buscar ordens',
-      simulateSummary: '{{symbol}} {{direction}} {{volume}} lotes por {{days}} dias'
+      simulateSummary: '{{symbol}} {{direction}} {{volume}} lotes por {{days}} dias',
+      directHedge: 'Hedge Direto (1 Operação)',
+      crossHedge: 'Hedge Cruzado (2 Operações)',
+      currentRate: 'Taxa Atual',
+      syntheticRate: 'Taxa Sintética',
+      breakevenRate: 'Taxa de Equilíbrio',
+      breakevenDelta: 'Delta de Equilíbrio',
+      savesVsWorstBroker: 'Economiza {{amount}} vs pior corretora'
     },
     developers: {
       badge: 'API de Hedge',

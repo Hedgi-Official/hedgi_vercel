@@ -870,24 +870,24 @@ export default function CorporateDashboard() {
                           <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
                             <div className="flex items-center gap-2 mb-3">
                               <Activity className="w-4 h-4 text-blue-500" />
-                              <span className="text-sm font-medium">Cross Hedge (2 Operations)</span>
+                              <span className="text-sm font-medium">{t('corporateDashboard.crossHedge')}</span>
                               <Badge variant="secondary" className="ml-auto">{simulateResult.best_broker}</Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
-                                <span className="text-muted-foreground text-xs">Synthetic Rate</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.syntheticRate')}</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Breakeven Rate</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.breakevenRate')}</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Total Cost</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.totalCost')}</span>
                                 <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Breakeven Delta</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.breakevenDelta')}</span>
                                 <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                               </div>
                             </div>
@@ -998,24 +998,24 @@ export default function CorporateDashboard() {
                           <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
                             <div className="flex items-center gap-2 mb-3">
                               <Activity className="w-4 h-4 text-blue-500" />
-                              <span className="text-sm font-medium">Direct Hedge (1 Operation)</span>
+                              <span className="text-sm font-medium">{t('corporateDashboard.directHedge')}</span>
                               <Badge variant="secondary" className="ml-auto">{simulateResult.best_broker}</Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
-                                <span className="text-muted-foreground text-xs">Current Rate</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.currentRate')}</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Breakeven Rate</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.breakevenRate')}</span>
                                 <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Total Cost</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.totalCost')}</span>
                                 <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground text-xs">Breakeven Delta</span>
+                                <span className="text-muted-foreground text-xs">{t('corporateDashboard.breakevenDelta')}</span>
                                 <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                               </div>
                             </div>
@@ -1069,7 +1069,7 @@ export default function CorporateDashboard() {
                                 </div>
                                 {bestBroker.savings_vs_worst > 0 && (
                                   <div className="mt-2 text-xs text-emerald-600">
-                                    Saves {bestBroker.savings_vs_worst?.toFixed(2)} {quoteCurrency} vs worst broker
+                                    {t('corporateDashboard.savesVsWorstBroker', { amount: `${bestBroker.savings_vs_worst?.toFixed(2)} ${quoteCurrency}` })}
                                   </div>
                                 )}
                               </div>
