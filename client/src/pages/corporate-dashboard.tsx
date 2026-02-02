@@ -414,10 +414,11 @@ export default function CorporateDashboard() {
     },
   });
 
+  // Close OPEN orders using POST /close endpoint
   const closeOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      const res = await fetch(`/api/hedgi/orders/${orderId}`, {
-        method: "DELETE",
+      const res = await fetch(`/api/hedgi/orders/${orderId}/close`, {
+        method: "POST",
         credentials: "include",
       });
       if (!res.ok) {
@@ -434,6 +435,28 @@ export default function CorporateDashboard() {
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: t('corporateDashboard.closeFailed'), description: error.message });
+    },
+  });
+
+  // Cancel PENDING orders using DELETE endpoint
+  const cancelApiOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const res = await fetch(`/api/hedgi/orders/${orderId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || error.detail || "Cancel order failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: t('corporateDashboard.orderCancelled') });
+      queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: t('corporateDashboard.cancelFailed'), description: error.message });
     },
   });
 
@@ -1391,8 +1414,8 @@ export default function CorporateDashboard() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => closeOrderMutation.mutate(order.order_id)}
-                              disabled={closeOrderMutation.isPending}
+                              onClick={() => cancelApiOrderMutation.mutate(order.order_id)}
+                              disabled={cancelApiOrderMutation.isPending}
                             >
                               <XCircle className="w-4 h-4 mr-1" />
                               {t('corporateDashboard.cancel')}

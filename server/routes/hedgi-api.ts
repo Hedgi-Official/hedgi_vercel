@@ -174,7 +174,8 @@ router.get("/api/hedgi/orders/:id", requireAuth, async (req: Request, res: Respo
   }
 });
 
-router.delete("/api/hedgi/orders/:id", requireAuth, async (req: Request, res: Response) => {
+// Close an OPEN order (POST /api/orders/:id/close)
+router.post("/api/hedgi/orders/:id/close", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
     const orderId = req.params.id;
@@ -184,10 +185,10 @@ router.delete("/api/hedgi/orders/:id", requireAuth, async (req: Request, res: Re
       return res.status(403).json({ error: "No API key configured for this account" });
     }
 
-    console.log("[Hedgi API] Closing order:", orderId, "for user:", userId);
+    console.log("[Hedgi API] Closing OPEN order:", orderId, "for user:", userId);
 
-    const response = await fetch(`${HEDGI_API_BASE}/api/orders/${orderId}`, {
-      method: "DELETE",
+    const response = await fetch(`${HEDGI_API_BASE}/api/orders/${orderId}/close`, {
+      method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -205,6 +206,41 @@ router.delete("/api/hedgi/orders/:id", requireAuth, async (req: Request, res: Re
   } catch (error: any) {
     console.error("[Hedgi API] Close order error:", error);
     return res.status(500).json({ error: error.message || "Failed to close order" });
+  }
+});
+
+// Cancel a PENDING order (DELETE /api/orders/:id)
+router.delete("/api/hedgi/orders/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const orderId = req.params.id;
+    const apiKey = await getApiKeyForUser(userId);
+    
+    if (!apiKey) {
+      return res.status(403).json({ error: "No API key configured for this account" });
+    }
+
+    console.log("[Hedgi API] Cancelling PENDING order:", orderId, "for user:", userId);
+
+    const response = await fetch(`${HEDGI_API_BASE}/api/orders/${orderId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    console.log("[Hedgi API] Cancel order response:", response.status, JSON.stringify(data));
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    return res.json(data);
+  } catch (error: any) {
+    console.error("[Hedgi API] Cancel order error:", error);
+    return res.status(500).json({ error: error.message || "Failed to cancel order" });
   }
 });
 
