@@ -366,16 +366,20 @@ export default function CorporateDashboard() {
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
+      const orderBody: any = {
+        symbol: simulateForm.symbol,
+        direction: simulateForm.direction.toLowerCase(),
+        volume: parseFloat(simulateForm.volume),
+        duration_days: parseInt(simulateForm.duration_days),
+      };
+      if (simulateResult?.best_broker) {
+        orderBody.broker = simulateResult.best_broker;
+      }
       const res = await fetch("/api/hedgi/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          symbol: simulateForm.symbol,
-          direction: simulateForm.direction.toLowerCase(),
-          volume: parseFloat(simulateForm.volume),
-          duration_days: parseInt(simulateForm.duration_days),
-        }),
+        body: JSON.stringify(orderBody),
       });
       if (!res.ok) {
         const error = await res.json();

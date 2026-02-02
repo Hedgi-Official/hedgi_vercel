@@ -600,8 +600,8 @@ export default function BatchUpload() {
   
   const [marketClosedDialog, setMarketClosedDialog] = React.useState<{
     open: boolean;
-    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>;
-    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>;
+    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean; broker: string | null }>;
+    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean; broker: string | null }>;
     futureAdjustments: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; executeAt: string }>;
   }>({
     open: false,
@@ -856,7 +856,7 @@ export default function BatchUpload() {
     },
   });
 
-  const checkMarketStatus = async (symbol: string): Promise<boolean> => {
+  const checkMarketStatus = async (symbol: string): Promise<{ isOpen: boolean; bestBroker: string | null }> => {
     try {
       const base = symbol.slice(0, 3);
       const target = symbol.slice(3, 6);
@@ -875,12 +875,13 @@ export default function BatchUpload() {
       });
       
       const data = await res.json();
+      const bestBroker = data.best_broker || null;
       
       if (!res.ok) {
         const errorCode = data.code || data.error_code || "";
         const errorMessage = data.message || data.error || "";
         if (errorCode === "MARKET_CLOSED" || (errorMessage.toLowerCase().includes("market") && errorMessage.toLowerCase().includes("closed"))) {
-          return false;
+          return { isOpen: false, bestBroker };
         }
       }
       
@@ -888,14 +889,14 @@ export default function BatchUpload() {
         const hasOpenBroker = data.brokers.some((b: any) => b.market_open === true);
         if (!hasOpenBroker) {
           console.log(`[Market Check] All brokers have market_open=false for ${symbol}`);
-          return false;
+          return { isOpen: false, bestBroker };
         }
       }
       
-      return true;
+      return { isOpen: true, bestBroker };
     } catch (e) {
       console.error(`Error checking market status for ${symbol}:`, e);
-      return true;
+      return { isOpen: true, bestBroker: null };
     }
   };
 
@@ -943,15 +944,19 @@ export default function BatchUpload() {
         }));
       
       const symbolsToCheck = Array.from(new Set(consolidatedOrders.map(o => o.symbol)));
-      const marketStatusPromises = symbolsToCheck.map(async (symbol) => ({
-        symbol,
-        isOpen: await checkMarketStatus(symbol),
-      }));
+      const marketStatusPromises = symbolsToCheck.map(async (symbol) => {
+        const status = await checkMarketStatus(symbol);
+        return { symbol, ...status };
+      });
       const marketStatuses = await Promise.all(marketStatusPromises);
-      const marketStatusMap = new Map(marketStatuses.map(s => [s.symbol, s.isOpen]));
+      const marketStatusMap = new Map(marketStatuses.map(s => [s.symbol, { isOpen: s.isOpen, bestBroker: s.bestBroker }]));
       
-      const openMarketOrders = consolidatedOrders.filter(o => marketStatusMap.get(o.symbol) === true);
-      const closedMarketOrders = consolidatedOrders.filter(o => marketStatusMap.get(o.symbol) === false);
+      const openMarketOrders = consolidatedOrders
+        .filter(o => marketStatusMap.get(o.symbol)?.isOpen === true)
+        .map(o => ({ ...o, broker: marketStatusMap.get(o.symbol)?.bestBroker || null }));
+      const closedMarketOrders = consolidatedOrders
+        .filter(o => marketStatusMap.get(o.symbol)?.isOpen === false)
+        .map(o => ({ ...o, broker: marketStatusMap.get(o.symbol)?.bestBroker || null }));
       
       if (closedMarketOrders.length > 0) {
         setMarketClosedDialog({
@@ -969,8 +974,8 @@ export default function BatchUpload() {
   };
 
   const executeUnifiedFlow = async (
-    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>,
-    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>,
+    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean; broker: string | null }>,
+    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean; broker: string | null }>,
     futureAdjustments: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; executeAt: string }>
   ) => {
     if (futureAdjustments.length > 0) {
@@ -1036,17 +1041,97 @@ export default function BatchUpload() {
     }
     
     if (openMarketOrders.length > 0) {
-      const netPositionsToExecute: NetPosition[] = openMarketOrders.map(o => ({
+      const ordersWithBroker = openMarketOrders.map(o => ({
         symbol: o.symbol,
-        netDirection: o.direction as "buy" | "sell",
-        netVolume: o.volume,
-        paymentDate: o.paymentDate,
-        durationDays: o.durationDays,
-        longVolume: o.direction === "buy" ? o.volume : 0,
-        shortVolume: o.direction === "sell" ? o.volume : 0,
-        notional: o.volume * LOT_SIZE,
+        direction: o.direction,
+        volume: o.volume,
+        duration_days: o.durationDays,
+        payment_date: o.paymentDate,
+        broker: o.broker,
       }));
-      executeNowMutation.mutate(netPositionsToExecute);
+      
+      const results = await Promise.all(
+        ordersWithBroker.map(async (order) => {
+          const orderBody: any = {
+            symbol: order.symbol,
+            direction: order.direction,
+            volume: order.volume,
+            duration_days: order.duration_days,
+            payment_date: order.payment_date,
+          };
+          if (order.broker) {
+            orderBody.broker = order.broker;
+          }
+          const res = await fetch("/api/hedgi/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(orderBody),
+          });
+          const data = await res.json();
+          const errorCode = !res.ok ? (data.code || data.error_code || `HTTP_${res.status}`) : null;
+          const errorMessage = !res.ok ? (data.detail || data.message || data.error || JSON.stringify(data)) : null;
+          return { order, success: res.ok, data, errorCode, errorMessage };
+        })
+      );
+      
+      const failedOrders = results.filter(r => !r.success);
+      if (failedOrders.length > 0) {
+        try {
+          const pendingRes = await fetch("/api/pending-orders/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              orders: failedOrders.map(r => {
+                const errorStr = (r.errorMessage || "").toLowerCase();
+                const isMarketClosed = errorStr.includes("market") && errorStr.includes("closed");
+                return {
+                  symbol: r.order.symbol,
+                  direction: r.order.direction,
+                  volume: r.order.volume,
+                  duration_days: r.order.duration_days,
+                  payment_date: r.order.payment_date || "Immediate",
+                  execute_at: new Date().toISOString(),
+                  status: isMarketClosed ? "market_closed" : "failed",
+                  result_error: `[${r.errorCode}] ${r.errorMessage}`,
+                  metadata: { original_order: r.order, api_response: r.data, broker: r.order.broker },
+                };
+              }),
+            }),
+          });
+          if (!pendingRes.ok) {
+            console.error("Failed to save failed orders to pending queue");
+          }
+        } catch (e) {
+          console.error("Error saving failed orders to pending queue:", e);
+        }
+      }
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      if (failCount > 0) {
+        toast({
+          title: t('batchUpload.batchExecutionComplete'),
+          description: t('batchUpload.ordersExecutedWithFailures', { success: successCount, failed: failCount }),
+          variant: "destructive",
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: t('batchUpload.batchExecutionComplete'), 
+          description: t('batchUpload.ordersExecutedSuccess', { count: successCount }),
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
+      setParsedOrders([]);
+      setRawOrders([]);
+      setNetPositions([]);
+      setSegmentedNetting(null);
+      setFileName("");
+      setHasSyntheticPairs(false);
     } else {
       setParsedOrders([]);
       setRawOrders([]);
