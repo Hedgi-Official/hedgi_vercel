@@ -1,5 +1,6 @@
 import * as React from "react";
 import ExcelJS from "exceljs";
+import { useTranslation } from "react-i18next";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -403,6 +404,8 @@ async function fetchRatesForSymbols(symbols: string[]): Promise<ExchangeRates> {
   return rates;
 }
 
+const IMMEDIATE_MARKER = "__IMMEDIATE__";
+
 function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
   const validOrders = orders.filter(o => o.valid);
   
@@ -413,7 +416,7 @@ function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
     const existing = positionMap.get(key) || { 
       long: 0, 
       short: 0, 
-      paymentDate: order.payment_date || "Immediate",
+      paymentDate: order.payment_date || IMMEDIATE_MARKER,
       durationDays: order.duration_days
     };
     
@@ -454,8 +457,8 @@ function calculateNetPositions(orders: ParsedOrder[]): NetPosition[] {
     const symbolCompare = a.symbol.localeCompare(b.symbol);
     if (symbolCompare !== 0) return symbolCompare;
     
-    if (a.paymentDate === "Immediate") return -1;
-    if (b.paymentDate === "Immediate") return 1;
+    if (a.paymentDate === IMMEDIATE_MARKER) return -1;
+    if (b.paymentDate === IMMEDIATE_MARKER) return 1;
     
     const dateA = parseDateDDMMYYYY(a.paymentDate);
     const dateB = parseDateDDMMYYYY(b.paymentDate);
@@ -574,6 +577,7 @@ export default function BatchUpload() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   
   const [parsedOrders, setParsedOrders] = React.useState<ParsedOrder[]>([]);
   const [rawOrders, setRawOrders] = React.useState<ParsedOrder[]>([]);
@@ -621,8 +625,8 @@ export default function BatchUpload() {
       if (missingRates.length > 0) {
         toast({
           variant: "destructive",
-          title: "Missing exchange rates",
-          description: `Could not fetch rates for: ${missingRates.join(", ")}. Synthetic pairs will show errors.`,
+          title: t('batchUpload.missingExchangeRates'),
+          description: t('batchUpload.missingExchangeRatesDesc', { symbols: missingRates.join(", ") }),
         });
       }
       
@@ -633,8 +637,8 @@ export default function BatchUpload() {
       setSegmentedNetting(calculateTimeSegmentNetting(expandedOrders));
       
       toast({
-        title: "Synthetic pairs expanded",
-        description: `${syntheticOrders.length} synthetic pair(s) converted to ${syntheticOrders.length * 2} tradable orders`,
+        title: t('batchUpload.syntheticPairsExpanded'),
+        description: t('batchUpload.syntheticPairsExpandedDesc', { count: syntheticOrders.length, expanded: syntheticOrders.length * 2 }),
       });
     } catch (error) {
       console.error("Failed to process synthetic pairs:", error);
@@ -643,8 +647,8 @@ export default function BatchUpload() {
       setSegmentedNetting(calculateTimeSegmentNetting(orders));
       toast({
         variant: "destructive",
-        title: "Rate fetch failed",
-        description: "Could not fetch rates for synthetic pairs. Please try again.",
+        title: t('batchUpload.rateFetchFailed'),
+        description: t('batchUpload.rateFetchFailedDesc'),
       });
     } finally {
       setIsProcessing(false);
@@ -687,8 +691,8 @@ export default function BatchUpload() {
     if (!['csv', 'xlsx', 'xls'].includes(extension || '')) {
       toast({
         variant: "destructive",
-        title: "Invalid file type",
-        description: "Please upload a CSV or Excel file (.csv, .xlsx, .xls)",
+        title: t('batchUpload.invalidFileType'),
+        description: t('batchUpload.invalidFileTypeDesc'),
       });
       return;
     }
@@ -759,14 +763,14 @@ export default function BatchUpload() {
       
       if (failCount > 0) {
         toast({
-          title: "Batch execution complete",
-          description: `${successCount} orders executed, ${failCount} failed and added to pending queue for retry`,
+          title: t('batchUpload.batchExecutionComplete'),
+          description: t('batchUpload.ordersExecutedWithFailures', { success: successCount, failed: failCount }),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Batch execution complete", 
-          description: `${successCount} orders executed successfully`,
+          title: t('batchUpload.batchExecutionComplete'), 
+          description: t('batchUpload.ordersExecutedSuccess', { count: successCount }),
         });
       }
       
@@ -780,7 +784,7 @@ export default function BatchUpload() {
       setHasSyntheticPairs(false);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Execution failed", description: error.message });
+      toast({ variant: "destructive", title: t('batchUpload.executionFailed'), description: error.message });
     },
   });
 
@@ -805,14 +809,14 @@ export default function BatchUpload() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Failed to schedule orders");
+        throw new Error(error.error || t('batchUpload.schedulingFailed'));
       }
       return res.json();
     },
     onSuccess: (data) => {
       toast({
-        title: "Orders scheduled",
-        description: `${data.count} orders added to pending queue`,
+        title: t('batchUpload.ordersScheduled'),
+        description: t('batchUpload.ordersAddedToPending', { count: data.count }),
       });
       queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
       setParsedOrders([]);
@@ -823,7 +827,7 @@ export default function BatchUpload() {
       setHasSyntheticPairs(false);
     },
     onError: (error: Error) => {
-      toast({ variant: "destructive", title: "Scheduling failed", description: error.message });
+      toast({ variant: "destructive", title: t('batchUpload.schedulingFailed'), description: error.message });
     },
   });
 
@@ -854,22 +858,22 @@ export default function BatchUpload() {
             if (scheduleRes.ok) {
               const data = await scheduleRes.json();
               toast({
-                title: "Future adjustments scheduled",
-                description: `${data.count} adjustment orders saved to pending queue`,
+                title: t('batchUpload.futureAdjustmentsScheduled'),
+                description: t('batchUpload.futureAdjustmentsScheduledDesc', { count: data.count }),
               });
             } else {
               toast({
                 variant: "destructive",
-                title: "Failed to schedule adjustments",
-                description: "Future adjustment orders could not be saved",
+                title: t('batchUpload.failedToScheduleAdjustments'),
+                description: t('batchUpload.futureAdjustmentsCouldNotBeSaved'),
               });
             }
           } catch (e) {
             console.error("Failed to schedule future adjustments:", e);
             toast({
               variant: "destructive",
-              title: "Scheduling error",
-              description: "Could not save future adjustments to pending queue",
+              title: t('batchUpload.schedulingError'),
+              description: t('batchUpload.couldNotSaveAdjustments'),
             });
           }
         }
@@ -911,6 +915,41 @@ export default function BatchUpload() {
   const validCount = parsedOrders.filter(o => o.valid).length;
   const invalidCount = parsedOrders.filter(o => !o.valid).length;
 
+  const translatePaymentDate = (paymentDate: string) => {
+    if (paymentDate === IMMEDIATE_MARKER) {
+      return t('batchUpload.immediate');
+    }
+    return paymentDate;
+  };
+
+  const translateError = (error: string) => {
+    if (error === "Missing symbol") return t('batchUpload.errorMissingSymbol');
+    if (error.startsWith("Invalid symbol:")) {
+      const symbol = error.replace("Invalid symbol:", "").trim();
+      return t('batchUpload.errorInvalidSymbol', { symbol });
+    }
+    if (error === "Missing direction") return t('batchUpload.errorMissingDirection');
+    if (error.startsWith("Invalid direction:")) {
+      const direction = error.replace("Invalid direction:", "").trim();
+      return t('batchUpload.errorInvalidDirection', { direction });
+    }
+    if (error === "Invalid volume") return t('batchUpload.errorInvalidVolume');
+    if (error === "Payment date is in the past") return t('batchUpload.errorPaymentDatePast');
+    if (error.startsWith("Invalid date format:")) {
+      const match = error.match(/Invalid date format: (.+?) \(use dd\/mm\/yyyy\)/);
+      if (match) return t('batchUpload.errorInvalidDateFormat', { date: match[1] });
+    }
+    if (error.startsWith("Missing rate for ")) {
+      const symbol = error.replace("Missing rate for ", "").trim();
+      return t('batchUpload.errorMissingRateFor', { symbol });
+    }
+    return error;
+  };
+
+  const translateDirection = (direction: "buy" | "sell") => {
+    return direction === "buy" ? t('batchUpload.buy') : t('batchUpload.sell');
+  };
+
   if (!user || user.userType !== "business") {
     return null;
   }
@@ -923,13 +962,13 @@ export default function BatchUpload() {
           <Link href="/corporate-dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              {t('batchUpload.backToDashboard')}
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">Batch Hedge Upload</h1>
+            <h1 className="text-2xl font-bold">{t('batchUpload.title')}</h1>
             <p className="text-muted-foreground">
-              Upload CSV or Excel file with hedge orders for smart netting by payment date
+              {t('batchUpload.subtitle')}
             </p>
           </div>
         </div>
@@ -939,10 +978,10 @@ export default function BatchUpload() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Upload File
+                {t('batchUpload.uploadFile')}
               </CardTitle>
               <CardDescription>
-                Required: symbol, direction, volume, payment_date (dd/mm/yyyy). Synthetic pairs (EURBRL, GBPBRL) are auto-converted to tradable legs.
+                {t('batchUpload.uploadDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -991,15 +1030,15 @@ export default function BatchUpload() {
                     <>
                       <RefreshCw className="w-12 h-12 text-muted-foreground animate-spin" />
                       <div>
-                        <p className="font-medium">Processing synthetic pairs...</p>
-                        <p className="text-sm text-muted-foreground">Fetching exchange rates for volume conversion</p>
+                        <p className="font-medium">{t('batchUpload.processingSynthetic')}</p>
+                        <p className="text-sm text-muted-foreground">{t('batchUpload.fetchingRates')}</p>
                       </div>
                     </>
                   ) : isDragging ? (
                     <>
                       <Upload className="w-12 h-12 text-primary" />
                       <div>
-                        <p className="font-medium text-primary">Drop file here</p>
+                        <p className="font-medium text-primary">{t('batchUpload.dropFileHere')}</p>
                       </div>
                     </>
                   ) : (
@@ -1008,12 +1047,12 @@ export default function BatchUpload() {
                       {fileName ? (
                         <div>
                           <p className="font-medium">{fileName}</p>
-                          <p className="text-sm text-muted-foreground">Click to upload a different file</p>
+                          <p className="text-sm text-muted-foreground">{t('batchUpload.clickToUploadDifferent')}</p>
                         </div>
                       ) : (
                         <div>
-                          <p className="font-medium">Drop CSV or Excel file here or click to upload</p>
-                          <p className="text-sm text-muted-foreground">Supports .csv, .xlsx, .xls formats</p>
+                          <p className="font-medium">{t('batchUpload.dropOrClick')}</p>
+                          <p className="text-sm text-muted-foreground">{t('batchUpload.supportedFormats')}</p>
                         </div>
                       )}
                     </>
@@ -1024,10 +1063,10 @@ export default function BatchUpload() {
               {parsedOrders.length > 0 && (
                 <div className="mt-6 space-y-4">
                   <div className="flex items-center gap-4">
-                    <Badge variant="outline">{parsedOrders.length} rows</Badge>
-                    <Badge variant="default" className="bg-emerald-500">{validCount} valid</Badge>
+                    <Badge variant="outline">{parsedOrders.length} {t('batchUpload.rows')}</Badge>
+                    <Badge variant="default" className="bg-emerald-500">{validCount} {t('batchUpload.valid')}</Badge>
                     {invalidCount > 0 && (
-                      <Badge variant="destructive">{invalidCount} errors</Badge>
+                      <Badge variant="destructive">{invalidCount} {t('batchUpload.errors')}</Badge>
                     )}
                   </div>
 
@@ -1040,13 +1079,13 @@ export default function BatchUpload() {
                         <SelectItem value="immediate">
                           <div className="flex items-center gap-2">
                             <Play className="w-4 h-4" />
-                            Execute Net Now
+                            {t('batchUpload.executeNetNow')}
                           </div>
                         </SelectItem>
                         <SelectItem value="scheduled">
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4" />
-                            Schedule for Later
+                            {t('batchUpload.scheduleForLater')}
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -1060,17 +1099,17 @@ export default function BatchUpload() {
                       {executeNowMutation.isPending || scheduleOrdersMutation.isPending ? (
                         <>
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Processing...
+                          {t('batchUpload.processing')}
                         </>
                       ) : executionMode === "immediate" ? (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Execute {netPositions.filter(p => p.netDirection !== "flat").length} Net Orders
+                          {t('batchUpload.executeNetOrders', { count: netPositions.filter(p => p.netDirection !== "flat").length })}
                         </>
                       ) : (
                         <>
                           <Clock className="w-4 h-4 mr-2" />
-                          Schedule {validCount} Orders
+                          {t('batchUpload.scheduleOrders', { count: validCount })}
                         </>
                       )}
                     </Button>
@@ -1100,12 +1139,12 @@ export default function BatchUpload() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Calculator className="w-5 h-5" />
-                    {nettingMode === "timeline" ? "Timeline Netting" : "Simple Netting"}
+                    {nettingMode === "timeline" ? t('batchUpload.timelineNetting') : t('batchUpload.simpleNetting')}
                   </CardTitle>
                   <CardDescription>
                     {nettingMode === "timeline" 
-                      ? "Overlapping hedges netted until expiry, then readjusted"
-                      : "Orders grouped by symbol and payment date"}
+                      ? t('batchUpload.timelineDescription')
+                      : t('batchUpload.simpleDescription')}
                   </CardDescription>
                 </div>
                 <Select value={nettingMode} onValueChange={(v) => setNettingMode(v as "simple" | "timeline")}>
@@ -1113,8 +1152,8 @@ export default function BatchUpload() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="timeline">Timeline</SelectItem>
-                    <SelectItem value="simple">Simple</SelectItem>
+                    <SelectItem value="timeline">{t('batchUpload.timeline')}</SelectItem>
+                    <SelectItem value="simple">{t('batchUpload.simple')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1125,19 +1164,19 @@ export default function BatchUpload() {
                   {segmentedNetting.segments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                       <Calculator className="w-12 h-12 mb-4 opacity-20" />
-                      <p>Upload a file to see net positions</p>
+                      <p>{t('batchUpload.uploadFileToSee')}</p>
                     </div>
                   ) : (
                     <>
                       <div>
-                        <h4 className="text-sm font-medium mb-3">Time Segments</h4>
+                        <h4 className="text-sm font-medium mb-3">{t('batchUpload.timeSegments')}</h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Symbol</TableHead>
-                              <TableHead>Period</TableHead>
-                              <TableHead>Net Position</TableHead>
-                              <TableHead>Active Orders</TableHead>
+                              <TableHead>{t('batchUpload.symbol')}</TableHead>
+                              <TableHead>{t('batchUpload.period')}</TableHead>
+                              <TableHead>{t('batchUpload.netPosition')}</TableHead>
+                              <TableHead>{t('batchUpload.activeOrders')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1152,15 +1191,15 @@ export default function BatchUpload() {
                                 </TableCell>
                                 <TableCell>
                                   {seg.netDirection === "flat" ? (
-                                    <Badge variant="secondary">Flat</Badge>
+                                    <Badge variant="secondary">{t('batchUpload.flat')}</Badge>
                                   ) : (
                                     <Badge variant={seg.netDirection === "buy" ? "default" : "destructive"}>
-                                      {seg.netDirection.toUpperCase()} {seg.netVolume}
+                                      {translateDirection(seg.netDirection)} {seg.netVolume}
                                     </Badge>
                                   )}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {seg.ordersInSegment} order(s)
+                                  {seg.ordersInSegment} {t('batchUpload.orders')}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1170,15 +1209,15 @@ export default function BatchUpload() {
                       
                       {segmentedNetting.executionOrders.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-medium mb-3">Execution Schedule</h4>
+                          <h4 className="text-sm font-medium mb-3">{t('batchUpload.executionSchedule')}</h4>
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Symbol</TableHead>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Volume</TableHead>
-                                <TableHead>Execute At</TableHead>
-                                <TableHead>Type</TableHead>
+                                <TableHead>{t('batchUpload.symbol')}</TableHead>
+                                <TableHead>{t('batchUpload.action')}</TableHead>
+                                <TableHead>{t('batchUpload.volume')}</TableHead>
+                                <TableHead>{t('batchUpload.executeAt')}</TableHead>
+                                <TableHead>{t('batchUpload.type')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1192,11 +1231,11 @@ export default function BatchUpload() {
                                   </TableCell>
                                   <TableCell>{order.volume}</TableCell>
                                   <TableCell>
-                                    {order.isInitial ? "Now" : new Date(order.executeAt).toLocaleDateString()}
+                                    {order.isInitial ? t('batchUpload.now') : new Date(order.executeAt).toLocaleDateString()}
                                   </TableCell>
                                   <TableCell>
                                     <Badge variant={order.isInitial ? "outline" : "secondary"}>
-                                      {order.isInitial ? "Initial" : "Adjustment"}
+                                      {order.isInitial ? t('batchUpload.initial') : t('batchUpload.adjustment')}
                                     </Badge>
                                   </TableCell>
                                 </TableRow>
@@ -1211,18 +1250,18 @@ export default function BatchUpload() {
               ) : netPositions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Calculator className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Upload a file to see net positions</p>
+                  <p>{t('batchUpload.uploadFileToSee')}</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Symbol</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Long</TableHead>
-                      <TableHead>Short</TableHead>
-                      <TableHead>Net</TableHead>
-                      <TableHead>Days</TableHead>
+                      <TableHead>{t('batchUpload.symbol')}</TableHead>
+                      <TableHead>{t('batchUpload.paymentDate')}</TableHead>
+                      <TableHead>{t('batchUpload.long')}</TableHead>
+                      <TableHead>{t('batchUpload.short')}</TableHead>
+                      <TableHead>{t('batchUpload.net')}</TableHead>
+                      <TableHead>{t('batchUpload.days')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1232,7 +1271,7 @@ export default function BatchUpload() {
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">
                             <Calendar className="w-3 h-3" />
-                            {pos.paymentDate}
+                            {translatePaymentDate(pos.paymentDate)}
                           </div>
                         </TableCell>
                         <TableCell className="text-emerald-600">
@@ -1253,10 +1292,10 @@ export default function BatchUpload() {
                         </TableCell>
                         <TableCell>
                           {pos.netDirection === "flat" ? (
-                            <Badge variant="secondary">Flat</Badge>
+                            <Badge variant="secondary">{t('batchUpload.flat')}</Badge>
                           ) : (
                             <Badge variant={pos.netDirection === "buy" ? "default" : "destructive"}>
-                              {pos.netDirection.toUpperCase()} {pos.netVolume}
+                              {translateDirection(pos.netDirection)} {pos.netVolume}
                             </Badge>
                           )}
                         </TableCell>
@@ -1275,22 +1314,22 @@ export default function BatchUpload() {
         {parsedOrders.length > 0 && (
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Parsed Orders</CardTitle>
-              <CardDescription>Review all orders from the uploaded file</CardDescription>
+              <CardTitle>{t('batchUpload.parsedOrders')}</CardTitle>
+              <CardDescription>{t('batchUpload.parsedOrdersDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-96 overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Row</TableHead>
-                      <TableHead>Symbol</TableHead>
-                      <TableHead>Direction</TableHead>
-                      <TableHead>Volume</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Ref</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>{t('batchUpload.row')}</TableHead>
+                      <TableHead>{t('batchUpload.symbol')}</TableHead>
+                      <TableHead>{t('batchUpload.direction')}</TableHead>
+                      <TableHead>{t('batchUpload.volume')}</TableHead>
+                      <TableHead>{t('batchUpload.paymentDate')}</TableHead>
+                      <TableHead>{t('batchUpload.duration')}</TableHead>
+                      <TableHead>{t('batchUpload.ref')}</TableHead>
+                      <TableHead>{t('batchUpload.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1327,7 +1366,7 @@ export default function BatchUpload() {
                             <div className="flex items-center gap-1">
                               <AlertCircle className="w-4 h-4 text-destructive" />
                               <span className="text-xs text-destructive">
-                                {order.errors.join(", ")}
+                                {order.errors.map(translateError).join(", ")}
                               </span>
                             </div>
                           )}
