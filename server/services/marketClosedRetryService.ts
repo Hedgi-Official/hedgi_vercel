@@ -36,15 +36,26 @@ async function checkMarketStatus(symbol: string, apiKey: string): Promise<boolea
       }),
     });
 
+    const data = await response.json() as any;
+
     if (!response.ok) {
-      const data = await response.json() as any;
       const errorCode = data.code || data.error_code || "";
       const errorMessage = data.message || data.error || "";
       if (errorCode === "MARKET_CLOSED" || 
           (errorMessage.toLowerCase().includes("market") && errorMessage.toLowerCase().includes("closed"))) {
+        console.log(`[MarketClosedRetry] Market closed (error response) for ${symbol}`);
         return false;
       }
     }
+    
+    if (response.ok && data.brokers && Array.isArray(data.brokers) && data.brokers.length > 0) {
+      const hasOpenBroker = data.brokers.some((b: any) => b.market_open === true);
+      if (!hasOpenBroker) {
+        console.log(`[MarketClosedRetry] All brokers have market_open=false for ${symbol}`);
+        return false;
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error(`[MarketClosedRetry] Error checking market for ${symbol}:`, error);
@@ -71,7 +82,8 @@ async function executeOrder(order: any, apiKey: string): Promise<{ success: bool
     const data = await response.json();
     
     if (!response.ok) {
-      return { success: false, data, error: (data as any).message || (data as any).error || "Order failed" };
+      const errorMessage = (data as any).detail || (data as any).message || (data as any).error || "Order failed";
+      return { success: false, data, error: errorMessage };
     }
     
     return { success: true, data };
