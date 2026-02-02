@@ -589,6 +589,7 @@ const enUS = {
       noCancelledOrFailed: 'No cancelled or failed orders',
       cancelled: 'Cancelled',
       failed: 'Failed',
+      marketClosed: 'Market Closed',
       paymentDate: 'Payment Date',
       date: 'Date',
       closePosition: 'Close Position',
@@ -837,7 +838,18 @@ const enUS = {
       failedToScheduleAdjustments: 'Failed to schedule adjustments',
       futureAdjustmentsCouldNotBeSaved: 'Future adjustment orders could not be saved',
       schedulingError: 'Scheduling error',
-      couldNotSaveAdjustments: 'Could not save future adjustments to pending queue'
+      couldNotSaveAdjustments: 'Could not save future adjustments to pending queue',
+      checkingMarkets: 'Checking markets...',
+      placeHedges: 'Place Hedges',
+      marketClosedTitle: 'Some Markets Are Closed',
+      marketClosedDescription: 'Some of the currency pairs you are trying to trade have closed markets. You can proceed with available markets and queue closed market orders for automatic retry.',
+      closedMarkets: 'Closed Markets',
+      openMarkets: 'Open Markets',
+      marketClosedOptions: 'Closed market orders will be automatically retried every 10 minutes until the market opens.',
+      cancelAndReturn: 'Cancel and Return',
+      proceedWithPending: 'Proceed with Pending',
+      closedMarketOrdersQueued: 'Closed market orders queued',
+      closedMarketOrdersQueuedDesc: '{{count}} orders queued for automatic retry when markets open'
     }
   }
 };
@@ -1428,6 +1440,7 @@ const ptBR = {
       noCancelledOrFailed: 'Nenhuma ordem cancelada ou com falha',
       cancelled: 'Cancelado',
       failed: 'Falhou',
+      marketClosed: 'Mercado Fechado',
       paymentDate: 'Data de Pagamento',
       date: 'Data',
       closePosition: 'Fechar Posição',
@@ -1679,7 +1692,18 @@ const ptBR = {
       failedToScheduleAdjustments: 'Falha ao agendar ajustes',
       futureAdjustmentsCouldNotBeSaved: 'Ordens de ajuste futuras não puderam ser salvas',
       schedulingError: 'Erro de agendamento',
-      couldNotSaveAdjustments: 'Não foi possível salvar ajustes futuros na fila pendente'
+      couldNotSaveAdjustments: 'Não foi possível salvar ajustes futuros na fila pendente',
+      checkingMarkets: 'Verificando mercados...',
+      placeHedges: 'Colocar Hedges',
+      marketClosedTitle: 'Alguns Mercados Estão Fechados',
+      marketClosedDescription: 'Alguns dos pares de moedas que você está tentando negociar têm mercados fechados. Você pode prosseguir com os mercados disponíveis e colocar os pedidos de mercados fechados na fila para tentativa automática.',
+      closedMarkets: 'Mercados Fechados',
+      openMarkets: 'Mercados Abertos',
+      marketClosedOptions: 'Os pedidos de mercados fechados serão tentados automaticamente a cada 10 minutos até que o mercado abra.',
+      cancelAndReturn: 'Cancelar e Voltar',
+      proceedWithPending: 'Prosseguir com Pendentes',
+      closedMarketOrdersQueued: 'Pedidos de mercados fechados na fila',
+      closedMarketOrdersQueuedDesc: '{{count}} pedidos na fila para tentativa automática quando os mercados abrirem'
     }
   }
 };

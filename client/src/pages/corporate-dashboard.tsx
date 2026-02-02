@@ -522,7 +522,7 @@ export default function CorporateDashboard() {
   );
   const pendingOrders = pendingOrdersQuery.data?.orders || [];
   const activePendingOrders = pendingOrders.filter((o: any) => 
-    o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed" && o.status !== "failed"
+    o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed" && o.status !== "failed" && o.status !== "completed"
   );
   const activePendingCount = activePendingOrders.length;
   const cancelledOrders = pendingOrders.filter((o: any) => o.status === "cancelled");
@@ -1355,16 +1355,20 @@ export default function CorporateDashboard() {
                             <Badge 
                               variant={
                                 order.status === "pending" ? "outline" :
+                                order.status === "scheduled" ? "outline" :
+                                order.status === "market_closed" ? "secondary" :
                                 order.status === "executed" ? "default" :
+                                order.status === "completed" ? "default" :
                                 order.status === "cancelled" ? "secondary" :
                                 "destructive"
                               }
+                              className={order.status === "market_closed" ? "border-amber-500 text-amber-700" : ""}
                             >
-                              {order.status}
+                              {order.status === "market_closed" ? t('corporateDashboard.marketClosed') : order.status}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {order.status === "pending" && (
+                            {(order.status === "pending" || order.status === "market_closed" || order.status === "scheduled") && (
                               <Button
                                 variant="ghost"
                                 size="sm"

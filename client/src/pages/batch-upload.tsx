@@ -25,6 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Upload,
   FileSpreadsheet,
   AlertCircle,
@@ -38,6 +46,7 @@ import {
   RefreshCw,
   Trash2,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { LOT_SIZE } from "@/lib/pnl";
 
@@ -583,12 +592,24 @@ export default function BatchUpload() {
   const [rawOrders, setRawOrders] = React.useState<ParsedOrder[]>([]);
   const [netPositions, setNetPositions] = React.useState<NetPosition[]>([]);
   const [segmentedNetting, setSegmentedNetting] = React.useState<SegmentedNetting | null>(null);
-  const [executionMode, setExecutionMode] = React.useState<"immediate" | "scheduled">("immediate");
   const [nettingMode, setNettingMode] = React.useState<"simple" | "timeline">("timeline");
   const [fileName, setFileName] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasSyntheticPairs, setHasSyntheticPairs] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
+  
+  const [marketClosedDialog, setMarketClosedDialog] = React.useState<{
+    open: boolean;
+    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>;
+    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>;
+    futureAdjustments: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; executeAt: string }>;
+  }>({
+    open: false,
+    openMarketOrders: [],
+    closedMarketOrders: [],
+    futureAdjustments: [],
+  });
+  const [isCheckingMarkets, setIsCheckingMarkets] = React.useState(false);
 
   React.useEffect(() => {
     if (!user) {
@@ -831,85 +852,214 @@ export default function BatchUpload() {
     },
   });
 
-  const handleExecute = async () => {
-    if (executionMode === "immediate") {
-      if (nettingMode === "timeline" && segmentedNetting) {
-        const initialOrders = segmentedNetting.executionOrders.filter(o => o.isInitial);
-        const futureAdjustments = segmentedNetting.executionOrders.filter(o => !o.isInitial && o.volume > 0);
-        
-        if (futureAdjustments.length > 0) {
-          try {
-            const scheduleRes = await fetch("/api/pending-orders/batch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({
-                orders: futureAdjustments.map(o => ({
-                  symbol: o.symbol,
-                  direction: o.direction,
-                  volume: o.volume,
-                  duration_days: 0,
-                  payment_date: o.paymentDate,
-                  execute_at: o.executeAt,
-                  metadata: { type: "timeline_adjustment", isAdjustment: true },
-                })),
-              }),
-            });
-            if (scheduleRes.ok) {
-              const data = await scheduleRes.json();
-              toast({
-                title: t('batchUpload.futureAdjustmentsScheduled'),
-                description: t('batchUpload.futureAdjustmentsScheduledDesc', { count: data.count }),
-              });
-            } else {
-              toast({
-                variant: "destructive",
-                title: t('batchUpload.failedToScheduleAdjustments'),
-                description: t('batchUpload.futureAdjustmentsCouldNotBeSaved'),
-              });
-            }
-          } catch (e) {
-            console.error("Failed to schedule future adjustments:", e);
-            toast({
-              variant: "destructive",
-              title: t('batchUpload.schedulingError'),
-              description: t('batchUpload.couldNotSaveAdjustments'),
-            });
-          }
+  const checkMarketStatus = async (symbol: string): Promise<boolean> => {
+    try {
+      const base = symbol.slice(0, 3);
+      const target = symbol.slice(3, 6);
+      const res = await fetch("/api/hedgi/quotes/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          symbol,
+          base_currency: base,
+          target_currency: target,
+          volume: 0.01,
+          direction: "buy",
+          duration_days: 1,
+        }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        const errorCode = data.code || data.error_code || "";
+        const errorMessage = data.message || data.error || "";
+        if (errorCode === "MARKET_CLOSED" || errorMessage.toLowerCase().includes("market") && errorMessage.toLowerCase().includes("closed")) {
+          return false;
         }
-        
-        const positionMap = new Map<string, { symbol: string; signedNet: number; paymentDate: string }>();
-        initialOrders.forEach(o => {
-          const key = o.symbol;
-          const existing = positionMap.get(key);
-          const signedVol = o.direction === "buy" ? o.volume : -o.volume;
-          if (existing) {
-            existing.signedNet += signedVol;
-          } else {
-            positionMap.set(key, { symbol: o.symbol, signedNet: signedVol, paymentDate: o.paymentDate });
-          }
-        });
-        
-        const netPositionsFromInitial: NetPosition[] = Array.from(positionMap.values())
-          .filter(p => Math.abs(p.signedNet) > 0.0001)
-          .map(p => ({
-            symbol: p.symbol,
-            netDirection: p.signedNet > 0 ? "buy" as const : "sell" as const,
-            netVolume: Math.abs(p.signedNet),
-            paymentDate: p.paymentDate,
-            durationDays: 0,
-            longVolume: p.signedNet > 0 ? p.signedNet : 0,
-            shortVolume: p.signedNet < 0 ? -p.signedNet : 0,
-            notional: Math.abs(p.signedNet) * LOT_SIZE,
-          }));
-        
-        executeNowMutation.mutate(netPositionsFromInitial);
-      } else {
-        executeNowMutation.mutate(netPositions);
       }
-    } else {
-      scheduleOrdersMutation.mutate(parsedOrders);
+      return true;
+    } catch (e) {
+      console.error(`Error checking market status for ${symbol}:`, e);
+      return true;
     }
+  };
+
+  const handleExecute = async () => {
+    setIsCheckingMarkets(true);
+    
+    try {
+      let initialOrders: Array<{ symbol: string; direction: "buy" | "sell"; volume: number; paymentDate: string; isInitial: boolean }> = [];
+      let futureAdjustments: Array<{ symbol: string; direction: "buy" | "sell"; volume: number; paymentDate: string; executeAt: string }> = [];
+      
+      if (nettingMode === "timeline" && segmentedNetting) {
+        initialOrders = segmentedNetting.executionOrders
+          .filter(o => o.isInitial && o.volume > 0)
+          .map(o => ({ symbol: o.symbol, direction: o.direction, volume: o.volume, paymentDate: o.paymentDate, isInitial: true }));
+        futureAdjustments = segmentedNetting.executionOrders
+          .filter(o => !o.isInitial && o.volume > 0)
+          .map(o => ({ symbol: o.symbol, direction: o.direction, volume: o.volume, paymentDate: o.paymentDate, executeAt: o.executeAt }));
+      } else {
+        initialOrders = netPositions
+          .filter(p => p.netDirection !== "flat" && p.netVolume > 0)
+          .map(p => ({ symbol: p.symbol, direction: p.netDirection as "buy" | "sell", volume: p.netVolume, paymentDate: p.paymentDate, isInitial: true }));
+      }
+      
+      const positionMap = new Map<string, { symbol: string; signedNet: number; paymentDate: string; durationDays: number }>();
+      initialOrders.forEach(o => {
+        const key = o.symbol;
+        const existing = positionMap.get(key);
+        const signedVol = o.direction === "buy" ? o.volume : -o.volume;
+        if (existing) {
+          existing.signedNet += signedVol;
+        } else {
+          positionMap.set(key, { symbol: o.symbol, signedNet: signedVol, paymentDate: o.paymentDate, durationDays: 0 });
+        }
+      });
+      
+      const consolidatedOrders = Array.from(positionMap.values())
+        .filter(p => Math.abs(p.signedNet) > 0.0001)
+        .map(p => ({
+          symbol: p.symbol,
+          direction: p.signedNet > 0 ? "buy" as const : "sell" as const,
+          volume: Math.abs(p.signedNet),
+          paymentDate: p.paymentDate,
+          durationDays: p.durationDays,
+          isInitial: true,
+        }));
+      
+      const symbolsToCheck = Array.from(new Set(consolidatedOrders.map(o => o.symbol)));
+      const marketStatusPromises = symbolsToCheck.map(async (symbol) => ({
+        symbol,
+        isOpen: await checkMarketStatus(symbol),
+      }));
+      const marketStatuses = await Promise.all(marketStatusPromises);
+      const marketStatusMap = new Map(marketStatuses.map(s => [s.symbol, s.isOpen]));
+      
+      const openMarketOrders = consolidatedOrders.filter(o => marketStatusMap.get(o.symbol) === true);
+      const closedMarketOrders = consolidatedOrders.filter(o => marketStatusMap.get(o.symbol) === false);
+      
+      if (closedMarketOrders.length > 0) {
+        setMarketClosedDialog({
+          open: true,
+          openMarketOrders,
+          closedMarketOrders,
+          futureAdjustments,
+        });
+      } else {
+        await executeUnifiedFlow(openMarketOrders, [], futureAdjustments);
+      }
+    } finally {
+      setIsCheckingMarkets(false);
+    }
+  };
+
+  const executeUnifiedFlow = async (
+    openMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>,
+    closedMarketOrders: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; durationDays: number; isInitial: boolean }>,
+    futureAdjustments: Array<{ symbol: string; direction: string; volume: number; paymentDate: string; executeAt: string }>
+  ) => {
+    if (futureAdjustments.length > 0) {
+      try {
+        const scheduleRes = await fetch("/api/pending-orders/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            orders: futureAdjustments.map(o => ({
+              symbol: o.symbol,
+              direction: o.direction,
+              volume: o.volume,
+              duration_days: 0,
+              payment_date: o.paymentDate,
+              execute_at: o.executeAt,
+              status: "scheduled",
+              metadata: { type: "timeline_adjustment", isAdjustment: true },
+            })),
+          }),
+        });
+        if (scheduleRes.ok) {
+          const data = await scheduleRes.json();
+          toast({
+            title: t('batchUpload.futureAdjustmentsScheduled'),
+            description: t('batchUpload.futureAdjustmentsScheduledDesc', { count: data.count }),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to schedule future adjustments:", e);
+      }
+    }
+    
+    if (closedMarketOrders.length > 0) {
+      try {
+        const pendingRes = await fetch("/api/pending-orders/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            orders: closedMarketOrders.map(o => ({
+              symbol: o.symbol,
+              direction: o.direction,
+              volume: o.volume,
+              duration_days: o.durationDays,
+              payment_date: o.paymentDate,
+              execute_at: new Date().toISOString(),
+              status: "market_closed",
+              metadata: { type: "market_closed_retry", isInitial: o.isInitial },
+            })),
+          }),
+        });
+        if (pendingRes.ok) {
+          const data = await pendingRes.json();
+          toast({
+            title: t('batchUpload.closedMarketOrdersQueued'),
+            description: t('batchUpload.closedMarketOrdersQueuedDesc', { count: data.count }),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to queue closed market orders:", e);
+      }
+    }
+    
+    if (openMarketOrders.length > 0) {
+      const netPositionsToExecute: NetPosition[] = openMarketOrders.map(o => ({
+        symbol: o.symbol,
+        netDirection: o.direction as "buy" | "sell",
+        netVolume: o.volume,
+        paymentDate: o.paymentDate,
+        durationDays: o.durationDays,
+        longVolume: o.direction === "buy" ? o.volume : 0,
+        shortVolume: o.direction === "sell" ? o.volume : 0,
+        notional: o.volume * LOT_SIZE,
+      }));
+      executeNowMutation.mutate(netPositionsToExecute);
+    } else {
+      setParsedOrders([]);
+      setRawOrders([]);
+      setNetPositions([]);
+      setSegmentedNetting(null);
+      setFileName("");
+      setHasSyntheticPairs(false);
+      queryClient.invalidateQueries({ queryKey: ["pending-orders"] });
+    }
+  };
+
+  const handleMarketClosedProceed = () => {
+    setMarketClosedDialog(prev => ({ ...prev, open: false }));
+    executeUnifiedFlow(
+      marketClosedDialog.openMarketOrders,
+      marketClosedDialog.closedMarketOrders,
+      marketClosedDialog.futureAdjustments
+    );
+  };
+
+  const handleMarketClosedCancel = () => {
+    setMarketClosedDialog({
+      open: false,
+      openMarketOrders: [],
+      closedMarketOrders: [],
+      futureAdjustments: [],
+    });
   };
 
   const validCount = parsedOrders.filter(o => o.valid).length;
@@ -1071,45 +1221,25 @@ export default function BatchUpload() {
                   </div>
 
                   <div className="flex gap-4">
-                    <Select value={executionMode} onValueChange={(v: "immediate" | "scheduled") => setExecutionMode(v)}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="immediate">
-                          <div className="flex items-center gap-2">
-                            <Play className="w-4 h-4" />
-                            {t('batchUpload.executeNetNow')}
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="scheduled">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            {t('batchUpload.scheduleForLater')}
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
                     <Button
                       onClick={handleExecute}
-                      disabled={validCount === 0 || executeNowMutation.isPending || scheduleOrdersMutation.isPending}
+                      disabled={validCount === 0 || executeNowMutation.isPending || isCheckingMarkets}
                       className="flex-1"
                     >
-                      {executeNowMutation.isPending || scheduleOrdersMutation.isPending ? (
+                      {isCheckingMarkets ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          {t('batchUpload.checkingMarkets')}
+                        </>
+                      ) : executeNowMutation.isPending ? (
                         <>
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                           {t('batchUpload.processing')}
                         </>
-                      ) : executionMode === "immediate" ? (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          {t('batchUpload.executeNetOrders', { count: netPositions.filter(p => p.netDirection !== "flat").length })}
-                        </>
                       ) : (
                         <>
-                          <Clock className="w-4 h-4 mr-2" />
-                          {t('batchUpload.scheduleOrders', { count: validCount })}
+                          <Play className="w-4 h-4 mr-2" />
+                          {t('batchUpload.placeHedges')}
                         </>
                       )}
                     </Button>
@@ -1380,6 +1510,65 @@ export default function BatchUpload() {
           </Card>
         )}
       </div>
+
+      <Dialog open={marketClosedDialog.open} onOpenChange={(open) => !open && handleMarketClosedCancel()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              {t('batchUpload.marketClosedTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('batchUpload.marketClosedDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {marketClosedDialog.closedMarketOrders.length > 0 && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                <p className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                  {t('batchUpload.closedMarkets')}:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {marketClosedDialog.closedMarketOrders.map((o, i) => (
+                    <Badge key={i} variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-300">
+                      {o.symbol} - {translateDirection(o.direction as "buy" | "sell")} {o.volume}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {marketClosedDialog.openMarketOrders.length > 0 && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <p className="font-medium text-emerald-800 dark:text-emerald-200 mb-2">
+                  {t('batchUpload.openMarkets')}:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {marketClosedDialog.openMarketOrders.map((o, i) => (
+                    <Badge key={i} variant="outline" className="border-emerald-500 text-emerald-700 dark:text-emerald-300">
+                      {o.symbol} - {translateDirection(o.direction as "buy" | "sell")} {o.volume}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <p className="text-sm text-muted-foreground">
+              {t('batchUpload.marketClosedOptions')}
+            </p>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleMarketClosedCancel}>
+              {t('batchUpload.cancelAndReturn')}
+            </Button>
+            <Button onClick={handleMarketClosedProceed}>
+              {t('batchUpload.proceedWithPending')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
