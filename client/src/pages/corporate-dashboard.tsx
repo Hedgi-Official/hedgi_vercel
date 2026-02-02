@@ -1352,6 +1352,7 @@ export default function CorporateDashboard() {
                         <TableHead>{t('corporateDashboard.volume')}</TableHead>
                         <TableHead>{t('corporateDashboard.created')}</TableHead>
                         <TableHead>{t('corporateDashboard.status')}</TableHead>
+                        <TableHead>{t('corporateDashboard.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1372,6 +1373,17 @@ export default function CorporateDashboard() {
                             <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">
                               {t('corporateDashboard.waitingForMarket')}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => closeOrderMutation.mutate(order.order_id)}
+                              disabled={closeOrderMutation.isPending}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              {t('corporateDashboard.cancel')}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
