@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { useUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -260,12 +260,32 @@ function parseCSV(content: string): ParsedOrder[] {
   return parseRowsFromData(rows);
 }
 
-function parseExcel(buffer: ArrayBuffer): ParsedOrder[] {
-  const workbook = XLSX.read(buffer, { type: "array" });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
+async function parseExcel(buffer: ArrayBuffer): Promise<ParsedOrder[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
   
-  const data: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: "" });
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return [];
+  
+  const data: any[][] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const rowData: any[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      while (rowData.length < colNumber - 1) {
+        rowData.push("");
+      }
+      let value = cell.value;
+      if (value && typeof value === 'object' && 'result' in value) {
+        value = value.result;
+      }
+      if (value && typeof value === 'object' && 'richText' in value) {
+        value = (value as any).richText.map((t: any) => t.text).join('');
+      }
+      rowData.push(value?.toString() ?? "");
+    });
+    data.push(rowData);
+  });
+  
   return parseRowsFromData(data);
 }
 
@@ -637,9 +657,9 @@ export default function BatchUpload() {
     
     if (extension === 'xlsx' || extension === 'xls') {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const buffer = e.target?.result as ArrayBuffer;
-        const orders = parseExcel(buffer);
+        const orders = await parseExcel(buffer);
         setRawOrders(orders);
         processOrdersWithSyntheticExpansion(orders);
       };
