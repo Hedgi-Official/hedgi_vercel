@@ -187,6 +187,7 @@ export default function CorporateDashboard() {
   });
 
   const [simulateResult, setSimulateResult] = React.useState<SimulateResponse | null>(null);
+  const [selectedBroker, setSelectedBroker] = React.useState<string | null>(null);
   const [closeDialogOpen, setCloseDialogOpen] = React.useState(false);
   const [orderToClose, setOrderToClose] = React.useState<Order | null>(null);
 
@@ -372,6 +373,7 @@ export default function CorporateDashboard() {
     },
     onSuccess: (data) => {
       setSimulateResult(data);
+      setSelectedBroker(data.best_broker);
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: t('corporateDashboard.simulationFailed'), description: error.message });
@@ -386,7 +388,9 @@ export default function CorporateDashboard() {
         volume: parseFloat(simulateForm.volume),
         duration_days: parseInt(simulateForm.duration_days),
       };
-      if (simulateResult?.best_broker) {
+      if (selectedBroker) {
+        orderBody.broker = selectedBroker;
+      } else if (simulateResult?.best_broker) {
         orderBody.broker = simulateResult.best_broker;
       }
       const res = await fetch("/api/hedgi/orders", {
@@ -408,6 +412,7 @@ export default function CorporateDashboard() {
       toast({ title: t('corporateDashboard.orderCreated'), description: `${t('corporateDashboard.orderId')}: ${data.order_id}` });
       queryClient.invalidateQueries({ queryKey: ["hedgi-orders"] });
       setSimulateResult(null);
+      setSelectedBroker(null);
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: t('corporateDashboard.orderFailed'), description: error.message });
@@ -1131,29 +1136,42 @@ export default function CorporateDashboard() {
 
                           {simulateResult.brokers && simulateResult.brokers.length > 1 && (
                             <div>
-                              <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.allBrokers')}</h4>
+                              <h4 className="text-sm font-medium mb-2">{t('corporateDashboard.selectBroker')}</h4>
                               <div className="space-y-2">
                                 {simulateResult.brokers.map((broker, i) => {
                                   const baseCurrency = getBaseCurrency(simulateResult.symbol, simulateResult.base_currency);
+                                  const isSelected = selectedBroker === broker.broker;
+                                  const isClickable = broker.market_open;
                                   return (
                                     <div
                                       key={i}
-                                      className={`flex items-center justify-between p-2 rounded text-sm ${
-                                        broker.market_open ? (broker.recommended ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-muted/50") : "bg-muted/20 opacity-50"
+                                      onClick={() => isClickable && setSelectedBroker(broker.broker)}
+                                      className={`flex items-center justify-between p-3 rounded-lg text-sm transition-all ${
+                                        !broker.market_open 
+                                          ? "bg-muted/20 opacity-50 cursor-not-allowed" 
+                                          : isSelected 
+                                            ? "bg-primary/10 border-2 border-primary cursor-pointer ring-2 ring-primary/20" 
+                                            : "bg-muted/50 border border-transparent hover:border-muted-foreground/20 cursor-pointer hover:bg-muted"
                                       }`}
                                     >
                                       <div className="flex items-center gap-2">
-                                        <span>{broker.broker}</span>
-                                        {broker.recommended && <Badge variant="outline" className="text-xs">{t('corporateDashboard.best')}</Badge>}
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                                        }`}>
+                                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                        </div>
+                                        <span className={isSelected ? "font-medium" : ""}>{broker.broker}</span>
+                                        {broker.recommended && <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-600">{t('corporateDashboard.best')}</Badge>}
                                         {!broker.market_open && <Badge variant="destructive" className="text-xs">{t('corporateDashboard.closed')}</Badge>}
                                       </div>
-                                      <span className="font-mono">
+                                      <span className={`font-mono ${isSelected ? "font-bold text-primary" : ""}`}>
                                         {broker.total_cost_base?.toFixed(2)} {baseCurrency}
                                       </span>
                                     </div>
                                   );
                                 })}
                               </div>
+                              <p className="text-xs text-muted-foreground mt-2">{t('corporateDashboard.clickToSelectBroker')}</p>
                             </div>
                           )}
                         </>
@@ -1172,7 +1190,9 @@ export default function CorporateDashboard() {
                         ) : (
                           <>
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-                            {t('corporateDashboard.executeOrder')}
+                            {selectedBroker 
+                              ? t('corporateDashboard.executeWithBroker', { broker: selectedBroker })
+                              : t('corporateDashboard.executeOrder')}
                           </>
                         )}
                       </Button>
