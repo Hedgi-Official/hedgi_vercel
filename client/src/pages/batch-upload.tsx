@@ -755,17 +755,21 @@ export default function BatchUpload() {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({
-              orders: failedOrders.map(r => ({
-                symbol: r.order.symbol,
-                direction: r.order.direction,
-                volume: r.order.volume,
-                duration_days: r.order.duration_days,
-                payment_date: r.order.payment_date || "Immediate",
-                execute_at: new Date().toISOString(),
-                status: "failed",
-                result_error: `[${r.errorCode}] ${r.errorMessage}`,
-                metadata: { original_order: r.order, api_response: r.data },
-              })),
+              orders: failedOrders.map(r => {
+                const errorStr = (r.errorMessage || "").toLowerCase();
+                const isMarketClosed = errorStr.includes("market") && errorStr.includes("closed");
+                return {
+                  symbol: r.order.symbol,
+                  direction: r.order.direction,
+                  volume: r.order.volume,
+                  duration_days: r.order.duration_days,
+                  payment_date: r.order.payment_date || "Immediate",
+                  execute_at: new Date().toISOString(),
+                  status: isMarketClosed ? "market_closed" : "failed",
+                  result_error: `[${r.errorCode}] ${r.errorMessage}`,
+                  metadata: { original_order: r.order, api_response: r.data },
+                };
+              }),
             }),
           });
           if (!pendingRes.ok) {
@@ -880,16 +884,10 @@ export default function BatchUpload() {
         }
       }
       
-      if (res.ok && data.brokers && Array.isArray(data.brokers)) {
-        const allClosed = data.brokers.every((b: any) => b.closed === true || b.status === "closed");
-        if (allClosed && data.brokers.length > 0) {
-          console.log(`[Market Check] All brokers closed for ${symbol}`);
-          return false;
-        }
-        
-        const hasOpenBroker = data.brokers.some((b: any) => !b.closed && b.status !== "closed");
-        if (!hasOpenBroker && data.brokers.length > 0) {
-          console.log(`[Market Check] No open brokers for ${symbol}`);
+      if (res.ok && data.brokers && Array.isArray(data.brokers) && data.brokers.length > 0) {
+        const hasOpenBroker = data.brokers.some((b: any) => b.market_open === true);
+        if (!hasOpenBroker) {
+          console.log(`[Market Check] All brokers have market_open=false for ${symbol}`);
           return false;
         }
       }
