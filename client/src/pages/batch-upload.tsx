@@ -870,14 +870,30 @@ export default function BatchUpload() {
         }),
       });
       
+      const data = await res.json();
+      
       if (!res.ok) {
-        const data = await res.json();
         const errorCode = data.code || data.error_code || "";
         const errorMessage = data.message || data.error || "";
-        if (errorCode === "MARKET_CLOSED" || errorMessage.toLowerCase().includes("market") && errorMessage.toLowerCase().includes("closed")) {
+        if (errorCode === "MARKET_CLOSED" || (errorMessage.toLowerCase().includes("market") && errorMessage.toLowerCase().includes("closed"))) {
           return false;
         }
       }
+      
+      if (res.ok && data.brokers && Array.isArray(data.brokers)) {
+        const allClosed = data.brokers.every((b: any) => b.closed === true || b.status === "closed");
+        if (allClosed && data.brokers.length > 0) {
+          console.log(`[Market Check] All brokers closed for ${symbol}`);
+          return false;
+        }
+        
+        const hasOpenBroker = data.brokers.some((b: any) => !b.closed && b.status !== "closed");
+        if (!hasOpenBroker && data.brokers.length > 0) {
+          console.log(`[Market Check] No open brokers for ${symbol}`);
+          return false;
+        }
+      }
+      
       return true;
     } catch (e) {
       console.error(`Error checking market status for ${symbol}:`, e);
