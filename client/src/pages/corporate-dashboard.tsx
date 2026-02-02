@@ -251,6 +251,8 @@ export default function CorporateDashboard() {
       return res.json();
     },
     enabled: !!user && user.userType === "business",
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   const hideClosedOrderMutation = useMutation({
@@ -267,11 +269,22 @@ export default function CorporateDashboard() {
       }
       return res.json();
     },
+    onMutate: async (orderId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["hidden-orders"] });
+      const previousHidden = queryClient.getQueryData<{ orderIds: string[] }>(["hidden-orders"]);
+      queryClient.setQueryData(["hidden-orders"], (old: { orderIds: string[] } | undefined) => ({
+        orderIds: [...(old?.orderIds || []), orderId],
+      }));
+      return { previousHidden };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hidden-orders"] });
       toast({ title: t('corporateDashboard.orderRemoved') });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _orderId, context) => {
+      if (context?.previousHidden) {
+        queryClient.setQueryData(["hidden-orders"], context.previousHidden);
+      }
       toast({ variant: "destructive", title: t('corporateDashboard.hideOrderFailed'), description: error.message });
     },
   });
