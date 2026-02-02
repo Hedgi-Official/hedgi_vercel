@@ -156,6 +156,7 @@ interface Order {
   entry_price: number;
   status: string;
   timestamp: string;
+  created_at?: string;
   estimated_total_cost_quote?: number;
   estimated_spread_cost_quote?: number;
   estimated_swap_cost_quote?: number;
@@ -524,11 +525,16 @@ export default function CorporateDashboard() {
   const closedOrders = orders.filter((o: Order) => 
     (o.status === "CLOSED" || o.status === "closed") && !hiddenOrderIds.has(String(o.order_id))
   );
+  // API pending orders - orders stored in Hedgi API waiting for market to open
+  const apiPendingOrders = orders.filter((o: Order) => 
+    o.status === "PENDING" || o.status === "pending"
+  );
+  // Scheduled orders - from our local pending_orders table
   const pendingOrders = pendingOrdersQuery.data?.orders || [];
   const activePendingOrders = pendingOrders.filter((o: any) => 
     o.status !== "cancelled" && o.status !== "executed" && o.status !== "closed" && o.status !== "failed" && o.status !== "completed"
   );
-  const activePendingCount = activePendingOrders.length;
+  const totalPendingCount = apiPendingOrders.length + activePendingOrders.length;
   const cancelledOrders = pendingOrders.filter((o: any) => o.status === "cancelled");
   const failedOrders = pendingOrders.filter((o: any) => o.status === "failed");
 
@@ -645,7 +651,14 @@ export default function CorporateDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{t('corporateDashboard.pendingOrders')}</p>
-                  <p className="text-2xl font-bold">{activePendingCount}</p>
+                  <p className="text-2xl font-bold">{totalPendingCount}</p>
+                  {(apiPendingOrders.length > 0 || activePendingOrders.length > 0) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {apiPendingOrders.length > 0 && `${apiPendingOrders.length} ${t('corporateDashboard.waitingForMarket')}`}
+                      {apiPendingOrders.length > 0 && activePendingOrders.length > 0 && " • "}
+                      {activePendingOrders.length > 0 && `${activePendingOrders.length} ${t('corporateDashboard.scheduled')}`}
+                    </p>
+                  )}
                 </div>
                 <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
                   <Clock className="h-5 w-5 text-orange-500" />
@@ -1296,13 +1309,88 @@ export default function CorporateDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="pending">
+          <TabsContent value="pending" className="space-y-6">
+            {/* API Pending Orders - Waiting for Market */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>{t('corporateDashboard.pendingOrdersQueue')}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-500" />
+                    {t('corporateDashboard.waitingForMarketTitle')}
+                  </CardTitle>
                   <CardDescription>
-                    {t('corporateDashboard.scheduledForExecution')}
+                    {t('corporateDashboard.waitingForMarketDesc')}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => ordersQuery.refetch()}
+                  disabled={ordersQuery.isFetching}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${ordersQuery.isFetching ? "animate-spin" : ""}`} />
+                  {t('corporateDashboard.refresh')}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {ordersQuery.isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : apiPendingOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <CheckCircle2 className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-sm">{t('corporateDashboard.noOrdersWaitingForMarket')}</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('corporateDashboard.id')}</TableHead>
+                        <TableHead>{t('corporateDashboard.symbol')}</TableHead>
+                        <TableHead>{t('corporateDashboard.direction')}</TableHead>
+                        <TableHead>{t('corporateDashboard.volume')}</TableHead>
+                        <TableHead>{t('corporateDashboard.created')}</TableHead>
+                        <TableHead>{t('corporateDashboard.status')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {apiPendingOrders.map((order: Order) => (
+                        <TableRow key={order.order_id}>
+                          <TableCell className="font-mono text-xs">{order.order_id}</TableCell>
+                          <TableCell>{order.symbol}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.direction?.toLowerCase() === "buy" ? "default" : "secondary"}>
+                              {order.direction?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{order.volume}</TableCell>
+                          <TableCell className="text-sm">
+                            {(order.created_at || order.timestamp) ? new Date(order.created_at || order.timestamp).toLocaleString() : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50">
+                              {t('corporateDashboard.waitingForMarket')}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Scheduled Orders - Local Queue */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-5 h-5 text-blue-500" />
+                    {t('corporateDashboard.scheduledOrdersTitle')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('corporateDashboard.scheduledOrdersDesc')}
                   </CardDescription>
                 </div>
                 <Button
@@ -1321,10 +1409,10 @@ export default function CorporateDashboard() {
                     <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : activePendingOrders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                    <Clock className="w-12 h-12 mb-4 opacity-20" />
-                    <p>{t('corporateDashboard.noPendingOrders')}</p>
-                    <p className="text-sm mt-2">{t('corporateDashboard.uploadCsvToSchedule')}</p>
+                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <Clock className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-sm">{t('corporateDashboard.noScheduledOrders')}</p>
+                    <p className="text-xs mt-1">{t('corporateDashboard.uploadCsvToSchedule')}</p>
                   </div>
                 ) : (
                   <Table>

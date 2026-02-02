@@ -3,7 +3,8 @@ import { createServer } from "http";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupSimpleAuth } from "./simple-auth";
-import { startMarketClosedRetryService } from "./services/marketClosedRetryService";
+// Market closed retry service is now disabled - Hedgi API handles pending orders automatically
+// import { startMarketClosedRetryService } from "./services/marketClosedRetryService";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -89,8 +90,9 @@ app.use((req, res, next) => {
   server.listen(PORT, "0.0.0.0", () => {
     log(`Server successfully started on port ${PORT}`);
     
-    // Start the market closed retry service
-    startMarketClosedRetryService();
-    log("Market closed retry service started");
+    // Market closed retry service is disabled - Hedgi API now handles pending orders automatically
+    // When orders are placed during closed markets, they are stored with "pending" status
+    // and automatically executed by the API when markets open
+    log("Server ready (API handles pending orders automatically)");
   });
 })();
