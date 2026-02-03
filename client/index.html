@@ -9,6 +9,28 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Hedgi is a professional currency hedging platform that helps individuals and businesses protect against exchange rate fluctuations. Lock in rates, reduce FX risk, and simplify international payments." />
+    <meta name="keywords" content="currency hedging, FX protection, exchange rate, forex hedge, international payments, USD BRL, currency risk management" />
+    <meta name="author" content="Hedgi" />
+    <link rel="canonical" href="https://hedgi.ai/" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hedgi.ai/" />
+    <meta property="og:title" content="Hedgi - Professional Currency Hedging Platform" />
+    <meta property="og:description" content="Protect your international payments from currency fluctuations. Simple API integration for businesses, easy-to-use platform for individuals." />
+    <meta property="og:image" content="https://hedgi.ai/Hedgi.png" />
+    <meta property="og:site_name" content="Hedgi" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://hedgi.ai/" />
+    <meta name="twitter:title" content="Hedgi - Professional Currency Hedging Platform" />
+    <meta name="twitter:description" content="Protect your international payments from currency fluctuations. Simple API integration for businesses, easy-to-use platform for individuals." />
+    <meta name="twitter:image" content="https://hedgi.ai/Hedgi.png" />
+    
     <!-- PWA Configuration -->
     <meta name="theme-color" content="#1dd1a1" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,6 +51,39 @@
     <link rel="manifest" href="/manifest.json" />
     
     <title>Hedgi - Currency Hedging Platform</title>
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Hedgi",
+      "url": "https://hedgi.ai",
+      "logo": "https://hedgi.ai/Hedgi.png",
+      "description": "Professional currency hedging platform for individuals and businesses",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Portuguese"]
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Hedgi",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Currency hedging platform that helps protect against exchange rate fluctuations"
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

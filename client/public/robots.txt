@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /corporate-dashboard
+Disallow: /batch-upload
+Disallow: /profile
+Disallow: /auth
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://hedgi.ai/sitemap.xml

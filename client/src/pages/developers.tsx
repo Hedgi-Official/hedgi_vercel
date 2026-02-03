@@ -1,5 +1,6 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -374,6 +375,11 @@ export default function Developers() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Developer API Documentation"
+        description="Integrate Hedgi's currency hedging API into your application. RESTful endpoints, real-time quotes, and comprehensive documentation for developers."
+        path="/developers"
+      />
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       <main>
