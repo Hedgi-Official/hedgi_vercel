@@ -32,11 +32,7 @@ export default function WhatIsHedge() {
 
   return (
     <div className="page-container">
-      <SEO 
-        title="What is Currency Hedging"
-        description="Learn how currency hedging protects your international payments from exchange rate fluctuations. Understand hedging strategies for businesses and individuals."
-        path="/what-is-hedge"
-      />
+      <SEO titleKey="whatIsHedge" path="/what-is-hedge" />
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       <main className="page-main">

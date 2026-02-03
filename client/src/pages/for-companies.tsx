@@ -261,11 +261,7 @@ export default function ForCompanies() {
 
   const renderMainPage = () => (
     <div className="page-container bg-background">
-      <SEO 
-        title="Currency Hedging API for Companies"
-        description="Integrate currency hedging into your platform with Hedgi's simple API. Protect your clients from FX risk with one API call. Request sandbox access today."
-        path="/"
-      />
+      <SEO titleKey="home" path="/" />
       <div className="absolute inset-0 opacity-3 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>

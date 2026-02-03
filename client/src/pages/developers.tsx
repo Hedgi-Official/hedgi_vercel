@@ -375,11 +375,7 @@ export default function Developers() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO 
-        title="Developer API Documentation"
-        description="Integrate Hedgi's currency hedging API into your application. RESTful endpoints, real-time quotes, and comprehensive documentation for developers."
-        path="/developers"
-      />
+      <SEO titleKey="developers" path="/developers" />
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       <main>
