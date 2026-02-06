@@ -13,35 +13,35 @@ const BASE_URL = import.meta.env.VITE_BASE_URL || "https://hedgi.ai";
 
 const seoTranslations = {
   en: {
-    defaultTitle: "Hedgi - Currency Hedging Platform",
-    defaultDescription: "Hedgi is a professional currency hedging platform that helps individuals and businesses protect against exchange rate fluctuations. Lock in rates, reduce FX risk, and simplify international payments.",
+    defaultTitle: "Hedgi - Currency Hedging API for Companies",
+    defaultDescription: "Currency hedging API for fintechs and payment platforms. Protect clients from FX risk with one API call. Request sandbox access.",
     home: {
       title: "Currency Hedging API for Companies",
-      description: "Integrate currency hedging into your platform with Hedgi's simple API. Protect your clients from FX risk with one API call. Request sandbox access today."
+      description: "Currency hedging API for fintechs and payment platforms. Protect clients from FX risk with one API call. Request sandbox access."
     },
     whatIsHedge: {
       title: "What is Currency Hedging",
-      description: "Learn how currency hedging protects your international payments from exchange rate fluctuations. Understand hedging strategies for businesses and individuals."
+      description: "Learn how currency hedging protects international payments from exchange rate changes. Hedging strategies for businesses explained."
     },
     developers: {
       title: "Developer API Documentation",
-      description: "Integrate Hedgi's currency hedging API into your application. RESTful endpoints, real-time quotes, and comprehensive documentation for developers."
+      description: "Integrate Hedgi's currency hedging API into your app. RESTful endpoints, real-time quotes, and full documentation for developers."
     }
   },
   "pt-BR": {
-    defaultTitle: "Hedgi - Plataforma de Hedge Cambial",
-    defaultDescription: "Hedgi é uma plataforma profissional de hedge cambial que ajuda pessoas e empresas a se protegerem contra flutuações nas taxas de câmbio. Trave taxas, reduza riscos cambiais e simplifique pagamentos internacionais.",
+    defaultTitle: "Hedgi - API de Hedge Cambial para Empresas",
+    defaultDescription: "API de hedge cambial para fintechs e plataformas de pagamento. Proteja clientes do risco FX com uma chamada de API. Solicite acesso.",
     home: {
       title: "API de Hedge Cambial para Empresas",
-      description: "Integre hedge cambial à sua plataforma com a API simples da Hedgi. Proteja seus clientes do risco cambial com uma única chamada de API. Solicite acesso ao sandbox hoje."
+      description: "API de hedge cambial para fintechs e plataformas de pagamento. Proteja clientes do risco FX com uma chamada de API. Solicite acesso."
     },
     whatIsHedge: {
       title: "O que é Hedge Cambial",
-      description: "Aprenda como o hedge cambial protege seus pagamentos internacionais contra flutuações nas taxas de câmbio. Entenda estratégias de hedge para empresas e pessoas físicas."
+      description: "Saiba como o hedge cambial protege pagamentos internacionais contra flutuações cambiais. Estratégias de hedge para empresas."
     },
     developers: {
       title: "Documentação da API para Desenvolvedores",
-      description: "Integre a API de hedge cambial da Hedgi à sua aplicação. Endpoints RESTful, cotações em tempo real e documentação completa para desenvolvedores."
+      description: "Integre a API de hedge cambial da Hedgi à sua aplicação. Endpoints RESTful, cotações em tempo real e documentação completa."
     }
   }
 };
