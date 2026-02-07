@@ -30,9 +30,44 @@ export default function WhatIsHedge() {
     navigate("/");
   };
 
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": t("whatIsHedging.title"),
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": t("whatIsHedging.heroParagraph")
+        }
+      },
+      {
+        "@type": "Question",
+        "name": t("whatIsHedging.businessTitle"),
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": t("whatIsHedging.businessSubtitle") + " " + t("whatIsHedging.businessFooter")
+        }
+      },
+      {
+        "@type": "Question",
+        "name": t("whatIsHedging.individualsTitle"),
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": t("whatIsHedging.individualsIntro")
+        }
+      }
+    ]
+  };
+
   return (
     <div className="page-container">
       <SEO titleKey="whatIsHedge" path="/what-is-hedge" />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <Header showAuthButton={!user} username={user?.username} onLogout={handleLogout} />
       
       <main className="page-main">

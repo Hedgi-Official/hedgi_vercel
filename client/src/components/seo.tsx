@@ -54,18 +54,31 @@ function getLanguageCode(lang: string): SupportedLanguage {
   return "en";
 }
 
-function getHreflangCode(lang: SupportedLanguage): string {
-  return lang === "pt-BR" ? "pt-BR" : "en";
+function isPortuguesePath(): boolean {
+  if (typeof window === "undefined") return false;
+  const pathname = window.location.pathname;
+  return pathname === "/pt" || pathname.startsWith("/pt/");
+}
+
+function getEnglishUrl(path: string): string {
+  return path ? `${BASE_URL}${path}` : BASE_URL;
+}
+
+function getPortugueseUrl(path: string): string {
+  const cleanPath = path && path !== "/" ? path : "";
+  return `${BASE_URL}/pt${cleanPath}`;
 }
 
 export function SEO({ titleKey, path, title, description }: SEOProps) {
   const { i18n } = useTranslation();
   const currentLang = getLanguageCode(i18n.language);
   const translations = seoTranslations[currentLang];
-  
+  const isPt = isPortuguesePath();
+  const htmlLang = isPt ? "pt-BR" : "en";
+
   useEffect(() => {
-    document.documentElement.lang = getHreflangCode(currentLang);
-  }, [currentLang]);
+    document.documentElement.lang = htmlLang;
+  }, [htmlLang]);
 
   let fullTitle: string;
   let metaDescription: string;
@@ -82,21 +95,38 @@ export function SEO({ titleKey, path, title, description }: SEOProps) {
     metaDescription = description || translations.defaultDescription;
   }
 
-  const canonicalUrl = path ? `${BASE_URL}${path}` : BASE_URL;
+  const pagePath = path || "/";
+  const canonicalUrl = isPt ? getPortugueseUrl(pagePath) : getEnglishUrl(pagePath);
+  const enUrl = getEnglishUrl(pagePath);
+  const ptUrl = getPortugueseUrl(pagePath);
 
   return (
     <Helmet>
-      <html lang={getHreflangCode(currentLang)} />
+      <html lang={htmlLang} />
       <title>{fullTitle}</title>
       <meta name="description" content={metaDescription} />
+
+      <link rel="canonical" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="en" href={enUrl} />
+      <link rel="alternate" hrefLang="pt-BR" href={ptUrl} />
+      <link rel="alternate" hrefLang="x-default" href={enUrl} />
+
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={metaDescription} />
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:locale" content={currentLang === "pt-BR" ? "pt_BR" : "en_US"} />
+      <meta property="og:locale" content={isPt ? "pt_BR" : "en_US"} />
+      <meta property="og:locale:alternate" content={isPt ? "en_US" : "pt_BR"} />
+      <meta property="og:image" content={`${BASE_URL}/Hedgi.png`} />
+      <meta property="og:image:width" content="500" />
+      <meta property="og:image:height" content="500" />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="Hedgi" />
+
+      <meta name="twitter:card" content="summary" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={metaDescription} />
       <meta name="twitter:url" content={canonicalUrl} />
-      <link rel="canonical" href={canonicalUrl} />
+      <meta name="twitter:image" content={`${BASE_URL}/Hedgi.png`} />
     </Helmet>
   );
 }

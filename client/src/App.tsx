@@ -1,10 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
-import "@/i18n";
+import { useEffect } from "react";
+import i18n from "@/i18n";
 
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
@@ -20,7 +21,25 @@ import ResetPassword from "@/pages/ResetPassword";
 
 import { CacheManager } from "@/components/cache-manager";
 
-function Router() {
+function getLanguageFromPath(): { lang: "en" | "pt"; base: string } {
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  if (pathname === "/pt" || pathname.startsWith("/pt/")) {
+    return { lang: "pt", base: "/pt" };
+  }
+  return { lang: "en", base: "" };
+}
+
+function LanguageSync({ lang }: { lang: "en" | "pt" }) {
+  useEffect(() => {
+    const target = lang === "pt" ? "pt-BR" : "en-US";
+    if (!i18n.language?.startsWith(lang)) {
+      i18n.changeLanguage(target);
+    }
+  }, [lang]);
+  return null;
+}
+
+function AppRouter() {
   const { user, isLoading } = useUser();
 
   if (isLoading) {
@@ -58,11 +77,16 @@ function Router() {
 }
 
 function App() {
+  const { lang, base } = getLanguageFromPath();
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <CacheManager />
-      <Toaster />
+      <WouterRouter base={base}>
+        <LanguageSync lang={lang} />
+        <AppRouter />
+        <CacheManager />
+        <Toaster />
+      </WouterRouter>
     </QueryClientProvider>
   );
 }

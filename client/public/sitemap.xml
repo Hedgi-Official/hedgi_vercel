@@ -1,20 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://hedgi.ai/</loc>
-    <lastmod>2026-02-06</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/" />
+    <lastmod>2026-02-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://hedgi.ai/pt</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/" />
+    <lastmod>2026-02-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://hedgi.ai/what-is-hedge</loc>
-    <lastmod>2026-02-06</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/what-is-hedge" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt/what-is-hedge" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/what-is-hedge" />
+    <lastmod>2026-02-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://hedgi.ai/pt/what-is-hedge</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/what-is-hedge" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt/what-is-hedge" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/what-is-hedge" />
+    <lastmod>2026-02-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://hedgi.ai/developers</loc>
-    <lastmod>2026-02-06</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/developers" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt/developers" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/developers" />
+    <lastmod>2026-02-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://hedgi.ai/pt/developers</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hedgi.ai/developers" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://hedgi.ai/pt/developers" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hedgi.ai/developers" />
+    <lastmod>2026-02-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

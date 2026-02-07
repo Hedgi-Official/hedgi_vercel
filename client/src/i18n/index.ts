@@ -1730,8 +1730,24 @@ const ptBR = {
   }
 };
 
+const pathLanguageDetector = {
+  name: 'path',
+  lookup() {
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      if (pathname === '/pt' || pathname.startsWith('/pt/')) {
+        return 'pt-BR';
+      }
+    }
+    return undefined;
+  }
+};
+
+const languageDetector = new LanguageDetector();
+languageDetector.addDetector(pathLanguageDetector);
+
 i18n
-  .use(LanguageDetector)
+  .use(languageDetector)
   .use(initReactI18next)
   .init({
     resources: {
@@ -1743,7 +1759,7 @@ i18n
     supportedLngs: ['en-US', 'pt-BR', 'en', 'pt'],
     fallbackLng: 'en-US',
     detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
+      order: ['path', 'localStorage', 'navigator', 'htmlTag'],
       caches: typeof window !== 'undefined' ? ['localStorage'] : [],
       lookupLocalStorage: 'hedgi-language'
     },
