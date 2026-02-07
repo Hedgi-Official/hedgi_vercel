@@ -47,3 +47,8 @@ Preferred communication style: Simple, everyday language.
 - **Mercado Pago**: For payment processing in Brazilian and Mexican markets.
 - **Broker APIs**: For real-time trading data, execution, and liquidity.
 - **Neon**: Serverless PostgreSQL database hosting.
+
+## Changelog
+- February 7, 2026. **Codebase cleanup Phase 3 & 4** - Server consolidation: deleted unused routes.ts (908 lines), renamed routes-fixed.ts to routes.ts (the active file), deleted simple-auth.ts (unused auth endpoint), consolidated payment route mounting from index.ts into main routes file, cleaned up index.ts imports. i18n pruning: removed 328 lines of unused translation keys from both English and Portuguese - deleted entire aboutUs, forIndividuals, cta, features, lifestyle namespaces; pruned landing namespace to 5 used keys; removed 19 root-level orphan keys and 6 companiesPage socialProof keys.
+- February 7, 2026. **Comprehensive multilingual SEO overhaul** - Added URL-based language routing with /pt/ prefix for Portuguese pages. Added hreflang annotations, updated sitemap.xml with bilingual hreflang elements. Fixed viewport initial-scale, removed aggressive no-cache meta tags. Improved 404 page. Added FAQ structured data to what-is-hedge page.
+- February 7, 2026. **Codebase cleanup Phase 1 & 2** - Removed 47MB attached_assets, 20MB public/images, deprecated server files, orphaned components, and duplicate assets.

@@ -1,12 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes-fixed";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupSimpleAuth } from "./simple-auth";
-// Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();
-import paymentRoutes from './routes/payment';
 
 const app = express();
 const server = createServer(app);
@@ -14,16 +11,11 @@ const server = createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Add payment routes
-app.use('/', paymentRoutes);
-
-// Add test endpoint
 app.get('/ping', (req, res) => {
   log('Ping endpoint called');
   res.json({ message: 'pong' });
 });
 
-// Enhanced request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -57,13 +49,9 @@ app.use((req, res, next) => {
 (async () => {
   log("Starting server initialization...");
 
-  // Simple authentication is now handled in the main routes file
-
-  // Initialize routes first to ensure API endpoints are ready
   registerRoutes(app);
   log("Routes registered successfully");
 
-  // Setup Vite or static serving based on environment
   if (app.get("env") === "development") {
     log("Setting up Vite in development mode...");
     await setupVite(app, server);
@@ -74,7 +62,6 @@ app.use((req, res, next) => {
     log("Static serving setup completed");
   }
 
-  // Enhanced error handling middleware (after all routes)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -82,15 +69,10 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Bind server to port 5000
   const PORT = 5000;
   
   server.listen(PORT, "0.0.0.0", () => {
     log(`Server successfully started on port ${PORT}`);
-    
-    // Market closed retry service is disabled - Hedgi API now handles pending orders automatically
-    // When orders are placed during closed markets, they are stored with "pending" status
-    // and automatically executed by the API when markets open
     log("Server ready (API handles pending orders automatically)");
   });
 })();

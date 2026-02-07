@@ -1,216 +1,224 @@
-// server/routes.ts
 import fetch from 'node-fetch';
-import { db } from '@db';
-import { trades, users } from '@db/schema';        // ← import the real trades table and users
-import { eq, desc, inArray, and} from 'drizzle-orm';
-import type { Express, Request, Response } from 'express';
-import { createServer, Server } from 'http';
-import { setupAuth } from './auth';
-import activtradesRouter from './routes/activtrades-rate';
-import tickmillRouter from './routes/tickmill-rate';
-import fbsRouter from './routes/fbs-rate';
-import secondaryRateRouter from './routes/secondary-rate';
-import chatRouter from './routes/chat';
-import paymentRouter from './routes/payment';
-// Import our modern trade service for the curl-based API implementation
-import { tradeService } from "./services/tradeService";
-import { PAYMENT_CONFIG } from "./config";
-import { paymentService } from "./services/paymentService";
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { db } from "@db";
+import { users, hedges, trades } from "@db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { setupAuth } from "./auth";
 import nodemailer from 'nodemailer';
 
-const FLASK = process.env.FLASK_URL;
-interface BrokerRate {
-  bid:      number;
-  ask:      number;
-  swap_long:  number;
-  swap_short: number;
-}
+import secondaryRateRouter from "./routes/secondary-rate";
+import chatRouter from "./routes/chat";
+import activtradesRouter from "./routes/activtrades-rate";
+import tickmillRouter from "./routes/tickmill-rate";
+import fbsRouter from "./routes/fbs-rate";
+import paymentRouter from "./routes/payment";
+import simulateRouter from "./routes/simulate";
+import hedgiApiRouter from "./routes/hedgi-api";
+import pendingOrdersRouter from "./routes/pending-orders";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
 
+const scryptAsync = promisify(scrypt);
+
+// In-memory cache for payment results
+const paymentResultsCache = new Map<string, any>();
+
+const crypto = {
+  hash: async (password: string) => {
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
+  },
+  compare: async (suppliedPassword: string, storedPassword: string) => {
+    const [hashedPassword, salt] = storedPassword.split(".");
+    const buf = (await scryptAsync(suppliedPassword, salt, 64)) as Buffer;
+    return buf.toString("hex") === hashedPassword;
+  },
+};
+
+const FLASK = process.env.FLASK_URL;
+
+console.log("[BOOT] Using FLASK_URL =", FLASK);
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Mercado Pago API endpoints for modal popup
-  app.get('/api/mp-public-key', async (req: Request, res: Response) => {
+  // Local Mercado Pago brick endpoint to avoid CORS issues
+  app.get("/api/proxy/brick", async (req: Request, res: Response) => {
+    const startTime = Date.now();
     try {
-      const publicKey = PAYMENT_CONFIG.BR_PUBLIC_KEY;
-      if (!publicKey) {
-        return res.status(500).json({ error: 'Mercado Pago public key not configured' });
-      }
-      res.json({ publicKey });
-    } catch (error) {
-      console.error('Error getting MP public key:', error);
-      res.status(500).json({ error: 'Failed to get public key' });
-    }
-  });
+      // 1) Read amount, txId, and locale from the query string
+      const amount = req.query.amount;
+      const txId   = req.query.txId;  // will be a UUID set by React
+      const lang = req.query.lang || "en-US"; // Default to English
 
-  app.post('/api/payment-preference', async (req: Request, res: Response) => {
-    try {
-      const { amount, hedgeData } = req.body;
-
-      const preference = {
-        id: `hedge_${Date.now()}`,
-        amount: parseFloat(amount),
-        currency_id: 'BRL',
-        description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
-        metadata: hedgeData
+      // Debug user session and account info
+      const sessionInfo = {
+        sessionId: req.sessionID || 'no-session',
+        userId: (req as any).user?.id || 'no-user',
+        userAgent: req.get('User-Agent')?.substring(0, 100) || 'no-ua',
+        ip: req.ip || req.connection.remoteAddress || 'no-ip',
+        referer: req.get('Referer') || 'no-referer'
       };
 
-      res.json(preference);
-    } catch (error) {
-      console.error('Error creating payment preference:', error);
-      res.status(500).json({ error: 'Failed to create payment preference' });
-    }
-  });
+      console.log(`[Local Brick] /api/proxy/brick endpoint called`);
+      console.log(`[Local Brick] Session info:`, sessionInfo);
+      console.log(`[Local Brick] Creating Mercado Pago brick for amount=${amount}, txId=${txId}, lang=${lang}`);
 
-  app.post('/api/process-payment', async (req: Request, res: Response) => {
-    try {
-      const { hedgeData, amount, ...paymentData } = req.body;
+      // 2) Forward both to Flask’s /brick endpoint
+      //    Flask’s home() route will extract `amount` and `txId` and render them into the HTML.
+      const cacheBuster = Date.now();
+      const flaskUrl = `${FLASK}/brick?amount=${amount}&txId=${txId}&lang=${lang}&_cb=${cacheBuster}`;
+      console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
 
-      console.log('[MP Process Payment] Processing payment for amount:', amount);
+      const fetchStart = Date.now();
+      const response = await Promise.race([
+        fetch(flaskUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; Hedgi-Proxy/1.0)",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+          },
 
-      const mpResult = await paymentService.processPayment({
-        token: paymentData.token,
-        transaction_amount: parseFloat(amount),
-        description: `Hedge ${hedgeData.baseCurrency}/${hedgeData.targetCurrency}`,
-        payment_method_id: paymentData.payment_method_id,
-        payer: paymentData.payer,
-        metadata: {
-          days: hedgeData.duration,
-          margin: hedgeData.margin || '0',
-          baseCurrency: hedgeData.baseCurrency,
-          targetCurrency: hedgeData.targetCurrency,
-          tradeDirection: hedgeData.tradeDirection,
-          rate: hedgeData.rate,
-          amount: hedgeData.amount
-        }
-      });
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Flask request timeout after 15 seconds')), 15000)
+        )
+      ]);
 
-      if (mpResult && (mpResult as any).status === 'approved') {
-        const paymentResult = {
-          id: (mpResult as any).id,
-          status: 'approved',
-          message: 'Payment processed successfully'
-        };
-        res.json(paymentResult);
-      } else {
-        res.status(400).json({ 
-          error: 'Payment not approved', 
-          status: (mpResult as any)?.status || 'unknown' 
-        });
-      }
-    } catch (error: unknown) {
-      console.error('[MP Process Payment] Error:', error);
-      res.status(500).json({ 
-        error: 'Payment processing failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+      const fetchTime = Date.now() - fetchStart;
+      console.log(`[Local Brick] Flask fetch completed in ${fetchTime}ms with status ${response.status}`);
 
-  // Flask brick proxy endpoint - using specific route that Vite won't intercept
-  app.get('/flask-brick-proxy', async (req: Request, res: Response) => {
-    try {
-      const { amount, hedgeData } = req.query;
-
-      console.log('[Flask Brick Proxy] Request:', { amount, hedgeData });
-
-      // Get Flask URL from environment (keeping it secure)
-      const flaskUrl = process.env.FLASK_URL;
-
-      // Forward request to Flask /brick endpoint with just amount parameter
-      const brickUrl = `${flaskUrl}/brick?amount=${amount}`;
-      console.log('[Flask Brick Proxy] Fetching from:', brickUrl);
-
-      const brickResponse = await fetch(brickUrl, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Hedgi-Proxy/1.0',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        }
-      });
-
-      console.log('[Flask Brick Proxy] Response status:', brickResponse.status);
-
-      if (!brickResponse.ok) {
-        throw new Error(`Flask brick endpoint returned ${brickResponse.status}: ${brickResponse.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Flask server responded with ${response.status}: ${response.statusText}`);
       }
 
-      let html = await brickResponse.text();
-      console.log('[Flask Brick Proxy] HTML length:', html.length);
+      const htmlStart = Date.now();
+      const html = await response.text();
+      const htmlTime = Date.now() - htmlStart;
+      console.log(`[Local Brick] Generated brick HTML (${html.length} chars) in ${htmlTime}ms`);
 
-      // Inject message passing code to communicate payment results back to parent
-      const messageScript = `
-        <script>
-          // Override any payment completion functions to send messages to parent
-          window.notifyPaymentSuccess = function(paymentResult) {
-            window.parent.postMessage({
-              type: 'PAYMENT_SUCCESS',
-              paymentResult: paymentResult
-            }, '*');
-          };
+      // Debug: Show the actual onSubmit signature from Flask
+      const onSubmitMatch = html.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
+      if (onSubmitMatch) {
+        console.log(`[Local Brick] Flask onSubmit signature: ${onSubmitMatch[0]}`);
+      }
 
-          window.notifyPaymentError = function(error) {
-            window.parent.postMessage({
-              type: 'PAYMENT_ERROR',
-              error: error
-            }, '*');
-          };
+      // Fix the fetch URL to point to our proxy with HTTPS support
+      const originalFetch = 'fetch("/process_payment", {';
+      const protocol = req.get('x-forwarded-proto') === 'https' ? 'https' : req.protocol;
+      const newFetch = `fetch("${protocol}://${req.get('host')}/api/proxy/process_payment", {`;
 
-          window.notifyPaymentProcessing = function() {
-            window.parent.postMessage({
-              type: 'PAYMENT_PROCESSING'
-            }, '*');
-          };
+      let updatedHtml = html.replace(originalFetch, newFetch);
+      console.log(`[Brick Proxy] Fetch URL replacement: ${originalFetch} -> ${newFetch}`);
 
-          // Override console.log to capture payment completion
-          const originalLog = console.log;
-          console.log = function(...args) {
-            originalLog.apply(console, args);
+      // Set dynamic locale based on user's language preference
+      updatedHtml = updatedHtml.replace(
+        'locale: "en-US"',
+        `locale: "${lang}"`
+      );
 
-            // Look for payment completion patterns
-            const message = args.join(' ');
-            if (message.includes('Payment') && message.includes('approved')) {
-              try {
-                const paymentData = JSON.parse(message);
-                if (paymentData.status === 'approved') {
-                  window.notifyPaymentSuccess(paymentData);
-                }
-              } catch (e) {
-                // If not JSON, look for payment ID patterns
-                const idMatch = message.match(/id[":]+([0-9]+)/);
-                if (idMatch) {
-                  window.notifyPaymentSuccess({
-                    id: idMatch[1],
-                    status: 'approved',
-                    message: 'Payment processed successfully'
-                  });
-                }
-              }
-            }
-          };
-        </script>
-      `;
+      // Fix payment method restrictions to support both Visa and Mastercard
+      const beforeReplace = updatedHtml.includes('excluded: ["debit_card"]');
+      updatedHtml = updatedHtml.replace(
+        'types:           { excluded: ["debit_card"] }',
+        'types:           { included: ["credit_card"] }'
+      );
+      const afterReplace = updatedHtml.includes('included: ["credit_card"]');
+      console.log(`[Brick Proxy] Payment method replacement - Before: ${beforeReplace}, After: ${afterReplace}`);
 
-      // Inject the script before closing </body> tag
-      html = html.replace('</body>', `${messageScript}</body>`);
+      // Fix payment method ID extraction - use payment_method_id instead of paymentMethodId
+      const beforeMethodFix = updatedHtml.includes('cardFormData.paymentMethodId');
+      updatedHtml = updatedHtml.replace(
+        /cardFormData\.paymentMethodId/g,
+        'cardFormData.payment_method_id'
+      );
+      const afterMethodFix = updatedHtml.includes('cardFormData.payment_method_id');
+      console.log(`[Brick Proxy] Payment method ID extraction - Before: ${beforeMethodFix}, After: ${afterMethodFix}`);
 
-      // Set proper headers to prevent iframe restrictions
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('X-Frame-Options', 'ALLOWALL');
-      res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *");
-      res.send(html);
+      // Also add locale to the Brick settings for form translation
+      updatedHtml = updatedHtml.replace(
+        'initialization: {',
+        `locale: "${lang}",\n        initialization: {`
+      );
+
+      // Add enhanced logging to the postMessage section
+      updatedHtml = updatedHtml.replace(
+        /console\.log\("\[iframe\] proxy JSON:", backendJson\);/,
+        `console.log("[iframe] proxy JSON:", backendJson);
+              console.log("[iframe] About to check status:", backendJson.status);
+              console.log("[iframe] Status comparison result:", backendJson.status === "approved");`
+      );
+
+      // Add logging before postMessage calls
+      updatedHtml = updatedHtml.replace(
+        /window\.parent\.postMessage\(\s*\{\s*status:\s*"approved"/g,
+        `console.log("[iframe] SENDING APPROVED postMessage with data:", backendJson);
+                window.parent.postMessage({ status: "approved"`
+      );
+
+      updatedHtml = updatedHtml.replace(
+        /window\.parent\.postMessage\(\s*\{\s*status:\s*"error"/g,
+        `console.log("[iframe] SENDING ERROR postMessage");
+                window.parent.postMessage({ status: "error"`
+      );
+
+      // Add a test postMessage when brick is ready - check if replacement worked
+      const beforeOnReadyReplace = updatedHtml.includes('onReady: () => console.log("[iframe] Brick ready for amount =", AMOUNT)');
+      updatedHtml = updatedHtml.replace(
+        /onReady:\s*\(\)\s*=>\s*console\.log\("\[iframe\] Brick ready for amount =", AMOUNT\)/,
+        `onReady: () => {
+            console.log("[iframe] Brick ready for amount =", AMOUNT);
+            console.log("[iframe] Brick ready, sending test postMessage");
+            window.parent.postMessage({ status: "test", message: "iframe ready", txId: TX_ID }, "*");
+          }`
+      );
+      const afterOnReadyReplace = updatedHtml.includes('window.parent.postMessage({ status: "test", message: "iframe ready"');
+      console.log(`[Brick Proxy] onReady replacement - Before: ${beforeOnReadyReplace}, After: ${afterOnReadyReplace}`);
+
+      // Debug: Show the final onSubmit signature we're serving
+      const finalOnSubmitMatch = updatedHtml.match(/onSubmit:\s*async\s*\([^)]*\)\s*=>/);
+      if (finalOnSubmitMatch) {
+        console.log(`[Local Brick] Final onSubmit signature: ${finalOnSubmitMatch[0]}`);
+      }
+
+      const totalTime = Date.now() - startTime;
+      console.log(`[Local Brick] Complete proxy response in ${totalTime}ms for session ${sessionInfo.sessionId}, user ${sessionInfo.userId}`);
+
+      // 3) Return it as HTML so the iframe can render it
+      res.setHeader("Content-Type", "text/html");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.send(updatedHtml);
     } catch (error) {
-      console.error('Flask brick proxy error:', error);
+      const errorTime = Date.now() - startTime;
+      console.error(`[Local Brick] Error creating brick after ${errorTime}ms:`, error);
+      console.error(`[Local Brick] Error details:`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        sessionId: req.sessionID || 'unknown',
+        userId: (req as any).user?.id || 'unknown'
+      });
       res.status(500).send(`
         <html>
           <body>
-            <div style="padding: 20px; text-align: center;">
-              <h3>Payment Form Error</h3>
-              <p>Failed to load payment form from Flask server</p>
-              <p>Error: ${error.message}</p>
-              <button onclick="window.parent.postMessage({type: 'PAYMENT_ERROR', error: 'Failed to load payment form'}, '*')">Close</button>
+            <div style="padding:20px; text-align:center; color:#666;">
+              <h3>Payment form temporarily unavailable</h3>
+              <p>Please try again in a moment.</p>
+              <script>
+                window.parent.postMessage(
+                  { status: "error", error: "Payment form unavailable" },
+                  "*"
+                );
+              </script>
             </div>
           </body>
         </html>
@@ -218,290 +226,578 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Mercado Pago Brick Integration Endpoints
-
-  // 1. GET /payment?amount=<AMOUNT> - Renders payment form with cardPayment Brick
-  app.get('/payment', (req: Request, res: Response) => {
-    const amount = req.query.amount as string;
-    const publicKey = process.env.MP_BR_PUBLIC_KEY;
-
-    if (!amount || isNaN(Number(amount))) {
-      return res.status(400).send('Invalid amount parameter');
-    }
-
-    if (!publicKey) {
-      return res.status(500).send('Payment system not configured');
-    }
-
-    try {
-      const template = readFileSync(join(__dirname, 'templates/payment.html'), 'utf8');
-      const html = template
-        .replace(/{{AMOUNT}}/g, amount)
-        .replace(/{{PUBLIC_KEY}}/g, publicKey);
-
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    } catch (error) {
-      console.error('Error rendering payment template:', error);
-      res.status(500).send('Error loading payment page');
-    }
+  // Handle CORS preflight for iframe requests
+  app.options("/api/proxy/process_payment", (req: Request, res: Response) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.sendStatus(200);
   });
 
-  // 2. POST /process_payment - Processes payment via Mercado Pago API
-  app.post('/process_payment', async (req: Request, res: Response) => {
-    try {
-      const paymentData = req.body;
-      const accessToken = process.env.MP_BR_ACCESS_TOKEN;
+  app.post("/api/proxy/process_payment", async (req: Request, res: Response) => {
+    // Set CORS headers for iframe requests
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
 
-      if (!accessToken) {
-        return res.status(500).json({ 
-          error: 'Payment system not configured',
-          status: 'error' 
+    try {
+      console.log("[Proxy] /api/proxy/process_payment endpoint called!");
+      console.log("[Proxy] Request headers:", req.headers);
+      console.log("[Proxy] Request method:", req.method);
+      console.log("[Proxy] Request URL:", req.url);
+
+      // 1) The request body is a JSON object containing:
+      //    { token, installments, paymentMethodId, transactionAmount, payer:{…}, amount, txId }
+      const originalPayload = req.body;
+      console.log("[Proxy] Received payload:", JSON.stringify(originalPayload, null, 2));
+
+      // Extract payment method ID - Flask sends it as payment_method_id
+      let paymentMethodId = originalPayload.payment_method_id || 
+                           originalPayload.paymentMethodId ||
+                           originalPayload.paymentMethod?.id ||
+                           originalPayload.payment_method?.id;
+
+      console.log("[Proxy] Raw payload keys:", Object.keys(originalPayload));
+      console.log("[Proxy] Looking for payment_method_id:", originalPayload.payment_method_id);
+      console.log("[Proxy] Looking for paymentMethodId:", originalPayload.paymentMethodId);
+      console.log("[Proxy] Extracted payment_method_id:", paymentMethodId);
+
+      // Log full payload only if payment method ID is missing for debugging
+      if (!paymentMethodId) {
+        console.log("[Proxy] MISSING payment_method_id - Full payload:", JSON.stringify(originalPayload, null, 2));
+      }
+
+      // Validate that we have required payment method ID
+      if (!paymentMethodId) {
+        console.error("[Proxy] CRITICAL: payment_method_id not found in payload");
+        console.error("[Proxy] Available fields in originalPayload:", Object.keys(originalPayload));
+        return res.status(400).json({
+          status: "error",
+          error: "Payment method ID is required but not found in request",
+          txId: originalPayload.txId
         });
       }
 
-      console.log('[Process Payment] Received payment data:', paymentData);
-
-      // Call Mercado Pago Payments API
-      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Transform payload to match Flask's expected format
+      const payload = {
+        token: originalPayload.token,
+        installments: originalPayload.installments || 1,
+        payment_method_id: paymentMethodId,
+        transaction_amount: originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount,
+        description: `Hedgi order for R$${originalPayload.transaction_amount || originalPayload.transactionAmount || originalPayload.amount}`,
+        payer: {
+          email: originalPayload.payer?.email,
+          identification: originalPayload.payer?.identification,
+          first_name: originalPayload.payer?.first_name || "HedgiCustomer"
         },
-        body: JSON.stringify(paymentData)
+        txId: originalPayload.txId
+      };
+
+      console.log("[Proxy] Transformed payload for Flask:", JSON.stringify(payload, null, 2));
+
+      // 2) Forward it directly to Flask’s /process_payment
+      const flaskUrl = `${FLASK}/process_payment`;
+      console.log(`[Proxy] Forwarding to Flask: ${flaskUrl}`);
+
+      const response = await fetch(flaskUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      const mpResult = await mpResponse.json();
-      console.log('[Process Payment] Mercado Pago response:', mpResult);
+      // 3) Read Flask’s JSON response (e.g. { status:"approved", id:"abc123", message:"…" })
+      const data = await response.json();
 
-      if (mpResult.status === 'approved') {
-        return res.json({
-          id: mpResult.id,
-          message: 'Payment processed',
-          status: 'approved'
+      // Store payment result for polling
+      if (data.txId) {
+        paymentResultsCache.set(data.txId, {
+          ...data,
+          timestamp: Date.now()
         });
-      } else {
-        return res.json({
-          id: null,
-          message: 'Payment failed',
-          status: 'rejected',
-          details: mpResult.status_detail || 'Payment not approved'
-        });
+        console.log(`[Proxy] Stored payment result for txId ${data.txId}:`, data);
       }
+
+      // Always return status 200 to iframe, let iframe handle success/error based on data.status
+      res.json(data);
     } catch (error) {
-      console.error('[Process Payment] Error:', error);
-      res.status(500).json({
-        error: 'Payment processing failed',
-        status: 'error'
+      console.error("[Proxy] Error proxying payment:", error);
+      res.json({ 
+        status: "error", 
+        error: "Payment processing failed",
+        txId: req.body?.txId || ""
       });
     }
   });
 
-  // 3. GET /payment_status/<payment_id> - Shows status with statusScreen Brick
-  app.get('/payment_status/:paymentId', (req: Request, res: Response) => {
-    const { paymentId } = req.params;
-    const publicKey = process.env.MP_BR_PUBLIC_KEY;
-
-    if (!publicKey) {
-      return res.status(500).send('Payment system not configured');
-    }
-
-    const isFailure = paymentId === 'failure';
-
+  // Payment status endpoint for polling
+  app.get("/api/payment-status/:txId", async (req, res) => {
     try {
-      const template = readFileSync(join(__dirname, 'templates/payment_status.html'), 'utf8');
+      const { txId } = req.params;
+      console.log(`[Payment Status] Checking status for txId: ${txId}`);
 
-      if (isFailure) {
-        const html = template
-          .replace(/{{#if isFailure}}/g, '')
-          .replace(/{{#unless isFailure}}[\s\S]*{{\/unless}}/g, '')
-          .replace(/{{\/if}}/g, '')
-          .replace(/{{AMOUNT}}/g, req.query.amount as string || '100')
-          .replace(/{{PUBLIC_KEY}}/g, publicKey);
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
+      const cachedResult = paymentResultsCache.get(txId);
+      if (cachedResult) {
+        console.log(`[Payment Status] Found cached result for ${txId}:`, cachedResult);
+        res.json(cachedResult);
       } else {
-        const html = template
-          .replace(/{{#if isFailure}}[\s\S]*{{\/if}}/g, '')
-          .replace(/{{#unless isFailure}}/g, '')
-          .replace(/{{\/unless}}/g, '')
-          .replace(/{{PAYMENT_ID}}/g, paymentId)
-          .replace(/{{PUBLIC_KEY}}/g, publicKey)
-          .replace(/{{SYMBOL}}/g, 'USDBRL')
-          .replace(/{{VOLUME}}/g, '0.1')
-          .replace(/{{DIRECTION}}/g, 'buy')
-          .replace(/{{DAYS}}/g, '7')
-          .replace(/{{MARGIN}}/g, '500');
-
-        res.setHeader('Content-Type', 'text/html');
-        res.send(html);
+        console.log(`[Payment Status] No cached result for ${txId}, returning pending`);
+        res.json({
+          status: "pending",
+          message: "Payment verification in progress",
+          txId: txId
+        });
       }
     } catch (error) {
-      console.error('Error rendering payment status template:', error);
-      res.status(500).send('Error loading payment status page');
+      console.error("[Payment Status] Error checking payment status:", error);
+      res.status(500).json({
+        status: "error",
+        error: "Unable to check payment status"
+      });
     }
   });
 
+  // Working registration endpoint that bypasses schema conflicts
+  app.post("/signup", async (req: Request, res: Response) => {
+    try {
+      const { fullName, email, username, password, phoneNumber, nation, paymentIdentifier, cpf, birthdate } = req.body;
 
-  // 1) Create a new trade (Enhanced proxy to Flask with PIX key in metadata)
-  app.post('/api/trades', async (req: Request, res: Response) => {
-    // Check authentication
+      // Basic validation
+      if (!fullName || !email || !username || !password || !nation || !paymentIdentifier || !cpf || !birthdate) {
+        return res.status(400).json({ message: "All required fields must be provided" });
+      }
+
+      // Age validation
+      const birthDate = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0);
+
+      if (actualAge < 18) {
+        return res.status(400).json({ message: "You must be at least 18 years old to use this service" });
+      }
+
+      // Hash the password
+      const hashedPassword = await crypto.hash(password);
+
+      // Use Drizzle ORM for database operations
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      // Check if user already exists
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const existingEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Insert new user using Drizzle ORM
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username,
+          email,
+          fullName,
+          phoneNumber: phoneNumber || null,
+          password: hashedPassword,
+          nation,
+          paymentIdentifier,
+          cpf,
+          birthdate: new Date(birthdate),
+          googleCalendarEnabled: false,
+          googleRefreshToken: null,
+        })
+        .returning();
+
+      // Log the user in after successful registration using session
+      req.login = req.login || ((user, callback) => {
+        req.user = user;
+        if (callback) callback();
+      });
+
+      req.login(newUser, (err) => {
+        if (err) {
+          console.error("Login after registration failed:", err);
+          return res.status(500).json({ message: "Registration successful but login failed" });
+        }
+
+        return res.json({
+          message: "Registration successful",
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            fullName: newUser.fullName,
+            phoneNumber: newUser.phoneNumber,
+            nation: newUser.nation,
+            paymentIdentifier: newUser.paymentIdentifier,
+          },
+        });
+      });
+
+    } catch (error: any) {
+      console.error("Account creation error:", error);
+      res.status(500).json({ message: "Registration failed: " + error.message });
+    }
+  });
+
+  // Register existing routes
+  app.use(secondaryRateRouter);
+  app.use(chatRouter);
+  app.use(activtradesRouter);
+  app.use(tickmillRouter);
+  app.use(fbsRouter);
+  app.use(paymentRouter);
+  app.use(simulateRouter);
+  app.use(hedgiApiRouter);
+  app.use(pendingOrdersRouter);
+
+  // User settings endpoints
+  app.post("/api/user/update-pix", async (req: Request, res: Response) => {
     if (!req.isAuthenticated() || !req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     try {
-      const userId = req.user.id;
-      console.log('[Express Proxy] Creating trade for user:', userId);
+      const { pixKey } = req.body;
 
-      // Fetch user's PIX key from database
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, userId),
-        columns: {
-          paymentIdentifier: true
-        }
-      });
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      if (!pixKey || typeof pixKey !== 'string') {
+        return res.status(400).json({ error: 'PIX key is required' });
       }
 
-      // Prepare the payload with PIX key in metadata
+      const userId = req.user.id;
+      console.log(`[User Settings] Updating PIX key for user ${userId}`);
+
+      // Update the user's PIX key in the database
+      await db.update(users)
+        .set({ 
+          paymentIdentifier: pixKey.trim(),
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+
+      console.log(`[User Settings] Successfully updated PIX key for user ${userId}`);
+
+      res.json({ 
+        success: true, 
+        message: 'PIX key updated successfully',
+        pixKey: pixKey.trim()
+      });
+    } catch (error) {
+      console.error('[User Settings] Error updating PIX key:', error);
+      res.status(500).json({ error: 'Failed to update PIX key' });
+    }
+  });
+
+  // Update PIX key endpoint (legacy support)
+  app.post("/api/user/update-pix", async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    try {
+      const { pixKey } = req.body;
+
+      if (!pixKey) {
+        return res.status(400).json({ error: "PIX key is required" });
+      }
+
+      console.log(`[User Settings] Updating PIX key for user ${req.user.id}`);
+
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      await db
+        .update(users)
+        .set({ paymentIdentifier: pixKey })
+        .where(eq(users.id, req.user.id));
+
+      console.log(`[User Settings] Successfully updated PIX key for user ${req.user.id}`);
+
+      res.json({ success: true, message: "PIX key updated successfully" });
+    } catch (error) {
+      console.error('[User Settings] Error updating PIX key:', error);
+      res.status(500).json({ error: "Failed to update PIX key" });
+    }
+  });
+
+  // Update user profile endpoint
+  app.post("/api/user/update-profile", async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    try {
+      const { paymentIdentifier, email, phoneNumber } = req.body;
+
+      if (!paymentIdentifier && !email && !phoneNumber) {
+        return res.status(400).json({ error: "At least one field must be provided" });
+      }
+
+      console.log(`[User Settings] Updating profile for user ${req.user.id}`);
+
+      const { db } = await import('../db/index.js');
+      const { users } = await import('../db/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      // Only check email if it's being updated and is different
+      if (email && email !== req.user.email) {
+        // Optimized query - only select id field
+        const existingUser = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        if (existingUser.length > 0) {
+          return res.status(400).json({ error: "Email is already taken by another user" });
+        }
+      }
+
+      // Build update object with only provided fields
+      const updateData: any = { updatedAt: new Date() };
+      if (paymentIdentifier !== undefined) updateData.paymentIdentifier = paymentIdentifier;
+      if (email !== undefined) updateData.email = email;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+
+      // Single database update operation
+      await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, req.user.id));
+
+      console.log(`[User Settings] Successfully updated profile for user ${req.user.id}`);
+
+      // Send response immediately
+      res.json({ success: true, message: "Profile updated successfully" });
+    } catch (error) {
+      console.error('[User Settings] Error updating profile:', error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // **SIMPLE FLASK PROXY ENDPOINTS**
+
+  // 1. Create a new trade → POST /api/trades (proxy to Flask with PIX key)
+  app.post('/api/trades', async (req: Request, res: Response) => {
+    try {
+      // Get user ID from session or default (for authenticated requests)
+      const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 21; // Default user for testing (has PIX key)
+
+      // Fetch user's PIX key and email from database with graceful fallback
+      let pixKey = null;
+      let mail = null;
+      try {
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, userId),
+          columns: {
+            paymentIdentifier: true,
+            email: true
+          }
+        });
+        pixKey = user?.paymentIdentifier || null;
+        mail = user?.email || null;
+        console.log('[Express Proxy] User PIX key fetched from database:', pixKey);
+        console.log('[Express Proxy] User email fetched from database:', mail);
+      } catch (dbError) {
+        console.error('[Express Proxy] Database unavailable, using fallback PIX key:', dbError.message);
+        // Use fallback PIX key for user 21 when database is unavailable
+        pixKey = userId === 21 ? 'user21-pix-key@example.com' : null;
+        console.log('[Express Proxy] Using fallback PIX key:', pixKey);
+      }
+
+      // Prepare the payload with PIX key and user email in metadata
       const payload = {
         ...req.body,
         metadata: {
           ...req.body.metadata,
-          pixKey: user.paymentIdentifier || null
+          pixKey: pixKey,
+          mail: mail
         }
       };
 
-      console.log('[Express Proxy] Forwarding trade request to Flask with metadata:', payload);
+      console.log('[Express Proxy] Forwarding trade request to Flask with PIX key:', payload);
 
-      const flaskRes = await fetch(`${FLASK}/trades`, {
+      const response = await fetch(`${FLASK}/trades`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': 'Hedgi-Trade-Proxy/1.0'
+        },
         body: JSON.stringify(payload)
       });
 
-      console.log('[Express Proxy] Flask response status:', flaskRes.status);
+      console.log('[Express Proxy] Flask response status:', response.status);
 
-      if (!flaskRes.ok) {
-        const errorText = await flaskRes.text();
+      if (!response.ok) {
+        const errorText = await response.text();
         console.error('[Express Proxy] Flask error:', errorText);
-        return res.status(flaskRes.status).json({ error: errorText });
+        return res.status(response.status).json({ error: errorText });
       }
 
-      const result = await flaskRes.json();
+      const result = await response.json();
       console.log('[Express Proxy] Flask success:', result);
+
+      // Save the Flask trade to our local database for history tracking (optional if database available)
+      try {
+        const dbUserId = req.isAuthenticated() && req.user?.id ? req.user.id : 7; // Default to user 7 for now
+        console.log('[Express Proxy] Attempting to save trade to database with data:', {
+          userId: dbUserId,
+          flaskTradeId: result.id,
+          volume: result.volume,
+          symbol: result.symbol,
+          created_at: result.created_at,
+          metadata: result.metadata
+        });
+
+        // Don't use Flask ID as primary key, let database auto-generate
+        const insertResult = await db.insert(trades).values({
+          userId: dbUserId,
+          ticket: `FLASK-${result.id}`,
+          broker: 'flask',
+          volume: result.volume, // Keep as numeric, not string
+          symbol: result.symbol,
+          openTime: new Date(result.created_at || new Date()),
+          durationDays: result.metadata?.days || 7,
+          status: 'open',
+          flaskTradeId: result.id,
+          metadata: {
+            ...result.metadata,
+            mail: mail
+          }
+        }).returning();
+
+        console.log('[Express Proxy] Successfully saved trade to local database:', insertResult);
+      } catch (dbError) {
+        console.error('[Express Proxy] Failed to save to local database (continuing without local storage):', dbError.message);
+        // Don't fail the request if database save fails - Flask trade was successful
+      }
+
       res.json(result);
     } catch (error) {
       console.error('[Express Proxy] Error:', error);
-      res.status(500).json({ error: 'Proxy error: ' + error.message });
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
     }
   });
 
-
-  // 2) Poll status
+  // 2. Poll a trade's status → GET /api/trades/:tradeId/status (proxy to Flask)
   app.get('/api/trades/:tradeId/status', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
-    try {
-      const t = await db.query.trades.findFirst({
-        where: eq(trades.id, Number(req.params.tradeId))
-      });
-      if (!t || t.userId !== req.user.id) return res.status(404).json({ error: 'Trade not found' });
-
-      const flaskRes = await fetch(`${FLASK}/trades/${t.flaskTradeId}/status`);
-      const flaskStatus = (await flaskRes.json()) as { status: string, closedAt?: string };
-
-      const statusMap: Record<string,string> = {
-        NEW:       'Order sent',
-        Executed:  'Order placed',
-        Closed:    'Closed',
-        FAILED:    'Failed',
-      };
-
-      // Update the database with the new status and closedAt from Flask
-      const updateData: any = { 
-        status: flaskStatus.status, 
-        updatedAt: new Date()
-      };
-
-      // Use closedAt from Flask if provided
-      if (flaskStatus.closedAt) {
-        updateData.closedAt = new Date(flaskStatus.closedAt);
-      }
-
-      await db.update(trades)
-        .set(updateData)
-        .where(eq(trades.id, t.id));
-
-      console.log(`[Trade Status] Updated trade ${t.id} status to: ${flaskStatus.status}`);
-
-      const response: any = { 
-        status: flaskStatus.status, 
-        label: statusMap[flaskStatus.status] ?? flaskStatus.status
-      };
-
-      // Include closedAt from Flask if provided
-      if (flaskStatus.closedAt) {
-        response.closedAt = flaskStatus.closedAt;
-      }
-
-      return res.json(response);
-    } catch (err) {
-      console.error('Error checking trade status:', err);
-      return res.status(500).json({ error: 'Failed to check status' });
-    }
-  });
-
-  // 3) Close early - Secure endpoint requiring authentication
-  app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
-    console.log('[CLOSE ENDPOINT] Route hit - tradeId:', req.params.tradeId);
-    console.log('[CLOSE ENDPOINT] Authentication check:', req.isAuthenticated());
-    console.log('[CLOSE ENDPOINT] User:', req.user);
-
-    if (!req.isAuthenticated() || !req.user?.id) {
-      console.log('[CLOSE ENDPOINT] Authentication failed');
+    if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    const userId = req.user.id;
+
+    try {
+      const tradeId = req.params.tradeId;
+      console.log(`[Express Proxy] Checking trade status for ID: ${tradeId}, user: ${req.user.id}`);
+
+      // Find the trade record by ID and ensure it belongs to the current user
+      const trade = await db.query.trades.findFirst({
+        where: (t, { eq, and }) => and(
+          eq(t.id, Number(tradeId)),
+          eq(t.userId, req.user.id)
+        )
+      });
+
+      if (!trade) {
+        console.log(`[Express Proxy] Trade ${tradeId} not found for user ${req.user.id}`);
+        return res.status(404).json({ error: 'Trade not found' });
+      }
+
+      const response = await fetch(`${FLASK}/trades/${tradeId}/status`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask status error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      console.log('[Express Proxy] Flask status response:', result);
+
+      // Update the local database with the latest status from Flask
+      try {
+        const updateData: any = { 
+          status: result.status, 
+          updatedAt: new Date()
+        };
+
+        // Use closedAt from Flask if provided
+        if (result.closedAt) {
+          updateData.closedAt = new Date(result.closedAt);
+        }
+
+        await db.update(trades)
+          .set(updateData)
+          .where(eq(trades.id, Number(tradeId)));
+
+        console.log(`[Express Proxy] Updated trade ${tradeId} status in database to: ${result.status}`);
+      } catch (dbError) {
+        console.error('[Express Proxy] Failed to update database:', dbError);
+        // Don't fail the request if database update fails
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('[Express Proxy] Status check error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
+    }
+  });
+
+  // 3. Close a trade early → POST /api/trades/:tradeId/close (proxy to Flask)
+  app.post('/api/trades/:tradeId/close', async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
     try {
       const flaskTradeId = req.params.tradeId;
-      console.log(`[CLOSE] User ${userId} closing Flask trade ${flaskTradeId}`);
+      console.log(`[Express Proxy] User ${req.user.id} closing Flask trade ${flaskTradeId}`);
 
-      // Direct call to Flask close endpoint
-      const flaskRes = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
+      // Direct call to Flask close endpoint using Flask trade ID
+      const response = await fetch(`${FLASK}/trades/${flaskTradeId}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
 
-      if (!flaskRes.ok) {
-        const errorText = await flaskRes.text();
-        console.error(`[CLOSE] Flask error for trade ${flaskTradeId}:`, errorText);
-        return res.status(flaskRes.status).json({ error: errorText });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Express Proxy] Flask close error:', errorText);
+        return res.status(response.status).json({ error: errorText });
       }
 
-      const result = await flaskRes.json();
-      console.log(`[CLOSE] Successfully closed Flask trade ${flaskTradeId}`);
-      return res.json(result);
-
-    } catch (err) {
-      console.error('[CLOSE] Error:', err);
-      return res.status(500).json({ error: 'Failed to close trade' });
+      const result = await response.json();
+      console.log('[Express Proxy] Flask close response:', result);
+      res.json(result);      
+    } catch (error) {
+      console.error('[Express Proxy] Close error:', error);
+      res.status(500).json({ error: 'Proxy error: ' + (error as Error).message });
     }
   });
 
-  // 3.5) Get trade spread info → GET /api/trades/:tradeId/spread (proxy to Flask)
+  // 3.5. Get trade spread info → GET /api/trades/:tradeId/spread (proxy to Flask)
   app.get('/api/trades/:tradeId/spread', async (req: Request, res: Response) => {
     console.log('[SPREAD ENDPOINT] Route hit - tradeId:', req.params.tradeId);
     console.log('[SPREAD ENDPOINT] Authentication check:', req.isAuthenticated());
     console.log('[SPREAD ENDPOINT] FLASK URL:', FLASK);
 
-    if (!req.isAuthenticated() || !req.user?.id) {
+    if (!req.isAuthenticated()) {
       console.log('[SPREAD ENDPOINT] Authentication failed');
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -550,120 +846,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 4) History tab - returns ONLY ClosedTrade interface fields
-  app.get('/api/trades/history', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
-    try {
-      console.log('[Express Proxy] Getting trade history from database');
-      console.log('Cookies:', req.headers.cookie);
-
-      // Get all trades for this user that have Flask IDs
-      const allTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, req.user.id),
-        orderBy: desc(trades.updatedAt),
-      });
-
-      console.log(`[Express Proxy] Found ${allTrades.length} trades total for user ${req.user.id}`);
-
-      // Interface matching exactly what React expects
-      interface ClosedTrade {
-        id: number;
-        ticket: string;
-        symbol: string;
-        volume: string;
-        openTime: string;
-        closedAt: string;
-        status: string;
-      }
-
-      const historyTrades: ClosedTrade[] = [];
-
-      for (const trade of allTrades) {
-        // Skip trades without Flask IDs - we only get status from Flask
-        if (!trade.flaskTradeId) {
-          console.log(`[Express Proxy] Skipping trade ${trade.id} - no Flask ID`);
-          continue;
-        }
-
-        try {
-          // 1) Get current status from Flask (NEVER use database status)
-          const flaskRes = await fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`);
-          if (!flaskRes.ok) {
-            console.log(`[Express Proxy] Failed to fetch Flask status for trade ${trade.id}`);
-            continue;
-          }
-
-          const flaskData = await flaskRes.json() as {
-            status: string;
-            closedAt?: string;
-          };
-
-          console.log(`[Express Proxy] Flask status for trade ${trade.id}: ${flaskData.status}`);
-
-          // 2) Only include completed trades in history
-          const isCompleted = ['failed','closed','executed','cancelled','completed']
-            .includes(flaskData.status.toLowerCase());
-
-          if (!isCompleted) {
-            console.log(`[Express Proxy] Skipping active trade ${trade.id} with status: ${flaskData.status}`);
-            continue;
-          }
-          await db.update(trades)
-          .set({
-              status: flaskData.status, 
-              closedAt: flaskData.closedAt ? new Date(flaskData.closedAt) : null,
-              updatedAt: new Date() // Update the timestamp
-          })
-          .where(eq(trades.id, trade.id));
-
-          // 3) Create clean ClosedTrade object with ONLY required fields
-          const closedTrade: ClosedTrade = {
-            id: trade.id,
-            ticket: `FLASK-${trade.flaskTradeId}`,
-            symbol: trade.symbol,
-            volume: trade.volume?.toString() || '0.01',
-            openTime: trade.createdAt.toISOString(),
-            status: flaskData.status,  // Always from Flask
-            closedAt: flaskData.closedAt || new Date().toISOString()  // Flask date or current time
-          };
-
-          historyTrades.push(closedTrade);
-          console.log(`[Express Proxy] Added completed trade ${trade.id} to history`);
-
-        } catch (err) {
-          console.error(`[Express Proxy] Error processing trade ${trade.id}:`, err);
-        }
-      }
-
-      console.log(`[Express Proxy] Returning ${historyTrades.length} completed trades for history`);
-      return res.json(historyTrades);
-    } catch (err) {
-      console.error('Error fetching trade history:', err);
-      return res.status(500).json({ error: 'Failed to fetch history' });
-    }
-  });
-
-  // Main GET /api/trades endpoint - returns active trades for dashboard
+  // 4. Get active trades → GET /api/trades (returns non-CLOSED/FAILED trades for current user only)
   app.get('/api/trades', async (req: Request, res: Response) => {
-    console.log('[TRADES ENDPOINT] Route hit');
-    console.log('[TRADES ENDPOINT] Authentication check:', req.isAuthenticated());
-    console.log('[TRADES ENDPOINT] User:', req.user);
-
-    if (!req.isAuthenticated() || !req.user?.id) {
-      console.log('[TRADES ENDPOINT] Authentication failed');
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    const userId = req.user.id;
+    // Use authenticated user ID or fallback to user 7 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
 
     try {
-      console.log('[Express Proxy] Getting active trades from database for user:', userId);
+      console.log(`[Express Proxy] Getting active trades for user ${userId}`);
 
-      // Get only trades for the current authenticated user
-      const userTrades = await db.query.trades.findMany({
-        where: eq(trades.userId, userId),
-        orderBy: desc(trades.createdAt),
-        limit: 100
-      });
+      // Get only trades for the current authenticated user with error handling
+      let userTrades;
+      try {
+        userTrades = await db.query.trades.findMany({
+          where: eq(trades.userId, userId),
+          orderBy: desc(trades.createdAt),
+          limit: 100
+        });
+      } catch (dbError) {
+        console.error('[Express Proxy] Database connection error:', dbError.message);
+        // Return empty array if database is temporarily unavailable
+        return res.json([]);
+      }
 
       console.log(`[Express Proxy] Found ${userTrades.length} trades for user ${userId}`);
 
@@ -682,8 +885,8 @@ export function registerRoutes(app: Express): Server {
                 return {
                   ...trade,
                   status: flaskData.status,
-                  current_value: flaskData.current_value,
-                  direction: flaskData.direction,
+                  current_value: flaskData.current_value, // Include current_value from Flask
+                  direction: flaskData.direction, // Include direction from Flask
                   updatedAt: new Date().toISOString()
                 };
               }
@@ -711,135 +914,83 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // 1) Open trades → returns the simplified OpenTrade interface
-  app.get('/api/trades/open', async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ error: 'Authentication required' });
-    try {
-      console.log(`[Express Proxy] Getting open trades for user ${req.user.id}`);
-      const openTrades = await tradeService.getOpenTrades(req.user.id);
-      console.log(`[Express Proxy] Found ${openTrades.length} open trades for user ${req.user.id}`);
-      return res.json(openTrades);
-    } catch (err) {
-      console.error('Error fetching open trades:', err);
-      return res.status(500).json({ error: 'Failed to fetch open trades' });
-    }
-  });
 
-  // … leave other unrelated routes (e.g. /api/xtb/rates) here …
 
-  // Proxy endpoint for Flask brick to avoid CORS issues
-  app.get("/api/proxy/brick", async (req: Request, res: Response) => {
-    try {
-      const amount = req.query.amount || 415;
-      const flaskUrl = `https://boot-wilson-productivity-gsm.trycloudflare.com/brick?amount=${amount}`;
 
-      console.log(`[Flask Proxy] Fetching brick from: ${flaskUrl}`);
-
-      const response = await fetch(flaskUrl);
-      const html = await response.text();
-
-      console.log(`[Flask Proxy] Successfully fetched brick HTML (${html.length} characters)`);
-
-      // Set proper headers for iframe embedding
-      res.setHeader('Content-Type', 'text/html');
-      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-      res.send(html);
-    } catch (error) {
-      console.error('[Flask Proxy] Error fetching brick:', error);
-      res.status(500).send(`
-        <html>
-          <body>
-            <div style="padding: 20px; text-align: center; color: #666;">
-              <h3>Payment form temporarily unavailable</h3>
-              <p>Please try again in a moment.</p>
-              <script>
-                window.parent.postMessage({ status: 'error', error: 'Payment form unavailable' }, "*");
-              </script>
-            </div>
-          </body>
-        </html>
-      `);
-    }
-  });
-
-  // Register routes
-  app.use(secondaryRateRouter);
-  app.use(chatRouter);
-  app.use(activtradesRouter);
-  app.use(tickmillRouter);
-  app.use(fbsRouter);
-  app.use(paymentRouter);
-  // app.use(xtbRouter); // Removed - we're using direct routes below
-
-  // List of supported symbols for exchange rates
-  const SUPPORTED_SYMBOLS = ['USDBRL', 'EURUSD', 'USDMXN'];
-
-  // Exchange rates endpoint that uses our new infrastructure
-  app.get("/api/xtb/rates", async (req, res) => {
-    res.header('Content-Type', 'application/json');
-    console.log('[Exchange Rates DEBUG] Request received for /api/xtb/rates');
+  // 5. Get trade history → GET /api/trades/history (proxy to Flask)
+  app.get('/api/trades/history', async (req: Request, res: Response) => {
+    // Use authenticated user ID or fallback to user 7 for testing
+    const userId = req.isAuthenticated() && req.user?.id ? req.user.id : 7;
 
     try {
-      // Get real data for each symbol using our activtrades endpoint
-      const symbols = SUPPORTED_SYMBOLS;
-      const rates = [];
+      console.log('[Express Proxy] Getting trade history from database');
 
-      console.log('[Exchange Rates DEBUG] Fetching rates for all symbols:', symbols);
-
-      for (const symbol of symbols) {
-        try {
-          console.log(`[Exchange Rates] Fetching rate for ${symbol}`);
-          // Use fetch with a timeout for safety
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-          // Fetch from the activtrades endpoint which returns real data
-          const response = await fetch(`http://localhost:${req.socket.localPort}/api/activtrades-rate?symbol=${symbol}`, {
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = (await response.json()) as BrokerRate;
-          console.log(`[Exchange Rates] Got data for ${symbol}:`, data);
-
-          rates.push({
-            symbol,
-            bid: data.bid,
-            ask: data.ask,
-            timestamp: Date.now(),
-            swapLong: Math.abs(data.swap_long / 10000 || 0), // Convert to decimal
-            swapShort: Math.abs(data.swap_short / 10000 || 0), // Convert to decimal
-          });
-        } catch (error) {
-          console.error(`[Exchange Rates] Error fetching ${symbol}:`, error);
-
-          // If a specific symbol fails, let's still return the others
-          // rather than failing the whole request
-          continue;
-        }
-      }
-
-      // If we have no rates, something went wrong with the service
-      if (rates.length === 0) {
-        console.error('[Exchange Rates] Failed to get any rates');
-        return res.status(503).json({ 
-          error: 'Exchange rate service temporarily unavailable' 
+      // Get only trades for the current authenticated user, ordered by creation date DESC
+      let allTrades;
+      try {
+        allTrades = await db.query.trades.findMany({
+          where: eq(trades.userId, userId),
+          orderBy: (trades, { desc }) => [desc(trades.createdAt)]
         });
+      } catch (dbError) {
+        console.error('[Express Proxy] Database connection error in trade history:', dbError.message);
+        // Return empty array if database is temporarily unavailable
+        return res.json([]);
       }
 
-      // Send the rates as a direct JSON string
-      console.log('[Exchange Rates] Returning rates:', rates);
-      return res.send(JSON.stringify(rates));
+      console.log(`[Express Proxy] Found ${allTrades.length} trades for user ${userId}`);
+
+      const completedTrades = [];
+      const flaskPromises = [];
+
+      // Batch Flask status requests for efficiency
+      for (const trade of allTrades) {
+        if (!trade.flaskTradeId) continue;
+
+        flaskPromises.push(
+          fetch(`${FLASK}/trades/${trade.flaskTradeId}/status`)
+            .then(response => response.ok ? response.json() : null)
+            .then(flaskData => {
+              console.log(`[Express Proxy] Flask status for trade ${trade.id} (Flask ${trade.flaskTradeId}):`, flaskData);
+              if (flaskData && ['CLOSED', 'FAILED', 'closed', 'failed'].includes(flaskData.status?.trim())) {
+                // Fix Flask's microsecond precision dates for JavaScript compatibility
+                let closedAtISO = flaskData.closedAt;
+                if (closedAtISO && closedAtISO.includes('.')) {
+                  // Truncate microseconds to milliseconds (6 digits -> 3 digits)
+                  closedAtISO = closedAtISO.replace(/\.(\d{6})$/, '.$1'.substring(0, 4));
+                }
+                
+                const completedTrade = {
+                  ...trade,
+                  status: flaskData.status,
+                  closedAt: closedAtISO || new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+                console.log(`[Express Proxy] Added completed trade ${trade.id} with status ${flaskData.status}, closedAt: ${closedAtISO}`);
+                return completedTrade;
+              }
+              console.log(`[Express Proxy] Trade ${trade.id} status ${flaskData?.status || 'unknown'} - not completed`);
+              return null;
+            })
+            .catch(error => {
+              console.error(`[Express Proxy] Error checking Flask status for trade ${trade.id}:`, error);
+              return null;
+            })
+        );
+
+        // Limit Flask requests to 50
+        if (flaskPromises.length >= 50) break;
+      }
+
+      // Wait for all Flask requests to complete
+      const results = await Promise.all(flaskPromises);
+      completedTrades.push(...results.filter(result => result !== null));
+
+      console.log('[Express Proxy] Found completed trades:', completedTrades.length);
+      res.json(completedTrades);
     } catch (error) {
-      console.error('[Exchange Rates] Error in rates endpoint:', error);
-      return res.status(500).json({ 
-        error: 'Failed to retrieve exchange rates'
-      });
+      console.error('[Express Proxy] History error:', error);
+      res.status(500).json({ error: 'Failed to fetch trade history' });
     }
   });
 
@@ -847,6 +998,7 @@ export function registerRoutes(app: Express): Server {
   app.post('/api/sandbox-request', async (req: Request, res: Response) => {
     try {
       const { name, company, email, useCase } = req.body;
+      console.log('[Sandbox Request] Received:', { name, company, email, useCase });
 
       // Validate required fields
       if (!name || !company || !email || !useCase) {
@@ -866,7 +1018,7 @@ export function registerRoutes(app: Express): Server {
       // Send notification email to guilherme@hedgi.ai
       await transporter.sendMail({
         to: 'guilherme@hedgi.ai',
-        from: 'hjalmar@hedgi.ai',
+        from: 'guilherme@hedgi.ai',
         subject: `New Sandbox Access Request: ${company}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -905,5 +1057,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  return createServer(app);
+  const httpServer = createServer(app);
+  return httpServer;
 }
