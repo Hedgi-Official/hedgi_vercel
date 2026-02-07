@@ -3,8 +3,6 @@ import { createServer } from "http";
 import { registerRoutes } from "./routes-fixed";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupSimpleAuth } from "./simple-auth";
-// Market closed retry service is now disabled - Hedgi API handles pending orders automatically
-// import { startMarketClosedRetryService } from "./services/marketClosedRetryService";
 // Load environment variables from .env file
 import * as dotenv from 'dotenv';
 dotenv.config();

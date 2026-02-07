@@ -100,13 +100,3 @@
 .markdown-content ol {
   list-style-type: decimal;
 }
-
-/* Mobile-specific Skyline styling */
-@media (max-width: 639px) {
-  .skyline-container {
-    margin-left: calc(-1rem);
-    margin-right: calc(-1rem);
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
