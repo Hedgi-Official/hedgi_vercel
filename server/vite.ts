@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { injectSeoTags } from "./seo";
 
 const viteLogger = createLogger();
 
@@ -55,7 +56,8 @@ export async function setupVite(app: Express, server: Server) {
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(`src="/src/main.tsx"`, `src="/src/main.tsx?v=${nanoid()}"`)
-      const page = await vite.transformIndexHtml(url, template);
+      let page = await vite.transformIndexHtml(url, template);
+      page = injectSeoTags(page, url);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
@@ -89,6 +91,9 @@ export function serveStatic(app: Express) {
     etag: false
   }));
 
+  // Cache the index.html template in memory for production
+  const indexHtml = fs.readFileSync(path.resolve(distPath, "index.html"), "utf-8");
+
   // Handle SPA routing - serve index.html for non-asset routes
   app.get("*", (req, res) => {
     // Don't serve index.html for actual static assets
@@ -97,7 +102,8 @@ export function serveStatic(app: Express) {
       return res.status(404).send('Not Found');
     }
 
-    // Serve index.html for all routes (including root)
-    res.sendFile(path.resolve(distPath, "index.html"));
+    // Inject per-page SEO tags and serve
+    const html = injectSeoTags(indexHtml, req.path);
+    res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(html);
   });
 }
