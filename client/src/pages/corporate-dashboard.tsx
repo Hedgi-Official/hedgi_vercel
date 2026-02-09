@@ -615,14 +615,14 @@ export default function CorporateDashboard() {
       <Header showAuthButton={false} username={user?.username} onLogout={handleLogout} />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">{t('corporateDashboard.title')}</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">{t('corporateDashboard.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               {user.companyName || t('corporateDashboard.yourCompany')} - {t('corporateDashboard.apiTradingConsole')}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <Link href="/batch-upload">
               <Button variant="outline" size="sm">
                 <Upload className="w-4 h-4 mr-2" />
@@ -636,7 +636,7 @@ export default function CorporateDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -710,7 +710,7 @@ export default function CorporateDashboard() {
         </div>
 
         <Tabs defaultValue="simulate" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-lg grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="simulate">{t('corporateDashboard.simulate')}</TabsTrigger>
             <TabsTrigger value="open">
               {t('corporateDashboard.open')} ({openOrders.length})
@@ -1211,7 +1211,7 @@ export default function CorporateDashboard() {
 
           <TabsContent value="open">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle>{t('corporateDashboard.openPositions')}</CardTitle>
                   <CardDescription>
@@ -1368,7 +1368,7 @@ export default function CorporateDashboard() {
           <TabsContent value="pending" className="space-y-6">
             {/* API Pending Orders - Waiting for Market */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-amber-500" />
@@ -1451,7 +1451,7 @@ export default function CorporateDashboard() {
 
             {/* Scheduled Orders - Local Queue */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <FileSpreadsheet className="w-5 h-5 text-blue-500" />
