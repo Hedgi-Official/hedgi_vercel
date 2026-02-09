@@ -23,7 +23,13 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
-    min-width: 320px; /* Prevent layout from breaking on very small screens */
+    min-width: 320px;
+  }
+
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
   }
 }
 

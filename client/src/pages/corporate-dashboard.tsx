@@ -710,13 +710,13 @@ export default function CorporateDashboard() {
         </div>
 
         <Tabs defaultValue="simulate" className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-2 sm:grid-cols-4 h-auto sm:h-10 gap-1 p-1">
-            <TabsTrigger value="simulate" className="py-2.5 sm:py-1.5">{t('corporateDashboard.simulate')}</TabsTrigger>
-            <TabsTrigger value="open" className="py-2.5 sm:py-1.5">
+          <TabsList className="grid w-full max-w-lg grid-cols-2 sm:grid-cols-4 h-auto sm:h-10 gap-1.5 p-1.5">
+            <TabsTrigger value="simulate" className="py-2.5 sm:py-1.5 border border-border/60">{t('corporateDashboard.simulate')}</TabsTrigger>
+            <TabsTrigger value="open" className="py-2.5 sm:py-1.5 border border-border/60">
               {t('corporateDashboard.open')} ({openOrders.length})
             </TabsTrigger>
-            <TabsTrigger value="pending" className="py-2.5 sm:py-1.5">{t('corporateDashboard.pending')}</TabsTrigger>
-            <TabsTrigger value="history" className="py-2.5 sm:py-1.5">{t('corporateDashboard.history')}</TabsTrigger>
+            <TabsTrigger value="pending" className="py-2.5 sm:py-1.5 border border-border/60">{t('corporateDashboard.pending')}</TabsTrigger>
+            <TabsTrigger value="history" className="py-2.5 sm:py-1.5 border border-border/60">{t('corporateDashboard.history')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="simulate" className="space-y-6">
