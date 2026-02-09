@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { db } from "@db";
-import { users, hedges, trades } from "@db/schema";
+import { users, trades } from "@db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
@@ -502,39 +502,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('[User Settings] Error updating PIX key:', error);
       res.status(500).json({ error: 'Failed to update PIX key' });
-    }
-  });
-
-  // Update PIX key endpoint (legacy support)
-  app.post("/api/user/update-pix", async (req: Request, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json({ error: "User not authenticated" });
-    }
-
-    try {
-      const { pixKey } = req.body;
-
-      if (!pixKey) {
-        return res.status(400).json({ error: "PIX key is required" });
-      }
-
-      console.log(`[User Settings] Updating PIX key for user ${req.user.id}`);
-
-      const { db } = await import('../db/index.js');
-      const { users } = await import('../db/schema.js');
-      const { eq } = await import('drizzle-orm');
-
-      await db
-        .update(users)
-        .set({ paymentIdentifier: pixKey })
-        .where(eq(users.id, req.user.id));
-
-      console.log(`[User Settings] Successfully updated PIX key for user ${req.user.id}`);
-
-      res.json({ success: true, message: "PIX key updated successfully" });
-    } catch (error) {
-      console.error('[User Settings] Error updating PIX key:', error);
-      res.status(500).json({ error: "Failed to update PIX key" });
     }
   });
 
