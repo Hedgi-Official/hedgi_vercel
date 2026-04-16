@@ -28,7 +28,7 @@ router.post("/api/hedgi/quotes/simulate", requireAuth, async (req: Request, res:
   try {
     const userId = req.user!.id;
     const apiKey = await getApiKeyForUser(userId);
-    
+
     if (!apiKey) {
       return res.status(403).json({ error: "No API key configured for this account" });
     }
@@ -55,6 +55,44 @@ router.post("/api/hedgi/quotes/simulate", requireAuth, async (req: Request, res:
     return res.json(data);
   } catch (error: any) {
     console.error("[Hedgi API] Simulate error:", error);
+    return res.status(500).json({ error: error.message || "Failed to simulate quote" });
+  }
+});
+
+// Public simulate proxy for marketing pages. api.hedgi.ai's
+// /api/quotes/simulate accepts unauthenticated requests under tighter
+// rate limits, so this proxy forwards without a Bearer header. No auth
+// middleware on our side either. Basic body validation only.
+router.post("/api/hedgi/quotes/simulate-public", async (req: Request, res: Response) => {
+  try {
+    const { symbol, direction, volume, duration_days } = req.body || {};
+    if (!symbol || !direction || volume === undefined || !duration_days) {
+      return res.status(400).json({
+        error: "symbol, direction, volume, and duration_days are required",
+      });
+    }
+
+    const response = await fetch(`${HEDGI_API_BASE}/api/quotes/simulate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol,
+        direction: String(direction).toLowerCase(),
+        volume: Number(volume),
+        duration_days: Number(duration_days),
+        best_only: req.body?.best_only ?? false,
+      }),
+    });
+
+    const data = await response.json();
+    console.log("[Hedgi API Public] Simulate response:", response.status);
+
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+    return res.json(data);
+  } catch (error: any) {
+    console.error("[Hedgi API Public] Simulate error:", error);
     return res.status(500).json({ error: error.message || "Failed to simulate quote" });
   }
 });

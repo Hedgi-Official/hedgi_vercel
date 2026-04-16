@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CurrencySimulator } from "@/components/currency-simulator";
+import { BusinessSimulator } from "@/components/business-simulator";
 import { useUser } from "@/hooks/use-user";
 
 const AccessRequestForm = () => {
@@ -396,7 +396,7 @@ export default function Business() {
                 {t("business.simulatorHelper")}
               </p>
             </div>
-            <CurrencySimulator showGraph={false} showTooltips={false} />
+            <BusinessSimulator />
           </div>
         </section>
 

@@ -203,6 +203,7 @@ If the cutover goes sideways within the first 48 hours:
 
 **Developer docs:**
 - Rate-limits and idempotency block on `/developers` is deferred pending product-truth confirmation of what `api.hedgi.ai` actually enforces (deferred 2026-04-16); re-add only once verified.
+- `/api/hedgi/quotes/simulate-public` (added 2026-04-16) forwards marketing-page simulations to `api.hedgi.ai` without auth, relying on the upstream's own rate limits. Add a per-IP rate limit on this Express proxy if abuse becomes visible in logs.
 
 **Code quality:**
 - Pre-existing TypeScript strict errors in `server/routes.ts` (~30
