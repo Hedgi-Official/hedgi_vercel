@@ -16,22 +16,6 @@ app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
 
-app.get('/_debug/paths', async (_req, res) => {
-  const fs = await import('fs');
-  const path = await import('path');
-  const cwd = process.cwd();
-  const distPublic = path.resolve(cwd, 'dist', 'public');
-  const distIndex = path.resolve(cwd, 'dist', 'index.js');
-  res.json({
-    cwd,
-    distPublic,
-    distPublicExists: fs.existsSync(distPublic),
-    distPublicFiles: fs.existsSync(distPublic) ? fs.readdirSync(distPublic).join(', ') : 'N/A',
-    distIndexExists: fs.existsSync(distIndex),
-    distDir: fs.existsSync(path.resolve(cwd, 'dist')) ? fs.readdirSync(path.resolve(cwd, 'dist')).join(', ') : 'N/A',
-    cwdFiles: fs.readdirSync(cwd).slice(0, 30).join(', '),
-  });
-});
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -13,8 +13,8 @@
  * race ahead of route registration.
  */
 import type { IncomingMessage, ServerResponse } from "http";
-// @ts-ignore — dist/index.js is a build artifact; TS can't check it
-import { app, ready } from "../dist/index.js";
+// @ts-ignore — dist/server/index.js is a build artifact; TS can't check it
+import { app, ready } from "../dist/server/index.js";
 
 export default async function handler(
   req: IncomingMessage,
