@@ -1,31 +1,25 @@
 /**
  * Vercel serverless adapter for the Express app.
  *
- * On Vercel, this file becomes a Node serverless function. Vercel bundles it
- * with @vercel/node, which uses esbuild under the hood — same module
- * resolution as our local tsx setup.
+ * Imports from the pre-bundled `dist/index.js` (built by esbuild in
+ * `npm run build:vercel`). This avoids Node.js ESM bare-import errors —
+ * Vercel's @vercel/node transpiles but doesn't bundle, so raw source
+ * imports like `from "./routes"` (no extension) fail under strict ESM.
+ * The esbuild bundle resolves all internal imports at build time.
  *
- * Why a thin adapter and not Express directly?
- *   server/index.ts has an async IIFE that registers routes, sets up static
- *   serving, and installs the error handler. That work is initiated at import
- *   time but isn't synchronous. We must await it before forwarding requests
- *   on a cold start, or the very first request can race ahead of route
- *   registration and return 404.
- *
- * The vercel.json rewrites all paths (/api/*, SPA pages, even static fallback
- * misses) to this function. Express then handles each path itself: the existing
- * routers serve /api/*, server/vite.ts:serveStatic serves /assets/* and the
- * SPA index.html with per-route SEO injection.
+ * The async IIFE in server/index.ts registers routes, sets up static
+ * serving, and installs the error handler. We await the `ready` promise
+ * before forwarding requests so the first cold-start request doesn't
+ * race ahead of route registration.
  */
 import type { IncomingMessage, ServerResponse } from "http";
-import { app, ready } from "../server/index.js";
+// @ts-ignore — dist/index.js is a build artifact; TS can't check it
+import { app, ready } from "../dist/index.js";
 
 export default async function handler(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
   await ready;
-  // Express's app() satisfies the (req, res, next?) signature; cast to bypass
-  // the IncomingMessage→Request widening that @types/express enforces.
   (app as unknown as (req: IncomingMessage, res: ServerResponse) => void)(req, res);
 }
