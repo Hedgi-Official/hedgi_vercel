@@ -16,9 +16,9 @@ app.get('/ping', (req, res) => {
   res.json({ message: 'pong' });
 });
 
-app.get('/_debug/paths', (_req, res) => {
-  const fs = require('fs');
-  const path = require('path');
+app.get('/_debug/paths', async (_req, res) => {
+  const fs = await import('fs');
+  const path = await import('path');
   const cwd = process.cwd();
   const distPublic = path.resolve(cwd, 'dist', 'public');
   const distIndex = path.resolve(cwd, 'dist', 'index.js');
@@ -26,10 +26,10 @@ app.get('/_debug/paths', (_req, res) => {
     cwd,
     distPublic,
     distPublicExists: fs.existsSync(distPublic),
-    distPublicFiles: fs.existsSync(distPublic) ? fs.readdirSync(distPublic) : 'N/A',
+    distPublicFiles: fs.existsSync(distPublic) ? fs.readdirSync(distPublic).join(', ') : 'N/A',
     distIndexExists: fs.existsSync(distIndex),
-    distDir: fs.existsSync(path.resolve(cwd, 'dist')) ? fs.readdirSync(path.resolve(cwd, 'dist')) : 'N/A',
-    cwdFiles: fs.readdirSync(cwd).slice(0, 20),
+    distDir: fs.existsSync(path.resolve(cwd, 'dist')) ? fs.readdirSync(path.resolve(cwd, 'dist')).join(', ') : 'N/A',
+    cwdFiles: fs.readdirSync(cwd).slice(0, 30).join(', '),
   });
 });
 
