@@ -139,6 +139,17 @@ export const hiddenClosedOrders = pgTable('hidden_closed_orders', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Beta invite codes — replaces the legacy BETA_INVITE_CODES env var that
+// was mutated at runtime via .env file writes (impossible on serverless).
+// A code is "available" while used_at IS NULL; consumption is a single
+// atomic UPDATE so concurrent registrations cannot reuse the same code.
+export const inviteCodes = pgTable('invite_codes', {
+  code:         text('code').primaryKey(),
+  usedAt:       timestamp('used_at'),
+  usedByUserId: integer('used_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt:    timestamp('created_at').defaultNow().notNull(),
+});
+
 export const hiddenClosedOrderRelations = relations(hiddenClosedOrders, ({ one }) => ({
   user: one(users, {
     fields:    [hiddenClosedOrders.userId],
@@ -160,3 +171,5 @@ export type Trade    = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
 export type PendingOrder = typeof pendingOrders.$inferSelect;
 export type NewPendingOrder = typeof pendingOrders.$inferInsert;
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type NewInviteCode = typeof inviteCodes.$inferInsert;

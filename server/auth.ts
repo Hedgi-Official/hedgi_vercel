@@ -2,16 +2,48 @@ import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
 import { type Express } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type User as SelectUser, passwordResetTokens } from "@db/schema";
-import { db } from "@db";
-import { eq, sql, and, lt, gt } from "drizzle-orm";
-import fs from 'node:fs';
+import { users, insertUserSchema, type User as SelectUser, passwordResetTokens, inviteCodes } from "@db/schema";
+import { db, pool } from "@db";
+import { eq, sql, and, gt, isNull } from "drizzle-orm";
 import nodemailer from "nodemailer";
-import cryptoLib from "crypto";
-import { genAndStoreToken, validateAndConsumeToken } from "./token-utils"; 
+import { genAndStoreToken, validateAndConsumeToken } from "./token-utils";
+
+/**
+ * Atomically claim a beta invite code. Returns true if the code existed
+ * and was unused at the moment of the UPDATE, false otherwise. Concurrent
+ * registrations using the same code are guaranteed to see exactly one true.
+ */
+async function consumeInviteCode(rawCode: string | undefined): Promise<boolean> {
+  const code = rawCode?.trim();
+  if (!code) return false;
+  const claimed = await db
+    .update(inviteCodes)
+    .set({ usedAt: new Date() })
+    .where(and(eq(inviteCodes.code, code), isNull(inviteCodes.usedAt)))
+    .returning({ code: inviteCodes.code });
+  return claimed.length === 1;
+}
+
+/**
+ * Release a previously-claimed invite code back to the unused pool.
+ * Used when registration fails after the claim succeeded, so a real
+ * user doesn't burn a code they never got an account from.
+ */
+async function releaseInviteCode(rawCode: string | undefined): Promise<void> {
+  const code = rawCode?.trim();
+  if (!code) return;
+  try {
+    await db
+      .update(inviteCodes)
+      .set({ usedAt: null, usedByUserId: null })
+      .where(eq(inviteCodes.code, code));
+  } catch (err) {
+    console.error('[releaseInviteCode] Failed to release code:', err);
+  }
+}
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -40,20 +72,42 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
+  const sessionSecret = process.env.SESSION_SECRET || process.env.REPL_ID;
+  if (!sessionSecret && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET must be set in production (REPL_ID accepted as legacy fallback)."
+    );
+  }
+
+  // Postgres-backed session store (Neon pool reused from db/index.ts).
+  // Persistent across serverless invocations and shared between deploys.
+  // Cast to any: connect-pg-simple's pg-style typings don't quite match
+  // @neondatabase/serverless's Pool, but the runtime API surface used
+  // (query) is identical.
+  const PgStore = connectPgSimple(session);
+  const store = new PgStore({
+    pool: pool as any,
+    tableName: "session",
+    createTableIfMissing: true,
+    pruneSessionInterval: 60 * 60, // prune expired sessions every hour
+  });
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "porygon-supremacy",
+    secret: sessionSecret || "porygon-supremacy-dev-only",
     resave: false,
     saveUninitialized: false,
-    cookie: {},
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+    },
+    store,
   };
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
     sessionSettings.cookie = {
+      ...sessionSettings.cookie,
       secure: true,
     };
   }
@@ -148,7 +202,10 @@ export function setupAuth(app: Express) {
         return res.status(500).json({ error: "Unable to process request" });
       }
       
-      const baseUrl = process.env.REPLIT_DOMAIN || `${req.protocol}://${req.get('host')}`;
+      const baseUrl =
+        process.env.APP_URL ||
+        process.env.REPLIT_DOMAIN ||
+        `${req.protocol}://${req.get('host')}`;
       const link = `${baseUrl}/reset-password?token=${token}`;
       
       console.log('[forgot-password] Generated link:', link);
@@ -255,88 +312,21 @@ export function setupAuth(app: Express) {
     
     res.json({ message: "Password has been reset." });
   })
-  // Helper function to send verification email
-
-  // Helper functions for reading and writing to .env file
-  const readEnvFile = () => {
-    try {
-      return fs.readFileSync(".env", "utf-8");
-    } catch (error) {
-      console.error("Error reading .env file:", error);
-      return "";
-    }
-  };
-
-  const writeEnvFile = (data: string) => {
-    try {
-      fs.writeFileSync(".env", data, "utf-8");
-    } catch (error) {
-      console.error("Error writing to .env file:", error);
-    }
-  };
-
-  const removeInviteCodeFromEnv = (usedCode: string) => {
-    try {
-      console.log(`[removeInviteCodeFromEnv] Attempting to remove code: "${usedCode}"`);
-
-      const envContent = readEnvFile();
-
-      const lines = envContent.split('\n');
-      
-
-      const updatedLines = lines.map(line => {
-        if (line.startsWith('BETA_INVITE_CODES=')) {
-          const currentCodes = line.substring('BETA_INVITE_CODES='.length);
-          
-
-          const codeArray = currentCodes.split(',').map(code => code.trim());
-          
-
-          const remainingCodes = codeArray.filter(code => code !== usedCode.trim());
-          
-
-          const newLine = `BETA_INVITE_CODES=${remainingCodes.join(', ')}`;
-          console.log(`[removeInviteCodeFromEnv] New line: "${newLine}"`);
-          return newLine;
-        }
-        return line;
-      });
-
-      console.log(`[removeInviteCodeFromEnv] Writing updated content to .env file`);
-      writeEnvFile(updatedLines.join('\n'));
-
-      // Update the runtime environment variable as well
-      const newEnvValue = updatedLines
-        .find(line => line.startsWith('BETA_INVITE_CODES='))
-        ?.substring('BETA_INVITE_CODES='.length) || '';
-
-      process.env.BETA_INVITE_CODES = newEnvValue;
-    } catch (error) {
-      console.error('[removeInviteCodeFromEnv] Error removing invite code from .env:', error);
-    }
-  };
-
 
   app.post("/api/register", async (req, res, next) => {
+    const { inviteCode } = req.body;
+
+    // Atomically claim the invite code first. If the rest of registration
+    // fails, we release the claim so the code stays available.
+    const claimed = await consumeInviteCode(inviteCode);
+    if (!claimed) {
+      console.log(`[register] Invalid or already-used invite code: "${inviteCode}"`);
+      return res.status(400).send("Valid invite code required for beta access");
+    }
+    console.log(`[register] Invite code "${inviteCode?.trim()}" claimed`);
+
+    let userCreated = false;
     try {
-      // Check invite code first (for beta access)
-      const { inviteCode } = req.body;
-      console.log(`[register] Received invite code: "${inviteCode}"`);
-
-      const validCodes = process.env.BETA_INVITE_CODES?.split(',').map(code => code.trim()) || [];
-      console.log(`[register] Valid codes from environment:`, validCodes);
-
-      // Require invite code for beta access
-      if (!inviteCode || !validCodes.includes(inviteCode.trim())) {
-        console.log(`[register] Invalid invite code: "${inviteCode}" not found in valid codes`);
-        return res.status(400).send("Valid invite code required for beta access");
-      }
-
-      console.log(`[register] Valid invite code found, proceeding with registration`);
-
-      // Remove used code from .env file to make it truly one-time use
-      removeInviteCodeFromEnv(inviteCode.trim());
-
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
         return res
@@ -346,7 +336,6 @@ export function setupAuth(app: Express) {
 
       const { username, email } = result.data;
 
-      // Check if user already exists
       const [existingUser] = await db
         .select()
         .from(users)
@@ -357,7 +346,6 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      // Check if email already exists
       const [existingEmail] = await db
         .select()
         .from(users)
@@ -368,12 +356,8 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Email already exists");
       }
 
-
-
-      // Hash the password
       const hashedPassword = await crypto.hash(result.data.password);
 
-      // Create user using the Drizzle ORM
       const [createdUser] = await db
         .insert(users)
         .values({
@@ -393,6 +377,18 @@ export function setupAuth(app: Express) {
           companyRole: result.data.companyRole || null,
         })
         .returning();
+
+      userCreated = true;
+
+      // Best-effort: link the claimed code to the new user for auditing.
+      try {
+        await db
+          .update(inviteCodes)
+          .set({ usedByUserId: createdUser.id })
+          .where(eq(inviteCodes.code, inviteCode.trim()));
+      } catch (linkErr) {
+        console.error('[register] Failed to link invite code to user (non-fatal):', linkErr);
+      }
 
       // Log the user in after registration
       req.login(createdUser, (err) => {
@@ -419,6 +415,10 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error('Registration error:', error);
       next(error);
+    } finally {
+      if (!userCreated) {
+        await releaseInviteCode(inviteCode);
+      }
     }
   });
 

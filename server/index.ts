@@ -46,33 +46,60 @@ app.use((req, res, next) => {
   next();
 });
 
+// `ready` resolves once routes, static serving, and the error handler are
+// installed. Serverless adapters (api/index.ts) MUST `await ready` before
+// forwarding the first request, otherwise registerRoutes may not have
+// completed and 404s will leak.
+let resolveReady!: () => void;
+let rejectReady!: (err: unknown) => void;
+const ready: Promise<void> = new Promise((resolve, reject) => {
+  resolveReady = resolve;
+  rejectReady = reject;
+});
+
 (async () => {
-  log("Starting server initialization...");
+  try {
+    log("Starting server initialization...");
 
-  registerRoutes(app);
-  log("Routes registered successfully");
+    registerRoutes(app);
+    log("Routes registered successfully");
 
-  if (app.get("env") === "development") {
-    log("Setting up Vite in development mode...");
-    await setupVite(app, server);
-    log("Vite setup completed");
-  } else {
-    log("Setting up static serving for production...");
-    serveStatic(app);
-    log("Static serving setup completed");
+    if (app.get("env") === "development") {
+      log("Setting up Vite in development mode...");
+      await setupVite(app, server);
+      log("Vite setup completed");
+    } else {
+      log("Setting up static serving for production...");
+      serveStatic(app);
+      log("Static serving setup completed");
+    }
+
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      log(`Error: ${message}`);
+      res.status(status).json({ message });
+    });
+
+    // Skip server.listen() when running inside a serverless environment
+    // (e.g. Vercel) where the platform provides its own request lifecycle.
+    // Local dev (`npm run dev`) and standalone prod (`npm start`) still listen.
+    if (!process.env.VERCEL) {
+      const PORT = Number(process.env.PORT) || 5000;
+      server.listen(PORT, "0.0.0.0", () => {
+        log(`Server successfully started on port ${PORT}`);
+        log("Server ready (API handles pending orders automatically)");
+      });
+    } else {
+      log("Detected VERCEL environment — skipping server.listen()");
+    }
+
+    resolveReady();
+  } catch (err) {
+    log(`Fatal init error: ${err instanceof Error ? err.message : String(err)}`);
+    rejectReady(err);
+    throw err;
   }
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    log(`Error: ${message}`);
-    res.status(status).json({ message });
-  });
-
-  const PORT = 5000;
-  
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`Server successfully started on port ${PORT}`);
-    log("Server ready (API handles pending orders automatically)");
-  });
 })();
+
+export { app, server, ready };

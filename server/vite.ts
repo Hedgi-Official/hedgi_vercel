@@ -67,7 +67,11 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
+  // Resolve relative to the working directory, not __dirname. After bundling
+  // (esbuild for standalone prod, Vercel's @vercel/node for serverless), the
+  // bundled file's __dirname is unreliable. process.cwd() is the project root
+  // in both `npm start` (local) and Vercel function execution.
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(

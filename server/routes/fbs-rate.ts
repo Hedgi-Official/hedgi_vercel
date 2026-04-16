@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
-import { cfAgent } from '../tunnelAgent.js';
 
 const router = Router();
 

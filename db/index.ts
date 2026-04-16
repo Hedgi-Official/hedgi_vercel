@@ -10,7 +10,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create connection pool with error handling
-const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,

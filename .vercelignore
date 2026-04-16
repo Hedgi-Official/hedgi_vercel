@@ -1,0 +1,20 @@
+# Replit-only files — keep out of the Vercel deployment payload
+.replit
+replit.nix
+replit.md
+
+# IDE & local-only
+.idea/
+.vscode/
+.DS_Store
+
+# Test artefacts (smoke-test bundles, never committed but defensive)
+.vercel-test-bundle.mjs
+
+# Test/seed scripts are run locally; not needed on the function bundle
+# (kept in repo so they stay in source control)
+scripts/
+
+# Drizzle migration metadata is dev-only; the schema is applied via
+# `drizzle-kit push` outside the Vercel runtime
+migrations/
