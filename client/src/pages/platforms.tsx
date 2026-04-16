@@ -5,25 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/hooks/use-user";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { 
-  Code, 
-  Zap, 
-  Shield, 
-  BarChart3, 
+  Code,
+  Zap,
+  Shield,
   TrendingDown,
-  Server,
-  FileText,
   ArrowRight,
   Building2,
   Bitcoin,
   Ship,
   Target,
-  Check,
+  CheckCircle2,
   ExternalLink,
-  Globe,
-  Lock
+  Globe
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -156,21 +152,52 @@ const SandboxRequestForm = () => {
     volumeBand: '',
     email: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Sandbox request:', formData);
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/sandbox-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, source: 'platforms' })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setSubmitted(true);
+    } catch (error) {
+      console.error('[SandboxRequestForm] Submit error:', error);
+      alert(t('companiesPage.formErrorGeneric'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (submitted) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">{t('companiesPage.formSuccessTitle')}</h3>
+        <p className="text-muted-foreground">{t('companiesPage.formSuccessMessage')}</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="company">{t('companiesPage.formCompanyLabel')}</Label>
-        <Input 
-          id="company" 
+        <Input
+          id="company"
           placeholder={t('companiesPage.formCompanyPlaceholder')}
           value={formData.company}
           onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+          required
         />
       </div>
       <div>
@@ -206,16 +233,17 @@ const SandboxRequestForm = () => {
       </div>
       <div>
         <Label htmlFor="email">{t('companiesPage.formEmailLabel')}</Label>
-        <Input 
-          id="email" 
+        <Input
+          id="email"
           type="email"
           placeholder={t('companiesPage.formEmailPlaceholder')}
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
         />
       </div>
-      <Button type="submit" className="w-full">
-        {t('companiesPage.requestSandbox')}
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? t('companiesPage.formSubmitting') : t('companiesPage.requestSandbox')}
       </Button>
     </form>
   );
@@ -248,7 +276,7 @@ const SolutionCard = ({
   );
 };
 
-export default function ForCompanies() {
+export default function Platforms() {
   const [, navigate] = useLocation();
   const { user, logout } = useUser();
   const { t } = useTranslation();
@@ -261,7 +289,7 @@ export default function ForCompanies() {
 
   const renderMainPage = () => (
     <div className="page-container bg-background">
-      <SEO titleKey="home" path="/" />
+      <SEO titleKey="platforms" path="/platforms" />
       <div className="absolute inset-0 opacity-3 -z-10">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
@@ -318,6 +346,12 @@ export default function ForCompanies() {
                     </a>
                   </Button>
                 </div>
+                <Link
+                  href="/"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                >
+                  {t('companiesPage.notAPlatform')}
+                </Link>
               </div>
               <div className="lg:py-4">
                 <CodeSnippet />
@@ -524,34 +558,10 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <Zap className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiQuotesTitle')}</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiTimeToValueTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiQuotesDesc')}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                    <Lock className="w-5 h-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiLockTitle')}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiLockDesc')}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/40 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                    <BarChart3 className="w-5 h-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiTrackTitle')}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiTrackDesc')}</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiTimeToValueDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -560,22 +570,34 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <TrendingDown className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiCostTitle')}</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiTransparentPricingTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiCostDesc')}</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiTransparentPricingDesc')}</p>
                 </CardContent>
               </Card>
 
               <Card className="hover:border-primary/40 transition-colors">
                 <CardHeader className="pb-2">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                    <FileText className="w-5 h-5 text-primary" />
+                    <Target className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiReportsTitle')}</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiCustomerOutcomeTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiReportsDesc')}</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiCustomerOutcomeDesc')}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:border-primary/40 transition-colors">
+                <CardHeader className="pb-2">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                    <Globe className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base">{t('companiesPage.apiCoverageTitle')}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiCoverageDesc')}</p>
                 </CardContent>
               </Card>
 
@@ -584,74 +606,17 @@ export default function ForCompanies() {
                   <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center mb-2">
                     <Code className="w-5 h-5 text-primary" />
                   </div>
-                  <CardTitle className="text-base">{t('companiesPage.apiDocsTitle')}</CardTitle>
+                  <CardTitle className="text-base">{t('companiesPage.apiLiveConsoleTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiDocsDesc')}</p>
+                  <p className="text-xs text-muted-foreground">{t('companiesPage.apiLiveConsoleDesc')}</p>
                   <Button variant="ghost" size="sm" className="mt-2 px-0 text-foreground font-semibold hover:text-foreground/80 text-xs" asChild>
-                    <a href="https://api.hedgi.ai/docs" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                      {t('companiesPage.exploreDocs')} <ExternalLink className="w-3 h-3" />
-                    </a>
+                    <Link href="/developers" className="flex items-center gap-1">
+                      {t('companiesPage.viewDevelopers')} <ArrowRight className="w-3 h-3" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-10 md:py-14">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">
-                  {t('companiesPage.securityTitle')}
-                </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  {t('companiesPage.securitySubtitle')}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Shield className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityApiKeyTitle')}</h3>
-                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityApiKeyDesc')}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Check className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityIdempotencyTitle')}</h3>
-                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityIdempotencyDesc')}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Server className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityEncryptionTitle')}</h3>
-                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityEncryptionDesc')}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-0.5">{t('companiesPage.securityAuditTitle')}</h3>
-                    <p className="text-xs text-muted-foreground">{t('companiesPage.securityAuditDesc')}</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </section>

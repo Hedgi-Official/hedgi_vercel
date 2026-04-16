@@ -43,16 +43,20 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
 
           {/* Desktop Navigation - Left Aligned */}
           <div className="hidden md:flex items-center space-x-4 flex-1 ml-4">
-            <Link href={user ? "/dashboard" : "/"}>
+            <Link href="/">
+              <Button variant="ghost">{t('nav.forBusinesses')}</Button>
+            </Link>
+            <Link href="/platforms">
               <Button variant="ghost">
-                {t('Home')}
+                <span className="xl:hidden">{t('nav.forPlatformsShort')}</span>
+                <span className="hidden xl:inline">{t('nav.forPlatforms')}</span>
               </Button>
             </Link>
             <Link href="/developers">
-              <Button variant="ghost">{t('Developers')}</Button>
+              <Button variant="ghost">{t('nav.forDevelopers')}</Button>
             </Link>
             <Link href="/what-is-hedge">
-              <Button variant="ghost">{t('What is Hedging?')}</Button>
+              <Button variant="ghost">{t('nav.whatIsHedge')}</Button>
             </Link>
           </div>
 
@@ -106,19 +110,24 @@ export function Header({ showAuthButton, username, onLogout }: HeaderProps) {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t bg-background">
             <div className="py-4 space-y-2">
-              <Link href={user ? "/dashboard" : "/"}>
+              <Link href="/">
                 <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
-                  {t('Home')}
+                  {t('nav.forBusinesses')}
+                </Button>
+              </Link>
+              <Link href="/platforms">
+                <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
+                  {t('nav.forPlatforms')}
                 </Button>
               </Link>
               <Link href="/developers">
                 <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
-                  {t('Developers')}
+                  {t('nav.forDevelopers')}
                 </Button>
               </Link>
               <Link href="/what-is-hedge">
                 <Button variant="ghost" className="w-full justify-start" onClick={closeMobileMenu}>
-                  {t('What is Hedging?')}
+                  {t('nav.whatIsHedge')}
                 </Button>
               </Link>
               

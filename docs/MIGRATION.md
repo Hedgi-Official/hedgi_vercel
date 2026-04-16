@@ -201,6 +201,9 @@ If the cutover goes sideways within the first 48 hours:
 
 ## Known follow-ups (not blockers)
 
+**Developer docs:**
+- Rate-limits and idempotency block on `/developers` is deferred pending product-truth confirmation of what `api.hedgi.ai` actually enforces (deferred 2026-04-16); re-add only once verified.
+
 **Code quality:**
 - Pre-existing TypeScript strict errors in `server/routes.ts` (~30
   `unknown`-type spread errors). Build succeeds via esbuild. Worth a

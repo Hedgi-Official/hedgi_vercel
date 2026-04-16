@@ -768,18 +768,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Sandbox access request endpoint - sends email notification
+  // Sandbox access request endpoint - sends email notification.
+  // Two forms hit this: /platforms (company/useCase/volumeBand/email) and
+  // /developers (name/company/email/useCase). `name` is optional because
+  // the /platforms form doesn't collect it; `volumeBand` and `source`
+  // are optional extras from the /platforms form.
   app.post('/api/sandbox-request', async (req: Request, res: Response) => {
     try {
-      const { name, company, email, useCase } = req.body;
-      console.log('[Sandbox Request] Received:', { name, company, email, useCase });
+      const { name, company, email, useCase, volumeBand, source } = req.body;
+      console.log('[Sandbox Request] Received:', { name, company, email, useCase, volumeBand, source });
 
-      // Validate required fields
-      if (!name || !company || !email || !useCase) {
-        return res.status(400).json({ error: 'All fields are required' });
+      if (!company || !email || !useCase) {
+        return res.status(400).json({ error: 'company, email, and useCase are required' });
       }
 
-      // Create email transporter
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT),
@@ -789,20 +791,34 @@ export function registerRoutes(app: Express): Server {
         }
       });
 
-      // Send notification email to guilherme@hedgi.ai
+      const sourceLabel = source === 'platforms' ? 'Platforms'
+        : source === 'developers' ? 'Developers'
+        : source === 'business' ? 'Business'
+        : 'Site';
+
+      const nameRow = name
+        ? `<tr>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Name</td>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${name}</td>
+              </tr>`
+        : '';
+      const volumeRow = volumeBand
+        ? `<tr>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Monthly FX Volume</td>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${volumeBand}</td>
+              </tr>`
+        : '';
+
       await transporter.sendMail({
         to: 'guilherme@hedgi.ai',
         from: 'guilherme@hedgi.ai',
-        subject: `New Sandbox Access Request: ${company}`,
+        subject: `[${sourceLabel}] Sandbox Access Request: ${company}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #22c55e;">New Sandbox Access Request</h2>
-            <p>Someone has requested access to the Hedgi API sandbox:</p>
+            <p>Request submitted via the ${sourceLabel} page:</p>
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-              <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Name</td>
-                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${name}</td>
-              </tr>
+              ${nameRow}
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Company</td>
                 <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${company}</td>
@@ -815,6 +831,7 @@ export function registerRoutes(app: Express): Server {
                 <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Use Case</td>
                 <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${useCase}</td>
               </tr>
+              ${volumeRow}
             </table>
             <p style="color: #6b7280; font-size: 14px;">
               Reply directly to this email or contact <a href="mailto:${email}">${email}</a> to follow up.
@@ -823,7 +840,7 @@ export function registerRoutes(app: Express): Server {
         `
       });
 
-      console.log(`[Sandbox Request] Notification sent for ${company} (${email})`);
+      console.log(`[Sandbox Request] Notification sent for ${company} (${email}) via ${sourceLabel}`);
       return res.json({ success: true, message: 'Request submitted successfully' });
     } catch (error) {
       console.error('[Sandbox Request] Error:', error);

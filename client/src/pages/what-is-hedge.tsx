@@ -4,16 +4,17 @@ import { Footer } from "@/components/footer";
 import { SEO } from "@/components/seo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Shield, 
-  Building2, 
-  GraduationCap, 
-  Home, 
-  Luggage, 
-  DollarSign, 
+import {
+  Shield,
+  Building2,
+  GraduationCap,
+  Home,
+  Luggage,
+  DollarSign,
   TrendingUp,
   TrendingDown,
   ArrowDown,
+  ArrowRight,
   Check
 } from "lucide-react";
 import { CurrencySimulator } from "@/components/currency-simulator";
@@ -297,40 +298,66 @@ export default function WhatIsHedge() {
         </div>
       </section>
       
-      {/* Bottom CTA Section */}
+      {/* 3-path disambiguation */}
       <section className="py-20 px-4 bg-background">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-foreground">
-              {t("landing.bottomCtaTitle")}
+              {t("whatIsHedging.pathNavTitle")}
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              {t("landing.bottomCtaBody")}
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t("whatIsHedging.pathNavSubtitle")}
             </p>
+          </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6">
-              <Button
-                size="lg"
-                onClick={() => navigate("/developers")}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg"
-              >
-                {t("landing.viewApiQuickstart")}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate("/")}
-                className="px-8 py-4 text-lg"
-              >
-                {t("landing.learnMore")}
-              </Button>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link href="/" className="block h-full">
+              <Card className="p-6 hover:border-primary/40 transition-colors h-full cursor-pointer flex flex-col">
+                <div className="text-xs uppercase tracking-wider text-primary mb-2 font-semibold">
+                  {t("whatIsHedging.pathBusinessRole")}
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                  {t("whatIsHedging.pathBusinessDesc")}
+                </p>
+                <div className="inline-flex items-center text-xs font-medium bg-primary/5 border border-primary/20 rounded-full px-3 py-1 mb-3 w-fit">
+                  {t("whatIsHedging.pathBusinessPill")}
+                </div>
+                <div className="flex items-center text-sm font-medium text-foreground">
+                  {t("whatIsHedging.pathBusinessCta")}
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </Card>
+            </Link>
 
-            {/* Helper Text */}
-            <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-              {t("landing.bottomCtaHelper")}
-            </p>
+            <Link href="/platforms" className="block h-full">
+              <Card className="p-6 hover:border-primary/40 transition-colors h-full cursor-pointer flex flex-col">
+                <div className="text-xs uppercase tracking-wider text-primary mb-2 font-semibold">
+                  {t("whatIsHedging.pathPlatformsRole")}
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                  {t("whatIsHedging.pathPlatformsDesc")}
+                </p>
+                <div className="flex items-center text-sm font-medium text-foreground">
+                  {t("whatIsHedging.pathPlatformsCta")}
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </Card>
+            </Link>
+
+            <Link href="/developers" className="block h-full">
+              <Card className="p-6 hover:border-primary/40 transition-colors h-full cursor-pointer flex flex-col">
+                <div className="text-xs uppercase tracking-wider text-primary mb-2 font-semibold">
+                  {t("whatIsHedging.pathDevelopersRole")}
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                  {t("whatIsHedging.pathDevelopersDesc")}
+                </p>
+                <div className="flex items-center text-sm font-medium text-foreground">
+                  {t("whatIsHedging.pathDevelopersCta")}
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
@@ -341,23 +368,3 @@ export default function WhatIsHedge() {
   );
 }
 
-// Arrow right component for the animation
-function ArrowRight({ className }: { className?: string }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={className}
-    >
-      <path d="M5 12h14"></path>
-      <path d="m12 5 7 7-7 7"></path>
-    </svg>
-  );
-}

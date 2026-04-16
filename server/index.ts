@@ -11,6 +11,26 @@ const server = createServer(app);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Sets the `hedgi-geo` cookie from Vercel's x-vercel-ip-country header on
+// the first request that doesn't already have one. The client-side i18n
+// geo detector reads this cookie to route Brazilian visitors to pt-BR by
+// default without overriding explicit /pt URL paths or a prior language
+// choice cached in localStorage. No-op locally (header is Vercel-set).
+app.use((req, res, next) => {
+  const country = req.headers['x-vercel-ip-country'] as string | undefined;
+  const cookieHeader = req.headers.cookie || '';
+  const hasGeoCookie = /(?:^|;\s*)hedgi-geo=/.test(cookieHeader);
+  if (country && !hasGeoCookie) {
+    res.cookie('hedgi-geo', country, {
+      path: '/',
+      httpOnly: false,
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60 * 24 * 30
+    });
+  }
+  next();
+});
+
 app.get('/ping', (req, res) => {
   log('Ping endpoint called');
   res.json({ message: 'pong' });

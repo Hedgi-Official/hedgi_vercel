@@ -14,7 +14,8 @@ import BatchUpload from "@/pages/batch-upload";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import WhatIsHedge from "@/pages/what-is-hedge";
-import ForCompanies from "@/pages/for-companies";
+import Business from "@/pages/business";
+import Platforms from "@/pages/platforms";
 import Developers from "@/pages/developers";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -52,7 +53,8 @@ function AppRouter() {
 
   return (
     <Switch>
-      <Route path="/" component={ForCompanies} />
+      <Route path="/" component={Business} />
+      <Route path="/platforms" component={Platforms} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />

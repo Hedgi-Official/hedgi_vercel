@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/hooks/use-user";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { 
@@ -244,7 +244,7 @@ const SandboxForm = ({ onClose, translations }: { onClose?: () => void; translat
       const response = await fetch('/api/sandbox-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, source: 'developers' })
       });
       if (!response.ok) {
         throw new Error('Failed to submit request');
@@ -425,6 +425,15 @@ export default function Developers() {
                   <span className="text-black">{t('developers.sandbox')}</span>
                 </div>
               </div>
+
+              <div className="mt-6">
+                <Link
+                  href="/platforms"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                >
+                  {t('developers.crossLinkPlatforms')}
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -449,7 +458,7 @@ export default function Developers() {
                 </div>
                 <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2 border">
                   <span className="text-sm text-muted-foreground">{t('developers.direction')}</span>
-                  <select 
+                  <select
                     value={selectedDirection}
                     onChange={(e) => setSelectedDirection(e.target.value)}
                     className="bg-transparent text-sm font-medium focus:outline-none cursor-pointer"
@@ -458,6 +467,13 @@ export default function Developers() {
                     <option value="sell">{t('developers.sellProtectExports')}</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Auth header (shared by every endpoint) */}
+              <div className="flex justify-center mb-8">
+                <code className="text-xs bg-background border px-3 py-1.5 rounded font-mono text-muted-foreground">
+                  Authorization: Bearer $HEDGI_API_KEY
+                </code>
               </div>
 
               {/* Lifecycle Stages */}
@@ -633,20 +649,14 @@ export default function Developers() {
                   </a>
                 </Button>
               </div>
-              
-              <div className="flex justify-center gap-8 mt-12 pt-8 border-t">
-                <div>
-                  <div className="text-2xl font-bold">99.9%</div>
-                  <div className="text-sm text-muted-foreground">{t('developers.uptimeSla')}</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">&lt;50ms</div>
-                  <div className="text-sm text-muted-foreground">{t('developers.avgResponse')}</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">24/7</div>
-                  <div className="text-sm text-muted-foreground">{t('developers.support')}</div>
-                </div>
+
+              <div className="mt-8">
+                <Link
+                  href="/what-is-hedge"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+                >
+                  {t('developers.crossLinkWhatIsHedge')}
+                </Link>
               </div>
             </div>
           </div>

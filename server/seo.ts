@@ -4,13 +4,18 @@ const BASE_URL = "https://hedgi.ai";
 // Duplicated intentionally — the server cannot import client ESM modules.
 const seoTranslations = {
   en: {
-    defaultTitle: "Hedgi - Currency Hedging API for Companies",
+    defaultTitle: "Hedgi - Currency Hedging for Brazilian Businesses",
     defaultDescription:
-      "Currency hedging API for fintechs and payment platforms. Protect clients from FX risk with one API call. Request sandbox access.",
+      "Currency hedging built for Brazilian importers, exporters, and teams paying in foreign currency.",
     home: {
-      title: "Currency Hedging API for Companies",
+      title: "Currency Hedging for Brazilian Businesses",
       description:
-        "Currency hedging API for fintechs and payment platforms. Protect clients from FX risk with one API call. Request sandbox access.",
+        "Currency hedging built for Brazilian importers, exporters, and teams paying in foreign currency.",
+    },
+    platforms: {
+      title: "Currency Hedging API for Platforms",
+      description:
+        "Embed currency hedging into your product. Offer your customers locked FX rates through a single API call.",
     },
     whatIsHedge: {
       title: "What is Currency Hedging",
@@ -24,13 +29,18 @@ const seoTranslations = {
     },
   },
   "pt-BR": {
-    defaultTitle: "Hedgi - API de Hedge Cambial para Empresas",
+    defaultTitle: "Hedgi - Proteção Cambial para Empresas Brasileiras",
     defaultDescription:
-      "API de hedge cambial para fintechs e plataformas de pagamento. Proteja clientes do risco FX com uma chamada de API. Solicite acesso.",
+      "Proteção cambial para importadores, exportadores e empresas brasileiras que pagam em moeda estrangeira.",
     home: {
-      title: "API de Hedge Cambial para Empresas",
+      title: "Proteção Cambial para Empresas Brasileiras",
       description:
-        "API de hedge cambial para fintechs e plataformas de pagamento. Proteja clientes do risco FX com uma chamada de API. Solicite acesso.",
+        "Proteção cambial para importadores, exportadores e empresas brasileiras que pagam em moeda estrangeira.",
+    },
+    platforms: {
+      title: "API de Hedge Cambial para Plataformas",
+      description:
+        "Incorpore hedge cambial ao seu produto. Ofereça taxas travadas aos seus clientes com uma única chamada de API.",
     },
     whatIsHedge: {
       title: "O que é Hedge Cambial",
@@ -46,11 +56,12 @@ const seoTranslations = {
 } as const;
 
 type Lang = keyof typeof seoTranslations;
-type PageKey = "home" | "whatIsHedge" | "developers";
+type PageKey = "home" | "platforms" | "whatIsHedge" | "developers";
 
 // Maps clean path (without /pt prefix) to a page key
 const routeMap: Record<string, PageKey> = {
   "/": "home",
+  "/platforms": "platforms",
   "/what-is-hedge": "whatIsHedge",
   "/developers": "developers",
 };
