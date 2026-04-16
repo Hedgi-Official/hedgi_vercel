@@ -19,10 +19,13 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  // Dynamic imports: vite, nanoid, and vite.config are only needed in dev
-  // mode and pull in heavy native deps (rollup) that don't exist on Vercel.
+  // Dynamic imports: vite, nanoid, and vite.config are only needed in dev.
+  // The variable indirection (`configPath`) prevents esbuild from inlining
+  // vite.config.ts into the production bundle, which would pull in a
+  // top-level `import "vite"` → rollup → platform-specific native binaries.
   const { createServer: createViteServer, createLogger } = await import("vite");
-  const viteConfig = (await import("../vite.config")).default;
+  const configPath = "../vite.config";
+  const viteConfig = (await import(configPath)).default;
   const { nanoid } = await import("nanoid");
   const viteLogger = createLogger();
 
