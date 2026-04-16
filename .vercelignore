@@ -1,8 +1,3 @@
-# Replit-only files — keep out of the Vercel deployment payload
-.replit
-replit.nix
-replit.md
-
 # IDE & local-only
 .idea/
 .vscode/
