@@ -97,6 +97,16 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath, {
     index: false,
     setHeaders: (res, path) => {
+      // sw.js must never be 304'd. Vercel normalizes every deployed
+      // file's mtime to 2018-10-20, so If-Modified-Since revalidations
+      // always match the previously cached copy and the browser keeps
+      // the old SW forever — the update check sees no change and the
+      // new SW never installs. Strip Last-Modified and force no-cache
+      // so the file is re-fetched whole on every check.
+      if (path.endsWith('sw.js')) {
+        res.removeHeader('Last-Modified');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
       if (path.endsWith('.js') || path.endsWith('.mjs')) {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       } else if (path.endsWith('.css')) {
