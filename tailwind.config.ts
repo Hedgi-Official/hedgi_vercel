@@ -1,10 +1,20 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Inter Variable"', ...defaultTheme.fontFamily.sans],
+        display: [
+          '"Geist Variable"',
+          '"Inter Variable"',
+          ...defaultTheme.fontFamily.sans,
+        ],
+        mono: ['"Geist Mono Variable"', ...defaultTheme.fontFamily.mono],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -40,6 +50,24 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        "accent-navy": {
+          DEFAULT: "hsl(var(--accent-navy))",
+          foreground: "hsl(var(--accent-navy-foreground))",
+        },
+        surface: {
+          DEFAULT: "hsl(var(--surface-0))",
+          "0": "hsl(var(--surface-0))",
+          "1": "hsl(var(--surface-1))",
+          "2": "hsl(var(--surface-2))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

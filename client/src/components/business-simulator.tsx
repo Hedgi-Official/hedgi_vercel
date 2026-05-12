@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as SelectPrimitive from "@radix-ui/react-select";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { cn, getDaysBetweenDates } from "@/lib/utils";
 import {
   RefreshCw,
   Play,
@@ -21,6 +24,7 @@ import {
   Activity,
   CheckCircle2,
   BarChart3,
+  Check,
 } from "lucide-react";
 
 export interface BrokerQuote {
@@ -116,6 +120,18 @@ interface BusinessSimulatorProps {
   showCreateOrderButton?: boolean;
   onCreateOrder?: (payload: CreateOrderPayload) => void;
   isCreatingOrder?: boolean;
+  /**
+   * `marketing` (default) keeps the original Volume (lots) / Buy (Long) UI
+   * used on the public /business and /what-is-hedge embeds. `dashboard`
+   * swaps the display layer to an Amount field with a live currency
+   * prefix, dynamic Buy/Sell labels, enriched pair dropdown, duration
+   * preset chips, and a reformatted quote-result summary. The API
+   * payload is identical in both variants — the display layer converts
+   * the typed amount back to lots before calling the endpoint. Scoped
+   * this way so the change is revertable by dropping `variant="dashboard"`
+   * from the call site.
+   */
+  variant?: "marketing" | "dashboard";
 }
 
 function getBaseCurrency(symbol: string, apiBaseCurrency?: string): string {
@@ -128,6 +144,55 @@ function getQuoteCurrency(symbol: string, apiQuoteCurrency?: string): string {
   return symbol.substring(3);
 }
 
+// Display <-> API bridge. Dashboard users enter a currency amount
+// (e.g. $10,000); the backend still expects `volume` in lots. Standard
+// forex lot size is 100,000 units of the base currency, so 10,000 USD
+// = 0.1 lots, matching today's default. Helpers are intentionally
+// trivial and local so reverting is a one-commit rollback.
+const LOT_SIZE = 100_000;
+
+const CURRENCY_PREFIXES: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  BRL: "R$",
+  GBP: "£",
+  JPY: "¥",
+  CNH: "¥",
+  CNY: "¥",
+  MXN: "Mex$",
+};
+
+const PAIR_NAMES: Record<string, [string, string]> = {
+  USDBRL: ["US Dollar", "Brazilian Real"],
+  EURBRL: ["Euro", "Brazilian Real"],
+  GBPBRL: ["British Pound", "Brazilian Real"],
+  JPYBRL: ["Japanese Yen", "Brazilian Real"],
+  CNHBRL: ["Chinese Yuan", "Brazilian Real"],
+  USDMXN: ["US Dollar", "Mexican Peso"],
+  EURUSD: ["Euro", "US Dollar"],
+  GBPUSD: ["British Pound", "US Dollar"],
+  USDJPY: ["US Dollar", "Japanese Yen"],
+  USDCNH: ["US Dollar", "Chinese Yuan"],
+};
+
+function formatPairCode(symbol: string): string {
+  if (symbol.length < 6) return symbol;
+  // Middle dot matches the separator register used site-wide (reassurance
+  // rows, cross-link eyebrows). Applies to the Select trigger, the
+  // enriched option list, and the quote-result summary line.
+  return `${symbol.slice(0, 3)}·${symbol.slice(3)}`;
+}
+
+function getCurrencyPrefix(symbol: string): string {
+  return CURRENCY_PREFIXES[symbol.slice(0, 3)] ?? "";
+}
+
+function formatAmountWithPrefix(symbol: string, lots: number): string {
+  const prefix = getCurrencyPrefix(symbol);
+  const amount = Math.round(lots * LOT_SIZE);
+  return `${prefix}${amount.toLocaleString("en-US")}`;
+}
+
 export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, BusinessSimulatorProps>(
   function BusinessSimulator(
     {
@@ -135,11 +200,18 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
       showCreateOrderButton = false,
       onCreateOrder,
       isCreatingOrder = false,
+      variant = "marketing",
     },
     ref,
   ) {
     const { t } = useTranslation();
     const { toast } = useToast();
+    // Marketing embeds on /business and /what-is-hedge render a
+    // simplified Quote Result — just the 4-metric summary band, no
+    // broker breakdown, no leg cards, no Execute button. Dashboard
+    // (corporate-dashboard) keeps the full breakdown because it's the
+    // surface where users actually select a broker and execute.
+    const isMarketing = variant === "marketing";
 
     const [simulateForm, setSimulateForm] = React.useState<SimulateForm>({
       symbol: "USDBRL",
@@ -147,6 +219,40 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
       volume: "0.1",
       duration_days: "7",
     });
+    // Focus state for the Amount input — swaps between "10,000" when
+    // blurred and "10000" raw digits while editing.
+    const [amountFocused, setAmountFocused] = React.useState(false);
+
+    // Date-picker derived state. `today` captured once at mount so the
+    // end-date derivation is deterministic per duration_days. The API
+    // payload remains `duration_days: number` — this state is purely
+    // the display bridge between a calendar date and days-to-hedge.
+    const today = React.useMemo(() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }, []);
+    const durationEndDate = React.useMemo(() => {
+      const d = new Date(today);
+      const days = parseInt(simulateForm.duration_days) || 7;
+      d.setDate(d.getDate() + days);
+      return d;
+    }, [today, simulateForm.duration_days]);
+    const minHedgeDate = React.useMemo(() => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 1); // tomorrow — can't hedge for 0 days
+      return d;
+    }, [today]);
+    const maxHedgeDate = React.useMemo(() => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 365); // matches the current max=365 input
+      return d;
+    }, [today]);
+    const handleDateChange = (date: Date | undefined) => {
+      if (!date) return;
+      const days = Math.max(1, getDaysBetweenDates(today, date));
+      setSimulateForm((f) => ({ ...f, duration_days: String(days) }));
+    };
     const [simulateResult, setSimulateResult] = React.useState<SimulateResponse | null>(null);
     const [selectedBroker, setSelectedBroker] = React.useState<string | null>(null);
 
@@ -224,7 +330,7 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
               {t("corporateDashboard.simulateHedge")}
             </CardTitle>
             <CardDescription>
-              {t("corporateDashboard.previewCosts")}
+              {t("corporateDashboard.previewCostsBrokers")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -240,16 +346,55 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USDBRL">USD/BRL</SelectItem>
-                      <SelectItem value="EURBRL">EUR/BRL</SelectItem>
-                      <SelectItem value="GBPBRL">GBP/BRL</SelectItem>
-                      <SelectItem value="JPYBRL">JPY/BRL</SelectItem>
-                      <SelectItem value="CNHBRL">CNH/BRL</SelectItem>
-                      <SelectItem value="USDMXN">USD/MXN</SelectItem>
-                      <SelectItem value="EURUSD">EUR/USD</SelectItem>
-                      <SelectItem value="GBPUSD">GBP/USD</SelectItem>
-                      <SelectItem value="USDJPY">USD/JPY</SelectItem>
-                      <SelectItem value="USDCNH">USD/CNH</SelectItem>
+                      {[
+                        "USDBRL",
+                        "EURBRL",
+                        "GBPBRL",
+                        "JPYBRL",
+                        "CNHBRL",
+                        "USDMXN",
+                        "EURUSD",
+                        "GBPUSD",
+                        "USDJPY",
+                        "USDCNH",
+                      ].map((symbol) => {
+                        const code = formatPairCode(symbol);
+                        const names = PAIR_NAMES[symbol];
+                        // Enriched dropdown option pattern. Radix's
+                        // <Select.Value> in the trigger reads only the
+                        // content of <Select.ItemText>, so code
+                        // ("USD/BRL") renders in the trigger; the
+                        // descriptive "— US Dollar · Brazilian Real"
+                        // sibling span lives inside the item but
+                        // outside ItemText and only shows in the
+                        // expanded dropdown list.
+                        if (!names) {
+                          return (
+                            <SelectItem key={symbol} value={symbol}>
+                              {code}
+                            </SelectItem>
+                          );
+                        }
+                        return (
+                          <SelectPrimitive.Item
+                            key={symbol}
+                            value={symbol}
+                            className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                          >
+                            <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                              <SelectPrimitive.ItemIndicator>
+                                <Check className="h-4 w-4" />
+                              </SelectPrimitive.ItemIndicator>
+                            </span>
+                            <SelectPrimitive.ItemText>
+                              {code}
+                            </SelectPrimitive.ItemText>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              — {names[0]} · {names[1]}
+                            </span>
+                          </SelectPrimitive.Item>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -264,8 +409,16 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="buy">{t("corporateDashboard.buyLong")}</SelectItem>
-                      <SelectItem value="sell">{t("corporateDashboard.sellShort")}</SelectItem>
+                      <SelectItem value="buy">
+                        {t("corporateDashboard.buyCurrency", {
+                          currency: simulateForm.symbol.slice(0, 3),
+                        })}
+                      </SelectItem>
+                      <SelectItem value="sell">
+                        {t("corporateDashboard.sellCurrency", {
+                          currency: simulateForm.symbol.slice(0, 3),
+                        })}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -273,27 +426,103 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bs-volume">{t("corporateDashboard.volumeLots")}</Label>
-                  <Input
-                    id="bs-volume"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={simulateForm.volume}
-                    onChange={(e) => setSimulateForm((f) => ({ ...f, volume: e.target.value }))}
-                  />
+                  <Label htmlFor="bs-volume">
+                    {t("corporateDashboard.amountLabel")}
+                  </Label>
+                  {/* Amount input: currency prefix pinned inside the
+                      field on the left; value is the lot volume ×
+                      LOT_SIZE, formatted with commas when unfocused
+                      and raw-numeric during editing. onChange converts
+                      the typed amount back to lots so the underlying
+                      form state (and API payload) stays on the
+                      existing `volume` field. */}
+                  {(() => {
+                    const prefix = getCurrencyPrefix(simulateForm.symbol);
+                    const lotsNum = parseFloat(simulateForm.volume) || 0;
+                    const amountNum = Math.round(lotsNum * LOT_SIZE);
+                    const amountStr = amountFocused
+                      ? String(amountNum)
+                      : amountNum.toLocaleString("en-US");
+                    const leftPad =
+                      prefix.length >= 3
+                        ? "pl-12"
+                        : prefix.length === 2
+                          ? "pl-10"
+                          : "pl-7";
+                    return (
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                          {prefix}
+                        </span>
+                        <Input
+                          id="bs-volume"
+                          type="text"
+                          inputMode="numeric"
+                          className={leftPad}
+                          value={amountStr}
+                          onFocus={() => setAmountFocused(true)}
+                          onBlur={() => setAmountFocused(false)}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(
+                              /[^0-9]/g,
+                              "",
+                            );
+                            const parsed = parseFloat(cleaned) || 0;
+                            const lots = (parsed / LOT_SIZE).toString();
+                            setSimulateForm((f) => ({ ...f, volume: lots }));
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bs-duration">{t("corporateDashboard.durationDays")}</Label>
-                  <Input
-                    id="bs-duration"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={simulateForm.duration_days}
-                    onChange={(e) => setSimulateForm((f) => ({ ...f, duration_days: e.target.value }))}
+                  <Label htmlFor="bs-duration">
+                    {t("corporateDashboard.durationLabel")}
+                  </Label>
+                  {/* Date picker is the primary affordance; the chip
+                      row below is a secondary quick-select. Both write
+                      back to simulateForm.duration_days. Compact "MMM
+                      d, yyyy" display register matches the site's
+                      tabular numeric aesthetic. */}
+                  <DatePicker
+                    value={durationEndDate}
+                    onValueChange={handleDateChange}
+                    minDate={minHedgeDate}
+                    maxDate={maxHedgeDate}
+                    displayFormat="MMM d, yyyy"
+                    className="h-10"
                   />
+                  {/* !mt-1.5 overrides the parent's space-y-2 so the
+                      chip row sits tighter under the date picker and
+                      the pair reads as one composed input. */}
+                  <div className="!mt-1.5 flex items-center justify-center gap-1.5">
+                    {[7, 30, 60, 90].map((days) => {
+                      const active =
+                        simulateForm.duration_days === String(days);
+                      return (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() =>
+                            setSimulateForm((f) => ({
+                              ...f,
+                              duration_days: String(days),
+                            }))
+                          }
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
+                            active
+                              ? "bg-accent-navy text-white"
+                              : "bg-muted text-muted-foreground hover:bg-muted/70",
+                          )}
+                        >
+                          {days}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -323,10 +552,13 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
             </CardTitle>
             <CardDescription>
               {simulateResult
-                ? t("corporateDashboard.simulateSummary", {
-                    symbol: simulateResult.symbol,
+                ? t("corporateDashboard.simulateSummaryDashboard", {
                     direction: simulateResult.direction.toUpperCase(),
-                    volume: simulateResult.volume,
+                    amount: formatAmountWithPrefix(
+                      simulateResult.symbol,
+                      simulateResult.volume,
+                    ),
+                    symbol: formatPairCode(simulateResult.symbol),
                     days: simulateResult.duration_days,
                   })
                 : t("corporateDashboard.runSimulation")}
@@ -334,6 +566,92 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
           </CardHeader>
           <CardContent>
             {simulateResult ? (
+              isMarketing ? (
+                /* Simplified marketing Quote Result. Two-tier layout
+                   leads with the Current Rate vs. Locked Rate
+                   comparison — the core educational moment of
+                   hedging. Total cost + Breakeven Δ become supporting
+                   metrics below a divider. A closing tagline wraps up
+                   the card without a second divider.
+                     - First-column rate label auto-switches between
+                       "Current Rate" (direct hedge) and "Synthetic
+                       Rate" (cross hedge).
+                     - "Locked Rate" replaces "Breakeven Rate" for
+                       this non-expert audience.
+                     - Sign-aware prefix on the Δ handles +/- values. */
+                (() => {
+                  const isCross =
+                    simulateResult.operations_required === 2 &&
+                    !!simulateResult.legs;
+                  const leftRateLabel = isCross
+                    ? t("corporateDashboard.syntheticRate")
+                    : t("corporateDashboard.currentRate");
+                  const pct = simulateResult.percentage ?? 0;
+                  const pctPrefix = pct >= 0 ? "+" : "";
+                  const days = simulateResult.duration_days;
+                  return (
+                    <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-6 py-8 md:px-8 md:py-10">
+                      {/* Hero tier — paired rate comparison */}
+                      <div className="grid grid-cols-1 gap-6 text-center sm:grid-cols-2 sm:gap-4">
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-navy">
+                            {leftRateLabel}
+                          </div>
+                          <div className="num-display mt-2 text-3xl font-semibold text-foreground">
+                            {simulateResult.synthetic_rate?.toFixed(5)}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {t("corporateDashboard.marketingCurrentRateCaption")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-navy">
+                            {t("corporateDashboard.marketingLockedRateLabel")}
+                          </div>
+                          <div className="num-display mt-2 text-3xl font-semibold text-foreground">
+                            {simulateResult.breakeven_rate?.toFixed(5)}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {t("corporateDashboard.marketingLockedRateCaption")}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="my-6 h-px bg-foreground/10" />
+
+                      {/* Supporting pair — sentence-case labels
+                          (no eyebrow treatment). Mint Total cost, amber Δ. */}
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("corporateDashboard.marketingTotalCostLabel")}
+                          </div>
+                          <p className="num-body mt-1 text-lg font-semibold text-primary">
+                            ${simulateResult.usd_cost?.toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("corporateDashboard.breakevenDeltaShort")}
+                          </div>
+                          <p className="num-body mt-1 text-lg font-semibold text-amber-500">
+                            {pctPrefix}
+                            {pct.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Closing tagline — no separator above; sits
+                          as the card's quiet foot. */}
+                      <div className="mt-6 text-center text-xs text-muted-foreground">
+                        {t("corporateDashboard.marketingRateLockedFooter", {
+                          days,
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
               <div className="space-y-4">
                 {simulateResult.operations_required === 2 && simulateResult.legs ? (
                   <>
@@ -346,19 +664,19 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.syntheticRate")}</span>
-                          <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
+                          <p className="num-body font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.breakevenRate")}</span>
-                          <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
+                          <p className="num-body font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.totalCost")}</span>
-                          <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
+                          <p className="num-body font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.breakevenDelta")}</span>
-                          <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
+                          <p className="num-body font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                         </div>
                       </div>
                     </div>
@@ -407,27 +725,27 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                                 <div className="grid grid-cols-2 gap-2 text-sm">
                                   <div>
                                     <span className="text-muted-foreground text-xs">{t("corporateDashboard.bidAsk")}</span>
-                                    <p className="font-mono text-sm">
+                                    <p className="num-body text-sm">
                                       {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
                                     </p>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground text-xs">{t("corporateDashboard.spreadCost")}</span>
-                                    <p className="font-mono text-sm">${getPrimaryCost(bestBroker, "spread")?.toFixed(2)}</p>
+                                    <p className="num-body text-sm">${getPrimaryCost(bestBroker, "spread")?.toFixed(2)}</p>
                                     <p className="text-xs text-muted-foreground">
                                       ({getSecondaryCost(bestBroker, "spread")?.toFixed(2)} {otherCurrency})
                                     </p>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground text-xs">{t("corporateDashboard.swapCost")}</span>
-                                    <p className="font-mono text-sm">${getPrimaryCost(bestBroker, "swap")?.toFixed(2)}</p>
+                                    <p className="num-body text-sm">${getPrimaryCost(bestBroker, "swap")?.toFixed(2)}</p>
                                     <p className="text-xs text-muted-foreground">
                                       ({getSecondaryCost(bestBroker, "swap")?.toFixed(2)} {otherCurrency})
                                     </p>
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground text-xs">{t("corporateDashboard.totalCost")}</span>
-                                    <p className="font-mono text-sm font-bold text-primary">${getPrimaryCost(bestBroker, "total")?.toFixed(2)}</p>
+                                    <p className="num-body text-sm font-bold text-primary">${getPrimaryCost(bestBroker, "total")?.toFixed(2)}</p>
                                     <p className="text-xs text-muted-foreground">
                                       ({getSecondaryCost(bestBroker, "total")?.toFixed(2)} {otherCurrency})
                                     </p>
@@ -453,7 +771,7 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                                             <span>{broker.broker}</span>
                                             {broker.recommended && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                                           </div>
-                                          <span className="font-mono">${getPrimaryCost(broker, "total")?.toFixed(2)}</span>
+                                          <span className="num-body">${getPrimaryCost(broker, "total")?.toFixed(2)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -477,19 +795,19 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.currentRate")}</span>
-                          <p className="font-mono font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
+                          <p className="num-body font-bold text-lg">{simulateResult.synthetic_rate?.toFixed(5)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.breakevenRate")}</span>
-                          <p className="font-mono font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
+                          <p className="num-body font-bold text-lg">{simulateResult.breakeven_rate?.toFixed(5)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.totalCost")}</span>
-                          <p className="font-mono font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
+                          <p className="num-body font-bold text-lg text-primary">${simulateResult.usd_cost?.toFixed(2)}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground text-xs">{t("corporateDashboard.breakevenDelta")}</span>
-                          <p className="font-mono font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
+                          <p className="num-body font-bold text-lg text-amber-500">+{simulateResult.percentage?.toFixed(2)}%</p>
                         </div>
                       </div>
                     </div>
@@ -509,13 +827,13 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <span className="text-muted-foreground">{t("corporateDashboard.bidAsk")}</span>
-                              <p className="font-mono font-bold">
+                              <p className="num-body font-bold">
                                 {bestBroker.bid?.toFixed(5)} / {bestBroker.ask?.toFixed(5)}
                               </p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">{t("corporateDashboard.spreadCost")}</span>
-                              <p className="font-mono font-bold">
+                              <p className="num-body font-bold">
                                 {bestBroker.spread_cost_base?.toFixed(2)} {baseCurrency}
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -524,7 +842,7 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                             </div>
                             <div>
                               <span className="text-muted-foreground">{t("corporateDashboard.swapCost")}</span>
-                              <p className="font-mono">
+                              <p className="num-body">
                                 {bestBroker.swap_cost_base?.toFixed(2)} {baseCurrency}
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -533,7 +851,7 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                             </div>
                             <div>
                               <span className="text-muted-foreground">{t("corporateDashboard.totalCost")}</span>
-                              <p className="font-mono font-bold text-primary">
+                              <p className="num-body font-bold text-primary">
                                 {bestBroker.total_cost_base?.toFixed(2)} {baseCurrency}
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -592,7 +910,7 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                                     </Badge>
                                   )}
                                 </div>
-                                <span className={`font-mono ${isSelected ? "font-bold text-primary" : ""}`}>
+                                <span className={`num-body ${isSelected ? "font-bold text-primary" : ""}`}>
                                   {broker.total_cost_base?.toFixed(2)} {baseCurrency}
                                 </span>
                               </div>
@@ -625,11 +943,18 @@ export const BusinessSimulator = React.forwardRef<BusinessSimulatorHandle, Busin
                   </Button>
                 )}
               </div>
+              )
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <BarChart3 className="w-12 h-12 mb-4 opacity-20" />
-                <p>{t("corporateDashboard.noSimulationResults")}</p>
-                <p className="text-sm">{t("corporateDashboard.fillFormAndSimulate")}</p>
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">
+                  {t("corporateDashboard.noSimulationResults")}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("corporateDashboard.fillFormAndSimulate")}
+                </p>
               </div>
             )}
           </CardContent>

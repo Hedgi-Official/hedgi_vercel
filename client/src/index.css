@@ -1,12 +1,21 @@
+/*
+  Self-hosted variable fonts via @fontsource-variable.
+  wght.css subsets lazy-load per unicode-range — BR visitors only
+  fetch latin + latin-ext. font-display: swap by default.
+*/
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/geist/wght.css';
+@import '@fontsource-variable/geist-mono/wght.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
-  Shadcn theme variables. Values mirror the output the
-  @replit/vite-plugin-shadcn-theme-json plugin produced from theme.json
-  (variant: professional, primary: #2bedb7, appearance: light, radius: 0.5).
-  Captured 2026-04-15 from https://hedgi.ai/ to preserve visual parity.
+  Shadcn theme variables. Primary mint #2bedb7 preserved from the
+  original Replit theme.json. Extended 2026-04-17 with semantic
+  tokens for success (emerald-600), info (slate-700, provisional),
+  and a warm-stone surface scale. Loss framing uses destructive.
 */
 :root {
   --background: 0 0% 100%;
@@ -29,6 +38,24 @@
   --destructive-foreground: 60 9.1% 97.8%;
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
+
+  /* Semantic extensions */
+  --success: 161 94% 30%;              /* emerald-600 #059669 */
+  --success-foreground: 0 0% 98%;
+  --info: 215 25% 27%;                 /* slate-700 #334155 (provisional) */
+  --info-foreground: 0 0% 98%;
+
+  /* Second brand accent — deep navy, used for data-forward labels,
+     eyebrows, and non-CTA icon tiles. Keeps mint green reserved for
+     primary CTAs, live indicators, the logo mark, and the "with Hedgi"
+     positive-outcome accent. #0A1F3D. */
+  --accent-navy: 215 72% 14%;
+  --accent-navy-foreground: 0 0% 98%;
+
+  /* Warm-stone surface scale */
+  --surface-0: 0 0% 100%;               /* white */
+  --surface-1: 60 9% 98%;               /* stone-50  #fafaf9 */
+  --surface-2: 60 5% 96%;               /* stone-100 #f5f5f4 */
 }
 
 .dark {
@@ -60,13 +87,12 @@
   }
 
   :root {
-    /* Responsive spacing using clamp for consistent scaling across screen sizes */
     --section-py: clamp(1.5rem, 3vh, 4rem);
     --section-py-hero: clamp(1.5rem, 3vh, 4rem);
     --section-py-hero-landing: clamp(2rem, 4vh, 5rem);
     --section-py-hero-subpage: clamp(2rem, 6vh, 5rem);
     --content-gap: clamp(0.75rem, 1.5vh, 1.5rem);
-    --container-max: 80rem; /* 1280px */
+    --container-max: 80rem;
   }
 
   html {
@@ -76,6 +102,7 @@
   body {
     @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
     min-width: 320px;
+    font-feature-settings: "cv11" 1, "ss01" 1;  /* Inter: single-story a, open digits */
   }
 
   @media screen and (max-width: 768px) {
@@ -85,40 +112,41 @@
   }
 }
 
-/* Page layout utilities for consistent viewport-fit pages */
+/* Legacy page layout utilities kept for continuity. New pages use
+   the <Section> component from components/marketing/section.tsx. */
 @layer utilities {
   .page-container {
     @apply min-h-screen flex flex-col;
   }
-  
+
   .page-container-fit {
     @apply min-h-screen lg:min-h-screen flex flex-col lg:overflow-auto;
   }
-  
+
   .page-main {
     @apply flex-1 flex flex-col;
   }
-  
+
   .page-section {
     padding-top: var(--section-py);
     padding-bottom: var(--section-py);
   }
-  
+
   .page-section-hero {
     padding-top: var(--section-py-hero);
     padding-bottom: var(--section-py-hero);
   }
-  
+
   .page-section-hero-landing {
     padding-top: max(5vh, var(--section-py-hero-landing));
     padding-bottom: var(--section-py-hero);
   }
-  
+
   .page-section-hero-subpage {
     padding-top: var(--section-py-hero-subpage);
     padding-bottom: var(--section-py-hero-subpage);
   }
-  
+
   @media (min-width: 1024px) {
     .page-section-hero-subpage {
       min-height: clamp(500px, 60vh, 700px);
@@ -127,13 +155,58 @@
       justify-content: center;
     }
   }
-  
+
   .content-gap {
     gap: var(--content-gap);
   }
-  
+
   .content-mb {
     margin-bottom: var(--content-gap);
+  }
+
+  /* Numeric type treatment — tabular figures for rates, receipts,
+     totals. `.num-display` is for large headline numbers; `.num-body`
+     for inline rows. Works on Geist Mono (primary) and falls back to
+     system mono fonts. */
+  .num-display {
+    font-family: theme('fontFamily.mono');
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "tnum" 1, "zero" 1, "ss01" 1;
+    letter-spacing: -0.02em;
+  }
+
+  .num-body {
+    font-family: theme('fontFamily.mono');
+    font-variant-numeric: tabular-nums slashed-zero;
+    font-feature-settings: "tnum" 1, "zero" 1;
+  }
+
+  /* PreviewCard live-rate flash — triggered via React `key` change on
+     the span when the numeric value updates. Briefly tints the number
+     mint, then returns to its normal color. 300ms total. */
+  .flash-mint {
+    animation: flash-mint 300ms ease-out;
+  }
+
+  @keyframes flash-mint {
+    0% { color: hsl(var(--primary)); }
+    100% { /* falls through to element's normal color */ }
+  }
+
+  /* Subtle opacity dip used when a number swaps on the
+     What is Hedging hero comparison card (UNHEDGED cycle).
+     Starts at 60% opacity and eases up to 100% over 200ms —
+     communicates "this value is uncertain" without sliding,
+     flipping, or digit-by-digit animation. Paired with a
+     React key on the rendered value so each update remounts
+     the span and restarts the animation. */
+  .fade-dip {
+    animation: fade-dip 200ms ease-out;
+  }
+
+  @keyframes fade-dip {
+    from { opacity: 0.6; }
+    to { opacity: 1; }
   }
 }
 
@@ -146,7 +219,7 @@
   white-space: pre-line;
 }
 
-.markdown-content ul, 
+.markdown-content ul,
 .markdown-content ol {
   padding-left: 1.5rem;
 }

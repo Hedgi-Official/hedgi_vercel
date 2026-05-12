@@ -84,8 +84,18 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static assets with proper MIME types for Chrome
+  // Serve hashed/static assets. `index: false` is critical — without it,
+  // express.static auto-serves dist/public/index.html for `/` and applies
+  // its `Last-Modified` heuristic (Vercel normalizes deployed file mtime
+  // to 2018-10-20), so browsers' If-Modified-Since revalidations always
+  // get 304 and reuse the cached HTML. That HTML embeds the previous
+  // build's content-hashed asset URLs (`/assets/index-<hash>.js`); after
+  // the next deploy those hashes are gone and the page renders blank
+  // because the bundle 404s. Letting the catch-all below own `/` keeps
+  // the SPA shell uncached without losing the 304 win on the hashed
+  // bundles, where Last-Modified is correct (same hash = same content).
   app.use(express.static(distPath, {
+    index: false,
     setHeaders: (res, path) => {
       if (path.endsWith('.js') || path.endsWith('.mjs')) {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -95,24 +105,28 @@ export function serveStatic(app: Express) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
       }
     },
-    // Ensure proper caching headers
     maxAge: 0,
-    etag: false
+    etag: false,
   }));
 
-  // Cache the index.html template in memory for production
   const indexHtml = fs.readFileSync(path.resolve(distPath, "index.html"), "utf-8");
 
-  // Handle SPA routing - serve index.html for non-asset routes
   app.get("*", (req, res) => {
-    // Don't serve index.html for actual static assets
     const ext = path.extname(req.path);
     if (ext && ext !== '.html') {
       return res.status(404).send('Not Found');
     }
 
-    // Inject per-page SEO tags and serve
     const html = injectSeoTags(indexHtml, req.path);
-    res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(html);
+    res
+      .status(200)
+      .set({
+        "Content-Type": "text/html; charset=utf-8",
+        // Force the SPA shell to revalidate every load. Bundles inside
+        // are already content-hashed, so the no-store applies only to
+        // index.html itself.
+        "Cache-Control": "no-store, must-revalidate",
+      })
+      .end(html);
   });
 }

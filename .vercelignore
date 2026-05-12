@@ -17,7 +17,8 @@ migrations/
 # Local build artefacts — Vercel runs `npm run build:vercel` on its
 # side and produces dist/public/ + server-build/ fresh. Uploading a
 # stale local dist/ or server-build/ via `vercel` CLI pollutes the
-# deployment: a leftover bundle inside dist/ previously got served by
-# the CDN as application/javascript at the site root.
+# deployment: a leftover `dist/index.js` (from `npm run build`)
+# previously got served by the CDN as application/javascript at the
+# site root because it collided with the SPA shell path.
 dist/
 server-build/

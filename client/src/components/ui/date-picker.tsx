@@ -13,6 +13,13 @@ interface DatePickerProps {
   maxDate?: Date;
   placeholder?: string;
   className?: string;
+  /**
+   * date-fns format string for the selected-date display in the
+   * trigger. Defaults to "PPP" ("April 26th, 2026"). Callers that
+   * want a tighter tabular register can pass e.g. "MMM d, yyyy"
+   * ("Apr 26, 2026").
+   */
+  displayFormat?: string;
 }
 
 export function DatePicker({
@@ -21,7 +28,8 @@ export function DatePicker({
   minDate,
   maxDate,
   placeholder = "Pick a date",
-  className
+  className,
+  displayFormat = "PPP"
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -42,7 +50,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP") : placeholder}
+          {value ? format(value, displayFormat) : placeholder}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">

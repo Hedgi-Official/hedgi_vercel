@@ -680,6 +680,7 @@ export default function CorporateDashboard() {
 
             <BusinessSimulator
               ref={simulatorRef}
+              variant="dashboard"
               endpoint="/api/hedgi/quotes/simulate"
               showCreateOrderButton
               onCreateOrder={(payload) => createOrderMutation.mutate(payload)}

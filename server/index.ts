@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startHeroRateRefresh } from "./hero-rate-cache";
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -84,6 +85,11 @@ const ready: Promise<void> = new Promise((resolve, reject) => {
 
     registerRoutes(app);
     log("Routes registered successfully");
+
+    // Start the hero-rate refresh loop. Populates the in-memory cache
+    // served by /api/hedgi/quotes/hero-rate for the /business PreviewCard.
+    startHeroRateRefresh();
+    log("Hero rate refresh started");
 
     if (app.get("env") === "development") {
       log("Setting up Vite in development mode...");

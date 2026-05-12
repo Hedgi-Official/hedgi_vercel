@@ -3,10 +3,23 @@ import fetch from "node-fetch";
 import { db } from "@db";
 import { users, hiddenClosedOrders } from "@db/schema";
 import { eq, and } from "drizzle-orm";
+import { getHeroRate } from "../hero-rate-cache";
 
 const router = Router();
 
 const HEDGI_API_BASE = "https://api.hedgi.ai";
+
+// Public hero-rate endpoint for the /business PreviewCard. Returns the
+// in-memory cached reference rate. Pure cache read — never triggers an
+// upstream fetch. The cache is populated by startHeroRateRefresh() in
+// server/index.ts.
+router.get(
+  "/api/hedgi/quotes/hero-rate",
+  (_req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(getHeroRate());
+  },
+);
 
 async function getApiKeyForUser(userId: number): Promise<string | null> {
   const [user] = await db

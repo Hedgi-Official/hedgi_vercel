@@ -229,6 +229,33 @@ If the cutover goes sideways within the first 48 hours:
   `server/vite.ts`. Since Vite adds content hashes to filenames, a
   longer maxAge (e.g. 1 year) would reduce bandwidth.
 
+**Vercel build output (2026-04-17):**
+- The esbuild'd server bundle now lives at `server-build/index.js`
+  (outside `dist/`). It used to live at `dist/server/index.js`, but
+  Vercel's Vite framework preset (inherited from the project-level
+  `framework: "vite"` setting that overrides `vercel.json`'s
+  `framework: null`) treats any file under `dist/` as a candidate
+  static asset, and under the right cache conditions would expose the
+  server bundle as `GET /` with `content-type: application/javascript`
+  — breaking the page. Keeping the bundle outside `dist/` removes the
+  ambiguity. `api/index.ts` now imports from `"../server-build/index.js"`.
+  This supersedes the earlier commit `1a953dd` "move server bundle to
+  dist/server/" fix, which moved the bundle one level deeper but left
+  it inside the Vite-preset's static-output root.
+
+**SEO injection on `/` (pre-existing, not Push 1):**
+- `server/vite.ts` `serveStatic()` registers `express.static(distPath)`
+  before the `app.get("*")` catch-all. express.static defaults to
+  `index: "index.html"` which short-circuits `GET /` to a raw static
+  serve — bypassing `injectSeoTags`. Result: `/` always returns the
+  static default `<title>` from `client/index.html`, never the
+  route-specific title from `server/seo.ts`. Other routes work.
+  Crawlers on `/` see "Hedgi - Currency Hedging API for Companies"
+  instead of "Currency Hedging for Brazilian Businesses | Hedgi".
+  Fix: pass `index: false` to `express.static` and rely on the
+  catch-all to serve `index.html` with injected tags. One-line change;
+  deferred out of the design revamp scope.
+
 **Serverless hygiene:**
 - `connect-pg-simple`'s `pruneSessionInterval` timer behaves
   unpredictably in serverless (suspended when function freezes, fires
