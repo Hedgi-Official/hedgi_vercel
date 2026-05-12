@@ -1,20 +1,21 @@
 /**
  * Vercel serverless adapter for the Express app.
  *
- * Imports from the pre-bundled `dist/index.js` (built by esbuild in
- * `npm run build:vercel`). This avoids Node.js ESM bare-import errors —
- * Vercel's @vercel/node transpiles but doesn't bundle, so raw source
- * imports like `from "./routes"` (no extension) fail under strict ESM.
- * The esbuild bundle resolves all internal imports at build time.
+ * Imports from the pre-bundled `server-build/index.js` (built by esbuild
+ * in `npm run build:vercel`). The bundle lives outside `dist/` because
+ * Vercel's Vite framework preset treats `dist/` as a static-asset root —
+ * any file inside it can be exposed by the CDN at an unintended URL.
+ * Keeping the server bundle at `server-build/index.js` prevents `GET /`
+ * from ever returning the esbuild bundle as `application/javascript`
+ * instead of the SPA shell.
  *
- * The async IIFE in server/index.ts registers routes, sets up static
- * serving, and installs the error handler. We await the `ready` promise
- * before forwarding requests so the first cold-start request doesn't
- * race ahead of route registration.
+ * We await the `ready` promise before forwarding requests so the first
+ * cold-start request doesn't race ahead of route registration in
+ * server/index.ts.
  */
 import type { IncomingMessage, ServerResponse } from "http";
-// @ts-ignore — dist/server/index.js is a build artifact; TS can't check it
-import { app, ready } from "../dist/server/index.js";
+// @ts-ignore — server-build/index.js is a build artifact; TS can't check it
+import { app, ready } from "../server-build/index.js";
 
 export default async function handler(
   req: IncomingMessage,

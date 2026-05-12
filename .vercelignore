@@ -13,3 +13,11 @@ scripts/
 # Drizzle migration metadata is dev-only; the schema is applied via
 # `drizzle-kit push` outside the Vercel runtime
 migrations/
+
+# Local build artefacts — Vercel runs `npm run build:vercel` on its
+# side and produces dist/public/ + server-build/ fresh. Uploading a
+# stale local dist/ or server-build/ via `vercel` CLI pollutes the
+# deployment: a leftover bundle inside dist/ previously got served by
+# the CDN as application/javascript at the site root.
+dist/
+server-build/
