@@ -101,10 +101,14 @@ export function serveStatic(app: Express) {
       // file's mtime to 2018-10-20, so If-Modified-Since revalidations
       // always match the previously cached copy and the browser keeps
       // the old SW forever — the update check sees no change and the
-      // new SW never installs. Strip Last-Modified and force no-cache
-      // so the file is re-fetched whole on every check.
+      // new SW never installs. removeHeader('Last-Modified') is not
+      // reliable here (send/Vercel re-emit it), so overwrite it with
+      // the current time: the browser's cached If-Modified-Since is
+      // always older, fresh() returns false, every request 200s with
+      // the current bytes. Combined with no-cache/no-store no proxy
+      // can pin a stale version.
       if (path.endsWith('sw.js')) {
-        res.removeHeader('Last-Modified');
+        res.setHeader('Last-Modified', new Date().toUTCString());
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       }
       if (path.endsWith('.js') || path.endsWith('.mjs')) {
